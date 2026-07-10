@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useGroups } from "@/lib/hooks/useGroups";
+import { useBranch } from "@/lib/contexts/branch-context";
 import { mutate } from "swr";
 
 function fmt(v: number) {
@@ -46,6 +47,7 @@ function revalidate() {
 }
 
 export default function StudentsPage() {
+  const { activeBranchId } = useBranch();
   const [search,       setSearch]       = useState("");
   const [filterEnroll, setFilterEnroll] = useState("barchasi");
   const [filterGroup,  setFilterGroup]  = useState("barchasi");
@@ -103,7 +105,7 @@ export default function StudentsPage() {
     try {
       const res = await fetch("/api/students", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(createForm),
+        body: JSON.stringify({ ...createForm, ...(activeBranchId ? { branchId: activeBranchId } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) { setCreateErr(data.error ?? "Xatolik"); return; }

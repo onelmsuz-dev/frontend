@@ -12,6 +12,7 @@ import Link from "next/link";
 import { Search, Phone, Mail, Users, BookOpen, Wallet, LayoutGrid, List, Plus, Pencil, Trash2, AlertCircle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTeachers } from "@/lib/hooks/useTeachers";
+import { useBranch } from "@/lib/contexts/branch-context";
 import { mutate } from "swr";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -28,6 +29,7 @@ type ViewMode = "grid" | "list";
 const EMPTY = { name: "", phone: "", email: "", password: "", subjects: [] as string[], salary: "", salaryType: "FIXED" as "FIXED" | "PERCENT" };
 
 export default function TeachersPage() {
+  const { activeBranchId } = useBranch();
   const [search,      setSearch]      = useState("");
   const [viewMode,    setViewMode]    = useState<ViewMode>("grid");
   const [showModal,   setShowModal]   = useState(false);
@@ -95,6 +97,7 @@ export default function TeachersPage() {
       if (form.email.trim()) body.email = form.email;
       if (!editTarget) {
         body.password = form.password;
+        if (activeBranchId) body.branchId = activeBranchId;
       } else if (form.password.trim()) {
         body.password = form.password;
       }
