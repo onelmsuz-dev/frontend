@@ -25,9 +25,9 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 const PLAN_COLOR: Record<string, string> = {
-  BASIC:      "bg-neutral-700 text-neutral-300",
-  PRO:        "bg-blue-900/60 text-blue-300",
-  ENTERPRISE: "bg-purple-900/60 text-purple-300",
+  STARTER:  "bg-neutral-700 text-neutral-300",
+  BUSINESS: "bg-blue-900/60 text-blue-300",
+  PREMIUM:  "bg-purple-900/60 text-purple-300",
 };
 
 export default function AdmodeDashboard() {
@@ -49,9 +49,9 @@ export default function AdmodeDashboard() {
   ] : [];
 
   const planCounts = {
-    BASIC:      orgs.filter(o => o.plan === "BASIC").length,
-    PRO:        orgs.filter(o => o.plan === "PRO").length,
-    ENTERPRISE: orgs.filter(o => o.plan === "ENTERPRISE").length,
+    STARTER:  orgs.filter(o => o.plan === "STARTER").length,
+    BUSINESS: orgs.filter(o => o.plan === "BUSINESS").length,
+    PREMIUM:  orgs.filter(o => o.plan === "PREMIUM").length,
   };
   const totalOrgs = orgs.length || 1;
 
@@ -136,13 +136,13 @@ export default function AdmodeDashboard() {
             </div>
           ) : (
             <div className="space-y-3">
-              {(["ENTERPRISE","PRO","BASIC"] as const).map(plan => {
+              {(["PREMIUM","BUSINESS","STARTER"] as const).map(plan => {
                 const count = planCounts[plan];
                 const pct = Math.round((count / totalOrgs) * 100);
                 const cfg = {
-                  ENTERPRISE: { label: "Enterprise", bar: "bg-purple-500",  text: "text-purple-300" },
-                  PRO:        { label: "Pro",        bar: "bg-blue-500",    text: "text-blue-300" },
-                  BASIC:      { label: "Basic",      bar: "bg-neutral-500", text: "text-neutral-300" },
+                  PREMIUM:  { label: "Premium",  bar: "bg-purple-500",  text: "text-purple-300" },
+                  BUSINESS: { label: "Business", bar: "bg-blue-500",    text: "text-blue-300" },
+                  STARTER:  { label: "Starter",  bar: "bg-neutral-500", text: "text-neutral-300" },
                 }[plan];
                 return (
                   <div key={plan}>
