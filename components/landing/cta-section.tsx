@@ -3,7 +3,7 @@ import { ArrowRight, ShieldCheck, Clock3, Headphones } from "lucide-react";
 
 const guarantees = [
   { icon: ShieldCheck, text: "Ma'lumotlar xavfsizligi kafolatlangan" },
-  { icon: Clock3,      text: "14 kun bepul — karta kerak emas" },
+  { icon: Clock3,      text: "7 kun bepul — karta kerak emas" },
   { icon: Headphones,  text: "O'zbek tilida texnik yordam" },
 ];
 

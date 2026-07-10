@@ -112,7 +112,7 @@ export function HowItWorksSection() {
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
           <p className="mt-3 text-xs text-slate-400 sm:text-sm">
-            14 kunlik bepul sinov · Karta kerak emas · Istalgan vaqt bekor qilish mumkin
+            7 kunlik bepul sinov · Karta kerak emas · Istalgan vaqt bekor qilish mumkin
           </p>
         </div>
       </div>

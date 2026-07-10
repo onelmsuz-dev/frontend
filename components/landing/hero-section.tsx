@@ -3,7 +3,7 @@ import { ArrowRight, Play, CheckCircle2 } from "lucide-react";
 
 const bullets = [
   "O'rnatish shart emas — to'liq veb-asosda",
-  "14 kunlik bepul sinov, karta kerak emas",
+  "7 kunlik bepul sinov, karta kerak emas",
   "O'zbek tilidagi interfeys va yordam",
 ];
 

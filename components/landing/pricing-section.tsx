@@ -71,7 +71,6 @@ const plans = [
       "Analytics",
       "Telegram Bot",
       "API integratsiyasi",
-      "Korporativ sayt",
       "Server hosting",
       "Ma'lumotlarni zaxiralash",
       "Tizim yangilanishlari",
@@ -103,7 +102,7 @@ export function PricingSection() {
             Sizning o'quv markazingizga mos narx
           </h2>
           <p className="mt-4 text-base text-slate-600 sm:text-lg">
-            Hamma tarifda 14 kunlik bepul sinov. Karta kerak emas.
+            Hamma tarifda 7 kunlik bepul sinov. Karta kerak emas.
             Istalgan vaqt o'zgartirish yoki bekor qilish mumkin.
           </p>
         </div>

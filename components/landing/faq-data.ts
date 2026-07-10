@@ -7,7 +7,7 @@ export const faqItems = [
   {
     question: "OneRoom qancha turadi? Bepul tarif bormi?",
     answer:
-      "OneRoom uchta asosiy tarifda mavjud: Starter — oyiga 270,000 so'm (200 tagacha o'quvchi, 1 filial, 3 admin). Business — oyiga 570,000 so'm (500 tagacha o'quvchi, 3 filial, 5 admin). Premium — oyiga 870,000 so'm (1000 tagacha o'quvchi, 8 filial, 12 admin). 1000+ o'quvchi uchun Maxsus tarif kelishuv asosida. Barcha tarifda 14 kunlik bepul sinov muddati mavjud — karta ma'lumotlari kerak emas.",
+      "OneRoom uchta asosiy tarifda mavjud: Starter — oyiga 270,000 so'm (200 tagacha o'quvchi, 1 filial, 3 admin). Business — oyiga 570,000 so'm (500 tagacha o'quvchi, 3 filial, 5 admin). Premium — oyiga 870,000 so'm (1000 tagacha o'quvchi, 8 filial, 12 admin). 1000+ o'quvchi uchun Maxsus tarif kelishuv asosida. Barcha tarifda 7 kunlik bepul sinov muddati mavjud — karta ma'lumotlari kerak emas.",
   },
   {
     question: "Ko'p filialli o'quv markazlarni boshqarish mumkinmi?",

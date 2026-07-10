@@ -21,7 +21,7 @@ export function TestimonialsSection() {
 
         <p className="mt-4 text-base text-slate-600 sm:text-lg max-w-xl mx-auto leading-relaxed">
           OneRoom hali yangi — va siz dastlabki foydalanuvchilardan bo'lishingiz mumkin.
-          14 kun bepul sinab ko'ring, fikr-mulohazangiz tizimni yaxshilashga yordam beradi.
+          7 kun bepul sinab ko'ring, fikr-mulohazangiz tizimni yaxshilashga yordam beradi.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
