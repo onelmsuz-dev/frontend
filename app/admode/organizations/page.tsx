@@ -87,6 +87,10 @@ export default function OrganizationsPage() {
     if (!form.name || !form.subdomain || !form.adminName || !form.adminPhone || !form.adminPassword) {
       setCreateErr("Barcha majburiy maydonlar to'ldirilsin"); return;
     }
+    // Telefonni login bilan bir xil formatga keltiramiz: +998XXXXXXXXX (probelsiz).
+    const phone9 = form.adminPhone.replace(/\D/g, "").slice(-9);
+    if (phone9.length !== 9) { setCreateErr("Admin telefon raqami to'liq emas (9 ta raqam)"); return; }
+    const adminPhone = "+998" + phone9;
     setSaving(true); setCreateErr("");
     try {
       const res = await fetch("/api/admode/organizations", {
@@ -94,7 +98,7 @@ export default function OrganizationsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name, subdomain: form.subdomain, plan: form.plan,
-          adminName: form.adminName, adminPhone: form.adminPhone,
+          adminName: form.adminName, adminPhone,
           adminEmail: form.adminEmail || undefined, adminPassword: form.adminPassword,
         }),
       });

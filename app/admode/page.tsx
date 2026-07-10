@@ -4,7 +4,7 @@ import useSWR from "swr";
 import { cn } from "@/lib/utils";
 import {
   Building2, Users, GraduationCap, TrendingUp, BookOpen,
-  Target, ArrowUpRight, RefreshCw, Clock,
+  Target, ArrowUpRight, RefreshCw, Clock, Database, Server,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -24,6 +24,31 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-800 rounded-lg", className)} />;
 }
 
+function fmtUptime(s?: number) {
+  if (!s) return "—";
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
+  if (d) return `${d}k ${h}s`;
+  if (h) return `${h}s ${m}d`;
+  return `${m}d`;
+}
+
+function StatusChip({ ok, icon: Icon, label, detail }: { ok?: boolean; icon: any; label: string; detail?: string }) {
+  const cls = ok === undefined
+    ? "bg-neutral-900 border-neutral-800 text-neutral-400"
+    : ok
+      ? "bg-emerald-900/15 border-emerald-900/30 text-emerald-300"
+      : "bg-red-900/15 border-red-900/30 text-red-300";
+  const dot = ok === undefined ? "bg-neutral-500 animate-pulse" : ok ? "bg-emerald-400" : "bg-red-400";
+  return (
+    <div className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px]", cls)}>
+      <Icon className="w-3.5 h-3.5" />
+      <span className="font-semibold">{label}</span>
+      <span className={cn("w-1.5 h-1.5 rounded-full", dot)} />
+      {ok !== undefined && detail && <span className="text-[10px] opacity-80">{detail}</span>}
+    </div>
+  );
+}
+
 const PLAN_COLOR: Record<string, string> = {
   STARTER:  "bg-neutral-700 text-neutral-300",
   BUSINESS: "bg-blue-900/60 text-blue-300",
@@ -34,6 +59,7 @@ export default function AdmodeDashboard() {
   const { data, isLoading, mutate } = useSWR("/api/admode/stats", fetcher, {
     refreshInterval: 60_000,
   });
+  const { data: sys } = useSWR("/api/admode/status", fetcher, { refreshInterval: 30_000 });
 
   const totals = data?.totals;
   const orgs: any[] = data?.orgs ?? [];
@@ -68,6 +94,20 @@ export default function AdmodeDashboard() {
           <RefreshCw className="w-3.5 h-3.5" />
           Yangilash
         </button>
+      </div>
+
+      {/* Tizim holati */}
+      <div className="flex flex-wrap items-center gap-2">
+        <StatusChip ok={sys?.db?.ok} icon={Database} label="Ma'lumotlar bazasi" detail={sys?.db ? `${sys.db.latencyMs}ms` : ""} />
+        <StatusChip ok={sys?.redis?.ok} icon={Server} label="Redis" detail={sys?.redis?.ok ? "ulangan" : "uzilgan"} />
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-[11px] text-neutral-400">
+          <Clock className="w-3.5 h-3.5" /> Uptime: {fmtUptime(sys?.uptimeSec)}
+        </div>
+        {sys?.node && (
+          <div className="px-2.5 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800 text-[11px] text-neutral-500">
+            {sys.node} · {sys.env}
+          </div>
+        )}
       </div>
 
       {/* Stat cards */}
