@@ -3,14 +3,18 @@
 import { useState, useMemo } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
+import { FormField } from "@/components/ui/form-field";
 import Link from "next/link";
-import { Search, Users, Clock, MapPin, CalendarDays, Eye, BookOpen, TrendingUp, X, Edit, Trash2, ChevronRight } from "lucide-react";
+import { Search, Users, Clock, CalendarDays, BookOpen, TrendingUp, Edit, Trash2, ChevronRight, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { useTeachers } from "@/lib/hooks/useTeachers";
+import { useRooms } from "@/lib/hooks/useRooms";
+import { useBranch } from "@/lib/contexts/branch-context";
+import { WEEKDAYS, WEEKDAY_SHORT, SCHEDULE_PRESETS, todayStr } from "@/lib/form-constants";
 import { mutate } from "swr";
 
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
@@ -24,27 +28,27 @@ const STATUS_TABS = [
   { v: "UPCOMING", l: "Keladi" },
   { v: "COMPLETED",l: "Tugagan" },
 ];
-const DAYS_OPTS = [
-  { v: "DUSHANBA",   l: "Dushanba"   }, { v: "SESHANBA",  l: "Seshanba"  },
-  { v: "CHORSHANBA", l: "Chorshanba" }, { v: "PAYSHANBA", l: "Payshanba" },
-  { v: "JUMA",       l: "Juma"       }, { v: "SHANBA",    l: "Shanba"    },
-  { v: "YAKSHANBA",  l: "Yakshanba"  },
-];
-const DAYS_SHORT: Record<string,string> = {
-  DUSHANBA:"Du", SESHANBA:"Se", CHORSHANBA:"Ch", PAYSHANBA:"Pa", JUMA:"Ju", SHANBA:"Sh", YAKSHANBA:"Yak",
-};
+
+const selectCls =
+  "w-full h-10 px-3 text-[13px] rounded-xl border border-neutral-200 dark:border-neutral-700 " +
+  "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-indigo-500 transition-colors";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
 
 const EMPTY_FORM = {
-  name: "", courseId: "", teacherId: "", maxStudents: "15",
-  scheduleDays: [] as string[], startTime: "09:00", endTime: "11:00",
-  startDate: new Date().toISOString().slice(0, 10), status: "ACTIVE",
+  name: "", courseId: "", teacherId: "", roomId: "", maxStudents: "15",
+  scheduleDays: [] as string[], startTime: "18:00", endTime: "19:30",
+  startDate: todayStr(), endDate: "", status: "ACTIVE",
 };
 
+function revalidate() {
+  mutate((k: string) => typeof k === "string" && k.startsWith("/api/groups"), undefined, { revalidate: true });
+}
+
 export default function GroupsPage() {
+  const { activeBranchId } = useBranch();
   const [search,    setSearch]    = useState("");
   const [statusTab, setStatusTab] = useState("barchasi");
   const [showModal, setShowModal] = useState(false);
@@ -52,14 +56,17 @@ export default function GroupsPage() {
   const [form,      setForm]      = useState(EMPTY_FORM);
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const { data: raw, isLoading } = useGroups();
   const { data: coursesRaw }     = useCourses();
   const { data: teachersRaw }    = useTeachers();
+  const { data: roomsRaw }       = useRooms();
 
   const groups:   any[] = Array.isArray(raw)         ? raw         : [];
   const courses:  any[] = Array.isArray(coursesRaw)  ? coursesRaw  : [];
   const teachers: any[] = Array.isArray(teachersRaw) ? teachersRaw : [];
+  const rooms:    any[] = Array.isArray(roomsRaw)    ? roomsRaw    : [];
 
   const filtered = useMemo(() => groups.filter(g => {
     const q = search.toLowerCase();
@@ -80,11 +87,12 @@ export default function GroupsPage() {
   function openEdit(g: any) {
     setEditId(g.id);
     setForm({
-      name: g.name, courseId: g.courseId, teacherId: g.teacherId,
+      name: g.name, courseId: g.courseId ?? "", teacherId: g.teacherId ?? "", roomId: g.roomId ?? "",
       maxStudents: String(g.maxStudents ?? 15),
       scheduleDays: g.scheduleDays ?? [],
       startTime: g.startTime, endTime: g.endTime,
-      startDate: g.startDate?.slice(0,10) ?? "",
+      startDate: g.startDate?.slice(0,10) ?? todayStr(),
+      endDate: g.endDate?.slice(0,10) ?? "",
       status: g.status,
     });
     setError(""); setShowModal(true);
@@ -98,10 +106,24 @@ export default function GroupsPage() {
         : [...p.scheduleDays, d],
     }));
   }
+  function applyPreset(days: readonly string[]) {
+    setForm(p => ({ ...p, scheduleDays: [...days] }));
+  }
+
+  // Course tanlanganda narx asosida maxStudents taxminini o'zgartirmaymiz, faqat nomni taklif
+  function onCourseChange(courseId: string) {
+    const c = courses.find(x => x.id === courseId);
+    setForm(p => ({
+      ...p,
+      courseId,
+      name: p.name || (c ? `${c.name} guruhi` : ""),
+    }));
+  }
 
   async function submit() {
-    if (!form.name.trim() || !form.courseId || !form.teacherId) { setError("Ism, kurs va o'qituvchi majburiy"); return; }
-    if (form.scheduleDays.length === 0) { setError("Kamida 1 ta kun tanlang"); return; }
+    if (!form.name.trim() || !form.courseId || !form.teacherId) { setError("Nom, kurs va o'qituvchi majburiy"); return; }
+    if (form.scheduleDays.length === 0) { setError("Kamida 1 ta dars kuni tanlang"); return; }
+    if (form.endTime <= form.startTime) { setError("Tugash vaqti boshlanish vaqtidan keyin bo'lsin"); return; }
     setSaving(true); setError("");
     try {
       const body: any = {
@@ -110,6 +132,10 @@ export default function GroupsPage() {
         scheduleDays: form.scheduleDays, startTime: form.startTime, endTime: form.endTime,
         startDate: form.startDate, status: form.status,
       };
+      if (form.roomId) body.roomId = form.roomId;
+      if (form.endDate) body.endDate = form.endDate;
+      if (!editId && activeBranchId) body.branchId = activeBranchId;
+
       const res = await fetch(editId ? `/api/groups/${editId}` : "/api/groups", {
         method: editId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -117,16 +143,21 @@ export default function GroupsPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Xatolik"); return; }
-      mutate((k: string) => typeof k === "string" && k.startsWith("/api/groups"), undefined, { revalidate: true });
+      revalidate();
       setShowModal(false);
     } catch { setError("Serverga ulanib bo'lmadi"); }
     finally { setSaving(false); }
   }
 
-  async function deleteGroup(id: string, name: string) {
-    if (!confirm(`"${name}" guruhini o'chirishni tasdiqlaysizmi?`)) return;
-    await fetch(`/api/groups/${id}`, { method: "DELETE" });
-    mutate((k: string) => typeof k === "string" && k.startsWith("/api/groups"), undefined, { revalidate: true });
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/groups/${deleteTarget.id}`, { method: "DELETE" });
+      if (!res.ok) { const d = await res.json(); setError(d.error ?? "O'chirib bo'lmadi"); return; }
+      revalidate();
+      setDeleteTarget(null);
+    } finally { setSaving(false); }
   }
 
   return (
@@ -137,106 +168,116 @@ export default function GroupsPage() {
         action={{ label: "Yangi guruh", onClick: openCreate }}
       />
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-y-auto py-6"
-          onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl w-full max-w-lg mx-4">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
-              <h2 className="font-bold text-[15px] text-neutral-900 dark:text-neutral-100">
-                {editId ? "Guruhni tahrirlash" : "Yangi guruh"}
-              </h2>
-              <button onClick={() => setShowModal(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto">
-              <div>
-                <Label className="text-xs text-neutral-500 mb-1.5 block">Guruh nomi *</Label>
-                <Input placeholder="Ingliz tili A1 guruh" value={form.name}
-                  onChange={e => setForm(p => ({...p, name: e.target.value}))} className="h-9" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-neutral-500 mb-1.5 block">Kurs *</Label>
-                  <select value={form.courseId} onChange={e => setForm(p => ({...p, courseId: e.target.value}))}
-                    className="w-full h-9 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700
-                      bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
-                    <option value="">Tanlang...</option>
-                    {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <Label className="text-xs text-neutral-500 mb-1.5 block">O'qituvchi *</Label>
-                  <select value={form.teacherId} onChange={e => setForm(p => ({...p, teacherId: e.target.value}))}
-                    className="w-full h-9 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700
-                      bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
-                    <option value="">Tanlang...</option>
-                    {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.user?.name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-neutral-500 mb-2 block">Dars kunlari *</Label>
-                <div className="flex gap-2 flex-wrap">
-                  {DAYS_OPTS.map(d => (
-                    <button key={d.v} type="button" onClick={() => toggleDay(d.v)}
-                      className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                        form.scheduleDays.includes(d.v)
-                          ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-neutral-900"
-                          : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
-                      {d.l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-neutral-500 mb-1.5 block">Boshlanish vaqti</Label>
-                  <Input type="time" value={form.startTime}
-                    onChange={e => setForm(p => ({...p, startTime: e.target.value}))} className="h-9" />
-                </div>
-                <div>
-                  <Label className="text-xs text-neutral-500 mb-1.5 block">Tugash vaqti</Label>
-                  <Input type="time" value={form.endTime}
-                    onChange={e => setForm(p => ({...p, endTime: e.target.value}))} className="h-9" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-neutral-500 mb-1.5 block">Boshlanish sanasi</Label>
-                  <Input type="date" value={form.startDate}
-                    onChange={e => setForm(p => ({...p, startDate: e.target.value}))} className="h-9" />
-                </div>
-                <div>
-                  <Label className="text-xs text-neutral-500 mb-1.5 block">Max o'quvchi</Label>
-                  <Input type="number" value={form.maxStudents} min="1" max="50"
-                    onChange={e => setForm(p => ({...p, maxStudents: e.target.value}))} className="h-9" />
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-neutral-500 mb-1.5 block">Status</Label>
-                <select value={form.status} onChange={e => setForm(p => ({...p, status: e.target.value}))}
-                  className="w-full h-9 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700
-                    bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
-                  <option value="ACTIVE">Faol</option>
-                  <option value="UPCOMING">Keladi</option>
-                  <option value="COMPLETED">Tugagan</option>
-                </select>
-              </div>
-              {error && <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>}
-            </div>
-            <div className="px-5 pb-5 flex gap-2">
-              <Button onClick={submit} disabled={saving}
-                className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white">
-                {saving ? "Saqlanmoqda..." : editId ? "Saqlash" : "Yaratish"}
-              </Button>
-              <Button variant="outline" className="h-9 px-4" onClick={() => setShowModal(false)}>Bekor</Button>
-            </div>
-          </div>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editId ? "Guruhni tahrirlash" : "Yangi guruh"}
+        subtitle={editId ? undefined : "Guruh ma'lumotlarini to'ldiring"}
+        size="lg"
+        footer={
+          <>
+            <Button onClick={submit} disabled={saving}
+              className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-semibold">
+              {saving ? "Saqlanmoqda..." : editId ? "Saqlash" : "Yaratish"}
+            </Button>
+            <Button variant="outline" className="h-10 px-4 text-[13px]" onClick={() => setShowModal(false)}>Bekor</Button>
+          </>
+        }
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Kurs" required>
+            <select value={form.courseId} onChange={e => onCourseChange(e.target.value)} className={selectCls}>
+              <option value="">Tanlang...</option>
+              {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </FormField>
+          <FormField label="O'qituvchi" required>
+            <select value={form.teacherId} onChange={e => setForm(p => ({...p, teacherId: e.target.value}))} className={selectCls}>
+              <option value="">Tanlang...</option>
+              {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.user?.name}</option>)}
+            </select>
+          </FormField>
         </div>
-      )}
+
+        <FormField label="Guruh nomi" required>
+          <Input placeholder="Ingliz tili A1 guruh" value={form.name}
+            onChange={e => setForm(p => ({...p, name: e.target.value}))} className="h-10" />
+        </FormField>
+
+        <FormField label="Dars kunlari" required>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {SCHEDULE_PRESETS.map(p => (
+              <button key={p.label} type="button" onClick={() => applyPreset(p.days)}
+                className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-indigo-200 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors">
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {WEEKDAYS.map(d => (
+              <button key={d.value} type="button" onClick={() => toggleDay(d.value)}
+                className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                  form.scheduleDays.includes(d.value)
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </FormField>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Boshlanish vaqti" required>
+            <Input type="time" value={form.startTime}
+              onChange={e => setForm(p => ({...p, startTime: e.target.value}))} className="h-10" />
+          </FormField>
+          <FormField label="Tugash vaqti" required>
+            <Input type="time" value={form.endTime}
+              onChange={e => setForm(p => ({...p, endTime: e.target.value}))} className="h-10" />
+          </FormField>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Boshlanish sanasi" required>
+            <Input type="date" value={form.startDate}
+              onChange={e => setForm(p => ({...p, startDate: e.target.value}))} className="h-10" />
+          </FormField>
+          <FormField label="Tugash sanasi" hint="Ixtiyoriy">
+            <Input type="date" value={form.endDate} min={form.startDate}
+              onChange={e => setForm(p => ({...p, endDate: e.target.value}))} className="h-10" />
+          </FormField>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3">
+          <FormField label="Xona" hint="Ixtiyoriy">
+            <select value={form.roomId} onChange={e => setForm(p => ({...p, roomId: e.target.value}))} className={selectCls}>
+              <option value="">—</option>
+              {rooms.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+          </FormField>
+          <FormField label="Max o'quvchi">
+            <Input type="number" value={form.maxStudents} min="1" max="50"
+              onChange={e => setForm(p => ({...p, maxStudents: e.target.value}))} className="h-10" />
+          </FormField>
+          <FormField label="Status">
+            <select value={form.status} onChange={e => setForm(p => ({...p, status: e.target.value}))} className={selectCls}>
+              <option value="ACTIVE">Faol</option>
+              <option value="UPCOMING">Keladi</option>
+              <option value="COMPLETED">Tugagan</option>
+            </select>
+          </FormField>
+        </div>
+
+        {error && <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>}
+      </Modal>
+
+      <ConfirmDeleteModal
+        open={!!deleteTarget} onClose={() => { setDeleteTarget(null); setError(""); }}
+        onConfirm={confirmDelete} loading={saving}
+        title="Guruhni o'chirish"
+        description={<><span className="font-semibold">{deleteTarget?.name}</span> o'chirilsinmi? Bu amalni qaytarib bo'lmaydi.
+          {error && <span className="block mt-2 text-red-500">{error}</span>}</>}
+      />
 
       <div className="p-5 space-y-5">
         {/* Stats */}
@@ -295,7 +336,7 @@ export default function GroupsPage() {
                 const occ       = Math.round((cnt/max)*100);
                 const cfg       = STATUS_CFG[g.status] ?? STATUS_CFG.ACTIVE;
                 const barColor  = occ >= 100 ? "bg-red-500" : occ >= 80 ? "bg-amber-500" : "bg-green-500";
-                const days      = (g.scheduleDays ?? []).map((d: string) => DAYS_SHORT[d] ?? d).join(", ");
+                const days      = (g.scheduleDays ?? []).map((d: string) => WEEKDAY_SHORT[d] ?? d).join(", ");
                 return (
                   <div key={g.id} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-3">
@@ -308,7 +349,7 @@ export default function GroupsPage() {
                         <button onClick={() => openEdit(g)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-orange-600 hover:bg-orange-50 transition-colors">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => deleteGroup(g.id, g.name)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                        <button onClick={() => { setError(""); setDeleteTarget(g); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                         <Link href={`/groups/${g.id}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
@@ -325,6 +366,7 @@ export default function GroupsPage() {
                       </div>
                       <div className="flex items-center gap-2 text-[12px] text-neutral-600 dark:text-neutral-400">
                         <Clock className="w-3.5 h-3.5 shrink-0 text-neutral-400" />{g.startTime} – {g.endTime}
+                        {g.room?.name && <><MapPin className="w-3.5 h-3.5 shrink-0 text-neutral-400 ml-2" />{g.room.name}</>}
                       </div>
                     </div>
                     <div className="border-t border-neutral-100 dark:border-neutral-800 pt-3">

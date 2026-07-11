@@ -3,10 +3,11 @@
 import { useState, useMemo } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
+import { FormField } from "@/components/ui/form-field";
 import Link from "next/link";
-import { Search, BookOpen, Users, Wallet, Clock, Edit, Trash2, X, ChevronRight } from "lucide-react";
+import { Search, BookOpen, Users, Wallet, Clock, Edit, Trash2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { mutate } from "swr";
@@ -29,18 +30,18 @@ const COLORS = [
   { label: "Toshyashil",value: "bg-emerald-500" },
 ];
 
-const EMPTY = { name: "", description: "", duration: "", price: "", color: "bg-blue-500" };
+const DURATION_PRESETS = ["1 oy", "3 oy", "6 oy", "9 oy", "12 oy"];
 
-type ModalMode = "create" | "edit";
+const EMPTY = { name: "", description: "", duration: "", price: "", color: "bg-blue-500" };
 
 export default function CoursesPage() {
   const [search,    setSearch]    = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [mode,      setMode]      = useState<ModalMode>("create");
   const [editId,    setEditId]    = useState<string | null>(null);
   const [form,      setForm]      = useState(EMPTY);
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const { data: raw, isLoading } = useCourses();
   const courses: any[] = Array.isArray(raw) ? raw : [];
@@ -58,10 +59,10 @@ export default function CoursesPage() {
   }), [courses]);
 
   function openCreate() {
-    setMode("create"); setEditId(null); setForm(EMPTY); setError(""); setShowModal(true);
+    setEditId(null); setForm(EMPTY); setError(""); setShowModal(true);
   }
   function openEdit(c: any) {
-    setMode("edit"); setEditId(c.id);
+    setEditId(c.id);
     setForm({ name: c.name, description: c.description ?? "", duration: c.duration, price: String(c.price), color: c.color ?? "bg-blue-500" });
     setError(""); setShowModal(true);
   }
@@ -70,10 +71,11 @@ export default function CoursesPage() {
     if (!form.name.trim() || !form.duration.trim() || !form.price) {
       setError("Nomi, davomiyligi va narxi majburiy"); return;
     }
+    if (parseFloat(form.price) <= 0) { setError("Narx 0 dan katta bo'lsin"); return; }
     setSaving(true); setError("");
     try {
-      const url    = mode === "create" ? "/api/courses" : `/api/courses/${editId}`;
-      const method = mode === "create" ? "POST"         : "PATCH";
+      const url    = editId ? `/api/courses/${editId}` : "/api/courses";
+      const method = editId ? "PATCH" : "POST";
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -87,11 +89,15 @@ export default function CoursesPage() {
     finally { setSaving(false); }
   }
 
-  async function deleteCourse(id: string, name: string) {
-    if (!confirm(`"${name}" kursini o'chirmoqchimisiz? Bu amal qaytarilmaydi.`)) return;
-    const res = await fetch(`/api/courses/${id}`, { method: "DELETE" });
-    if (res.ok) mutate("/api/courses");
-    else { const d = await res.json(); alert(d.error ?? "O'chirishda xatolik"); }
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/courses/${deleteTarget.id}`, { method: "DELETE" });
+      if (!res.ok) { const d = await res.json(); setError(d.error ?? "O'chirishda xatolik"); return; }
+      mutate("/api/courses");
+      setDeleteTarget(null);
+    } finally { setSaving(false); }
   }
 
   return (
@@ -102,67 +108,76 @@ export default function CoursesPage() {
         action={{ label: "Yangi kurs", onClick: openCreate }}
       />
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl w-full max-w-md mx-4">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
-              <h2 className="font-bold text-[15px] text-neutral-900 dark:text-neutral-100">
-                {mode === "create" ? "Yangi kurs" : "Kursni tahrirlash"}
-              </h2>
-              <button onClick={() => setShowModal(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400">
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title={editId ? "Kursni tahrirlash" : "Yangi kurs"}
+        subtitle={editId ? undefined : "Kurs ma'lumotlarini to'ldiring"}
+        size="md"
+        footer={
+          <>
+            <Button onClick={submit} disabled={saving}
+              className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-semibold">
+              {saving ? "Saqlanmoqda..." : editId ? "Saqlash" : "Qo'shish"}
+            </Button>
+            <Button variant="outline" className="h-10 px-4 text-[13px]" onClick={() => setShowModal(false)}>Bekor</Button>
+          </>
+        }
+      >
+        <FormField label="Kurs nomi" required>
+          <Input placeholder="Matematika, Ingliz tili..." value={form.name}
+            onChange={e => setForm(p => ({...p, name: e.target.value}))} className="h-10" />
+        </FormField>
+
+        <FormField label="Tavsif" hint="Ixtiyoriy">
+          <Input placeholder="Qisqacha tavsif..." value={form.description}
+            onChange={e => setForm(p => ({...p, description: e.target.value}))} className="h-10" />
+        </FormField>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Davomiyligi" required>
+            <Input placeholder="3 oy" value={form.duration}
+              onChange={e => setForm(p => ({...p, duration: e.target.value}))} className="h-10" />
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {DURATION_PRESETS.map(d => (
+                <button key={d} type="button" onClick={() => setForm(p => ({...p, duration: d}))}
+                  className={cn("px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors",
+                    form.duration === d
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:border-neutral-400")}>
+                  {d}
+                </button>
+              ))}
             </div>
-            <div className="p-5 space-y-3">
-              <div>
-                <Label className="text-xs text-neutral-500 mb-1.5 block">Kurs nomi *</Label>
-                <Input placeholder="Matematika, Ingliz tili..." value={form.name}
-                  onChange={e => setForm(p => ({...p, name: e.target.value}))} className="h-9" />
-              </div>
-              <div>
-                <Label className="text-xs text-neutral-500 mb-1.5 block">Tavsif</Label>
-                <Input placeholder="Qisqacha tavsif..." value={form.description}
-                  onChange={e => setForm(p => ({...p, description: e.target.value}))} className="h-9" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-xs text-neutral-500 mb-1.5 block">Davomiyligi *</Label>
-                  <Input placeholder="3 oy, 6 oy..." value={form.duration}
-                    onChange={e => setForm(p => ({...p, duration: e.target.value}))} className="h-9" />
-                </div>
-                <div>
-                  <Label className="text-xs text-neutral-500 mb-1.5 block">Narxi (so'm) *</Label>
-                  <Input type="number" placeholder="500000" value={form.price}
-                    onChange={e => setForm(p => ({...p, price: e.target.value}))} className="h-9" />
-                </div>
-              </div>
-              <div>
-                <Label className="text-xs text-neutral-500 mb-1.5 block">Rang</Label>
-                <div className="flex gap-2 flex-wrap">
-                  {COLORS.map(c => (
-                    <button key={c.value} onClick={() => setForm(p => ({...p, color: c.value}))}
-                      title={c.label}
-                      className={cn("w-7 h-7 rounded-lg transition-all", c.value,
-                        form.color === c.value ? "ring-2 ring-offset-2 ring-neutral-400 scale-110" : "opacity-70 hover:opacity-100")}>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {error && <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>}
-            </div>
-            <div className="px-5 pb-5 flex gap-2">
-              <Button onClick={submit} disabled={saving}
-                className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white">
-                {saving ? "Saqlanmoqda..." : mode === "create" ? "Qo'shish" : "Saqlash"}
-              </Button>
-              <Button variant="outline" className="h-9 px-4" onClick={() => setShowModal(false)}>Bekor</Button>
-            </div>
-          </div>
+          </FormField>
+          <FormField label="Oylik narxi (so'm)" required>
+            <Input type="number" inputMode="numeric" placeholder="500000" value={form.price}
+              onChange={e => setForm(p => ({...p, price: e.target.value}))} className="h-10" />
+          </FormField>
         </div>
-      )}
+
+        <FormField label="Rang">
+          <div className="flex gap-2 flex-wrap">
+            {COLORS.map(c => (
+              <button key={c.value} type="button" onClick={() => setForm(p => ({...p, color: c.value}))}
+                title={c.label}
+                className={cn("w-7 h-7 rounded-lg transition-all", c.value,
+                  form.color === c.value ? "ring-2 ring-offset-2 ring-neutral-400 scale-110" : "opacity-70 hover:opacity-100")}>
+              </button>
+            ))}
+          </div>
+        </FormField>
+
+        {error && <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>}
+      </Modal>
+
+      <ConfirmDeleteModal
+        open={!!deleteTarget} onClose={() => { setDeleteTarget(null); setError(""); }}
+        onConfirm={confirmDelete} loading={saving}
+        title="Kursni o'chirish"
+        description={<><span className="font-semibold">{deleteTarget?.name}</span> o'chirilsinmi?
+          {error && <span className="block mt-2 text-red-500">{error}</span>}</>}
+      />
 
       <div className="p-5 space-y-5">
         {/* Stats */}
@@ -223,7 +238,7 @@ export default function CoursesPage() {
                           className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => deleteCourse(course.id, course.name)}
+                        <button onClick={() => { setError(""); setDeleteTarget(course); }}
                           className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

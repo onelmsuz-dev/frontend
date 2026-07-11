@@ -17,6 +17,9 @@ import { mutate } from "swr";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormField } from "@/components/ui/form-field";
+import { Segmented, GenderPicker } from "@/components/ui/segmented";
+import { SALARY_TYPES, SALARY_CFG, salaryDisplay, type SalaryType } from "@/lib/salary";
+import { todayStr } from "@/lib/form-constants";
 
 function fmt(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -26,7 +29,13 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 type ViewMode = "grid" | "list";
-const EMPTY = { name: "", phone: "", email: "", password: "", subjects: [] as string[], salary: "", salaryType: "FIXED" as "FIXED" | "PERCENT" };
+const EMPTY = {
+  name: "", phone: "", email: "", password: "",
+  birthDate: "", joinedAt: todayStr(),
+  gender: "MALE" as "MALE" | "FEMALE",
+  subjects: [] as string[], salary: "",
+  salaryType: "FIXED" as SalaryType,
+};
 
 export default function TeachersPage() {
   const { activeBranchId } = useBranch();
@@ -65,7 +74,11 @@ export default function TeachersPage() {
     setEditTarget(t);
     setForm({
       name: t.user?.name ?? "", phone: t.phone ?? "", email: t.email ?? "",
-      password: "", subjects: t.subjects ?? [], salary: String(t.salary ?? ""),
+      password: "",
+      birthDate: t.birthDate ? String(t.birthDate).slice(0, 10) : "",
+      joinedAt: t.joinedAt ? String(t.joinedAt).slice(0, 10) : todayStr(),
+      gender: t.gender ?? "MALE",
+      subjects: t.subjects ?? [], salary: String(t.salary ?? ""),
       salaryType: t.salaryType ?? "FIXED",
     });
     setSubInput(""); setError(""); setPhoneErr(""); setShowModal(true);
@@ -84,17 +97,20 @@ export default function TeachersPage() {
       if (phoneDigits.length !== 12) { setPhoneErr("To'liq 9 ta raqam kiriting"); return; }
       if (!form.password.trim()) { setError("Parol majburiy"); return; }
     }
-    if (form.subjects.length === 0) { setError("Kamida 1 ta fan kiriting"); return; }
+    if (!form.salary || parseFloat(form.salary) < 0) { setError("Maosh summasini kiriting"); return; }
     setSaving(true); setError(""); setPhoneErr("");
     try {
       const body: Record<string, unknown> = {
-        subjects: form.subjects,
+        subjects: form.subjects.length ? form.subjects : ["Umumiy"],
         salary: parseFloat(form.salary) || 0,
         salaryType: form.salaryType,
+        gender: form.gender,
       };
       if (form.name.trim())  body.name  = form.name;
       if (form.phone.trim()) body.phone = form.phone;
       if (form.email.trim()) body.email = form.email;
+      if (form.birthDate)    body.birthDate = form.birthDate;
+      if (form.joinedAt)     body.joinedAt = form.joinedAt;
       if (!editTarget) {
         body.password = form.password;
         if (activeBranchId) body.branchId = activeBranchId;
@@ -152,6 +168,13 @@ export default function TeachersPage() {
           </>
         }
       >
+        {/* Avatar (harf) — rasm yuklash keyinroq qo'shiladi */}
+        <div className="flex justify-center">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-black text-3xl shrink-0">
+            {form.name.trim()?.[0]?.toUpperCase() ?? "?"}
+          </div>
+        </div>
+
         <FormField label="Ism familiya" required={!editTarget}>
           <Input
             placeholder="Jamshid Tursunov"
@@ -161,39 +184,61 @@ export default function TeachersPage() {
           />
         </FormField>
 
+        <FormField label="Telefon raqam" required={!editTarget} error={phoneErr}>
+          <PhoneInput
+            value={form.phone}
+            onChange={v => { setForm(p => ({...p, phone: v})); setPhoneErr(""); }}
+            error={!!phoneErr}
+          />
+        </FormField>
+
         <div className="grid grid-cols-2 gap-3">
-          <FormField label="Telefon" required={!editTarget} error={phoneErr}>
-            <PhoneInput
-              value={form.phone}
-              onChange={v => { setForm(p => ({...p, phone: v})); setPhoneErr(""); }}
-              error={!!phoneErr}
+          <FormField label="Tug'ilgan sana">
+            <Input
+              type="date"
+              value={form.birthDate}
+              max={todayStr()}
+              onChange={e => setForm(p => ({...p, birthDate: e.target.value}))}
+              className="h-10"
             />
           </FormField>
-          <FormField label="Email" hint="Ixtiyoriy">
+          <FormField label="Ishga olingan sana">
             <Input
-              placeholder="email@mail.com"
-              value={form.email}
-              onChange={e => setForm(p => ({...p, email: e.target.value}))}
+              type="date"
+              value={form.joinedAt}
+              onChange={e => setForm(p => ({...p, joinedAt: e.target.value}))}
               className="h-10"
             />
           </FormField>
         </div>
 
-        <FormField
-          label={editTarget ? "Yangi parol" : "Parol"}
-          required={!editTarget}
-          hint={editTarget ? "Bo'sh qoldirsangiz o'zgarmaydi" : undefined}
-        >
-          <Input
-            type="password"
-            placeholder="Kamida 6 belgi"
-            value={form.password}
-            onChange={e => setForm(p => ({...p, password: e.target.value}))}
-            className="h-10"
+        {/* Maosh hisoblash usuli */}
+        <FormField label="Maosh hisoblash usuli" required>
+          <Segmented
+            grid
+            options={SALARY_TYPES.map(s => ({ value: s.value, label: s.tab }))}
+            value={form.salaryType}
+            onChange={v => setForm(p => ({...p, salaryType: v}))}
           />
         </FormField>
+        <div className="-mt-1">
+          <FormField label={SALARY_CFG[form.salaryType].fieldLabel} required hint={SALARY_CFG[form.salaryType].hint}>
+            <Input
+              type="number"
+              inputMode="numeric"
+              placeholder={SALARY_CFG[form.salaryType].placeholder}
+              value={form.salary}
+              onChange={e => setForm(p => ({...p, salary: e.target.value}))}
+              className="h-10"
+            />
+          </FormField>
+        </div>
 
-        <FormField label="Fanlar" required>
+        <FormField label="Jinsini tanlang">
+          <GenderPicker value={form.gender} onChange={v => setForm(p => ({...p, gender: v}))} />
+        </FormField>
+
+        <FormField label="Fanlar" hint="Ixtiyoriy — bo'sh qoldirilsa 'Umumiy' bo'ladi">
           {form.subjects.length > 0 && (
             <div className="flex gap-1.5 flex-wrap mb-2">
               {form.subjects.map(s => (
@@ -221,27 +266,28 @@ export default function TeachersPage() {
           </div>
         </FormField>
 
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="Oylik turi">
-            <select
-              value={form.salaryType}
-              onChange={e => setForm(p => ({...p, salaryType: e.target.value as any}))}
-              className="w-full h-10 px-3 text-[13px] rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-neutral-900 dark:focus:border-neutral-400 transition-colors"
-            >
-              <option value="FIXED">Belgilangan (so'm)</option>
-              <option value="PERCENT">Foizli (%)</option>
-            </select>
-          </FormField>
-          <FormField label={form.salaryType === "FIXED" ? "Oylik (so'm)" : "Foiz (%)"}>
-            <Input
-              type="number"
-              placeholder={form.salaryType === "FIXED" ? "3 000 000" : "30"}
-              value={form.salary}
-              onChange={e => setForm(p => ({...p, salary: e.target.value}))}
-              className="h-10"
-            />
-          </FormField>
-        </div>
+        <FormField label="Email" hint="Ixtiyoriy">
+          <Input
+            placeholder="email@mail.com"
+            value={form.email}
+            onChange={e => setForm(p => ({...p, email: e.target.value}))}
+            className="h-10"
+          />
+        </FormField>
+
+        <FormField
+          label={editTarget ? "Yangi parol" : "Parol"}
+          required={!editTarget}
+          hint={editTarget ? "Bo'sh qoldirsangiz o'zgarmaydi" : undefined}
+        >
+          <Input
+            type="password"
+            placeholder="Kamida 6 belgi"
+            value={form.password}
+            onChange={e => setForm(p => ({...p, password: e.target.value}))}
+            className="h-10"
+          />
+        </FormField>
 
         {error && (
           <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5">
@@ -343,7 +389,7 @@ export default function TeachersPage() {
                       </div>
                       <div className="bg-neutral-50 dark:bg-neutral-800/60 rounded-xl p-2.5 flex items-center gap-2">
                         <Wallet className="w-4 h-4 text-purple-500 shrink-0" />
-                        <div><p className="text-[10px] text-neutral-500">Oylik</p><p className="text-[12px] font-bold text-purple-700 dark:text-purple-400">{t.salaryType === "FIXED" ? fmt(t.salary) : `${t.salary}%`}</p></div>
+                        <div><p className="text-[10px] text-neutral-500">Maosh</p><p className="text-[12px] font-bold text-purple-700 dark:text-purple-400">{salaryDisplay(t.salaryType, t.salary)}</p></div>
                       </div>
                     </div>
                     <div className="flex items-center justify-between border-t border-neutral-100 dark:border-neutral-800 pt-3">
@@ -394,7 +440,7 @@ export default function TeachersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-center"><span className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">{t._count?.groups ?? 0}</span></TableCell>
-                        <TableCell><span className="text-[13px] font-bold text-purple-700 dark:text-purple-400">{t.salaryType === "FIXED" ? fmt(t.salary) : `${t.salary}%`}</span></TableCell>
+                        <TableCell><span className="text-[13px] font-bold text-purple-700 dark:text-purple-400">{salaryDisplay(t.salaryType, t.salary)}</span></TableCell>
                         <TableCell>
                           <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold",
                             t.status === "ACTIVE" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"

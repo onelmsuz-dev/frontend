@@ -14,6 +14,7 @@ import {
   Plus, X, CheckCircle, Clock, RefreshCw, BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
 import { usePayments } from "@/lib/hooks/usePayments";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import useSWR, { mutate } from "swr";
@@ -476,15 +477,9 @@ export default function FinancePage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            {s.teacher?.salaryType === "FIXED" ? (
-                              <span className="text-[11px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full font-medium">
-                                Belgilangan
-                              </span>
-                            ) : (
-                              <span className="text-[11px] bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 px-2 py-0.5 rounded-full font-medium">
-                                Foizli — {s.teacher?.salary}%
-                              </span>
-                            )}
+                            <span className="text-[11px] bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 px-2 py-0.5 rounded-full font-medium">
+                              {salaryTypeLabel(s.teacher?.salaryType)} — {salaryDisplay(s.teacher?.salaryType, s.teacher?.salary ?? 0)}
+                            </span>
                           </TableCell>
                           <TableCell className="text-right">
                             <span className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">

@@ -4,6 +4,7 @@ import { TopHeader } from "@/components/layout/top-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useTeacherSummary } from "@/lib/hooks/usePanel";
+import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
 import { Wallet, Users, BookOpen, TrendingUp, CheckCircle2, Clock } from "lucide-react";
 
 function fmtMoney(v: number) {
@@ -37,8 +38,8 @@ export default function SalaryPage() {
             <>
               <StatCard icon={BookOpen} label="Guruhlar" value={String(data?.groupCount ?? 0)} />
               <StatCard icon={Users} label="O'quvchilar" value={String(data?.totalStudents ?? 0)} />
-              <StatCard icon={Wallet} label={data?.salaryType === "PERCENT" ? "Foiz" : "Bazaviy oylik"}
-                value={data?.salaryType === "PERCENT" ? `${data?.baseSalary ?? 0}%` : fmtMoney(data?.baseSalary ?? 0)} />
+              <StatCard icon={Wallet} label={salaryTypeLabel(data?.salaryType)}
+                value={salaryDisplay(data?.salaryType, data?.baseSalary ?? 0)} />
               <StatCard icon={TrendingUp} label="Oxirgi oylik"
                 value={salaries[0] ? fmtMoney(salaries[0].calculatedSalary) : "—"} />
             </>

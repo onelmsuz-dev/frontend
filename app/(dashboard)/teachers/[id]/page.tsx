@@ -9,6 +9,7 @@ import {
   ArrowLeft, Phone, BookOpen, Users, DollarSign,
   AlertCircle, CheckCircle, XCircle,
 } from "lucide-react";
+import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -113,10 +114,10 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
               <div>
                 <p className="text-[11px] text-neutral-400 mb-0.5">Asosiy maosh</p>
                 <p className="text-[22px] font-black text-neutral-900 dark:text-neutral-100 leading-none">
-                  {teacher.salaryType === "PERCENT" ? `${teacher.salary}%` : fmt(teacher.salary)}
+                  {salaryDisplay(teacher.salaryType, teacher.salary)}
                 </p>
                 <p className="text-[11px] text-neutral-400 mt-0.5">
-                  {teacher.salaryType === "FIXED" ? "Oylik fiksirovanniy" : "Tushum foizi"}
+                  {salaryTypeLabel(teacher.salaryType)}
                 </p>
               </div>
               <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800">
