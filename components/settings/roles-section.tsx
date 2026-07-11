@@ -118,7 +118,7 @@ export function RolesSection() {
         <div className="py-12 text-center text-neutral-400">
           <Shield className="w-8 h-8 mx-auto mb-2 opacity-30" />
           <p className="text-sm">Hali maxsus rol yaratilmagan</p>
-          <p className="text-xs mt-1">Kassir, Buxgalter, Admin, Yordamchi kabi rollar yarating</p>
+          <p className="text-xs mt-1">Admin, yordamchi va boshqa rollar yarating</p>
         </div>
       ) : (
         <div className="space-y-2">

@@ -157,7 +157,7 @@ export default function TeachersPage() {
         onClose={() => setShowModal(false)}
         title={editTarget ? "O'qituvchini tahrirlash" : "Yangi o'qituvchi"}
         subtitle={editTarget ? undefined : "O'qituvchi ma'lumotlarini to'ldiring"}
-        size="md"
+        size="lg"
         footer={
           <>
             <Button onClick={submit} disabled={saving}

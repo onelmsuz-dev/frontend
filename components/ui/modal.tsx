@@ -12,6 +12,13 @@ interface ModalProps {
   size?: "sm" | "md" | "lg";
 }
 
+const modalScrollCls =
+  "overflow-y-auto flex-1 min-h-0 scroll-smooth overscroll-contain " +
+  "[scrollbar-gutter:stable] " +
+  "[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent " +
+  "[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-neutral-300 " +
+  "dark:[&::-webkit-scrollbar-thumb]:bg-neutral-600";
+
 export function Modal({ open, onClose, title, subtitle, children, footer, size = "md" }: ModalProps) {
   return (
     <ModalOverlay
@@ -24,7 +31,7 @@ export function Modal({ open, onClose, title, subtitle, children, footer, size =
       )}
     >
       <div className={cn(
-        "bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full h-full flex flex-col",
+        "bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full flex flex-col max-h-full min-h-0",
         "border border-neutral-200/60 dark:border-neutral-800",
       )}>
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
@@ -41,11 +48,11 @@ export function Modal({ open, onClose, title, subtitle, children, footer, size =
           </button>
         </div>
 
-        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
+        <div className={cn("p-4 sm:p-5 space-y-4", modalScrollCls)}>
           {children}
         </div>
 
-        <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-3 border-t border-neutral-100 dark:border-neutral-800 shrink-0 flex flex-col-reverse sm:flex-row gap-2">
+        <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-3 border-t border-neutral-100 dark:border-neutral-800 shrink-0 flex flex-col-reverse sm:flex-row gap-2 bg-white dark:bg-neutral-900 rounded-b-2xl">
           {footer}
         </div>
       </div>

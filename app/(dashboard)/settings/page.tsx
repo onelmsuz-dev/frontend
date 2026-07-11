@@ -19,17 +19,19 @@ import { useUsers } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { useOrganization } from "@/lib/hooks/useOrganization";
-import { useStaffRoles } from "@/lib/hooks/useStaffRoles";
 import { TarifSection } from "@/components/settings/tarif-section";
 import { RolesSection } from "@/components/settings/roles-section";
 import { mutate } from "swr";
 
 const ROLE_CFG: Record<string, { label: string; color: string; description: string; permissions: string[] }> = {
-  SUPER_ADMIN:  { label: "Super Admin",  color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",       description: "Barcha imkoniyatlarga to'liq kirish", permissions: ["Dashboard", "Lidlar", "O'quvchilar", "O'qituvchilar", "Kurslar", "Guruhlar", "Moliya", "Hisobotlar", "Sozlamalar"] },
-  RECEPTIONIST: { label: "Qabulxona",    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",    description: "Lidlar, o'quvchilar va to'lovlarni boshqarish", permissions: ["Dashboard", "Lidlar", "O'quvchilar", "Kurslar", "Guruhlar", "To'lovlar"] },
+  SUPER_ADMIN:  { label: "Admin",        color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",       description: "Barcha imkoniyatlarga to'liq kirish", permissions: ["Dashboard", "Lidlar", "O'quvchilar", "O'qituvchilar", "Kurslar", "Guruhlar", "Moliya", "Hisobotlar", "Sozlamalar"] },
   TEACHER:      { label: "O'qituvchi",   color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", description: "O'z guruhlari va davomatni boshqarish", permissions: ["Dashboard", "O'z guruhlari", "Davomat", "O'quvchilar (ko'rish)", "Kurslar (ko'rish)"] },
-  ACCOUNTANT:   { label: "Buxgalter",    color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400", description: "Moliya va hisobotlarni boshqarish", permissions: ["Dashboard", "To'lovlar", "Xarajatlar", "Hisobotlar", "Guruhlar (ko'rish)"] },
 };
+
+const STAFF_ROLE_OPTIONS = [
+  { role: "SUPER_ADMIN", label: "Admin",      color: ROLE_CFG.SUPER_ADMIN.color },
+  { role: "TEACHER",     label: "O'qituvchi", color: ROLE_CFG.TEACHER.color },
+] as const;
 
 const ROOM_TYPE_LABELS: Record<string, string> = {
   dars_xonasi: "Dars xonasi", kompyuter_lab: "Kompyuter lab", sport_zal: "Sport zal", akt_zal: "Akt zal",
@@ -51,7 +53,7 @@ const sections = [
   { id: "bildirishnoma", label: "Bildirishnomalar", icon: Bell },
 ];
 
-const EMPTY_USER = { name: "", phone: "", email: "", password: "", role: "RECEPTIONIST" as string, branchId: "", staffRoleId: "" };
+const EMPTY_USER = { name: "", phone: "", email: "", password: "", role: "TEACHER" as string, branchId: "", staffRoleId: "" };
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-lg", className)} />;
@@ -88,9 +90,6 @@ export default function SettingsPage() {
   const { data: usersRaw, isLoading: usersLoading } = useUsers();
   const users: any[] = Array.isArray(usersRaw) ? usersRaw : [];
 
-  const { data: staffRolesRaw } = useStaffRoles();
-  const staffRoles: any[] = Array.isArray(staffRolesRaw) ? staffRolesRaw : [];
-
   const [showUserModal,  setShowUserModal]  = useState(false);
   const [editUser,       setEditUser]       = useState<any>(null);
   const [deleteUser,     setDeleteUser]     = useState<any>(null);
@@ -124,7 +123,7 @@ export default function SettingsPage() {
       if (!userForm.password.trim()) { setUserError("Parol majburiy"); return; }
     }
     if (userForm.role === "STAFF" && !userForm.staffRoleId) {
-      setUserError("Maxsus rol tanlang"); return;
+      setUserError("Rol tanlang"); return;
     }
     setUserSaving(true); setUserError("");
     try {
@@ -306,48 +305,20 @@ export default function SettingsPage() {
         </FormField>
 
         <FormField label="Rol" required>
-          <div className="space-y-2">
-            {/* Tayyor rollar */}
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { role: "RECEPTIONIST", label: "Qabulxona", color: ROLE_CFG.RECEPTIONIST.color },
-                { role: "ACCOUNTANT",   label: "Buxgalter", color: ROLE_CFG.ACCOUNTANT.color },
-              ].map(({ role, label, color }) => (
-                <button key={role} type="button"
-                  onClick={() => setUserForm(p => ({ ...p, role, staffRoleId: "" }))}
-                  className={cn(
-                    "text-left p-2.5 rounded-xl border-2 transition-all",
-                    userForm.role === role
-                      ? "border-neutral-900 dark:border-neutral-100 bg-neutral-50 dark:bg-neutral-800"
-                      : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600"
-                  )}>
-                  <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold", color)}>{label}</span>
-                  <p className="text-[11px] text-neutral-400 mt-1">Tayyor rol</p>
-                </button>
-              ))}
-            </div>
-
-            {/* Maxsus rollar (StaffRole) */}
-            {staffRoles.filter(r => r.isActive).length > 0 && (
-              <div>
-                <p className="text-[11px] text-neutral-400 mb-1.5">Maxsus rollar</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {staffRoles.filter(r => r.isActive).map(r => (
-                    <button key={r.id} type="button"
-                      onClick={() => setUserForm(p => ({ ...p, role: "STAFF", staffRoleId: r.id }))}
-                      className={cn(
-                        "text-left p-2.5 rounded-xl border-2 transition-all",
-                        userForm.role === "STAFF" && userForm.staffRoleId === r.id
-                          ? "border-neutral-900 dark:border-neutral-100 bg-neutral-50 dark:bg-neutral-800"
-                          : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600"
-                      )}>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">{r.name}</span>
-                      <p className="text-[11px] text-neutral-400 mt-1">{r.permissions.length} ruxsat</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="grid grid-cols-2 gap-2">
+            {STAFF_ROLE_OPTIONS.map(({ role, label, color }) => (
+              <button key={role} type="button"
+                onClick={() => setUserForm(p => ({ ...p, role, staffRoleId: "" }))}
+                className={cn(
+                  "text-left p-2.5 rounded-xl border-2 transition-all",
+                  userForm.role === role
+                    ? "border-neutral-900 dark:border-neutral-100 bg-neutral-50 dark:bg-neutral-800"
+                    : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600"
+                )}>
+                <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold", color)}>{label}</span>
+                <p className="text-[11px] text-neutral-400 mt-1">{ROLE_CFG[role].description}</p>
+              </button>
+            ))}
           </div>
         </FormField>
 
@@ -472,7 +443,9 @@ export default function SettingsPage() {
 
               {/* Role legend */}
               <div className="grid grid-cols-2 gap-2">
-                {Object.entries(ROLE_CFG).map(([role, cfg]) => (
+                {STAFF_ROLE_OPTIONS.map(({ role }) => {
+                  const cfg = ROLE_CFG[role];
+                  return (
                   <div key={role} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-3">
                     <div className="flex items-center justify-between mb-1.5">
                       <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold", cfg.color)}>{cfg.label}</span>
@@ -489,7 +462,8 @@ export default function SettingsPage() {
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* User list */}
@@ -549,7 +523,11 @@ export default function SettingsPage() {
                                   <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold", cfg.color)}>
                                     {cfg.label}
                                   </span>
-                                ) : null}
+                                ) : (
+                                  <span className="text-[11px] px-2.5 py-1 rounded-lg font-semibold bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                                    {u.role}
+                                  </span>
+                                )}
                                 <button
                                   onClick={() => { setResetUser(u); setResetPassword(""); setResetError(""); }}
                                   title="Parolni tiklash"

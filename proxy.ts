@@ -5,19 +5,25 @@ import type { NextRequest } from "next/server";
 
 const { auth } = NextAuth(authConfig);
 
+function isLocalOrIpHost(hostname: string): boolean {
+  if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+  if (hostname.includes("vercel.app")) return true;
+  // 127.0.0.1 va 172.20.10.2 kabi IP'lar subdomain deb o'qilmasin
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return true;
+  if (hostname.includes(":")) return true; // IPv6
+  return false;
+}
+
 function getSubdomainFromReq(req: NextRequest): string | null {
   const host =
     req.headers.get("x-forwarded-host") ??
     req.headers.get("host") ??
     req.nextUrl.hostname;
   const hostname = host.split(":")[0].toLowerCase();
+  if (isLocalOrIpHost(hostname)) return null;
+
   const parts = hostname.split(".");
-  if (
-    parts.length >= 3 &&
-    parts[0] !== "www" &&
-    !hostname.includes("vercel.app") &&
-    !hostname.includes("localhost")
-  ) {
+  if (parts.length >= 3 && parts[0] !== "www") {
     return parts[0];
   }
   return null;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { mutate } from "swr";
-import { Plus, Minus, AlertCircle, Users, UserPlus, School } from "lucide-react";
+import { Plus, AlertCircle, Users, UserPlus, School, ChevronDown } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -183,7 +183,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       onClose={onClose}
       title={isEdit ? "O'quvchini tahrirlash" : "O'quvchi qo'shish"}
       subtitle={isEdit ? initial?.name : "Yangi o'quvchi ma'lumotlarini to'ldiring"}
-      size="md"
+      size="lg"
       footer={
         <>
           <Button onClick={submit} disabled={saving}
@@ -374,9 +374,18 @@ function Section({ icon: Icon, title, open, onToggle, children }: {
         <span className="flex items-center gap-2 text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">
           <Icon className="w-4 h-4 text-neutral-400" /> {title}
         </span>
-        {open ? <Minus className="w-4 h-4 text-neutral-400" /> : <Plus className="w-4 h-4 text-neutral-400" />}
+        <ChevronDown className={cn("w-4 h-4 text-neutral-400 transition-transform duration-300 ease-out", open && "rotate-180")} />
       </button>
-      {open && <div className="px-3.5 pb-3.5 pt-1">{children}</div>}
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="px-3.5 pb-3.5 pt-1">{children}</div>
+        </div>
+      </div>
     </div>
   );
 }
