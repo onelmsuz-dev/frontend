@@ -54,33 +54,33 @@ export default function AdmodeLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-600/30">
-            <ShieldCheck className="w-7 h-7 text-white" />
+            <ShieldCheck className="w-7 h-7 text-neutral-900 dark:text-white" />
           </div>
-          <h1 className="text-2xl font-black text-white">OneRoom</h1>
+          <h1 className="text-2xl font-black text-neutral-900 dark:text-white">OneRoom</h1>
           <p className="text-sm text-neutral-500 mt-1">Platform boshqaruv paneli</p>
         </div>
 
-        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl p-6 space-y-5">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl p-6 space-y-5">
           <div>
-            <h2 className="text-[17px] font-bold text-white">Kirish</h2>
+            <h2 className="text-[17px] font-bold text-neutral-900 dark:text-white">Kirish</h2>
             <p className="text-[13px] text-neutral-500 mt-0.5">Platform admin huquqi talab etiladi</p>
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 bg-red-950/50 border border-red-900/50 rounded-xl px-3 py-2.5">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <p className="text-[13px] font-medium text-red-400">{error}</p>
+            <div className="flex items-center gap-2 bg-red-950/50 border border-red-200 dark:border-red-900/50 rounded-xl px-3 py-2.5">
+              <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+              <p className="text-[13px] font-medium text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Phone field - dark theme */}
             <div className="space-y-1.5">
-              <label className="text-[12px] font-semibold text-neutral-400 uppercase tracking-wide">
+              <label className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
                 Telefon raqam
               </label>
               <div className={cn(
@@ -89,9 +89,9 @@ export default function AdmodeLoginPage() {
                   ? "border-red-700 bg-red-950/30"
                   : isComplete
                     ? "border-blue-600 focus-within:border-blue-500"
-                    : "border-neutral-700 focus-within:border-neutral-500"
+                    : "border-neutral-300 dark:border-neutral-700 focus-within:border-neutral-500"
               )}>
-                <div className="flex items-center gap-1.5 pl-3 pr-2.5 shrink-0 h-full border-r border-neutral-700">
+                <div className="flex items-center gap-1.5 pl-3 pr-2.5 shrink-0 h-full border-r border-neutral-300 dark:border-neutral-700">
                   <span className="text-base leading-none">🇺🇿</span>
                   <span className="text-[13px] font-bold text-neutral-500 tracking-tight">+998</span>
                 </div>
@@ -101,12 +101,12 @@ export default function AdmodeLoginPage() {
                   value={toDisplay(phone)}
                   onChange={handlePhoneChange}
                   placeholder="90 123 45 67"
-                  className="flex-1 px-3 h-full text-[14px] font-medium bg-transparent outline-none tracking-wide text-white placeholder:text-neutral-600 placeholder:font-normal placeholder:tracking-normal"
+                  className="flex-1 px-3 h-full text-[14px] font-medium bg-transparent outline-none tracking-wide text-neutral-900 dark:text-white text-neutral-400 dark:text-neutral-600 placeholder:font-normal placeholder:tracking-normal"
                 />
                 {isComplete && !error && (
                   <div className="pr-3 shrink-0">
                     <div className="w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center">
-                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12">
+                      <svg className="w-2.5 h-2.5 text-neutral-900 dark:text-white" fill="none" viewBox="0 0 12 12">
                         <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </div>
@@ -117,7 +117,7 @@ export default function AdmodeLoginPage() {
 
             {/* Password field */}
             <div className="space-y-1.5">
-              <label className="text-[12px] font-semibold text-neutral-400 uppercase tracking-wide">
+              <label className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
                 Parol
               </label>
               <div className="relative">
@@ -128,10 +128,10 @@ export default function AdmodeLoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  className="pl-9 pr-10 h-10 bg-neutral-800 border-neutral-700 text-white placeholder:text-neutral-600 focus:border-blue-600 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="pl-9 pr-10 h-10 bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white text-neutral-400 dark:text-neutral-600 focus:border-blue-600 focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
                 <button type="button" onClick={() => setShowPass(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors">
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors">
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>

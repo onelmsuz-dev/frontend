@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { mutate } from "swr";
-import { Plus, AlertCircle, Users, UserPlus, School, ChevronDown } from "lucide-react";
+import { Plus, AlertCircle, Users, UserPlus, ChevronDown } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,7 @@ function emptyForm() {
   return {
     name: "", phone: "", birthDate: "", password: "",
     source: "", gender: "MALE" as Gender,
-    parentPhone: "", parentName: "", school: "",
+    parentPhone: "", parentName: "",
     groupId: "", joinDate: todayStr(),
   };
 }
@@ -55,7 +55,6 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
   // Collapsible sections
   const [openGroup, setOpenGroup] = useState(true);
   const [openParent, setOpenParent] = useState(false);
-  const [openSchool, setOpenSchool] = useState(false);
 
   // Group filters
   const [fBranch, setFBranch] = useState("");
@@ -81,14 +80,13 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
         password: "", source: initial.source ?? "",
         gender: initial.gender ?? "MALE",
         parentPhone: initial.parentPhone ?? "", parentName: initial.parentName ?? "",
-        school: initial.school ?? "", groupId: "", joinDate: todayStr(),
+        groupId: "", joinDate: todayStr(),
       });
       setOpenParent(!!(initial.parentPhone || initial.parentName));
-      setOpenSchool(!!initial.school);
       setOpenGroup(false);
     } else {
       setForm(emptyForm());
-      setOpenGroup(true); setOpenParent(false); setOpenSchool(false);
+      setOpenGroup(true); setOpenParent(false);
     }
     setFErr({}); setErr("");
     setFBranch(""); setFTeacher(""); setFCourse(""); setShowNewGroup(false);
@@ -156,7 +154,6 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       if (form.source) body.source = form.source;
       if (form.parentPhone.replace(/\D/g, "").length === 12) body.parentPhone = form.parentPhone;
       if (form.parentName.trim()) body.parentName = form.parentName.trim();
-      if (form.school.trim()) body.school = form.school.trim();
 
       if (!isEdit) {
         if (form.groupId) { body.groupId = form.groupId; body.joinDate = form.joinDate; }
@@ -344,14 +341,6 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
               onChange={e => setForm(p => ({ ...p, parentName: e.target.value }))} className="h-10" />
           </FormField>
         </div>
-      </Section>
-
-      {/* ── Maktab ── */}
-      <Section icon={School} title="Maktab" open={openSchool} onToggle={() => setOpenSchool(o => !o)}>
-        <FormField label="Maktab nomi / raqami">
-          <Input placeholder="Masalan: 25-maktab" value={form.school}
-            onChange={e => setForm(p => ({ ...p, school: e.target.value }))} className="h-10" />
-        </FormField>
       </Section>
 
       {err && (

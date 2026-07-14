@@ -6,61 +6,39 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
-import { PhoneInput } from "@/components/ui/phone-input";
-import { FormField } from "@/components/ui/form-field";
+import { ConfirmDeleteModal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 import type { Branch, Room } from "@/types";
 import {
-  Shield, Plus, Trash2, User, Building, Bell,
-  MapPin, DoorOpen, Phone, Users, CheckCircle, XCircle, Pencil, KeyRound, CreditCard,
+  Plus, Trash2, Users, Building, Bell,
+  MapPin, DoorOpen, Phone, CreditCard,
 } from "lucide-react";
-import { useUsers } from "@/lib/hooks/useUsers";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { useOrganization } from "@/lib/hooks/useOrganization";
 import { TarifSection } from "@/components/settings/tarif-section";
-import { RolesSection } from "@/components/settings/roles-section";
+import { StaffSection } from "@/components/settings/staff-section";
 import { mutate } from "swr";
-
-const ROLE_CFG: Record<string, { label: string; color: string; description: string; permissions: string[] }> = {
-  SUPER_ADMIN:  { label: "Admin",        color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",       description: "Barcha imkoniyatlarga to'liq kirish", permissions: ["Dashboard", "Lidlar", "O'quvchilar", "O'qituvchilar", "Kurslar", "Guruhlar", "Moliya", "Hisobotlar", "Sozlamalar"] },
-  TEACHER:      { label: "O'qituvchi",   color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400", description: "O'z guruhlari va davomatni boshqarish", permissions: ["Dashboard", "O'z guruhlari", "Davomat", "O'quvchilar (ko'rish)", "Kurslar (ko'rish)"] },
-};
-
-const STAFF_ROLE_OPTIONS = [
-  { role: "SUPER_ADMIN", label: "Admin",      color: ROLE_CFG.SUPER_ADMIN.color },
-  { role: "TEACHER",     label: "O'qituvchi", color: ROLE_CFG.TEACHER.color },
-] as const;
 
 const ROOM_TYPE_LABELS: Record<string, string> = {
   dars_xonasi: "Dars xonasi", kompyuter_lab: "Kompyuter lab", sport_zal: "Sport zal", akt_zal: "Akt zal",
 };
-const ROOM_TYPE_COLORS: Record<string, string> = {
-  dars_xonasi: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  kompyuter_lab: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  sport_zal: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  akt_zal: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-};
 
 const sections = [
   { id: "markaz",        label: "O'quv markaz",    icon: Building },
-  { id: "tarif",        label: "Tarif",            icon: CreditCard },
-  { id: "filliallar",   label: "Filliallar",       icon: MapPin },
-  { id: "xonalar",      label: "Xonalar",          icon: DoorOpen },
-  { id: "rollar",       label: "Rollar",           icon: Shield },
-  { id: "hodimlar",     label: "Hodimlar",         icon: User },
+  { id: "tarif",         label: "Tarif",           icon: CreditCard },
+  { id: "filliallar",    label: "Filliallar",      icon: MapPin },
+  { id: "xonalar",       label: "Xonalar",         icon: DoorOpen },
+  { id: "xodimlar",      label: "Xodimlar",        icon: Users },
   { id: "bildirishnoma", label: "Bildirishnomalar", icon: Bell },
 ];
-
-const EMPTY_USER = { name: "", phone: "", email: "", password: "", role: "TEACHER" as string, branchId: "", staffRoleId: "" };
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-lg", className)} />;
 }
 
 export default function SettingsPage() {
-  const [activeSection, setActiveSection] = useState("hodimlar");
+  const [activeSection, setActiveSection] = useState("xodimlar");
 
   const { data: branchesRaw, isLoading: branchesLoading } = useBranches();
   const branches: Branch[] = Array.isArray(branchesRaw) ? branchesRaw : [];
@@ -86,97 +64,6 @@ export default function SettingsPage() {
   const [orgSaving, setOrgSaving] = useState(false);
   const [orgErr, setOrgErr] = useState("");
 
-  // Staff / users state
-  const { data: usersRaw, isLoading: usersLoading } = useUsers();
-  const users: any[] = Array.isArray(usersRaw) ? usersRaw : [];
-
-  const [showUserModal,  setShowUserModal]  = useState(false);
-  const [editUser,       setEditUser]       = useState<any>(null);
-  const [deleteUser,     setDeleteUser]     = useState<any>(null);
-  const [userForm,       setUserForm]       = useState(EMPTY_USER);
-  const [userSaving,     setUserSaving]     = useState(false);
-  const [userError,      setUserError]      = useState("");
-
-  // Password reset
-  const [resetUser,      setResetUser]      = useState<any>(null);
-  const [resetPassword,  setResetPassword]  = useState("");
-  const [resetSaving,    setResetSaving]    = useState(false);
-  const [resetError,     setResetError]     = useState("");
-
-  function openCreateUser() {
-    setEditUser(null); setUserForm(EMPTY_USER); setUserError(""); setShowUserModal(true);
-  }
-  function openEditUser(u: any) {
-    setEditUser(u);
-    setUserForm({
-      name: u.name ?? "", phone: u.phone ?? "", email: u.email ?? "", password: "",
-      role: u.role, branchId: u.branchId ?? "", staffRoleId: u.staffRoleId ?? "",
-    });
-    setUserError(""); setShowUserModal(true);
-  }
-
-  async function submitUser() {
-    if (!editUser) {
-      const digits = userForm.phone.replace(/\D/g, "");
-      if (!userForm.name.trim()) { setUserError("Ism majburiy"); return; }
-      if (digits.length !== 12)  { setUserError("To'liq telefon raqam kiriting"); return; }
-      if (!userForm.password.trim()) { setUserError("Parol majburiy"); return; }
-    }
-    if (userForm.role === "STAFF" && !userForm.staffRoleId) {
-      setUserError("Rol tanlang"); return;
-    }
-    setUserSaving(true); setUserError("");
-    try {
-      const body: Record<string, unknown> = { role: userForm.role };
-      if (userForm.name.trim())     body.name  = userForm.name;
-      if (userForm.phone.trim())    body.phone = userForm.phone;
-      if (userForm.email.trim())    body.email = userForm.email;
-      if (userForm.password.trim()) body.password = userForm.password;
-      if (userForm.branchId)        body.branchId = userForm.branchId;
-      body.staffRoleId = userForm.role === "STAFF" ? userForm.staffRoleId : "";
-
-      const url    = editUser ? `/api/users/${editUser.id}` : "/api/users";
-      const method = editUser ? "PATCH" : "POST";
-      const res    = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const data   = await res.json();
-      if (!res.ok) { setUserError(data.error ?? "Xatolik"); return; }
-      mutate("/api/users");
-      setShowUserModal(false);
-    } catch { setUserError("Serverga ulanib bo'lmadi"); }
-    finally { setUserSaving(false); }
-  }
-
-  async function toggleActive(u: any) {
-    await fetch(`/api/users/${u.id}`, {
-      method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !u.isActive }),
-    });
-    mutate("/api/users");
-  }
-
-  async function confirmResetPassword() {
-    if (!resetUser || resetPassword.length < 6) { setResetError("Kamida 6 belgi kiriting"); return; }
-    setResetSaving(true); setResetError("");
-    try {
-      const res = await fetch(`/api/users/${resetUser.id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: resetPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setResetError(data.error ?? "Xatolik"); return; }
-      setResetUser(null); setResetPassword("");
-    } catch { setResetError("Serverga ulanib bo'lmadi"); }
-    finally { setResetSaving(false); }
-  }
-
-  async function confirmDeleteUser() {
-    if (!deleteUser) return;
-    setUserSaving(true);
-    await fetch(`/api/users/${deleteUser.id}`, { method: "DELETE" });
-    mutate("/api/users");
-    setDeleteUser(null); setUserSaving(false);
-  }
-
   async function addBranch() {
     if (!newBranch.name.trim()) { setBranchErr("Filial nomi majburiy"); return; }
     setBranchSaving(true); setBranchErr("");
@@ -193,7 +80,11 @@ export default function SettingsPage() {
 
   async function confirmDeleteBranch() {
     if (!deleteBranch) return;
-    await fetch(`/api/branches/${deleteBranch.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/branches/${deleteBranch.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setBranchErr(data.error ?? "Filialni o'chirib bo'lmadi");
+    }
     mutate("/api/branches");
     setDeleteBranch(null);
   }
@@ -235,149 +126,6 @@ export default function SettingsPage() {
   return (
     <div>
       <TopHeader title="Sozlamalar" subtitle="Tizim va markaz sozlamalari" />
-
-      <Modal
-        open={showUserModal}
-        onClose={() => setShowUserModal(false)}
-        title={editUser ? "Hodimni tahrirlash" : "Yangi hodim qo'shish"}
-        subtitle={editUser ? undefined : "Hodim ma'lumotlarini to'ldiring"}
-        size="md"
-        footer={
-          <>
-            <Button onClick={submitUser} disabled={userSaving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
-              {userSaving ? "Saqlanmoqda..." : editUser ? "Saqlash" : "Qo'shish"}
-            </Button>
-            <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowUserModal(false)}>Bekor</Button>
-          </>
-        }
-      >
-        <FormField label="Ism familiya" required={!editUser}>
-          <Input
-            placeholder="Sarvar Abdullayev"
-            value={userForm.name}
-            onChange={e => setUserForm(p => ({...p, name: e.target.value}))}
-            className="h-10"
-          />
-        </FormField>
-
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="Telefon" required={!editUser}>
-            <PhoneInput
-              value={userForm.phone}
-              onChange={v => setUserForm(p => ({...p, phone: v}))}
-              error={userError.includes("telefon")}
-            />
-          </FormField>
-          <FormField label="Email" hint="Ixtiyoriy">
-            <Input
-              placeholder="email@mail.com"
-              value={userForm.email}
-              onChange={e => setUserForm(p => ({...p, email: e.target.value}))}
-              className="h-10"
-            />
-          </FormField>
-        </div>
-
-        <FormField
-          label={editUser ? "Yangi parol" : "Parol"}
-          required={!editUser}
-          hint={editUser ? "Bo'sh qoldirsangiz o'zgarmaydi" : undefined}
-        >
-          <Input
-            type="password"
-            placeholder="Kamida 6 belgi"
-            value={userForm.password}
-            onChange={e => setUserForm(p => ({...p, password: e.target.value}))}
-            className="h-10"
-          />
-        </FormField>
-
-        <FormField label="Filial">
-          <select
-            value={userForm.branchId}
-            onChange={e => setUserForm(p => ({ ...p, branchId: e.target.value }))}
-            className="w-full h-10 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 outline-none"
-          >
-            <option value="">Filial tanlanmagan</option>
-            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
-        </FormField>
-
-        <FormField label="Rol" required>
-          <div className="grid grid-cols-2 gap-2">
-            {STAFF_ROLE_OPTIONS.map(({ role, label, color }) => (
-              <button key={role} type="button"
-                onClick={() => setUserForm(p => ({ ...p, role, staffRoleId: "" }))}
-                className={cn(
-                  "text-left p-2.5 rounded-xl border-2 transition-all",
-                  userForm.role === role
-                    ? "border-neutral-900 dark:border-neutral-100 bg-neutral-50 dark:bg-neutral-800"
-                    : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600"
-                )}>
-                <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold", color)}>{label}</span>
-                <p className="text-[11px] text-neutral-400 mt-1">{ROLE_CFG[role].description}</p>
-              </button>
-            ))}
-          </div>
-        </FormField>
-
-        {userError && (
-          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5">
-            <svg className="w-3.5 h-3.5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth="2"/><path d="M12 8v4m0 4h.01" strokeWidth="2" strokeLinecap="round"/></svg>
-            <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{userError}</p>
-          </div>
-        )}
-      </Modal>
-
-      {/* Password reset modal */}
-      <Modal
-        open={!!resetUser}
-        onClose={() => { setResetUser(null); setResetPassword(""); setResetError(""); }}
-        title="Parolni tiklash"
-        subtitle={resetUser ? `${resetUser.name} uchun yangi parol o'rnating` : ""}
-        size="sm"
-        footer={
-          <>
-            <Button onClick={confirmResetPassword} disabled={resetSaving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
-              {resetSaving ? "Saqlanmoqda..." : "Parolni yangilash"}
-            </Button>
-            <Button variant="outline" className="h-9 px-4 text-[13px]"
-              onClick={() => { setResetUser(null); setResetPassword(""); setResetError(""); }}>
-              Bekor
-            </Button>
-          </>
-        }
-      >
-        <FormField label="Yangi parol" required>
-          <Input
-            type="password"
-            placeholder="Kamida 6 belgi"
-            value={resetPassword}
-            onChange={e => { setResetPassword(e.target.value); setResetError(""); }}
-            className="h-10"
-            autoFocus
-          />
-        </FormField>
-        {resetError && (
-          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5">
-            <svg className="w-3.5 h-3.5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth="2"/><path d="M12 8v4m0 4h.01" strokeWidth="2" strokeLinecap="round"/></svg>
-            <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{resetError}</p>
-          </div>
-        )}
-      </Modal>
-
-      <ConfirmDeleteModal
-        open={!!deleteUser}
-        onClose={() => setDeleteUser(null)}
-        onConfirm={confirmDeleteUser}
-        loading={userSaving}
-        title="Hodimni o'chirish"
-        description={<>
-          <span className="font-semibold text-neutral-700 dark:text-neutral-300">{deleteUser?.name}</span> tizimdan o'chirilsinmi? Foydalanuvchi tizimga kira olmaydi.
-        </>}
-      />
 
       <ConfirmDeleteModal
         open={!!deleteBranch}
@@ -425,152 +173,11 @@ export default function SettingsPage() {
 
         <div className="flex-1 max-w-3xl space-y-4">
 
-          {/* ── Hodimlar (real API) ── */}
-          {activeSection === "hodimlar" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Tizim foydalanuvchilari</p>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    {usersLoading ? "Yuklanmoqda..." : `${users.length} ta hodim — har biri o'z roliga mos ma'lumotlarni ko'radi`}
-                  </p>
-                </div>
-                <Button size="sm" onClick={openCreateUser}
-                  className="gap-1.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-xs h-8">
-                  <Plus className="w-3.5 h-3.5" /> Hodim qo'shish
-                </Button>
-              </div>
-
-              {/* Role legend */}
-              <div className="grid grid-cols-2 gap-2">
-                {STAFF_ROLE_OPTIONS.map(({ role }) => {
-                  const cfg = ROLE_CFG[role];
-                  return (
-                  <div key={role} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold", cfg.color)}>{cfg.label}</span>
-                      <span className="text-[11px] text-neutral-400 font-semibold">
-                        {users.filter(u => u.role === role).length} ta
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {cfg.permissions.slice(0, 4).map(p => (
-                        <span key={p} className="text-[10px] bg-neutral-100 dark:bg-neutral-800 text-neutral-500 px-1.5 py-0.5 rounded">{p}</span>
-                      ))}
-                      {cfg.permissions.length > 4 && (
-                        <span className="text-[10px] text-neutral-400">+{cfg.permissions.length - 4}</span>
-                      )}
-                    </div>
-                  </div>
-                  );
-                })}
-              </div>
-
-              {/* User list */}
-              <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
-                <CardContent className="p-0">
-                  {usersLoading
-                    ? Array.from({length: 4}).map((_, i) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
-                          <Skeleton className="w-9 h-9 rounded-full" />
-                          <div className="flex-1 space-y-1.5">
-                            <Skeleton className="h-3 w-32" />
-                            <Skeleton className="h-2.5 w-24" />
-                          </div>
-                          <Skeleton className="h-6 w-20 rounded-full" />
-                        </div>
-                      ))
-                    : users.length === 0
-                      ? (
-                          <div className="py-12 text-center text-neutral-400">
-                            <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                            <p className="text-sm">Hali hodim qo'shilmagan</p>
-                          </div>
-                        )
-                      : users.map((u: any) => {
-                          const cfg = ROLE_CFG[u.role];
-                          return (
-                            <div key={u.id}
-                              className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                              <div className="flex items-center gap-3">
-                                <div className={cn(
-                                  "w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0",
-                                  u.isActive
-                                    ? "bg-gradient-to-br from-blue-400 to-purple-500"
-                                    : "bg-neutral-300 dark:bg-neutral-600"
-                                )}>
-                                  {u.name?.[0] ?? "?"}
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{u.name}</p>
-                                    {!u.isActive && (
-                                      <span className="text-[10px] bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded font-medium">Bloklangan</span>
-                                    )}
-                                  </div>
-                                  <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                                    {u.phone}{u.branch?.name ? ` · ${u.branch.name}` : ""}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2">
-                                {u.role === "STAFF" && u.staffRole ? (
-                                  <span className="text-[11px] px-2.5 py-1 rounded-lg font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-                                    {u.staffRole.name}
-                                  </span>
-                                ) : cfg ? (
-                                  <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold", cfg.color)}>
-                                    {cfg.label}
-                                  </span>
-                                ) : (
-                                  <span className="text-[11px] px-2.5 py-1 rounded-lg font-semibold bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
-                                    {u.role}
-                                  </span>
-                                )}
-                                <button
-                                  onClick={() => { setResetUser(u); setResetPassword(""); setResetError(""); }}
-                                  title="Parolni tiklash"
-                                  className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
-                                  <KeyRound className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => openEditUser(u)}
-                                  title="Tahrirlash"
-                                  className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                                  <Pencil className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => toggleActive(u)}
-                                  title={u.isActive ? "Bloklash" : "Faollashtirish"}
-                                  className={cn(
-                                    "w-7 h-7 flex items-center justify-center rounded-lg transition-colors",
-                                    u.isActive
-                                      ? "text-neutral-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                                      : "text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
-                                  )}>
-                                  {u.isActive ? <XCircle className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                                </button>
-                                {u.role !== "SUPER_ADMIN" && (
-                                  <button onClick={() => setDeleteUser(u)}
-                                    title="O'chirish"
-                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })
-                  }
-                </CardContent>
-              </Card>
-            </div>
-          )}
+          {/* ── Xodimlar va rollar ── */}
+          {activeSection === "xodimlar" && <StaffSection branches={branches} />}
 
           {/* ── Tarif ── */}
           {activeSection === "tarif" && <TarifSection />}
-
-          {/* ── Rollar (builder) ── */}
-          {activeSection === "rollar" && <RolesSection />}
 
           {/* ── O'quv markaz ── */}
           {activeSection === "markaz" && (
@@ -599,6 +206,9 @@ export default function SettingsPage() {
                         <Input defaultValue={orgData?.subdomain ?? ""} disabled className="h-9 text-sm rounded-r-none bg-neutral-50 dark:bg-neutral-800" />
                         <span className="flex items-center px-3 bg-neutral-100 dark:bg-neutral-800 border border-l-0 border-neutral-200 dark:border-neutral-700 rounded-r-lg text-sm text-neutral-500">.oneroom.uz</span>
                       </div>
+                      <p className="text-[11px] text-neutral-400 mt-1.5">
+                        Subdomen — markazning asosiy filiali. Qolgan filiallar shunga qo'shiladi.
+                      </p>
                     </div>
                     <div>
                       <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Tarif rejasi</Label>
@@ -647,6 +257,7 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
               )}
+              {!showBranchForm && branchErr && <p className="text-[12px] text-red-600 dark:text-red-400">{branchErr}</p>}
               {branchesLoading ? (
                 <div className="space-y-3">{Array.from({length: 2}).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}</div>
               ) : branches.length === 0 ? (
@@ -663,16 +274,25 @@ export default function SettingsPage() {
                           <div className="flex items-start gap-3">
                             <div className="w-10 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center shrink-0"><Building className="w-5 h-5 text-neutral-500" /></div>
                             <div>
-                              <h3 className="font-semibold text-[14px]">{branch.name}</h3>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-[14px]">{branch.name}</h3>
+                                {branch.isMain && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900">
+                                    Asosiy
+                                  </span>
+                                )}
+                              </div>
                               {branch.address && <div className="flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3 text-neutral-400" /><p className="text-xs text-neutral-500">{branch.address}</p></div>}
                               {branch.phone && <div className="flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3 text-neutral-400" /><p className="text-xs text-neutral-500">{branch.phone}</p></div>}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-neutral-400 hover:text-red-600" onClick={() => setDeleteBranch(branch)}>
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
+                          {!branch.isMain && (
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-neutral-400 hover:text-red-600" onClick={() => setDeleteBranch(branch)}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                         <div className="flex gap-4 mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
                           <div className="flex items-center gap-1.5"><DoorOpen className="w-3.5 h-3.5 text-neutral-400" /><span className="text-xs text-neutral-500">{branch.roomCount ?? 0} xona</span></div>

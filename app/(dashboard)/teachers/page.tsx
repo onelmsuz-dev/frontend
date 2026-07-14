@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { Search, Phone, Mail, Users, BookOpen, Wallet, LayoutGrid, List, Plus, Pencil, Trash2, AlertCircle, ChevronRight } from "lucide-react";
+import { Search, Phone, Users, BookOpen, Wallet, LayoutGrid, List, Plus, Pencil, Trash2, AlertCircle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { useBranch } from "@/lib/contexts/branch-context";
@@ -30,7 +30,7 @@ function Skeleton({ className }: { className?: string }) {
 
 type ViewMode = "grid" | "list";
 const EMPTY = {
-  name: "", phone: "", email: "", password: "",
+  name: "", phone: "", password: "",
   birthDate: "", joinedAt: todayStr(),
   gender: "MALE" as "MALE" | "FEMALE",
   subjects: [] as string[], salary: "",
@@ -73,7 +73,7 @@ export default function TeachersPage() {
   function openEdit(t: any) {
     setEditTarget(t);
     setForm({
-      name: t.user?.name ?? "", phone: t.phone ?? "", email: t.email ?? "",
+      name: t.user?.name ?? "", phone: t.phone ?? "",
       password: "",
       birthDate: t.birthDate ? String(t.birthDate).slice(0, 10) : "",
       joinedAt: t.joinedAt ? String(t.joinedAt).slice(0, 10) : todayStr(),
@@ -108,7 +108,6 @@ export default function TeachersPage() {
       };
       if (form.name.trim())  body.name  = form.name;
       if (form.phone.trim()) body.phone = form.phone;
-      if (form.email.trim()) body.email = form.email;
       if (form.birthDate)    body.birthDate = form.birthDate;
       if (form.joinedAt)     body.joinedAt = form.joinedAt;
       if (!editTarget) {
@@ -266,15 +265,6 @@ export default function TeachersPage() {
           </div>
         </FormField>
 
-        <FormField label="Email" hint="Ixtiyoriy">
-          <Input
-            placeholder="email@mail.com"
-            value={form.email}
-            onChange={e => setForm(p => ({...p, email: e.target.value}))}
-            className="h-10"
-          />
-        </FormField>
-
         <FormField
           label={editTarget ? "Yangi parol" : "Parol"}
           required={!editTarget}
@@ -396,7 +386,6 @@ export default function TeachersPage() {
                       <p className="text-[11px] text-neutral-400">{t.phone}</p>
                       <div className="flex gap-0.5">
                         <a href={`tel:${t.phone}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 transition-colors"><Phone className="w-3.5 h-3.5" /></a>
-                        {t.email && <a href={`mailto:${t.email}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"><Mail className="w-3.5 h-3.5" /></a>}
                         <button onClick={() => openEdit(t)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"><Pencil className="w-3.5 h-3.5" /></button>
                         <button onClick={() => { setError(""); setDeleteTarget(t); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                         <Link href={`/teachers/${t.id}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><ChevronRight className="w-3.5 h-3.5" /></Link>

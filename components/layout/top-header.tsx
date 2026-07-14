@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useNotifications, type Notification } from "@/lib/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 import { BranchHeaderControls } from "@/components/layout/branch-header-controls";
+import { FullscreenToggle } from "@/components/fullscreen-toggle";
 
 interface TopHeaderProps {
   title: string;
@@ -280,6 +281,7 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
       <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
         <BranchHeaderControls />
         <GlobalSearch />
+        <FullscreenToggle className="hidden sm:flex w-9 h-9 rounded-xl" />
 
         {/* Bell */}
         <div className="relative" ref={panelRef}>

@@ -2,6 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { FullscreenToggle } from "@/components/fullscreen-toggle";
 import { LogOut } from "lucide-react";
 
 export default function PanelLayout({ children }: { children: React.ReactNode }) {
@@ -20,6 +21,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
             <span className="font-bold text-[15px] text-neutral-900 dark:text-neutral-100">OneRoom</span>
           </div>
           <div className="flex items-center gap-2">
+            <FullscreenToggle />
             <ThemeToggle />
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-[12px] font-bold">
               {name[0]?.toUpperCase() ?? "U"}

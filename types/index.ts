@@ -145,6 +145,8 @@ export interface Branch {
   address: string;
   phone: string;
   managerName?: string;
+  /** Markaz ochilganda subdomen nomi bilan yaratilgan filial — o'chirilmaydi. */
+  isMain?: boolean;
   studentCount: number;
   roomCount: number;
   status: "active" | "inactive";

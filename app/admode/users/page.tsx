@@ -8,14 +8,14 @@ import { Search, KeyRound, ShieldOff, ShieldCheck, X } from "lucide-react";
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
-  SUPER_ADMIN:  { label: "Super Admin",  color: "bg-red-900/40 text-red-300" },
-  TEACHER:      { label: "O'qituvchi",   color: "bg-green-900/40 text-green-300" },
-  RECEPTIONIST: { label: "Qabulxona",    color: "bg-blue-900/40 text-blue-300" },
-  ACCOUNTANT:   { label: "Buxgalter",    color: "bg-purple-900/40 text-purple-300" },
+  SUPER_ADMIN:  { label: "Super Admin",  color: "bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-300" },
+  TEACHER:      { label: "O'qituvchi",   color: "bg-green-50 dark:bg-green-900/40 text-green-700 dark:text-green-300" },
+  RECEPTIONIST: { label: "Qabulxona",    color: "bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" },
+  ACCOUNTANT:   { label: "Buxgalter",    color: "bg-purple-50 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300" },
 };
 
 function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse bg-neutral-800 rounded", className)} />;
+  return <div className={cn("animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded", className)} />;
 }
 
 export default function AdmodeUsersPage() {
@@ -68,10 +68,10 @@ export default function AdmodeUsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-black text-white">Foydalanuvchilar</h1>
+          <h1 className="text-xl font-black text-neutral-900 dark:text-white">Foydalanuvchilar</h1>
           <p className="text-sm text-neutral-500 mt-0.5">Barcha tashkilot hodimlarini boshqaring</p>
         </div>
-        <span className="text-[12px] text-neutral-500 bg-neutral-800 px-3 py-1.5 rounded-lg">
+        <span className="text-[12px] text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 rounded-lg">
           {isLoading ? "..." : `${users.length} ta hodim`}
         </span>
       </div>
@@ -83,7 +83,7 @@ export default function AdmodeUsersPage() {
           value={q}
           onChange={e => setQ(e.target.value)}
           placeholder="Ism yoki telefon qidiring..."
-          className="w-full h-10 pl-9 pr-4 bg-neutral-900 border border-neutral-800 rounded-xl text-[13px] text-white placeholder-neutral-600 outline-none focus:border-blue-600 transition-colors"
+          className="w-full h-10 pl-9 pr-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-[13px] text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-blue-600 transition-colors"
         />
       </div>
 
@@ -95,7 +95,7 @@ export default function AdmodeUsersPage() {
           ))}
         </div>
       ) : users.length === 0 ? (
-        <div className="text-center py-16 text-neutral-600">
+        <div className="text-center py-16 text-neutral-400 dark:text-neutral-600">
           <p className="text-sm">Hodim topilmadi</p>
         </div>
       ) : (
@@ -104,32 +104,32 @@ export default function AdmodeUsersPage() {
             <div key={key}>
               {/* Org header */}
               <div className="flex items-center gap-2 mb-2">
-                <p className="text-[12px] font-bold text-neutral-300">{group.orgName}</p>
-                <span className="text-[10px] text-neutral-600">{group.subdomain}.oneroom.uz</span>
-                <span className="text-[10px] text-neutral-600 ml-auto">{group.users.length} ta</span>
+                <p className="text-[12px] font-bold text-neutral-300 dark:text-neutral-700 dark:text-neutral-300">{group.orgName}</p>
+                <span className="text-[10px] text-neutral-400 dark:text-neutral-600">{group.subdomain}.oneroom.uz</span>
+                <span className="text-[10px] text-neutral-400 dark:text-neutral-600 ml-auto">{group.users.length} ta</span>
               </div>
 
-              <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
+              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden">
                 {group.users.map((u, i) => {
-                  const roleCfg = ROLE_LABELS[u.role] ?? { label: u.role, color: "bg-neutral-800 text-neutral-400" };
+                  const roleCfg = ROLE_LABELS[u.role] ?? { label: u.role, color: "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400" };
                   return (
                     <div key={u.id}
                       className={cn(
-                        "flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors",
-                        i < group.users.length - 1 && "border-b border-neutral-800"
+                        "flex items-center justify-between px-4 py-3 hover:bg-neutral-100 dark:hover:bg-white/5 transition-colors",
+                        i < group.users.length - 1 && "border-b border-neutral-200 dark:border-neutral-800"
                       )}>
                       <div className="flex items-center gap-3">
                         <div className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0",
-                          u.isActive ? "bg-blue-600" : "bg-neutral-700"
+                          "w-8 h-8 rounded-full flex items-center justify-center text-neutral-900 dark:text-white text-[12px] font-bold shrink-0",
+                          u.isActive ? "bg-blue-600" : "bg-neutral-200 dark:bg-neutral-700"
                         )}>
                           {u.name?.[0]?.toUpperCase() ?? "?"}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-[13px] font-semibold text-white">{u.name}</p>
+                            <p className="text-[13px] font-semibold text-neutral-900 dark:text-white">{u.name}</p>
                             {!u.isActive && (
-                              <span className="text-[9px] font-bold bg-red-900/40 text-red-400 px-1.5 py-0.5 rounded">Bloklangan</span>
+                              <span className="text-[9px] font-bold bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded">Bloklangan</span>
                             )}
                           </div>
                           <p className="text-[11px] text-neutral-500">{u.phone}</p>
@@ -143,7 +143,7 @@ export default function AdmodeUsersPage() {
                         <button
                           onClick={() => { setResetUser(u); setNewPass(""); setSaveErr(""); setSaveOk(false); }}
                           title="Parolni tiklash"
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-500 hover:text-amber-400 hover:bg-amber-900/20 transition-colors">
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-500 hover:text-amber-400 bg-amber-50 dark:bg-amber-900/20 transition-colors">
                           <KeyRound className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -159,22 +159,22 @@ export default function AdmodeUsersPage() {
       {/* Password reset modal */}
       {resetUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-2xl">
+          <div className="w-full max-w-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-2xl">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-[15px] font-bold text-white">Parolni tiklash</h3>
+                <h3 className="text-[15px] font-bold text-neutral-900 dark:text-white">Parolni tiklash</h3>
                 <p className="text-[12px] text-neutral-500 mt-0.5">{resetUser.name} · {resetUser.phone}</p>
               </div>
               <button
                 onClick={() => { setResetUser(null); setNewPass(""); setSaveErr(""); }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 transition-colors">
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-[11px] font-semibold text-neutral-400 block mb-1.5">Yangi parol</label>
+                <label className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 block mb-1.5">Yangi parol</label>
                 <input
                   type="password"
                   placeholder="Kamida 6 belgi"
@@ -182,18 +182,18 @@ export default function AdmodeUsersPage() {
                   onChange={e => { setNewPass(e.target.value); setSaveErr(""); }}
                   onKeyDown={e => e.key === "Enter" && submitReset()}
                   autoFocus
-                  className="w-full h-10 px-3 bg-neutral-800 border border-neutral-700 rounded-xl text-[13px] text-white placeholder-neutral-600 outline-none focus:border-blue-500 transition-colors"
+                  className="w-full h-10 px-3 bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-xl text-[13px] text-neutral-900 dark:text-white placeholder-neutral-400 dark:placeholder-neutral-600 outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
 
               {saveErr && (
-                <p className="text-[12px] text-red-400 bg-red-900/20 border border-red-900/40 rounded-lg px-3 py-2">
+                <p className="text-[12px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-lg px-3 py-2">
                   {saveErr}
                 </p>
               )}
 
               {saveOk && (
-                <p className="text-[12px] text-green-400 bg-green-900/20 border border-green-900/40 rounded-lg px-3 py-2">
+                <p className="text-[12px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-lg px-3 py-2">
                   Parol muvaffaqiyatli yangilandi!
                 </p>
               )}
@@ -207,7 +207,7 @@ export default function AdmodeUsersPage() {
                 </button>
                 <button
                   onClick={() => { setResetUser(null); setNewPass(""); setSaveErr(""); }}
-                  className="h-9 px-4 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[13px] rounded-xl transition-colors">
+                  className="h-9 px-4 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-300 dark:text-neutral-700 dark:text-neutral-300 text-[13px] rounded-xl transition-colors">
                   Bekor
                 </button>
               </div>
