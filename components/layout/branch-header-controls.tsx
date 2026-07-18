@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { ChevronDown, Plus, Check } from "lucide-react";
 import { mutate } from "swr";
 import { useBranch } from "@/lib/contexts/branch-context";
+import { useMe } from "@/lib/hooks/useMe";
 import { AcceptPaymentModal } from "@/components/finance/accept-payment-modal";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
@@ -20,8 +21,13 @@ import { cn } from "@/lib/utils";
 
 export function BranchHeaderControls() {
   const { data: session } = useSession();
+  const { me } = useMe();
   const role = session?.user?.role;
   const canManage = role === "SUPER_ADMIN";
+
+  // TO'LOV tugmasi: o'qituvchi bo'lsa faqat to'lov huquqi berilganda ko'rinadi.
+  // Boshqa rollar (admin/xodim) — avvalgidek ko'radi.
+  const canAcceptPayment = role === "TEACHER" ? me?.acceptsPayments === true : true;
 
   const {
     branches,
@@ -64,13 +70,15 @@ export function BranchHeaderControls() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setShowPay(true)}
-        className="inline-flex items-center h-9 px-3 sm:px-4 rounded-lg bg-[#5B6FD6] hover:bg-[#4d60c4] text-white text-[11px] sm:text-[12px] font-bold tracking-wide transition-colors shrink-0"
-      >
-        TO&apos;LOV
-      </button>
+      {canAcceptPayment && (
+        <button
+          type="button"
+          onClick={() => setShowPay(true)}
+          className="inline-flex items-center h-9 px-3 sm:px-4 rounded-lg bg-[#5B6FD6] hover:bg-[#4d60c4] text-white text-[11px] sm:text-[12px] font-bold tracking-wide transition-colors shrink-0"
+        >
+          TO&apos;LOV
+        </button>
+      )}
 
       <DropdownMenu>
         <DropdownMenuTrigger

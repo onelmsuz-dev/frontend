@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
+import { useBranch } from "@/lib/contexts/branch-context";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -24,7 +25,9 @@ async function patcher(url: string, { arg }: { arg: unknown }) {
 }
 
 export function useTeachers() {
-  return useSWR("/api/teachers", fetcher);
+  const { activeBranchId } = useBranch();
+  const qs = activeBranchId ? `?branchId=${activeBranchId}` : "";
+  return useSWR(`/api/teachers${qs}`, fetcher);
 }
 
 export function useTeacher(id: string) {

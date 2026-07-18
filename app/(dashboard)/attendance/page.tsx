@@ -98,10 +98,12 @@ export default function AttendancePage() {
   const isLessonDay = group?.scheduleDays?.includes(DOW_TO_VALUE[currentDate.getDay()]);
 
   function setStatus(studentId: string, status: Status) {
+    if (!isLessonDay) return;
     setLocalStatus(prev => ({ ...prev, [studentId]: status }));
     setDirty(true);
   }
   function markAll(status: Status) {
+    if (!isLessonDay) return;
     const map: Record<string, Status> = {};
     students.forEach(s => { map[s.id] = status; });
     setLocalStatus(prev => ({ ...prev, ...map }));
@@ -112,7 +114,7 @@ export default function AttendancePage() {
   }
 
   async function saveAttendance() {
-    if (!selectedGroup || students.length === 0) return;
+    if (!selectedGroup || students.length === 0 || !isLessonDay) return;
     setSaving(true);
     try {
       const records = students
@@ -220,6 +222,18 @@ export default function AttendancePage() {
           </div>
         )}
 
+        {/* Dars kuni emas — ogohlantirish */}
+        {group && !isLessonDay && (
+          <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl px-4 py-3">
+            <CalendarDays className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-[13px] text-amber-700 dark:text-amber-400">
+              <strong>{UZ_DAYS[currentDate.getDay()]}</strong> — bu guruh jadvalida dars kuni emas.
+              Davomat faqat dars kunlarida belgilanadi
+              (<strong>{(group.scheduleDays ?? []).map((d: string) => WEEKDAY_SHORT[d] ?? d).join(", ") || "—"}</strong>).
+            </p>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {(ALL_STATUSES.map(k => [k, STATUS_CFG[k]] as const)).map(([key, cfg]) => {
@@ -266,7 +280,7 @@ export default function AttendancePage() {
         )}
 
         {/* Quick actions */}
-        {students.length > 0 && (
+        {students.length > 0 && isLessonDay && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 mr-1">Tez belgilash:</span>
             <button onClick={() => markAll("KELDI")}
@@ -310,7 +324,9 @@ export default function AttendancePage() {
                           const active = status === st;
                           return (
                             <button key={st} onClick={() => setStatus(s.id, st)}
+                              disabled={!isLessonDay}
                               className={cn("px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
+                                !isLessonDay && "opacity-40 cursor-not-allowed",
                                 active
                                   ? cfg.activeCls
                                   : cn("bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 hover:border-current", cfg.cls))}>
@@ -367,7 +383,7 @@ export default function AttendancePage() {
       </div>
 
       {/* Sticky save bar */}
-      {students.length > 0 && (
+      {students.length > 0 && isLessonDay && (
         <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-t border-neutral-200 dark:border-neutral-800 px-5 py-3 flex items-center gap-3">
           <div className="text-[12px] text-neutral-500 dark:text-neutral-400">
             {stats.unmarked > 0

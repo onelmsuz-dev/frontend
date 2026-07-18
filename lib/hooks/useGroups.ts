@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
+import { useBranch } from "@/lib/contexts/branch-context";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -30,10 +31,12 @@ async function deleter(url: string) {
 }
 
 export function useGroups(params?: { courseId?: string; teacherId?: string; status?: string }) {
+  const { activeBranchId } = useBranch();
   const query = new URLSearchParams();
   if (params?.courseId)  query.set("courseId",  params.courseId);
   if (params?.teacherId) query.set("teacherId", params.teacherId);
   if (params?.status)    query.set("status",    params.status);
+  if (activeBranchId)    query.set("branchId",  activeBranchId);
   const qs = query.toString();
   return useSWR(`/api/groups${qs ? `?${qs}` : ""}`, fetcher);
 }

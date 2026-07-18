@@ -14,6 +14,7 @@ export interface MeData {
   branchId: string | null;
   staffRoleId: string | null;
   orgSubdomain: string | null;
+  acceptsPayments?: boolean;
   permissions: string[];
 }
 

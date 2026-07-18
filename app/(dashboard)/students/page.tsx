@@ -36,6 +36,11 @@ const PAY_CFG: Record<string, { label: string; cls: string }> = {
   QISMAN:  { label: "Qisman",   cls: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
 };
 
+/** To'lov holati balansdan olinadi — "Jami qarz" bilan bir manba. */
+function payStatus(balance: number): keyof typeof PAY_CFG {
+  return balance < 0 ? "QARZDOR" : "TOLANDI";
+}
+
 function revalidate() {
   mutate((key: string) => typeof key === "string" && key.startsWith("/api/students"), undefined, { revalidate: true });
 }
@@ -199,7 +204,7 @@ export default function StudentsPage() {
                     const group   = sg?.group;
                     const teacher = group?.teacher?.user;
                     const enroll  = ENROLL_CFG[sg?.enrollmentStatus ?? (s.isActive ? "FAOL" : "SINOV")];
-                    const pay     = PAY_CFG[sg?.paymentStatus ?? "TOLANDI"];
+                    const pay     = PAY_CFG[payStatus(s.balance ?? 0)];
                     return (
                       <TableRow key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                         <TableCell>

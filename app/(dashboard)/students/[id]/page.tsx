@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { mutate } from "swr";
 import {
   Phone, Calendar, DollarSign, ArrowLeft, AlertCircle,
-  Plus, LogOut, Shuffle,
+  Plus, LogOut, Shuffle, UserCheck,
 } from "lucide-react";
 
 function fmt(v: number) {
@@ -60,9 +60,25 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const [transferErr,       setTransferErr]       = useState("");
   const [transferring,      setTransferring]      = useState(false);
 
+  const [activating, setActivating] = useState(false);
+
   function revalidateAll() {
     revalidate();
     mutate((k: string) => typeof k === "string" && k.startsWith("/api/students"), undefined, { revalidate: true });
+  }
+
+  // ── Faollashtirish (sinovdan → faol) ─────────────────────────────────────────
+  async function activateStudent() {
+    const sg = student?.groups?.find((g: any) => g.enrollmentStatus !== "CHIQIB_KETGAN");
+    if (!sg) return;
+    setActivating(true);
+    try {
+      await fetch(`/api/student-groups/${sg.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enrollmentStatus: "FAOL" }),
+      });
+      revalidateAll();
+    } finally { setActivating(false); }
   }
 
   // ── Payment ──────────────────────────────────────────────────────────────────
@@ -303,6 +319,15 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 </span>
               </div>
             </div>
+
+            {/* Sinovdagi o'quvchini faollashtirish */}
+            {activeSg && activeSg.enrollmentStatus === "SINOV" && (
+              <button onClick={activateStudent} disabled={activating}
+                className="w-full mb-3 flex items-center justify-center gap-1.5 h-9 rounded-xl text-[13px] font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-60">
+                <UserCheck className="w-4 h-4" />
+                {activating ? "Faollashtirilmoqda..." : "Faollashtirish (kurs to'lovi yoziladi)"}
+              </button>
+            )}
             <div className="space-y-2">
               <a href={`tel:${student.phone}`}
                 className="flex items-center gap-2 text-[13px] text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors">

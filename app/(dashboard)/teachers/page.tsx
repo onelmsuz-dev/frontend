@@ -35,6 +35,7 @@ const EMPTY = {
   gender: "MALE" as "MALE" | "FEMALE",
   subjects: [] as string[], salary: "",
   salaryType: "FIXED" as SalaryType,
+  acceptsPayments: true,
 };
 
 export default function TeachersPage() {
@@ -80,6 +81,7 @@ export default function TeachersPage() {
       gender: t.gender ?? "MALE",
       subjects: t.subjects ?? [], salary: String(t.salary ?? ""),
       salaryType: t.salaryType ?? "FIXED",
+      acceptsPayments: t.acceptsPayments ?? true,
     });
     setSubInput(""); setError(""); setPhoneErr(""); setShowModal(true);
   }
@@ -105,6 +107,7 @@ export default function TeachersPage() {
         salary: parseFloat(form.salary) || 0,
         salaryType: form.salaryType,
         gender: form.gender,
+        acceptsPayments: form.acceptsPayments,
       };
       if (form.name.trim())  body.name  = form.name;
       if (form.phone.trim()) body.phone = form.phone;
@@ -236,6 +239,27 @@ export default function TeachersPage() {
         <FormField label="Jinsini tanlang">
           <GenderPicker value={form.gender} onChange={v => setForm(p => ({...p, gender: v}))} />
         </FormField>
+
+        {/* To'lov qabul qilish huquqi */}
+        <button type="button"
+          onClick={() => setForm(p => ({ ...p, acceptsPayments: !p.acceptsPayments }))}
+          className="w-full flex items-center justify-between gap-3 rounded-xl border border-neutral-200 dark:border-neutral-700 px-3.5 py-3 text-left hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
+          <div>
+            <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Guruh o'quvchilaridan to'lov qabul qiladimi?</p>
+            <p className="text-[11px] text-neutral-400 mt-0.5">
+              Ha bo'lsa — o'qituvchi panelida "TO'LOV" tugmasi ko'rinadi
+            </p>
+          </div>
+          <span className={cn(
+            "relative w-10 h-6 rounded-full transition-colors shrink-0",
+            form.acceptsPayments ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-600",
+          )}>
+            <span className={cn(
+              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+              form.acceptsPayments && "translate-x-4",
+            )} />
+          </span>
+        </button>
 
         <FormField label="Fanlar" hint="Ixtiyoriy — bo'sh qoldirilsa 'Umumiy' bo'ladi">
           {form.subjects.length > 0 && (
