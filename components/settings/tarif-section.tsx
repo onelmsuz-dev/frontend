@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
+import { ReceiptUpload } from "@/components/ui/receipt-upload";
 import { cn } from "@/lib/utils";
 import {
   useSubscription, usePlans, useSubmitSubscriptionRequest, type PlanLimits,
@@ -237,8 +238,8 @@ export function TarifSection() {
           <FormField label="Necha oy">
             <Input type="number" min={1} max={12} value={months} onChange={e => setMonths(e.target.value)} className="h-10" />
           </FormField>
-          <FormField label="Chek rasmi havolasi (URL)" hint="Ixtiyoriy — to'lov chekini yuklab, havolasini qo'ying">
-            <Input placeholder="https://..." value={receiptUrl} onChange={e => setReceiptUrl(e.target.value)} className="h-10" />
+          <FormField label="Chek rasmi" hint="To'lov chekini rasm ko'rinishida yuklang">
+            <ReceiptUpload value={receiptUrl} onChange={setReceiptUrl} />
           </FormField>
           <FormField label="Izoh" hint="Ixtiyoriy">
             <Textarea placeholder="To'lov haqida qo'shimcha ma'lumot" value={note} onChange={e => setNote(e.target.value)} rows={2} />

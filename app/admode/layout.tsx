@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { FullscreenToggle } from "@/components/fullscreen-toggle";
 import {
   LayoutDashboard, Building2, CreditCard, LogOut, ShieldCheck,
-  Settings, Users, BarChart3,
+  Settings, Users, BarChart3, MessageSquare,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -24,6 +24,7 @@ const SECTIONS = [
     items: [
       { href: "/admode/organizations", label: "Tashkilotlar", icon: Building2 },
       { href: "/admode/subscriptions", label: "Obunalar",     icon: CreditCard },
+      { href: "/admode/sms",           label: "SMS paketlar", icon: MessageSquare },
       { href: "/admode/users",         label: "Foydalanuvchilar", icon: Users },
     ],
   },

@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, CalendarDays,
   ClipboardList, Wallet, BarChart3, Settings, UserCheck, Target,
-  Home, Megaphone, Layers, Banknote, Wrench, type LucideIcon,
+  Home, Megaphone, Layers, Banknote, Wrench, MessageSquare, type LucideIcon,
 } from "lucide-react";
 
 export interface NavItem {
@@ -28,7 +28,10 @@ export const navSections: NavSection[] = [
   },
   {
     id: "crm", label: "CRM", icon: Megaphone,
-    items: [{ href: "/leads", label: "Lidlar", icon: Target, perm: "leads.view" }],
+    items: [
+      { href: "/leads", label: "Lidlar", icon: Target, perm: "leads.view" },
+      { href: "/sms", label: "SMS xabarlar", icon: MessageSquare, perm: "sms.view" },
+    ],
   },
   {
     id: "talim", label: "Ta'lim", icon: BookOpen,
