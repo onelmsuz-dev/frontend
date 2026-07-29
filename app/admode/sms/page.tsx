@@ -5,6 +5,7 @@ import useSWR, { mutate } from "swr";
 import { cn } from "@/lib/utils";
 import {
   MessageSquare, Check, X, Package, Plus, Receipt, Clock, Building2,
+  FileText, Send, ArrowRight, ShieldCheck,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -25,13 +26,27 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-lg", className)} />;
 }
 
+const TPL_STATUS_LABEL: Record<string, string> = {
+  PENDING: "Navbatda", IN_REVIEW: "Jarayonda", APPROVED: "Tasdiqlangan", REJECTED: "Rad etilgan",
+};
+const TPL_STATUS_COLOR: Record<string, string> = {
+  PENDING:   "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400",
+  IN_REVIEW: "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  APPROVED:  "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  REJECTED:  "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+};
+
 export default function AdmodeSmsPage() {
   const { data: pendingRaw, isLoading: reqLoading } = useSWR(
     "/api/admode/sms/package-requests?status=PENDING", fetcher, { refreshInterval: 30_000 });
   const { data: orgsRaw, isLoading: orgLoading } = useSWR("/api/admode/organizations", fetcher);
+  const { data: tplRaw, isLoading: tplLoading } = useSWR(
+    "/api/admode/sms/templates", fetcher, { refreshInterval: 30_000 });
 
   const pending: any[] = Array.isArray(pendingRaw) ? pendingRaw : [];
   const orgs: any[] = Array.isArray(orgsRaw) ? orgsRaw : [];
+  const templates: any[] = Array.isArray(tplRaw) ? tplRaw : [];
+  const openTemplates = templates.filter(t => t.status === "PENDING" || t.status === "IN_REVIEW");
 
   const [busy, setBusy] = useState<string | null>(null);
   const [viewReceipt, setViewReceipt] = useState<string | null>(null);
@@ -41,6 +56,12 @@ export default function AdmodeSmsPage() {
   const [addQty, setAddQty] = useState(100);
   const [addCustom, setAddCustom] = useState("");
   const [adding, setAdding] = useState(false);
+
+  // Test SMS
+  const [testPhone, setTestPhone] = useState("");
+  const [testMsg, setTestMsg] = useState("Bu Eskiz dan test");
+  const [testBusy, setTestBusy] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function review(id: string, action: "APPROVE" | "REJECT") {
     let note: string | undefined;
@@ -54,6 +75,37 @@ export default function AdmodeSmsPage() {
       mutate("/api/admode/sms/package-requests?status=PENDING");
       mutate("/api/admode/organizations");
     } finally { setBusy(null); }
+  }
+
+  async function reviewTemplate(id: string, action: "IN_REVIEW" | "APPROVE" | "REJECT") {
+    let note: string | undefined;
+    if (action === "REJECT") note = window.prompt("Rad etish sababi:") ?? undefined;
+    setBusy(id);
+    try {
+      const res = await fetch(`/api/admode/sms/templates/${id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, note }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error ?? "Xatolik"); }
+      mutate("/api/admode/sms/templates");
+    } finally { setBusy(null); }
+  }
+
+  async function sendTest() {
+    if (!testPhone.trim() || !testMsg.trim()) return;
+    setTestBusy(true); setTestResult(null);
+    try {
+      const res = await fetch("/api/admode/sms/test-send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: testPhone.trim(), message: testMsg.trim() }),
+      });
+      const data = await res.json();
+      setTestResult(res.ok
+        ? { ok: true, text: `Yuborildi${data.eskizId ? ` (ID: ${data.eskizId})` : ""}` }
+        : { ok: false, text: data.error ?? "Yuborilmadi" });
+    } catch {
+      setTestResult({ ok: false, text: "Serverga ulanib bo'lmadi" });
+    } finally { setTestBusy(false); }
   }
 
   async function addPackage() {
@@ -78,6 +130,85 @@ export default function AdmodeSmsPage() {
           <MessageSquare className="w-5 h-5 text-blue-600" /> SMS paketlar
         </h1>
         <p className="text-sm text-neutral-500 mt-0.5">To'lov so'rovlarini tasdiqlang va markazlarga paket qo'shing</p>
+      </div>
+
+      {/* Test SMS — shlyuz kredensiallarini tekshirish */}
+      <div>
+        <p className="text-[13px] font-bold text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-emerald-500" /> Test SMS
+        </p>
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 space-y-3">
+          <p className="text-[12px] text-neutral-400">
+            Eskiz.uz kredensiallari (.env) to'g'ri ishlayotganini tekshiring — bu markaz balansidan yechilmaydi.
+            Tasdiqlangan matningiz bo'lsa uni, bo'lmasa test rejimidagi tayyor matnlardan birini yuboring
+            (masalan: "Bu Eskiz dan test").
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-2">
+            <input value={testPhone} onChange={e => setTestPhone(e.target.value)} placeholder="+998901234567"
+              className="h-10 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-blue-500" />
+            <input value={testMsg} onChange={e => setTestMsg(e.target.value)} placeholder="Xabar matni"
+              className="h-10 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-blue-500" />
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={sendTest} disabled={testBusy || !testPhone.trim() || !testMsg.trim()}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-[12px] font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-60">
+              <Send className="w-3.5 h-3.5" /> {testBusy ? "Yuborilmoqda..." : "Test yuborish"}
+            </button>
+            {testResult && (
+              <span className={cn("text-[12px] font-semibold", testResult.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+                {testResult.text}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Matn moderatsiyasi */}
+      <div>
+        <p className="text-[13px] font-bold text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-1.5">
+          <FileText className="w-4 h-4 text-indigo-500" /> Matn moderatsiyasi
+          {openTemplates.length > 0 && <span className="bg-indigo-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{openTemplates.length}</span>}
+        </p>
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+          {tplLoading ? (
+            <div className="p-4 space-y-3">{[1, 2].map(i => <Skeleton key={i} className="h-14" />)}</div>
+          ) : templates.length === 0 ? (
+            <p className="text-[13px] text-neutral-400 text-center py-10">Hali matn yuborilmagan</p>
+          ) : templates.map(t => (
+            <div key={t.id} className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">
+                    {t.title} <span className="text-neutral-400 font-normal">· {t.organization?.name}</span>
+                  </p>
+                  <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-1">{t.text}</p>
+                  {t.note && <p className="text-[11px] text-neutral-400 mt-1">Izoh: {t.note}</p>}
+                </div>
+                <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0", TPL_STATUS_COLOR[t.status])}>
+                  {TPL_STATUS_LABEL[t.status] ?? t.status}
+                </span>
+              </div>
+              {(t.status === "PENDING" || t.status === "IN_REVIEW") && (
+                <div className="flex items-center gap-1.5 mt-2.5">
+                  {t.status === "PENDING" && (
+                    <button onClick={() => reviewTemplate(t.id, "IN_REVIEW")} disabled={busy === t.id}
+                      className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg text-[12px] font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-60">
+                      <ArrowRight className="w-3.5 h-3.5" /> Eskiz'ga yubordim
+                    </button>
+                  )}
+                  <button onClick={() => reviewTemplate(t.id, "APPROVE")} disabled={busy === t.id}
+                    className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-[12px] font-semibold bg-green-600 hover:bg-green-500 text-white transition-colors disabled:opacity-60">
+                    <Check className="w-3.5 h-3.5" /> Tasdiqlash
+                  </button>
+                  <button onClick={() => reviewTemplate(t.id, "REJECT")} disabled={busy === t.id}
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Kutayotgan so'rovlar */}

@@ -5,6 +5,7 @@ import { mutate } from "swr";
 import {
   MessageSquare, Send, Users, GraduationCap, UserCog, Wallet,
   CheckCircle2, XCircle, AlertTriangle, Search, Package, Clock,
+  Plus, FileText, ShieldAlert,
 } from "lucide-react";
 import { TopHeader } from "@/components/layout/top-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +16,7 @@ import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { ReceiptUpload } from "@/components/ui/receipt-upload";
 import { cn } from "@/lib/utils";
-import { useSms } from "@/lib/hooks/useSms";
+import { useSms, useSmsTemplates, useSubmitSmsTemplate } from "@/lib/hooks/useSms";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 
@@ -37,17 +38,32 @@ const STATUS_COLOR: Record<string, string> = {
   REJECTED: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
 };
 
+const TPL_STATUS_LABEL: Record<string, string> = {
+  PENDING: "Navbatda", IN_REVIEW: "Jarayonda", APPROVED: "Tasdiqlangan", REJECTED: "Rad etilgan",
+};
+const TPL_STATUS_COLOR: Record<string, string> = {
+  PENDING:   "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400",
+  IN_REVIEW: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  APPROVED:  "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  REJECTED:  "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+};
+
 export default function SmsPage() {
   const { data: sms, isLoading } = useSms();
+  const { data: templatesRaw, isLoading: tplLoading } = useSmsTemplates();
   const { data: studentsRaw } = useStudents();
   const { data: teachersRaw } = useTeachers();
   const students: any[] = Array.isArray(studentsRaw) ? studentsRaw : [];
   const teachers: any[] = Array.isArray(teachersRaw) ? teachersRaw : [];
+  const templates: any[] = Array.isArray(templatesRaw) ? templatesRaw : [];
+  const approvedTemplates = templates.filter(t => t.status === "APPROVED");
 
   const balance = sms?.balance ?? 0;
   const configured = sms?.configured ?? false;
 
   // Compose
+  const [composeMode, setComposeMode] = useState<"template" | "free">("template");
+  const [templateId, setTemplateId] = useState("");
   const [message, setMessage] = useState("");
   const [audiences, setAudiences] = useState<Set<Audience>>(new Set(["students"]));
   const [scope, setScope] = useState<"all" | "selected">("all");
@@ -57,6 +73,16 @@ export default function SmsPage() {
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ sent: number; failed: number; total: number } | null>(null);
   const [err, setErr] = useState("");
+
+  const selectedTemplate = approvedTemplates.find(t => t.id === templateId);
+
+  // Yangi matn qo'shish (moderatsiyaga)
+  const [showAddTpl, setShowAddTpl] = useState(false);
+  const [tplTitle, setTplTitle] = useState("");
+  const [tplText, setTplText] = useState("");
+  const [tplNote, setTplNote] = useState("");
+  const [tplErr, setTplErr] = useState("");
+  const { trigger: submitTpl, isMutating: tplSaving } = useSubmitSmsTemplate();
 
   // Buy package
   const [showBuy, setShowBuy] = useState(false);
@@ -106,7 +132,9 @@ export default function SmsPage() {
 
   async function sendSms() {
     setErr(""); setResult(null);
-    if (!message.trim()) { setErr("Xabar matnini kiriting"); return; }
+    const usingTemplate = composeMode === "template";
+    if (usingTemplate && !templateId) { setErr("Tasdiqlangan matnni tanlang"); return; }
+    if (!usingTemplate && !message.trim()) { setErr("Xabar matnini kiriting"); return; }
     if (audiences.size === 0) { setErr("Kamida bitta oluvchi turini tanlang"); return; }
     if (estimate === 0) { setErr("Oluvchi topilmadi"); return; }
     if (estimate > balance) { setErr(`Balans yetarli emas: ${estimate} ta kerak, ${balance} ta bor`); return; }
@@ -116,7 +144,7 @@ export default function SmsPage() {
       const res = await fetch("/api/sms/send", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: message.trim(),
+          ...(usingTemplate ? { templateId } : { message: message.trim() }),
           audiences: [...audiences],
           scope,
           ...(scope === "selected" ? { studentIds: [...selStudents], teacherIds: [...selTeachers] } : {}),
@@ -125,10 +153,24 @@ export default function SmsPage() {
       const data = await res.json();
       if (!res.ok) { setErr(data.error ?? "Yuborishda xatolik"); return; }
       setResult({ sent: data.sent, failed: data.failed, total: data.total });
-      setMessage("");
+      setMessage(""); setTemplateId("");
       mutate("/api/sms");
     } catch { setErr("Serverga ulanib bo'lmadi"); }
     finally { setSending(false); }
+  }
+
+  async function submitNewTemplate() {
+    setTplErr("");
+    if (!tplTitle.trim()) { setTplErr("Nom kiriting"); return; }
+    if (tplText.trim().length < 5) { setTplErr("Matn juda qisqa"); return; }
+    try {
+      await submitTpl({ title: tplTitle.trim(), text: tplText.trim(), note: tplNote.trim() || undefined } as any);
+      mutate("/api/sms/templates");
+      setShowAddTpl(false);
+      setTplTitle(""); setTplText(""); setTplNote("");
+    } catch (e: any) {
+      setTplErr(e?.error ?? "Xatolik yuz berdi");
+    }
   }
 
   const pkg = (sms?.packages ?? []).find(p => p.quantity === buyQty);
@@ -201,6 +243,50 @@ export default function SmsPage() {
           </div>
         )}
 
+        {/* Mening matnlarim (moderatsiya) */}
+        <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+          <CardContent className="p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-neutral-400" />
+                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Mening matnlarim</p>
+              </div>
+              <Button size="sm" onClick={() => { setShowAddTpl(true); setTplErr(""); }}
+                className="gap-1.5 h-8 text-[12px] bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900">
+                <Plus className="w-3.5 h-3.5" /> Matn qo'shish
+              </Button>
+            </div>
+            <p className="text-[11px] text-neutral-400">
+              Eskiz.uz talabiga ko'ra, xabar yuborishdan oldin matn moderatsiyadan o'tishi shart.
+              Bir marta qo'shsangiz — tasdiqlangandan so'ng doim qayta ishlatiladi.
+            </p>
+            {tplLoading ? (
+              <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />)}</div>
+            ) : templates.length === 0 ? (
+              <p className="text-[12px] text-neutral-400 py-3 text-center">Hali matn qo'shilmagan</p>
+            ) : (
+              <div className="space-y-1.5">
+                {templates.map(t => (
+                  <div key={t.id} className="flex items-start justify-between gap-3 rounded-xl border border-neutral-100 dark:border-neutral-800 px-3 py-2.5">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{t.title}</p>
+                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0", TPL_STATUS_COLOR[t.status])}>
+                          {TPL_STATUS_LABEL[t.status] ?? t.status}
+                        </span>
+                      </div>
+                      <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-2">{t.text}</p>
+                      {t.status === "REJECTED" && t.reviewNote && (
+                        <p className="text-[11px] text-red-500 mt-1">Sabab: {t.reviewNote}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Xabar yuborish */}
         <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
           <CardContent className="p-5 space-y-4">
@@ -209,10 +295,64 @@ export default function SmsPage() {
               <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Yangi xabar</p>
             </div>
 
-            <FormField label="Xabar matni" hint={`${message.length} belgi${message.length > 160 ? " · 160 dan oshsa 2 SMS hisoblanadi" : ""}`}>
-              <Textarea rows={3} placeholder="Assalomu alaykum! ..." value={message}
-                onChange={e => setMessage(e.target.value)} />
-            </FormField>
+            {/* Rejim: shablondan yoki erkin matn */}
+            <div className="flex gap-2">
+              {([["template", "Tasdiqlangan matn"], ["free", "Erkin matn"]] as const).map(([v, l]) => (
+                <button key={v} type="button" onClick={() => setComposeMode(v)}
+                  className={cn("h-9 px-4 rounded-xl text-[12px] font-semibold border transition-all",
+                    composeMode === v ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-neutral-900"
+                                      : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400")}>
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            {composeMode === "template" ? (
+              approvedTemplates.length === 0 ? (
+                <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-3.5 py-3">
+                  <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-[12px] text-amber-700 dark:text-amber-400">
+                    Hali tasdiqlangan matningiz yo'q. Yuqorida <strong>"Matn qo'shish"</strong> orqali yuboring —
+                    admin tasdiqlagach shu yerda tanlab yuborasiz.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[12px] font-medium text-neutral-500 mb-1.5">Matnni tanlang</p>
+                  <div className="flex flex-wrap gap-2">
+                    {approvedTemplates.map(t => (
+                      <button key={t.id} type="button" onClick={() => setTemplateId(t.id)}
+                        className={cn("h-9 px-3.5 rounded-xl text-[12px] font-semibold border-2 transition-all",
+                          templateId === t.id ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
+                                               : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400")}>
+                        {t.title}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedTemplate && (
+                    <div className="mt-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800/60 px-3.5 py-2.5">
+                      <p className="text-[13px] text-neutral-700 dark:text-neutral-300">{selectedTemplate.text}</p>
+                      {selectedTemplate.text.includes("{ism}") && (
+                        <p className="text-[11px] text-neutral-400 mt-1">{"{ism}"} — har bir oluvchiga o'z ismi bilan yuboriladi</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            ) : (
+              <>
+                <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-3 py-2">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                    Moderatsiyadan o'tmagan matn operator tomonidan yetkazilmasligi mumkin.
+                  </p>
+                </div>
+                <FormField label="Xabar matni" hint={`${message.length} belgi${message.length > 160 ? " · 160 dan oshsa 2 SMS hisoblanadi" : ""}`}>
+                  <Textarea rows={3} placeholder="Assalomu alaykum! ..." value={message}
+                    onChange={e => setMessage(e.target.value)} />
+                </FormField>
+              </>
+            )}
 
             {/* Oluvchi turlari */}
             <div>
@@ -389,6 +529,39 @@ export default function SmsPage() {
             <Textarea rows={2} placeholder="Qo'shimcha ma'lumot" value={buyNote} onChange={e => setBuyNote(e.target.value)} />
           </FormField>
           {buyErr && <p className="text-[12px] text-red-600 dark:text-red-400">{buyErr}</p>}
+        </div>
+      </Modal>
+
+      {/* Yangi matn qo'shish (moderatsiyaga) */}
+      <Modal open={showAddTpl} onClose={() => setShowAddTpl(false)}
+        title="Yangi matn qo'shish" subtitle="Moderatsiyaga yuboriladi — 1 soatdan 1 kungacha tekshiriladi" size="md"
+        footer={
+          <>
+            <Button onClick={submitNewTemplate} disabled={tplSaving}
+              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+              {tplSaving ? "Yuborilmoqda..." : "Moderatsiyaga yuborish"}
+            </Button>
+            <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowAddTpl(false)}>Bekor</Button>
+          </>
+        }>
+        <div className="space-y-3">
+          <FormField label="Nom" hint="Faqat siz uchun — masalan, 'To'lov eslatmasi'">
+            <Input placeholder="To'lov eslatmasi" value={tplTitle} onChange={e => setTplTitle(e.target.value)} className="h-10" />
+          </FormField>
+          <FormField label="Matn" hint="Matnni SO'NGGI ko'rinishida yozing — abonentga qanday borsa, shundayligicha">
+            <Textarea rows={3} placeholder="Hurmatli {ism}! Siz bugun darsga qatnashmadingiz." value={tplText}
+              onChange={e => setTplText(e.target.value)} />
+          </FormField>
+          <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 px-3.5 py-2.5">
+            <p className="text-[11px] text-indigo-700 dark:text-indigo-400">
+              <strong>{"{ism}"}</strong> yozsangiz — yuborishda har bir oluvchining ismi bilan almashtiriladi.
+              <strong> {"{markaz}"}</strong> — markaz nomi bilan.
+            </p>
+          </div>
+          <FormField label="Izoh" hint="Ixtiyoriy — admin uchun qo'shimcha ma'lumot">
+            <Textarea rows={2} placeholder="Bu matnni har oy 25-sanada yuboraman" value={tplNote} onChange={e => setTplNote(e.target.value)} />
+          </FormField>
+          {tplErr && <p className="text-[12px] text-red-600 dark:text-red-400">{tplErr}</p>}
         </div>
       </Modal>
     </div>
