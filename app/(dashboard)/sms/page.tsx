@@ -258,7 +258,7 @@ export default function SmsPage() {
             </div>
             <p className="text-[11px] text-neutral-400">
               Eskiz.uz talabiga ko'ra, xabar yuborishdan oldin matn moderatsiyadan o'tishi shart.
-              Bir marta qo'shsangiz — tasdiqlangandan so'ng doim qayta ishlatiladi.
+              Tasdiqlangan matnlar — o'zingiz qo'shganlar va boshqa markazlar bilan "umumiy" qilinganlar.
             </p>
             {tplLoading ? (
               <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />)}</div>
@@ -269,11 +269,16 @@ export default function SmsPage() {
                 {templates.map(t => (
                   <div key={t.id} className="flex items-start justify-between gap-3 rounded-xl border border-neutral-100 dark:border-neutral-800 px-3 py-2.5">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{t.title}</p>
                         <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0", TPL_STATUS_COLOR[t.status])}>
                           {TPL_STATUS_LABEL[t.status] ?? t.status}
                         </span>
+                        {t.isShared && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                            Umumiy
+                          </span>
+                        )}
                       </div>
                       <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-2">{t.text}</p>
                       {t.status === "REJECTED" && t.reviewNote && (

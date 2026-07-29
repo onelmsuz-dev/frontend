@@ -63,6 +63,14 @@ export default function AdmodeSmsPage() {
   const [testBusy, setTestBusy] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
 
+  // Umumiy matn to'g'ridan-to'g'ri qo'shish (Eskiz kabinetida allaqachon tasdiqlangan)
+  const [showAddTpl, setShowAddTpl] = useState(false);
+  const [addTplTitle, setAddTplTitle] = useState("");
+  const [addTplText, setAddTplText] = useState("");
+  const [addTplShared, setAddTplShared] = useState(true);
+  const [addTplBusy, setAddTplBusy] = useState(false);
+  const [addTplErr, setAddTplErr] = useState("");
+
   async function review(id: string, action: "APPROVE" | "REJECT") {
     let note: string | undefined;
     if (action === "REJECT") note = window.prompt("Rad etish sababi (ixtiyoriy):") ?? undefined;
@@ -89,6 +97,35 @@ export default function AdmodeSmsPage() {
       if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error ?? "Xatolik"); }
       mutate("/api/admode/sms/templates");
     } finally { setBusy(null); }
+  }
+
+  async function toggleShared(id: string, next: boolean) {
+    setBusy(id);
+    try {
+      await fetch(`/api/admode/sms/templates/${id}/shared`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isShared: next }),
+      });
+      mutate("/api/admode/sms/templates");
+    } finally { setBusy(null); }
+  }
+
+  async function createGlobalTemplate() {
+    setAddTplErr("");
+    if (!addTplTitle.trim()) { setAddTplErr("Nom kiriting"); return; }
+    if (addTplText.trim().length < 5) { setAddTplErr("Matn juda qisqa"); return; }
+    setAddTplBusy(true);
+    try {
+      const res = await fetch("/api/admode/sms/templates", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: addTplTitle.trim(), text: addTplText.trim(), isShared: addTplShared }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setAddTplErr(data.error ?? "Xatolik"); return; }
+      mutate("/api/admode/sms/templates");
+      setShowAddTpl(false); setAddTplTitle(""); setAddTplText(""); setAddTplShared(true);
+    } catch { setAddTplErr("Serverga ulanib bo'lmadi"); }
+    finally { setAddTplBusy(false); }
   }
 
   async function sendTest() {
@@ -165,9 +202,19 @@ export default function AdmodeSmsPage() {
 
       {/* Matn moderatsiyasi */}
       <div>
-        <p className="text-[13px] font-bold text-neutral-700 dark:text-neutral-300 mb-2 flex items-center gap-1.5">
-          <FileText className="w-4 h-4 text-indigo-500" /> Matn moderatsiyasi
-          {openTemplates.length > 0 && <span className="bg-indigo-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{openTemplates.length}</span>}
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[13px] font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+            <FileText className="w-4 h-4 text-indigo-500" /> Matn moderatsiyasi
+            {openTemplates.length > 0 && <span className="bg-indigo-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{openTemplates.length}</span>}
+          </p>
+          <button onClick={() => { setShowAddTpl(true); setAddTplErr(""); }}
+            className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-[12px] font-semibold bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 text-white transition-colors">
+            <Plus className="w-3.5 h-3.5" /> Umumiy matn qo'shish
+          </button>
+        </div>
+        <p className="text-[11px] text-neutral-400 mb-2">
+          Eskiz akkaunti platforma uchun bitta — "Umumiy" belgili tasdiqlangan matnni barcha markazlar ko'radi va ishlatadi.
+          Eskiz kabinetida allaqachon tasdiqlangan matnni yuqoridagi tugma orqali to'g'ridan-to'g'ri qo'shing.
         </p>
         <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
           {tplLoading ? (
@@ -178,9 +225,16 @@ export default function AdmodeSmsPage() {
             <div key={t.id} className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">
-                    {t.title} <span className="text-neutral-400 font-normal">· {t.organization?.name}</span>
-                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">
+                      {t.title} <span className="text-neutral-400 font-normal">· {t.organization?.name ?? "Platforma"}</span>
+                    </p>
+                    {t.isShared && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                        Umumiy
+                      </span>
+                    )}
+                  </div>
                   <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-1">{t.text}</p>
                   {t.note && <p className="text-[11px] text-neutral-400 mt-1">Izoh: {t.note}</p>}
                 </div>
@@ -203,6 +257,17 @@ export default function AdmodeSmsPage() {
                   <button onClick={() => reviewTemplate(t.id, "REJECT")} disabled={busy === t.id}
                     className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                     <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {t.status === "APPROVED" && (
+                <div className="mt-2.5">
+                  <button onClick={() => toggleShared(t.id, !t.isShared)} disabled={busy === t.id}
+                    className={cn("inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-semibold border transition-colors disabled:opacity-60",
+                      t.isShared
+                        ? "border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                        : "border-indigo-200 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20")}>
+                    {t.isShared ? "Xususiy qilish" : "Barchaga ochish"}
                   </button>
                 </div>
               )}
@@ -327,6 +392,48 @@ export default function AdmodeSmsPage() {
                 {adding ? "Qo'shilmoqda..." : `${addCustom || addQty} ta qo'shish`}
               </button>
               <button onClick={() => setAddOrg(null)}
+                className="h-10 px-4 rounded-xl border border-neutral-200 dark:border-neutral-700 text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                Bekor
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Umumiy matn qo'shish modal */}
+      {showAddTpl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setShowAddTpl(false)}>
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md p-5 space-y-4 border border-neutral-200 dark:border-neutral-800" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-indigo-600" />
+              <div>
+                <p className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100">Umumiy matn qo'shish</p>
+                <p className="text-[12px] text-neutral-500">Eskiz kabinetida allaqachon tasdiqlangan matn uchun</p>
+              </div>
+            </div>
+            <div>
+              <label className="text-[12px] font-medium text-neutral-500 mb-1 block">Nom</label>
+              <input value={addTplTitle} onChange={e => setAddTplTitle(e.target.value)} placeholder="To'lov eslatmasi"
+                className="w-full h-10 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label className="text-[12px] font-medium text-neutral-500 mb-1 block">Matn (Eskiz'da tasdiqlangan ko'rinishida)</label>
+              <textarea value={addTplText} onChange={e => setAddTplText(e.target.value)} rows={3}
+                placeholder="Hurmatli o'quvchi, bugun yangi oy uchun to'lov qilishning oxirgi kuni..."
+                className="w-full px-3 py-2 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-indigo-500 resize-none" />
+            </div>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" checked={addTplShared} onChange={e => setAddTplShared(e.target.checked)}
+                className="w-4 h-4 rounded accent-indigo-600" />
+              <span className="text-[12px] text-neutral-600 dark:text-neutral-300">Barcha markazlarga ochiq qilish (tavsiya etiladi)</span>
+            </label>
+            {addTplErr && <p className="text-[12px] text-red-600 dark:text-red-400">{addTplErr}</p>}
+            <div className="flex gap-2 pt-1">
+              <button onClick={createGlobalTemplate} disabled={addTplBusy}
+                className="flex-1 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[13px] font-semibold transition-colors disabled:opacity-60">
+                {addTplBusy ? "Qo'shilmoqda..." : "Tasdiqlangan deb qo'shish"}
+              </button>
+              <button onClick={() => setShowAddTpl(false)}
                 className="h-10 px-4 rounded-xl border border-neutral-200 dark:border-neutral-700 text-[13px] font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
                 Bekor
               </button>

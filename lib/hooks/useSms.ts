@@ -29,12 +29,18 @@ export interface SmsStatus {
   requests: SmsPackageRequestRow[];
 }
 
-/** SMS matn (shablon) — moderatsiya holati: PENDING → IN_REVIEW → APPROVED/REJECTED. */
+/**
+ * SMS matn (shablon) — moderatsiya holati: PENDING → IN_REVIEW → APPROVED/REJECTED.
+ * `isShared` bilan APPROVED bo'lsa — Eskiz akkaunti platforma darajasida bitta
+ * bo'lgani uchun BARCHA markazlarga ko'rinadi va ishlatiladi (faqat o'ziniki emas).
+ */
 export interface SmsTemplate {
   id: string;
   title: string;
   text: string;
   status: "PENDING" | "IN_REVIEW" | "APPROVED" | "REJECTED";
+  isShared: boolean;
+  organizationId: string | null; // null = admin platforma darajasida qo'shgan
   note: string | null;
   reviewNote: string | null;
   createdAt: string;
