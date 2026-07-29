@@ -32,7 +32,7 @@ export function BottomNav() {
     .flatMap(s => s.items)
     .filter(item => {
       if (BOTTOM_HREFS.has(item.href)) return false;
-      if (item.teacherOnly) return role === "TEACHER";
+      if (item.teacherOnly) return role === "TEACHER" || (role === "SUPER_ADMIN" && !!me?.teacherId);
       if (permissions) return itemVisible(item.perm, permissions);
       const allowed = NAV_PERMISSIONS[item.href];
       return !allowed || allowed.includes(role);

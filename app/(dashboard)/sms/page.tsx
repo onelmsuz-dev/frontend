@@ -5,7 +5,7 @@ import { mutate } from "swr";
 import {
   MessageSquare, Send, Users, GraduationCap, UserCog, Wallet,
   CheckCircle2, XCircle, AlertTriangle, Search, Package, Clock,
-  Plus, FileText, ShieldAlert,
+  Plus, FileText, ShieldAlert, Zap, UserX,
 } from "lucide-react";
 import { TopHeader } from "@/components/layout/top-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +16,10 @@ import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { ReceiptUpload } from "@/components/ui/receipt-upload";
 import { cn } from "@/lib/utils";
-import { useSms, useSmsTemplates, useSubmitSmsTemplate } from "@/lib/hooks/useSms";
+import {
+  useSms, useSmsTemplates, useSubmitSmsTemplate,
+  useSmsAutomation, useUpdateSmsAutomation,
+} from "@/lib/hooks/useSms";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 
@@ -50,7 +53,9 @@ const TPL_STATUS_COLOR: Record<string, string> = {
 
 export default function SmsPage() {
   const { data: sms, isLoading } = useSms();
-  const { data: templatesRaw, isLoading: tplLoading } = useSmsTemplates();
+  const { data: templatesRaw, isLoading: tplLoading, error: tplError } = useSmsTemplates();
+  const { data: automation, mutate: mutateAutomation } = useSmsAutomation();
+  const { trigger: saveAutomation, isMutating: automationSaving } = useUpdateSmsAutomation();
   const { data: studentsRaw } = useStudents();
   const { data: teachersRaw } = useTeachers();
   const students: any[] = Array.isArray(studentsRaw) ? studentsRaw : [];
@@ -60,6 +65,18 @@ export default function SmsPage() {
 
   const balance = sms?.balance ?? 0;
   const configured = sms?.configured ?? false;
+
+  const [automationErr, setAutomationErr] = useState("");
+
+  async function toggleAbsenceAutomation(enabled: boolean, templateId?: string) {
+    setAutomationErr("");
+    try {
+      await saveAutomation({ enabled, templateId: templateId ?? automation?.absence.templateId } as any);
+      mutateAutomation();
+    } catch (e: any) {
+      setAutomationErr(e?.error ?? "Xatolik yuz berdi");
+    }
+  }
 
   // Compose
   const [composeMode, setComposeMode] = useState<"template" | "free">("template");
@@ -262,6 +279,13 @@ export default function SmsPage() {
             </p>
             {tplLoading ? (
               <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />)}</div>
+            ) : tplError ? (
+              <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <p className="text-[12px] font-medium text-red-600 dark:text-red-400">
+                  Matnlar yuklanmadi: {tplError.message}
+                </p>
+              </div>
             ) : templates.length === 0 ? (
               <p className="text-[12px] text-neutral-400 py-3 text-center">Hali matn qo'shilmagan</p>
             ) : (
@@ -289,6 +313,61 @@ export default function SmsPage() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Avtomatlashtirish */}
+        <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+          <CardContent className="p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Avtomatlashtirish</p>
+            </div>
+
+            <div className="flex items-start justify-between gap-3 rounded-xl border border-neutral-100 dark:border-neutral-800 px-3.5 py-3">
+              <div className="flex items-start gap-2.5 min-w-0">
+                <UserX className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">
+                    Davomat: "Kelmadi" belgilanganda avtomatik SMS
+                  </p>
+                  <p className="text-[11px] text-neutral-400 mt-0.5">
+                    O'qituvchi davomatda o'quvchini "Kelmadi" deb belgilasa — ota-onasiga (yoki raqami bo'lmasa o'ziga) tanlangan matn avtomatik yuboriladi.
+                  </p>
+                  {automation?.absence.enabled && (
+                    <select
+                      value={automation.absence.templateId ?? ""}
+                      onChange={e => toggleAbsenceAutomation(true, e.target.value)}
+                      className="mt-2 h-8 px-2.5 text-[12px] rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
+                      {(automation.availableTemplates ?? []).length === 0 && <option value="">Tasdiqlangan matn yo'q</option>}
+                      {(automation.availableTemplates ?? []).map(t => (
+                        <option key={t.id} value={t.id}>{t.title}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !automation?.absence.enabled;
+                  if (next && !automation?.availableTemplates?.length) {
+                    setAutomationErr("Avval yuqorida tasdiqlangan matn kerak");
+                    return;
+                  }
+                  toggleAbsenceAutomation(next, automation?.availableTemplates?.[0]?.id);
+                }}
+                disabled={automationSaving}
+                className={cn(
+                  "relative w-10 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60",
+                  automation?.absence.enabled ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-600",
+                )}>
+                <span className={cn(
+                  "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                  automation?.absence.enabled && "translate-x-4",
+                )} />
+              </button>
+            </div>
+            {automationErr && <p className="text-[12px] text-red-600 dark:text-red-400">{automationErr}</p>}
           </CardContent>
         </Card>
 

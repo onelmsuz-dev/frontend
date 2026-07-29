@@ -63,10 +63,13 @@ export default function GroupsPage() {
   const { data: teachersRaw }    = useTeachers();
   const { data: roomsRaw }       = useRooms();
 
-  const groups:   any[] = Array.isArray(raw)         ? raw         : [];
-  const courses:  any[] = Array.isArray(coursesRaw)  ? coursesRaw  : [];
-  const teachers: any[] = Array.isArray(teachersRaw) ? teachersRaw : [];
-  const rooms:    any[] = Array.isArray(roomsRaw)    ? roomsRaw    : [];
+  const groups:    any[] = Array.isArray(raw)         ? raw         : [];
+  const courses:   any[] = Array.isArray(coursesRaw)  ? coursesRaw  : [];
+  const teachers:  any[] = Array.isArray(teachersRaw) ? teachersRaw : [];
+  const allRooms:  any[] = Array.isArray(roomsRaw)    ? roomsRaw    : [];
+  // "Yaratish" formasida faqat aktiv filial xonalari — boshqa filial xonasini
+  // tasodifan tanlab qo'yish (va backendda rad etilishi) oldini olamiz.
+  const rooms = activeBranchId ? allRooms.filter(r => r.branchId === activeBranchId) : allRooms;
 
   const filtered = useMemo(() => groups.filter(g => {
     const q = search.toLowerCase();

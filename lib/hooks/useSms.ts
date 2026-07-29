@@ -1,7 +1,15 @@
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+/** Oddiy fetcherlardan farqli — xato holatini yutib yubormaydi, aks holda
+ *  "ruxsat yo'q" yoki "server xatosi" holatlari jim bo'sh ro'yxat bo'lib
+ *  ko'rinib, sababini aniqlash imkonsiz bo'lib qoladi. */
+const fetcher = async (url: string) => {
+  const r = await fetch(url);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error ?? `So'rov bajarilmadi (${r.status})`);
+  return data;
+};
 
 async function poster(url: string, { arg }: { arg: unknown }) {
   const r = await fetch(url, {
@@ -58,4 +66,26 @@ export function useSmsTemplates() {
 
 export function useSubmitSmsTemplate() {
   return useSWRMutation("/api/sms/templates", poster);
+}
+
+export interface SmsAutomation {
+  absence: { enabled: boolean; templateId: string | null };
+  availableTemplates: SmsTemplate[];
+}
+
+/** Davomat "Kelmadi" belgilanganda avtomatik SMS sozlamalari. */
+export function useSmsAutomation() {
+  return useSWR<SmsAutomation>("/api/sms/automation", fetcher);
+}
+
+export function useUpdateSmsAutomation() {
+  return useSWRMutation("/api/sms/automation", async (url: string, { arg }: { arg: unknown }) => {
+    const r = await fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(arg),
+    });
+    if (!r.ok) throw await r.json();
+    return r.json();
+  });
 }

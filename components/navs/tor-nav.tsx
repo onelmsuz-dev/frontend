@@ -33,7 +33,9 @@ export function TorNav() {
 
   // Ruxsat bo'yicha filtr (yuklanmaguncha role fallback)
   const visible = (item: (typeof navSections)[number]["items"][number]) => {
-    if (item.teacherOnly) return role === "TEACHER";
+    // SUPER_ADMIN o'zini o'qituvchi qilib qo'shgan bo'lsa (Jadval → "O'zimni
+    // qo'shish"), teacherId mavjud bo'ladi va u ham "Oyligim"ni ko'rishi kerak.
+    if (item.teacherOnly) return role === "TEACHER" || (role === "SUPER_ADMIN" && !!me?.teacherId);
     if (permissions) return itemVisible(item.perm, permissions);
     const allowed = NAV_PERMISSIONS[item.href];
     return !allowed || allowed.includes(role);
