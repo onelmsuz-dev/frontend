@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { GroupAttendanceSection } from "@/components/groups/group-attendance-section";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -257,6 +258,14 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             })}
           </div>
         </div>
+
+        {/* Davomat */}
+        <GroupAttendanceSection
+          groupId={id}
+          scheduleDays={group.scheduleDays ?? []}
+          startTime={group.startTime}
+          studentGroups={group.students ?? []}
+        />
       </div>
     </div>
   );

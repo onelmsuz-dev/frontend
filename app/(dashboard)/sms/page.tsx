@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { ReceiptUpload } from "@/components/ui/receipt-upload";
+import { PaymentCardInfo } from "@/components/ui/payment-card-info";
 import { cn } from "@/lib/utils";
 import {
   useSms, useSmsTemplates, useSubmitSmsTemplate,
@@ -606,7 +607,8 @@ export default function SmsPage() {
             <span className="text-neutral-500">Jami ({effectiveQty} ta)</span>
             <span className="font-bold">{fmtMoney(effectiveAmount)}</span>
           </div>
-          <FormField label="Chek rasmi" hint="To'lov chekini rasm ko'rinishida yuklang">
+          <PaymentCardInfo />
+          <FormField label="Chek rasmi" hint="To'lovni amalga oshirib, chekni rasm ko'rinishida yuklang">
             <ReceiptUpload value={receipt} onChange={setReceipt} />
           </FormField>
           <FormField label="Izoh" hint="Ixtiyoriy">

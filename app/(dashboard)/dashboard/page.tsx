@@ -133,7 +133,7 @@ export default function DashboardPage() {
             <p className="text-sm text-red-700 dark:text-red-300">
               <span className="font-bold">{stats?.debtorCount} ta o'quvchi</span> to'lovni kechiktirmoqda — moliya bo'limiga o'ting
             </p>
-            <a href="/finance" className="ml-auto text-xs font-semibold text-red-600 dark:text-red-400 hover:underline shrink-0">
+            <a href="/finance?tab=qarzdorlar" className="ml-auto text-xs font-semibold text-red-600 dark:text-red-400 hover:underline shrink-0">
               Ko'rish →
             </a>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,8 @@ import { useRooms } from "@/lib/hooks/useRooms";
 import { useOrganization } from "@/lib/hooks/useOrganization";
 import { TarifSection } from "@/components/settings/tarif-section";
 import { StaffSection } from "@/components/settings/staff-section";
+import { useMe } from "@/lib/hooks/useMe";
 import { mutate } from "swr";
-
-const ROOM_TYPE_LABELS: Record<string, string> = {
-  dars_xonasi: "Dars xonasi", kompyuter_lab: "Kompyuter lab", sport_zal: "Sport zal", akt_zal: "Akt zal",
-};
 
 const sections = [
   { id: "markaz",        label: "O'quv markaz",    icon: Building },
@@ -39,6 +36,12 @@ function Skeleton({ className }: { className?: string }) {
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState("xodimlar");
+  const { me } = useMe();
+
+  // Tarif bloklangan bo'lsa — to'lov bo'limiga to'g'ridan-to'g'ri yo'naltiramiz
+  useEffect(() => {
+    if (me?.subscriptionBlocked) setActiveSection("tarif");
+  }, [me?.subscriptionBlocked]);
 
   const { data: branchesRaw, isLoading: branchesLoading } = useBranches();
   const branches: Branch[] = Array.isArray(branchesRaw) ? branchesRaw : [];
@@ -56,7 +59,7 @@ export default function SettingsPage() {
   const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
 
   const [showRoomForm, setShowRoomForm] = useState(false);
-  const [newRoom, setNewRoom] = useState({ name: "", branchId: "", capacity: "", type: "dars_xonasi" });
+  const [newRoom, setNewRoom] = useState({ name: "", branchId: "", capacity: "" });
   const [roomSaving, setRoomSaving] = useState(false);
   const [roomErr, setRoomErr] = useState("");
 
@@ -99,7 +102,7 @@ export default function SettingsPage() {
       const data = await res.json();
       if (!res.ok) { setRoomErr(data.error ?? "Xatolik"); return; }
       mutate("/api/rooms");
-      setNewRoom({ name: "", branchId: "", capacity: "", type: "dars_xonasi" });
+      setNewRoom({ name: "", branchId: "", capacity: "" });
       setShowRoomForm(false);
     } catch { setRoomErr("Serverga ulanib bo'lmadi"); }
     finally { setRoomSaving(false); }
@@ -321,12 +324,11 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label className="text-xs text-neutral-500 mb-1 block">Xona nomi *</Label><Input placeholder="4-xona" value={newRoom.name} onChange={e => setNewRoom(p => ({...p, name: e.target.value}))} className="h-8 text-sm" /></div>
                       <div><Label className="text-xs text-neutral-500 mb-1 block">Sig'imi</Label><Input type="number" placeholder="15" value={newRoom.capacity} onChange={e => setNewRoom(p => ({...p, capacity: e.target.value}))} className="h-8 text-sm" /></div>
-                      <div><Label className="text-xs text-neutral-500 mb-1 block">Filial</Label>
+                      <div className="col-span-2"><Label className="text-xs text-neutral-500 mb-1 block">Filial</Label>
                         <select value={newRoom.branchId || branches[0]?.id || ""} onChange={e => setNewRoom(p => ({...p, branchId: e.target.value}))} className="w-full h-8 px-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 outline-none">
                           {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                         </select>
                       </div>
-                      <div><Label className="text-xs text-neutral-500 mb-1 block">Turi</Label><select value={newRoom.type} onChange={e => setNewRoom(p => ({...p, type: e.target.value}))} className="w-full h-8 px-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 outline-none">{Object.entries(ROOM_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
                     </div>
                     {roomErr && <p className="text-[12px] text-red-600 dark:text-red-400">{roomErr}</p>}
                     <div className="flex gap-2">

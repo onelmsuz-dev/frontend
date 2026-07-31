@@ -31,7 +31,7 @@ export interface SubscriptionData {
     branches: { used: number; max: number };
     staff: { used: number; max: number };
   };
-  subscription: { active: boolean; daysLeft: number; expiresAt: string | null; warning: boolean };
+  subscription: { active: boolean; daysLeft: number; expiresAt: string | null; warning: boolean; blocked: boolean };
   requests: Array<{
     id: string; plan: string; amount: number; months: number;
     note?: string; status: string; createdAt: string;

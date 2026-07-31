@@ -15,6 +15,8 @@ export interface MeData {
   staffRoleId: string | null;
   orgSubdomain: string | null;
   acceptsPayments?: boolean;
+  /** Tarif muddati + grace-period tugagan — org resurslari backendda bloklangan. */
+  subscriptionBlocked?: boolean;
   permissions: string[];
 }
 

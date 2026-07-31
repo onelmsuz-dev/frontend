@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import Link from "next/link";
-import { Search, Users, Clock, CalendarDays, BookOpen, TrendingUp, Edit, Trash2, ChevronRight, MapPin } from "lucide-react";
+import { Search, Users, Clock, CalendarDays, BookOpen, TrendingUp, Edit, Trash2, ChevronRight, MapPin, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useCourses } from "@/lib/hooks/useCourses";
@@ -58,6 +58,13 @@ export default function GroupsPage() {
   const [error,     setError]     = useState("");
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
+  // Inline xona qo'shish (guruh yaratish formasidan chiqmasdan)
+  const [showNewRoom,    setShowNewRoom]    = useState(false);
+  const [newRoomName,    setNewRoomName]    = useState("");
+  const [newRoomCapacity,setNewRoomCapacity]= useState("");
+  const [newRoomSaving,  setNewRoomSaving]  = useState(false);
+  const [newRoomErr,     setNewRoomErr]     = useState("");
+
   const { data: raw, isLoading } = useGroups();
   const { data: coursesRaw }     = useCourses();
   const { data: teachersRaw }    = useTeachers();
@@ -70,6 +77,33 @@ export default function GroupsPage() {
   // "Yaratish" formasida faqat aktiv filial xonalari — boshqa filial xonasini
   // tasodifan tanlab qo'yish (va backendda rad etilishi) oldini olamiz.
   const rooms = activeBranchId ? allRooms.filter(r => r.branchId === activeBranchId) : allRooms;
+  // Guruh o'quvchi soniga sig'maydigan xonani ko'rsatmaymiz — joriy tanlangan
+  // xona (tahrirlashda) va sig'imi belgilanmagan xonalar har doim ko'rinadi.
+  const parsedMaxStudents = parseInt(form.maxStudents) || 15;
+  const eligibleRooms = rooms.filter(r =>
+    r.id === form.roomId || r.capacity == null || r.capacity >= parsedMaxStudents,
+  );
+
+  async function createRoomInline() {
+    if (!newRoomName.trim()) { setNewRoomErr("Xona nomi kerak"); return; }
+    if (!activeBranchId) { setNewRoomErr("Avval filialni tanlang"); return; }
+    setNewRoomSaving(true); setNewRoomErr("");
+    try {
+      const res = await fetch("/api/rooms", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newRoomName.trim(), branchId: activeBranchId,
+          ...(newRoomCapacity ? { capacity: Number(newRoomCapacity) } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setNewRoomErr(data.error ?? "Xatolik"); return; }
+      mutate("/api/rooms");
+      setForm(p => ({ ...p, roomId: data.id }));
+      setShowNewRoom(false); setNewRoomName(""); setNewRoomCapacity("");
+    } catch { setNewRoomErr("Serverga ulanib bo'lmadi"); }
+    finally { setNewRoomSaving(false); }
+  }
 
   const filtered = useMemo(() => groups.filter(g => {
     const q = search.toLowerCase();
@@ -85,7 +119,9 @@ export default function GroupsPage() {
   }), [groups]);
 
   function openCreate() {
-    setEditId(null); setForm(EMPTY_FORM); setError(""); setShowModal(true);
+    setEditId(null); setForm(EMPTY_FORM); setError("");
+    setShowNewRoom(false); setNewRoomName(""); setNewRoomCapacity(""); setNewRoomErr("");
+    setShowModal(true);
   }
   function openEdit(g: any) {
     setEditId(g.id);
@@ -98,7 +134,9 @@ export default function GroupsPage() {
       endDate: g.endDate?.slice(0,10) ?? "",
       status: g.status,
     });
-    setError(""); setShowModal(true);
+    setError("");
+    setShowNewRoom(false); setNewRoomName(""); setNewRoomCapacity(""); setNewRoomErr("");
+    setShowModal(true);
   }
 
   function toggleDay(d: string) {
@@ -252,11 +290,35 @@ export default function GroupsPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <FormField label="Xona" hint="Ixtiyoriy">
+          <FormField label="Xona" hint="Ixtiyoriy — sig'imiga qarab filtrlangan">
             <select value={form.roomId} onChange={e => setForm(p => ({...p, roomId: e.target.value}))} className={selectCls}>
               <option value="">—</option>
-              {rooms.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {eligibleRooms.map((r: any) => (
+                <option key={r.id} value={r.id}>{r.name}{r.capacity ? ` (${r.capacity} joy)` : ""}</option>
+              ))}
             </select>
+            {rooms.length > eligibleRooms.length && (
+              <p className="text-[10px] text-neutral-400 mt-1">
+                {rooms.length - eligibleRooms.length} ta xona {parsedMaxStudents} kishiga sig'maydi — ko'rsatilmadi
+              </p>
+            )}
+            <button type="button" onClick={() => { setShowNewRoom(v => !v); setNewRoomErr(""); }}
+              className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Plus className="w-3 h-3" /> Yangi xona qo'shish
+            </button>
+            {showNewRoom && (
+              <div className="mt-2 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-900/40 space-y-2">
+                <Input placeholder="Xona nomi" value={newRoomName}
+                  onChange={e => setNewRoomName(e.target.value)} className="h-8 text-[12px]" />
+                <Input type="number" placeholder="Sig'imi (ixtiyoriy)" value={newRoomCapacity} min="1"
+                  onChange={e => setNewRoomCapacity(e.target.value)} className="h-8 text-[12px]" />
+                {newRoomErr && <p className="text-[11px] text-red-500">{newRoomErr}</p>}
+                <Button type="button" onClick={createRoomInline} disabled={newRoomSaving}
+                  className="w-full h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px]">
+                  {newRoomSaving ? "Qo'shilmoqda..." : "Qo'shish"}
+                </Button>
+              </div>
+            )}
           </FormField>
           <FormField label="Max o'quvchi">
             <Input type="number" value={form.maxStudents} min="1" max="50"

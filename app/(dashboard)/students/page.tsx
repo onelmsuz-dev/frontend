@@ -34,10 +34,17 @@ const PAY_CFG: Record<string, { label: string; cls: string }> = {
   TOLANDI: { label: "To'langan", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
   QARZDOR: { label: "Qarzdor",   cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
   QISMAN:  { label: "Qisman",   cls: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
+  SINOVDA: { label: "Sinovda",  cls: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-500" },
 };
 
-/** To'lov holati balansdan olinadi — "Jami qarz" bilan bir manba. */
-function payStatus(balance: number): keyof typeof PAY_CFG {
+/**
+ * To'lov holati balansdan olinadi — "Jami qarz" bilan bir manba. Sinov
+ * darsidagi o'quvchi hali kurs uchun hisoblanmagan (charge-on-activation) —
+ * balans 0 bo'lgani uchun "To'langan" deb ko'rsatish noto'g'ri, "Sinovda"
+ * ko'rsatiladi (to'lov hali dахldor emas).
+ */
+function payStatus(balance: number, enrollmentStatus?: string): keyof typeof PAY_CFG {
+  if (enrollmentStatus === "SINOV") return "SINOVDA";
   return balance < 0 ? "QARZDOR" : "TOLANDI";
 }
 
@@ -204,7 +211,7 @@ export default function StudentsPage() {
                     const group   = sg?.group;
                     const teacher = group?.teacher?.user;
                     const enroll  = ENROLL_CFG[sg?.enrollmentStatus ?? (s.isActive ? "FAOL" : "SINOV")];
-                    const pay     = PAY_CFG[payStatus(s.balance ?? 0)];
+                    const pay     = PAY_CFG[payStatus(s.balance ?? 0, sg?.enrollmentStatus)];
                     return (
                       <TableRow key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                         <TableCell>

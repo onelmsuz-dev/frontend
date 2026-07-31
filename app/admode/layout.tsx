@@ -45,7 +45,7 @@ export default function AdmodeLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 flex">
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 sticky top-0 h-screen flex flex-col border-r border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900">
+      <aside className="w-56 shrink-0 sticky top-0 h-dvh flex flex-col border-r border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900">
 
         {/* Logo */}
         <div className="h-14 shrink-0 flex items-center gap-2.5 px-4 border-b border-neutral-200 dark:border-white/10">

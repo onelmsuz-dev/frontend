@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { ReceiptUpload } from "@/components/ui/receipt-upload";
+import { PaymentCardInfo } from "@/components/ui/payment-card-info";
 import { cn } from "@/lib/utils";
 import {
   useSubscription, usePlans, useSubmitSubscriptionRequest, type PlanLimits,
@@ -83,6 +84,7 @@ export function TarifSection() {
 
   const daysLeft = sub?.subscription?.daysLeft ?? 0;
   const warning = sub?.subscription?.warning;
+  const blocked = sub?.subscription?.blocked;
   const active = sub?.subscription?.active;
   const hasPending = sub?.requests?.some(r => r.status === "PENDING");
 
@@ -124,14 +126,21 @@ export function TarifSection() {
             </div>
           )}
 
-          {warning && (
+          {blocked ? (
+            <div className="mt-4 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-xl px-3 py-2.5">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+              <p className="text-[12px] font-medium text-red-700 dark:text-red-400">
+                Panel bloklangan — tarif muddati va imtiyozli davr tugagan. Davom etish uchun to'lov qiling.
+              </p>
+            </div>
+          ) : warning ? (
             <div className="mt-4 flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40 rounded-xl px-3 py-2.5">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
               <p className="text-[12px] font-medium text-amber-700 dark:text-amber-400">
                 Tarif muddati tugayapti. To'lovni amalga oshiring — aks holda tizim to'xtatilishi mumkin.
               </p>
             </div>
-          )}
+          ) : null}
 
           {/* Foydalanish */}
           {sub && (
@@ -238,7 +247,8 @@ export function TarifSection() {
           <FormField label="Necha oy">
             <Input type="number" min={1} max={12} value={months} onChange={e => setMonths(e.target.value)} className="h-10" />
           </FormField>
-          <FormField label="Chek rasmi" hint="To'lov chekini rasm ko'rinishida yuklang">
+          <PaymentCardInfo />
+          <FormField label="Chek rasmi" hint="To'lovni amalga oshirib, chekni rasm ko'rinishida yuklang">
             <ReceiptUpload value={receiptUrl} onChange={setReceiptUrl} />
           </FormField>
           <FormField label="Izoh" hint="Ixtiyoriy">

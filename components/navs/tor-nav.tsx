@@ -49,7 +49,7 @@ export function TorNav() {
 
   return (
     <aside className={cn(
-      "rail-sidebar sticky top-0 h-screen z-40 shrink-0 hidden lg:flex flex-col overflow-hidden",
+      "rail-sidebar sticky top-0 h-dvh z-40 shrink-0 hidden lg:flex flex-col overflow-hidden",
       open ? "w-[220px]" : "w-[72px]",
       "bg-white dark:bg-neutral-900",
       "border-r border-neutral-200/80 dark:border-neutral-800/80 shadow-sm"

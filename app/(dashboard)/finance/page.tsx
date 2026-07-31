@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { AcceptPaymentModal } from "@/components/finance/accept-payment-modal";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,14 @@ import {
 import {
   TrendingUp, TrendingDown, Wallet, Sparkles,
   Plus, X, CheckCircle, Clock, RefreshCw, BadgeCheck,
+  AlertTriangle, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
 import { usePayments } from "@/lib/hooks/usePayments";
 import { useTeachers } from "@/lib/hooks/useTeachers";
+import { useStudents } from "@/lib/hooks/useStudents";
 import useSWR, { mutate } from "swr";
 
 function formatCurrency(v: number) {
@@ -35,12 +38,20 @@ const METHOD_COLORS: Record<string, string> = {
   PAYME: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
 };
 
-type Tab = "kirim" | "chiqim" | "oylik";
+type Tab = "kirim" | "chiqim" | "oylik" | "qarzdorlar";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function FinancePage() {
   const [activeTab,    setActiveTab]    = useState<Tab>("kirim");
+
+  // Dashboard'dagi "Qarzdorlar" ogohlantirishidan ?tab=qarzdorlar bilan kelishi
+  // mumkin — SSR/hydration nomuvofiqligidan qochish uchun faqat client'da,
+  // mount'dan keyin o'qiladi (boshlang'ich render doim "kirim").
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("tab");
+    if (q === "qarzdorlar") setActiveTab("qarzdorlar");
+  }, []);
   const now2 = new Date();
   const defaultPayMonth = `${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, "0")}`;
   const [payMonth, setPayMonth] = useState(defaultPayMonth);
@@ -60,9 +71,15 @@ export default function FinancePage() {
   const [payingId,      setPayingId]      = useState<string | null>(null);
   const [salaryErr,     setSalaryErr]     = useState("");
 
+  // Qarzdorlar
+  const [payForStudent, setPayForStudent] = useState<any>(null);
+  const [chargingDues,  setChargingDues]  = useState(false);
+  const [chargeMsg,     setChargeMsg]     = useState("");
+
   const { data: paymentsRaw, isLoading: paymentsLoading } = usePayments({ month: payMonth });
   const { data: teachersRaw }                             = useTeachers();
   const { data: expensesRaw, isLoading: expensesLoading } = useSWR("/api/expenses", fetcher);
+  const { data: studentsRaw, isLoading: studentsLoading } = useStudents();
   const { data: salariesRaw, isLoading: salariesLoading, mutate: mutateSalaries } =
     useSWR(`/api/teacher-salaries?month=${salaryMonth}`, fetcher);
 
@@ -70,15 +87,23 @@ export default function FinancePage() {
   const teachers: any[] = Array.isArray(teachersRaw) ? teachersRaw : [];
   const expenses: any[] = Array.isArray(expensesRaw) ? expensesRaw : [];
   const salaries: any[] = Array.isArray(salariesRaw) ? salariesRaw : [];
+  const allStudents: any[] = Array.isArray(studentsRaw) ? studentsRaw : [];
+
+  // Qarzdor = balans manfiy va guruhdan chiqib ketmagan (sinovdagilar 0 balans bilan qarzdor emas)
+  const debtors = allStudents
+    .filter(s => s.balance < 0 && s.groups?.[0]?.enrollmentStatus !== "CHIQIB_KETGAN")
+    .sort((a, b) => a.balance - b.balance);
+  const totalDebt = debtors.reduce((sum, s) => sum + Math.abs(s.balance), 0);
 
   const totalPayments = payments.reduce((s, p) => s + p.amount, 0);
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const profit        = totalPayments - totalExpenses;
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "kirim",  label: "To'lovlar (kirim)" },
-    { id: "chiqim", label: "Xarajatlar (chiqim)" },
-    { id: "oylik",  label: "Oylik hisoblash" },
+    { id: "kirim",      label: "To'lovlar (kirim)" },
+    { id: "chiqim",     label: "Xarajatlar (chiqim)" },
+    { id: "oylik",      label: "Oylik hisoblash" },
+    { id: "qarzdorlar", label: `Qarzdorlar${debtors.length ? ` (${debtors.length})` : ""}` },
   ];
 
   async function submitExpense() {
@@ -134,6 +159,23 @@ export default function FinancePage() {
       mutateSalaries();
     } catch { setSalaryErr("Serverga ulanib bo'lmadi"); }
     finally { setPayingId(null); }
+  }
+
+  /**
+   * Joriy oy uchun faol o'quvchilarga kurs to'lovini qo'lda hisoblash.
+   * Tizim buni har kuni birinchi dashboard yuklanganda avtomatik ham qiladi —
+   * bu tugma faqat darhol/qo'lda tekshirish uchun (qayta bosish xavfsiz).
+   */
+  async function chargeMonthlyDues() {
+    setChargingDues(true); setChargeMsg("");
+    try {
+      const res = await fetch("/api/student-groups/charge-monthly", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setChargeMsg(data.error ?? "Xatolik"); return; }
+      setChargeMsg(data.charged > 0 ? `${data.charged} ta o'quvchiga ${data.month} oyi uchun to'lov yozildi` : "Barcha o'quvchilar allaqachon shu oy uchun hisoblangan");
+      mutate((k: string) => typeof k === "string" && k.startsWith("/api/students"), undefined, { revalidate: true });
+    } catch { setChargeMsg("Serverga ulanib bo'lmadi"); }
+    finally { setChargingDues(false); }
   }
 
   return (
@@ -536,7 +578,113 @@ export default function FinancePage() {
             </div>
           </div>
         )}
+
+        {/* Qarzdorlar */}
+        {activeTab === "qarzdorlar" && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40">
+                <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                <span className="text-[13px] font-semibold text-red-700 dark:text-red-400">
+                  {debtors.length} ta o'quvchi qarzdor
+                </span>
+              </div>
+              <span className="text-[13px] font-bold text-red-600 dark:text-red-400">
+                Jami qarz: {formatCurrency(totalDebt)}
+              </span>
+              <button onClick={chargeMonthlyDues} disabled={chargingDues}
+                className="ml-auto inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50">
+                <RefreshCw className={cn("w-3.5 h-3.5", chargingDues && "animate-spin")} />
+                {chargingDues ? "Hisoblanmoqda..." : "Oylik to'lovni hisoblash"}
+              </button>
+            </div>
+            {chargeMsg && (
+              <p className="text-[12px] text-neutral-500 dark:text-neutral-400 -mt-2">{chargeMsg}</p>
+            )}
+            <p className="text-[11px] text-neutral-400 -mt-2">
+              Tizim buni har oy avtomatik ham bajaradi (birinchi kirishda) — bu tugma darhol tekshirish uchun.
+            </p>
+
+            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-neutral-50 dark:bg-neutral-800/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
+                      <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'quvchi</TableHead>
+                      <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Guruh</TableHead>
+                      <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'qituvchi</TableHead>
+                      <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Qarz summasi</TableHead>
+                      <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {studentsLoading
+                      ? Array.from({ length: 4 }).map((_, i) => (
+                          <TableRow key={i}>
+                            {Array.from({ length: 5 }).map((_, j) => (
+                              <TableCell key={j}><Skeleton className="h-3 w-full" /></TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      : debtors.map(s => {
+                          const sg = s.groups?.[0];
+                          return (
+                            <TableRow key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                              <TableCell>
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-400 to-orange-400 flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                                    {s.name?.[0]}
+                                  </div>
+                                  <div>
+                                    <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{s.name}</p>
+                                    <p className="text-[11px] text-neutral-400">{s.phone}</p>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-[13px] text-neutral-700 dark:text-neutral-300">{sg?.group?.name ?? "—"}</span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-[13px] text-neutral-500 dark:text-neutral-400">{sg?.group?.teacher?.user?.name ?? "—"}</span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-[13px] font-bold text-red-600 dark:text-red-400">{formatCurrency(Math.abs(s.balance))}</span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center justify-end gap-1">
+                                  <button onClick={() => setPayForStudent(s)}
+                                    className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors">
+                                    To'lov qabul qilish
+                                  </button>
+                                  <Link href={`/students/${s.id}`}
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                  </Link>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                    }
+                  </TableBody>
+                </Table>
+              </div>
+              {!studentsLoading && debtors.length === 0 && (
+                <div className="py-14 text-center">
+                  <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400 opacity-60" />
+                  <p className="text-sm text-neutral-400">Hech kim qarzdor emas</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+
+      <AcceptPaymentModal
+        open={!!payForStudent}
+        onClose={() => setPayForStudent(null)}
+        defaultStudentId={payForStudent?.id}
+      />
     </div>
   );
 }

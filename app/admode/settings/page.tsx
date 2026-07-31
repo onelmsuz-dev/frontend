@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { cn } from "@/lib/utils";
 import {
   ShieldCheck, Building2, GraduationCap, Users, Wallet,
-  Lock, Check, Loader2, AlertCircle, Eye, EyeOff,
+  Lock, Check, Loader2, AlertCircle, Eye, EyeOff, CreditCard,
 } from "lucide-react";
+import {
+  usePlatformSettings, useUpdatePlatformSettings, formatCardNumber,
+} from "@/lib/hooks/usePlatformSettings";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -35,6 +38,34 @@ export default function SettingsPage() {
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  // To'lov kartasi
+  const { data: platformSettings, mutate: mutateSettings } = usePlatformSettings();
+  const { trigger: saveCard, isMutating: cardSaving } = useUpdatePlatformSettings();
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardOwner,  setCardOwner]  = useState("");
+  const [cardMsg,    setCardMsg]    = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  useEffect(() => {
+    if (platformSettings) {
+      setCardNumber(platformSettings.paymentCardNumber ?? "");
+      setCardOwner(platformSettings.paymentCardOwner ?? "");
+    }
+  }, [platformSettings]);
+
+  async function submitCard(e: React.FormEvent) {
+    e.preventDefault();
+    setCardMsg(null);
+    const digits = cardNumber.replace(/\D/g, "");
+    if (digits.length < 12) { setCardMsg({ type: "err", text: "Karta raqami noto'g'ri" }); return; }
+    try {
+      await saveCard({ paymentCardNumber: digits, paymentCardOwner: cardOwner.trim() || undefined } as any);
+      mutateSettings();
+      setCardMsg({ type: "ok", text: "Karta ma'lumoti saqlandi" });
+    } catch (err: any) {
+      setCardMsg({ type: "err", text: err?.error ?? "Xatolik yuz berdi" });
+    }
+  }
 
   async function submitPassword(e: React.FormEvent) {
     e.preventDefault();
@@ -140,6 +171,45 @@ export default function SettingsPage() {
           <button type="submit" disabled={busy}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-xl text-[12px] font-semibold text-white transition-colors">
             {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Saqlash
+          </button>
+        </form>
+      </div>
+
+      {/* To'lov kartasi — tarif/SMS-paket sotib olishda markazlarga ko'rsatiladi */}
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <CreditCard className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+          <h2 className="text-[13px] font-bold text-neutral-900 dark:text-white">To'lov kartasi</h2>
+        </div>
+        <p className="text-[11px] text-neutral-500 mb-4">
+          Markazlar tarif va SMS-paket sotib olishda shu kartaga to'lov o'tkazadi (hozir: <strong>{formatCardNumber(platformSettings?.paymentCardNumber ?? "")}</strong>)
+        </p>
+        <form onSubmit={submitCard} className="space-y-3 max-w-sm">
+          <div>
+            <label className="block text-[11px] text-neutral-500 mb-1">Karta raqami</label>
+            <input value={cardNumber} onChange={(e) => setCardNumber(e.target.value)}
+              placeholder="9860 3501 4289 8617" className={inputCls} required />
+          </div>
+          <div>
+            <label className="block text-[11px] text-neutral-500 mb-1">Karta egasi (ixtiyoriy)</label>
+            <input value={cardOwner} onChange={(e) => setCardOwner(e.target.value)}
+              placeholder="Ism Familiya" className={inputCls} />
+          </div>
+
+          {cardMsg && (
+            <div className={cn(
+              "flex items-center gap-2 text-[12px] px-3 py-2 rounded-lg",
+              cardMsg.type === "ok" ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300" : "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300",
+            )}>
+              {cardMsg.type === "ok" ? <Check className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+              {cardMsg.text}
+            </div>
+          )}
+
+          <button type="submit" disabled={cardSaving}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-xl text-[12px] font-semibold text-white transition-colors">
+            {cardSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             Saqlash
           </button>
         </form>
