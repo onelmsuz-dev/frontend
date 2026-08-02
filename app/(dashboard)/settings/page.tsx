@@ -220,7 +220,7 @@ export default function SettingsPage() {
                     {orgErr && (
                       <p className="text-[12px] text-red-600 dark:text-red-400">{orgErr}</p>
                     )}
-                    <Button onClick={saveOrg} disabled={orgSaving} className="bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 mt-2">
+ <Button onClick={saveOrg} disabled={orgSaving} className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 mt-2">
                       {orgSaving ? "Saqlanmoqda..." : "Saqlash"}
                     </Button>
                   </>
@@ -237,7 +237,7 @@ export default function SettingsPage() {
                   {branchesLoading ? "Yuklanmoqda..." : `${branches.length} ta filial`}
                 </p>
                 <Button size="sm" onClick={() => { setShowBranchForm(v => !v); setBranchErr(""); }}
-                  className="gap-1.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-xs h-8">
+ className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-xs h-8">
                   <Plus className="w-3.5 h-3.5" /> Filial qo'shish
                 </Button>
               </div>
@@ -252,7 +252,7 @@ export default function SettingsPage() {
                     </div>
                     {branchErr && <p className="text-[12px] text-red-600 dark:text-red-400">{branchErr}</p>}
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={addBranch} disabled={branchSaving} className="bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 h-8 text-xs">
+ <Button size="sm" onClick={addBranch} disabled={branchSaving} className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 h-8 text-xs">
                         {branchSaving ? "Saqlanmoqda..." : "Saqlash"}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => setShowBranchForm(false)} className="h-8 text-xs">Bekor</Button>
@@ -315,7 +315,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-neutral-500">
                   {roomsLoading ? "Yuklanmoqda..." : `${rooms.length} ta xona`}
                 </p>
-                <Button size="sm" onClick={() => { setShowRoomForm(v => !v); setRoomErr(""); }} className="gap-1.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-xs h-8"><Plus className="w-3.5 h-3.5" /> Xona qo'shish</Button>
+ <Button size="sm" onClick={() => { setShowRoomForm(v => !v); setRoomErr(""); }} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-xs h-8"><Plus className="w-3.5 h-3.5" /> Xona qo'shish</Button>
               </div>
               {showRoomForm && (
                 <Card className="border border-white/60 dark:border-white/10 shadow-none">
@@ -332,7 +332,7 @@ export default function SettingsPage() {
                     </div>
                     {roomErr && <p className="text-[12px] text-red-600 dark:text-red-400">{roomErr}</p>}
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={addRoom} disabled={roomSaving} className="bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 h-8 text-xs">
+ <Button size="sm" onClick={addRoom} disabled={roomSaving} className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 h-8 text-xs">
                         {roomSaving ? "Saqlanmoqda..." : "Saqlash"}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => setShowRoomForm(false)} className="h-8 text-xs">Bekor</Button>
@@ -397,7 +397,7 @@ export default function SettingsPage() {
                     </label>
                   </div>
                 ))}
-                <Button className="bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 mt-3">Saqlash</Button>
+ <Button className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 mt-3">Saqlash</Button>
               </CardContent>
             </Card>
           )}

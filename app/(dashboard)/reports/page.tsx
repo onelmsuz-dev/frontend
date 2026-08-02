@@ -22,7 +22,7 @@ function formatCurrency(v: number) {
   return `${v} so'm`;
 }
 
-const PIE_COLORS = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4"];
+const PIE_COLORS = ["#6366f1", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4"];
 const COURSE_COLORS = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500", "bg-pink-500", "bg-yellow-500"];
 
 const DATE_RANGES: { label: string; months: number }[] = [
@@ -136,7 +136,7 @@ export default function ReportsPage() {
                     formatter={(v: unknown) => formatCurrency(v as number)}
                     contentStyle={{ background: chart.tooltip, border: `1px solid ${chart.tooltipBorder}`, borderRadius: 8, color: chart.tooltipText }}
                   />
-                  <Bar dataKey="kirim"  name="Kirim"  fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="kirim"  name="Kirim"  fill="#6366f1" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="chiqim" name="Chiqim" fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -173,7 +173,7 @@ export default function ReportsPage() {
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {courses.map((course, idx) => (
                 <div key={course.id}
-                  className="flex items-center justify-between px-5 py-3 hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+                  className="flex items-center justify-between px-5 py-3 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                   <div className="flex items-center gap-3">
                     <span className="text-[11px] text-neutral-400 dark:text-neutral-500 w-5 font-mono shrink-0">{idx + 1}</span>
                     <div className={cn("w-2 h-8 rounded-full shrink-0", course.color ?? COURSE_COLORS[idx % COURSE_COLORS.length])} />

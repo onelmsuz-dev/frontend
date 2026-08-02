@@ -159,8 +159,8 @@ export default function DashboardPage() {
             <AreaChart data={revenueData}>
               <defs>
                 <linearGradient id="g-kirim" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#818cf8" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
@@ -170,7 +170,7 @@ export default function DashboardPage() {
                 formatter={(v: unknown) => formatCurrency(v as number)}
                 contentStyle={{ background: chart.tooltip, border: `1px solid ${chart.tooltipBorder}`, borderRadius: 10, color: chart.tooltipText }}
               />
-              <Area type="monotone" dataKey="kirim" stroke="#14b8a6" fill="url(#g-kirim)" strokeWidth={2.5} name="Kirim" />
+              <Area type="monotone" dataKey="kirim" stroke="#818cf8" fill="url(#g-kirim)" strokeWidth={2.5} name="Kirim" />
               <Area type="monotone" dataKey="chiqim" stroke="#f87171" fill="none" strokeWidth={1.5} strokeDasharray="6 3" name="Chiqim" />
             </AreaChart>
           </ResponsiveContainer>
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                 ))
               : leads.slice(0, 5).map((l: any) => (
                   <div key={l.id}
-                    className="flex items-center gap-3 px-5 py-3 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+                    className="flex items-center gap-3 px-5 py-3 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                     <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-violet-500 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0">
                       {l.name[0]}
                     </div>
@@ -247,7 +247,7 @@ export default function DashboardPage() {
                   ))
                 : payments.slice(0, 4).map((p: any) => (
                     <div key={p.id}
-                      className="flex items-center justify-between px-5 py-3 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+                      className="flex items-center justify-between px-5 py-3 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center text-white text-[11px] font-bold shrink-0">
                           {p.student?.name?.[0] ?? "?"}

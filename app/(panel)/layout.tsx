@@ -15,8 +15,8 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
       <header className="sticky top-0 z-30 bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-b border-white/60 dark:border-white/10">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-neutral-900 dark:bg-neutral-100 rounded-xl flex items-center justify-center">
-              <span className="text-white dark:text-neutral-900 font-black text-[14px]">O</span>
+            <div className="w-8 h-8 bg-indigo-600 dark:bg-indigo-500 rounded-xl flex items-center justify-center">
+              <span className="text-white font-black text-[14px]">O</span>
             </div>
             <span className="font-bold text-[15px] text-neutral-900 dark:text-neutral-100">OneRoom</span>
           </div>

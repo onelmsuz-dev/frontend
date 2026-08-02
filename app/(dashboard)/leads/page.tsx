@@ -230,7 +230,7 @@ export default function LeadsPage() {
         footer={
           <>
             <Button onClick={submit} disabled={saving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {saving ? "Qo'shilmoqda..." : "Qo'shish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowModal(false)}>Bekor</Button>
@@ -303,7 +303,7 @@ export default function LeadsPage() {
         footer={
           <>
             <Button onClick={submitEdit} disabled={editSaving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {editSaving ? "Saqlanmoqda..." : "Saqlash"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setEditTarget(null)}>Bekor</Button>

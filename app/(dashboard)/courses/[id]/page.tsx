@@ -110,7 +110,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               const st     = STATUS_CFG[g.status] ?? STATUS_CFG.ACTIVE;
               const teacher = g.teacher?.user;
               return (
-                <div key={g.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+                <div key={g.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", g.color ?? "bg-blue-100 text-blue-700")}>
                       <BookOpen className="w-4 h-4" />

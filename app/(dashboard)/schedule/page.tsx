@@ -426,7 +426,7 @@ export default function SchedulePage() {
         footer={
           <>
             <Button onClick={submitGroup} disabled={groupSaving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {groupSaving ? "Saqlanmoqda..." : "Guruh yaratish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowGroupModal(false)}>Bekor</Button>
@@ -698,7 +698,7 @@ export default function SchedulePage() {
           <div className={cn(
             "shrink-0 flex items-center justify-between px-5 py-4",
             "border-b border-white/50 dark:border-white/10",
-            kunIsToday ? "bg-neutral-900 dark:bg-neutral-950" : "glass-panel"
+            kunIsToday ? "bg-indigo-600 dark:bg-indigo-600" : "glass-panel"
           )}>
             <div>
               <p className={cn("text-[11px] font-bold uppercase tracking-widest",
@@ -744,7 +744,7 @@ export default function SchedulePage() {
               </div>
               <div className="flex-1 relative" style={{ height: TOTAL_H }}>
                 {HOURS.map((_,i) => <div key={i} className="absolute inset-x-0 border-t border-white/50 dark:border-white/10" style={{ top: i*HOUR_H }} />)}
-                {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-white/50 dark:border-white/10/60" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
+                {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-white/50 dark:border-white/10" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
                 {kunUzIdx === null ? (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <p className="text-sm font-semibold text-neutral-400 dark:text-neutral-600">Dam olish kuni</p>
@@ -803,7 +803,7 @@ export default function SchedulePage() {
       {/* ══ HAFTA VIEW ════════════════════════════════════════════════════════ */}
       {view === "hafta" && (
         <div className="flex-1 overflow-auto">
-          <div className="sticky top-0 z-20 flex border-b border-white/50 dark:border-white/10 glass-panel">
+          <div className="sticky top-0 z-20 flex border-b border-white/50 dark:border-white/10 glass-strong">
             <div style={{ width: TIME_W, minWidth: TIME_W }} className="shrink-0 border-r border-white/50 dark:border-white/10" />
             {weekDays.map((d, i) => {
               const isToday = sameDay(d, today);
@@ -813,14 +813,14 @@ export default function SchedulePage() {
                   className={cn(
                     "flex-1 flex flex-col items-center justify-center py-3 gap-px",
                     "border-r border-white/50 dark:border-white/10 last:border-r-0 cursor-pointer transition-colors",
-                    isToday ? "bg-neutral-900 dark:bg-white" : isSel ? "glass-soft" : "hover:bg-white/60 dark:hover:bg-white/10/50"
+                    isToday ? "bg-indigo-600" : isSel ? "glass-soft" : "hover:bg-white/60 dark:hover:bg-white/10"
                   )}>
                   <span className={cn("text-[10px] font-bold uppercase tracking-widest",
                     isToday ? "text-white/50 dark:text-neutral-900/50" : isSel ? "text-neutral-500" : "text-neutral-400 dark:text-neutral-500")}>
                     {UZ_DAYS_S[i]}
                   </span>
                   <span className={cn("text-[20px] font-black leading-none",
-                    isToday ? "text-white dark:text-neutral-900" : isSel ? "text-neutral-800 dark:text-neutral-100" : "text-neutral-700 dark:text-neutral-200")}>
+                    isToday ? "text-white" : isSel ? "text-neutral-800 dark:text-neutral-100" : "text-neutral-700 dark:text-neutral-200")}>
                     {d.getDate()}
                   </span>
                   <span className={cn("text-[10px]",
@@ -850,7 +850,7 @@ export default function SchedulePage() {
                     isToday && "bg-blue-50/25 dark:bg-blue-900/10", isSel && "bg-neutral-50/80 dark:bg-neutral-800/30")}
                   style={{ height: TOTAL_H }}>
                   {HOURS.map((_,i) => <div key={i} className="absolute inset-x-0 border-t border-white/50 dark:border-white/10" style={{ top: i*HOUR_H }} />)}
-                  {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-white/50 dark:border-white/10/60" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
+                  {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-white/50 dark:border-white/10" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
                   {entries.map(entry => {
                     const top     = blockTop(entry.time);
                     const height  = blockH(entry.time, entry.endTime);
@@ -894,18 +894,18 @@ export default function SchedulePage() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-px rounded-2xl overflow-hidden bg-neutral-200 dark:bg-neutral-700 border border-white/60 dark:border-white/10">
+          <div className="grid grid-cols-7 gap-px rounded-2xl overflow-hidden bg-white/45 dark:bg-white/10 border border-white/60 dark:border-white/10">
             {calCells.slice(0,42).map((d, i) => {
               const inMonth = d.getMonth()===monthDate.getMonth();
-              if (i>=35 && !inMonth) return <div key={i} className="glass-panel h-24" />;
+              if (i>=35 && !inMonth) return <div key={i} className="glass-soft h-24" />;
               const isToday = sameDay(d, today);
               const isSel   = sameDay(d, selDay);
               const idx     = getUzIdx(d);
               const entries = idx!==null && inMonth ? schedule.filter(s => s.day===UZ_DAYS[idx]) : [];
               return (
                 <button key={i} onClick={() => { setSelDay(new Date(d)); setView("kun"); }}
-                  className={cn("glass-panel h-24 p-1.5 text-left flex flex-col gap-1",
-                    "hover:bg-white/60 dark:hover:bg-white/10/70 transition-colors",
+                  className={cn("glass-soft h-24 p-1.5 text-left flex flex-col gap-1",
+                    "hover:bg-white/60 dark:hover:bg-white/10 transition-colors",
                     !inMonth && "opacity-25")}>
                   <span className={cn("w-6 h-6 flex items-center justify-center rounded-full text-[12px] font-bold shrink-0",
                     isToday ? "bg-indigo-600 text-white dark:bg-indigo-500"

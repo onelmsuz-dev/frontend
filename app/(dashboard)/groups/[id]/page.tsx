@@ -115,7 +115,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         footer={
           <>
             <Button onClick={submitAdd} disabled={addSaving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {addSaving ? "Qo'shilmoqda..." : "Qo'shish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowAdd(false)}>Bekor</Button>
@@ -232,7 +232,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
               const s       = sg.student;
               const enroll  = ENROLL_CFG[sg.enrollmentStatus];
               return (
-                <div key={sg.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+                <div key={sg.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-8 h-8 rounded-xl flex items-center justify-center text-white text-[12px] font-bold",

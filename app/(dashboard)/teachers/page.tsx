@@ -163,7 +163,7 @@ export default function TeachersPage() {
         footer={
           <>
             <Button onClick={submit} disabled={saving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {saving ? "Saqlanmoqda..." : editTarget ? "Saqlash" : "Qo'shish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowModal(false)}>Bekor</Button>
@@ -397,11 +397,11 @@ export default function TeachersPage() {
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mb-4">
-                      <div className="glass-soft/60 rounded-xl p-2.5 flex items-center gap-2">
+                      <div className="glass-soft rounded-xl p-2.5 flex items-center gap-2">
                         <BookOpen className="w-4 h-4 text-green-500 shrink-0" />
                         <div><p className="text-[10px] text-neutral-500">Guruhlar</p><p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{t._count?.groups ?? 0}</p></div>
                       </div>
-                      <div className="glass-soft/60 rounded-xl p-2.5 flex items-center gap-2">
+                      <div className="glass-soft rounded-xl p-2.5 flex items-center gap-2">
                         <Wallet className="w-4 h-4 text-purple-500 shrink-0" />
                         <div><p className="text-[10px] text-neutral-500">Maosh</p><p className="text-[12px] font-bold text-purple-700 dark:text-purple-400">{salaryDisplay(t.salaryType, t.salary)}</p></div>
                       </div>
@@ -426,7 +426,7 @@ export default function TeachersPage() {
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="glass-soft/60 hover:bg-white/60 dark:hover:bg-white/10/60">
+                <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                   {["O'qituvchi","Fanlar","Guruhlar","Oylik","Status",""].map(h => (
                     <TableHead key={h} className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{h}</TableHead>
                   ))}
@@ -438,7 +438,7 @@ export default function TeachersPage() {
                       <TableRow key={i}>{Array.from({length:6}).map((_,j) => <TableCell key={j}><Skeleton className="h-3 w-full" /></TableCell>)}</TableRow>
                     ))
                   : filtered.map((t: any) => (
-                      <TableRow key={t.id} className="hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+                      <TableRow key={t.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-2.5">
                             <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center text-white font-bold text-[13px] shrink-0">{t.user?.name?.[0] ?? "?"}</div>

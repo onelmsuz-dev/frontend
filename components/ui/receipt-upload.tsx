@@ -71,7 +71,7 @@ export function ReceiptUpload({ value, onChange, className }: Props) {
         </div>
       ) : (
         <button type="button" onClick={() => inputRef.current?.click()} disabled={loading}
-          className="w-full h-28 flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-neutral-500 hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+          className="w-full h-28 flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-neutral-500 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
           {loading
             ? <Loader2 className="w-6 h-6 animate-spin" />
             : <><Upload className="w-6 h-6" /><span className="text-[12px] font-medium">Chek rasmini yuklang</span><span className="text-[10px] text-neutral-400 flex items-center gap-1"><ImageIcon className="w-3 h-3" /> JPG / PNG</span></>}

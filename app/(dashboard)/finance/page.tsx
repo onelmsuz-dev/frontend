@@ -239,7 +239,7 @@ export default function FinancePage() {
             </div>
             <div className="px-5 pb-5 flex gap-2">
               <Button
-                className="flex-1 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 h-10"
+ className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 h-10"
                 disabled={expSaving} onClick={submitExpense}>
                 {expSaving ? "Saqlanmoqda..." : "Qo'shish"}
               </Button>
@@ -324,7 +324,7 @@ export default function FinancePage() {
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="glass-soft/60 hover:bg-white/60 dark:hover:bg-white/10/60">
+                <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'quvchi</TableHead>
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Guruh</TableHead>
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Sana</TableHead>
@@ -344,7 +344,7 @@ export default function FinancePage() {
                       </TableRow>
                     ))
                   : payments.map((p: any) => (
-                      <TableRow key={p.id} className="hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+                      <TableRow key={p.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl flex items-center justify-center text-emerald-700 dark:text-emerald-400 text-[12px] font-bold shrink-0">
@@ -390,7 +390,7 @@ export default function FinancePage() {
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="glass-soft/60 hover:bg-white/60 dark:hover:bg-white/10/60">
+                <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Kategoriya</TableHead>
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Tavsif</TableHead>
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Sana</TableHead>
@@ -399,7 +399,7 @@ export default function FinancePage() {
               </TableHeader>
               <TableBody>
                 {expenses.map((e: any) => (
-                  <TableRow key={e.id} className="hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+                  <TableRow key={e.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                     <TableCell>
                       <span className="text-[11px] bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-lg font-medium">
                         {e.category}
@@ -441,8 +441,8 @@ export default function FinancePage() {
               <button
                 onClick={generateSalaries}
                 disabled={generating}
-                className="flex items-center gap-2 h-9 px-4 rounded-xl bg-neutral-900 dark:bg-neutral-100
-                  text-white dark:text-neutral-900 text-[13px] font-semibold hover:opacity-80 transition-opacity disabled:opacity-50">
+                className="flex items-center gap-2 h-9 px-4 rounded-xl bg-indigo-600 dark:bg-indigo-500
+                  text-white text-[13px] font-semibold hover:opacity-80 transition-opacity disabled:opacity-50">
                 <RefreshCw className={cn("w-3.5 h-3.5", generating && "animate-spin")} />
                 {generating ? "Hisoblanmoqda..." : "Oylikni hisoblash"}
               </button>
@@ -484,7 +484,7 @@ export default function FinancePage() {
               <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="glass-soft/60 hover:bg-white/60 dark:hover:bg-white/10/60">
+                  <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'qituvchi</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Turi</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Yig'ilgan</TableHead>
@@ -506,7 +506,7 @@ export default function FinancePage() {
                         </TableRow>
                       ))
                     : salaries.map((s: any) => (
-                        <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+                        <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                           <TableCell>
                             <div className="flex items-center gap-2.5">
                               <div className="w-9 h-9 bg-gradient-to-br from-violet-400 to-blue-500 rounded-xl flex items-center justify-center text-white text-[13px] font-bold shrink-0">
@@ -609,7 +609,7 @@ export default function FinancePage() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="glass-soft/60 hover:bg-white/60 dark:hover:bg-white/10/60">
+                    <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                       <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'quvchi</TableHead>
                       <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Guruh</TableHead>
                       <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'qituvchi</TableHead>
@@ -629,7 +629,7 @@ export default function FinancePage() {
                       : debtors.map(s => {
                           const sg = s.groups?.[0];
                           return (
-                            <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+                            <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                               <TableCell>
                                 <div className="flex items-center gap-2.5">
                                   <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-400 to-orange-400 flex items-center justify-center text-white text-[11px] font-bold shrink-0">

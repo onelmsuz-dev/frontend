@@ -203,7 +203,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         footer={
           <>
             <Button onClick={submitPayment} disabled={paying}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {paying ? "Saqlanmoqda..." : "Qabul qilish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowPayModal(false)}>Bekor</Button>
@@ -272,7 +272,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         footer={
           <>
             <Button onClick={transferGroup} disabled={transferring}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {transferring ? "O'tkazilmoqda..." : "O'tkazish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowTransferModal(false)}>Bekor</Button>

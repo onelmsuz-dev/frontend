@@ -171,7 +171,7 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
               <p className="text-[12px] text-neutral-400 p-6 text-center">Guruhlar yo'q</p>
             )}
             {teacher.groups?.map((g: any) => (
-              <div key={g.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
+              <div key={g.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                 <div>
                   <Link href={`/groups/${g.id}`}
                     className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 hover:text-blue-600 transition-colors">

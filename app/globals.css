@@ -268,16 +268,6 @@ tbody tr + tr {
   .dark .glass-strong {
     background-color: rgba(20, 18, 26, 0.88);
   }
-
-  /* Sticky table heads sitting on glass */
-  .glass-head {
-    background-color: rgba(255, 255, 255, 0.45);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-  .dark .glass-head {
-    background-color: rgba(255, 255, 255, 0.03);
-  }
 }
 
 /* shadcn cards inherit the glass surface too */

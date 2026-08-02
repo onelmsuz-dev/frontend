@@ -249,19 +249,19 @@ export default function CoursesPage() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="glass-soft/60 rounded-xl p-3">
+                      <div className="glass-soft rounded-xl p-3">
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Clock className="w-3.5 h-3.5" /><span className="text-[11px]">Davomiyligi</span></div>
                         <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course.duration}</p>
                       </div>
-                      <div className="glass-soft/60 rounded-xl p-3">
+                      <div className="glass-soft rounded-xl p-3">
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Wallet className="w-3.5 h-3.5" /><span className="text-[11px]">Narxi</span></div>
                         <p className="text-[13px] font-bold text-blue-700 dark:text-blue-400">{formatCurrency(course.price)}</p>
                       </div>
-                      <div className="glass-soft/60 rounded-xl p-3">
+                      <div className="glass-soft rounded-xl p-3">
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><BookOpen className="w-3.5 h-3.5" /><span className="text-[11px]">Guruhlar</span></div>
                         <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course._count?.groups ?? 0} ta</p>
                       </div>
-                      <div className="glass-soft/60 rounded-xl p-3">
+                      <div className="glass-soft rounded-xl p-3">
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Users className="w-3.5 h-3.5" /><span className="text-[11px]">O'quvchilar</span></div>
                         <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course.studentCount ?? 0} ta</p>
                       </div>

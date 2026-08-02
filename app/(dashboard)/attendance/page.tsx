@@ -257,7 +257,7 @@ export default function AttendancePage() {
             const Icon = cfg.icon;
             return (
               <div key={key} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-2 glass-soft/60", cfg.cls)}>
+                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-2 glass-soft", cfg.cls)}>
                   <Icon className="w-4.5 h-4.5" />
                 </div>
                 {studentsLoading ? <Skeleton className="h-6 w-8 mb-1" />
@@ -267,7 +267,7 @@ export default function AttendancePage() {
             );
           })}
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 glass-soft/60 text-neutral-400">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 glass-soft text-neutral-400">
               <Users className="w-4.5 h-4.5" />
             </div>
             {studentsLoading ? <Skeleton className="h-6 w-8 mb-1" />
@@ -358,7 +358,7 @@ export default function AttendancePage() {
                         value={localNote[s.id] ?? ""}
                         onChange={e => { setLocalNote(prev => ({ ...prev, [s.id]: e.target.value })); setDirty(true); }}
                         placeholder="Sabab / izoh..."
-                        className="mt-2 w-full h-8 px-2.5 text-[12px] rounded-lg border border-white/60 dark:border-white/10 glass-soft/50 text-neutral-700 dark:text-neutral-300 outline-none focus:border-indigo-400 transition-colors"
+                        className="mt-2 w-full h-8 px-2.5 text-[12px] rounded-lg border border-white/60 dark:border-white/10 glass-soft text-neutral-700 dark:text-neutral-300 outline-none focus:border-indigo-400 transition-colors"
                       />
                     )}
                   </div>

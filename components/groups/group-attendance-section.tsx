@@ -99,27 +99,27 @@ export function GroupAttendanceSection({ groupId, scheduleDays, startTime, stude
   const marked = students.filter(sg => localStatus[sg.studentId]).length;
 
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-      <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between flex-wrap gap-2">
+    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+      <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <CalendarDays className="w-4 h-4 text-neutral-400" />
           <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Davomat</h3>
         </div>
         <div className="flex items-center gap-1.5">
           <button onClick={() => setCurrentDate(d => addDays(d, -1))}
-            className="w-7 h-7 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors">
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-white/60 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors">
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
           <span className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 min-w-[92px] text-center">
             {currentDate.getDate()}.{currentDate.getMonth() + 1} · {UZ_DAYS[currentDate.getDay()].slice(0, 3)}
           </span>
           <button onClick={() => setCurrentDate(d => addDays(d, 1))} disabled={currentDate.getTime() >= today.getTime()}
-            className="w-7 h-7 flex items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-white/60 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
           {!isToday && (
             <button onClick={() => setCurrentDate(new Date(today))}
-              className="text-[11px] font-semibold px-2 h-7 rounded-lg border border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+              className="text-[11px] font-semibold px-2 h-7 rounded-lg border border-white/60 dark:border-white/10 text-neutral-500 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
               Bugun
             </button>
           )}
@@ -156,7 +156,7 @@ export function GroupAttendanceSection({ groupId, scheduleDays, startTime, stude
                     return (
                       <button key={st} onClick={() => setStatus(sg.studentId, st)}
                         className={cn("px-2 py-1 rounded-lg text-[10px] font-semibold border transition-all",
-                          active ? cfg.activeCls : cn("bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 hover:border-current", cfg.cls))}>
+                          active ? cfg.activeCls : cn("glass-panel border-white/60 dark:border-white/10 hover:border-current", cfg.cls))}>
                         {cfg.short}
                       </button>
                     );
@@ -169,7 +169,7 @@ export function GroupAttendanceSection({ groupId, scheduleDays, startTime, stude
       )}
 
       {canMark && students.length > 0 && (
-        <div className="px-5 py-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center gap-3">
+        <div className="px-5 py-3 border-t border-white/50 dark:border-white/10 flex items-center gap-3">
           <span className="text-[11px] text-neutral-400">{marked}/{students.length} belgilandi</span>
           {savedFlash && (
             <span className="flex items-center gap-1 text-[11px] font-semibold text-green-600 dark:text-green-400">

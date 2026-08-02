@@ -50,17 +50,17 @@ export function PermissionPicker({ value, onChange, className }: Props) {
         const isOpen = openGroups.has(group.key);
 
         return (
-          <div key={group.key} className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2.5 bg-neutral-50 dark:bg-neutral-800/50">
+          <div key={group.key} className="border border-white/60 dark:border-white/10 rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2.5 glass-soft">
               <button type="button" onClick={() => toggleGroup(keys, allOn)}
                 className="flex items-center gap-2 flex-1 text-left">
                 <span className={cn(
                   "w-4 h-4 rounded flex items-center justify-center border transition-colors shrink-0",
-                  allOn ? "bg-neutral-900 dark:bg-neutral-100 border-neutral-900 dark:border-neutral-100"
+                  allOn ? "bg-indigo-600 dark:bg-indigo-500 border-neutral-900 dark:border-neutral-100"
                     : someOn ? "bg-neutral-400 border-neutral-400"
                     : "border-neutral-300 dark:border-neutral-600",
                 )}>
-                  {(allOn || someOn) && <Check className="w-3 h-3 text-white dark:text-neutral-900" />}
+                  {(allOn || someOn) && <Check className="w-3 h-3 text-white" />}
                 </span>
                 <span className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">{group.label}</span>
                 <span className="text-[11px] text-neutral-400">{selectedIn}/{keys.length}</span>

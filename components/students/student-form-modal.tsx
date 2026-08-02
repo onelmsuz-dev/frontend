@@ -18,7 +18,7 @@ import { SOURCE_OPTIONS, WEEKDAYS, SCHEDULE_PRESETS, todayStr, type Gender } fro
 import { cn } from "@/lib/utils";
 
 const selectCls =
-  "w-full h-10 px-3 text-[13px] rounded-xl border border-neutral-200 dark:border-neutral-700 " +
+  "w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 " +
   "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none " +
   "focus:border-indigo-500 dark:focus:border-indigo-400 transition-colors";
 
@@ -295,7 +295,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
                     className={cn("px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all",
                       ng.scheduleDays.includes(d.value)
                         ? "bg-indigo-600 text-white border-indigo-600"
-                        : "border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:border-neutral-400")}>
+                        : "border-white/60 dark:border-white/10 text-neutral-500 hover:border-neutral-400")}>
                     {d.short}
                   </button>
                 ))}
@@ -357,9 +357,9 @@ function Section({ icon: Icon, title, open, onToggle, children }: {
   icon: any; title: string; open: boolean; onToggle: () => void; children: React.ReactNode;
 }) {
   return (
-    <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden">
+    <div className="border border-white/60 dark:border-white/10 rounded-xl overflow-hidden">
       <button type="button" onClick={onToggle}
-        className="w-full flex items-center justify-between px-3.5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+        className="w-full flex items-center justify-between px-3.5 py-3 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
         <span className="flex items-center gap-2 text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">
           <Icon className="w-4 h-4 text-neutral-400" /> {title}
         </span>

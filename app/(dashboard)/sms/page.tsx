@@ -233,7 +233,7 @@ export default function SmsPage() {
                 </div>
               </div>
               <Button onClick={() => { setShowBuy(true); setBuyErr(""); }} disabled={hasPending}
-                className="gap-1.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 h-9 text-[13px]">
+ className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 h-9 text-[13px]">
                 <Package className="w-4 h-4" /> Paket sotib olish
               </Button>
             </CardContent>
@@ -270,7 +270,7 @@ export default function SmsPage() {
                 <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Mening matnlarim</p>
               </div>
               <Button size="sm" onClick={() => { setShowAddTpl(true); setTplErr(""); }}
-                className="gap-1.5 h-8 text-[12px] bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900">
+ className="gap-1.5 h-8 text-[12px] bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 ">
                 <Plus className="w-3.5 h-3.5" /> Matn qo'shish
               </Button>
             </div>
@@ -415,7 +415,7 @@ export default function SmsPage() {
                     ))}
                   </div>
                   {selectedTemplate && (
-                    <div className="mt-2.5 rounded-xl glass-soft/60 px-3.5 py-2.5">
+                    <div className="mt-2.5 rounded-xl glass-soft px-3.5 py-2.5">
                       <p className="text-[13px] text-neutral-700 dark:text-neutral-300">{selectedTemplate.text}</p>
                       {selectedTemplate.text.includes("{ism}") && (
                         <p className="text-[11px] text-neutral-400 mt-1">{"{ism}"} — har bir oluvchiga o'z ismi bilan yuboriladi</p>
@@ -483,7 +483,7 @@ export default function SmsPage() {
                 </div>
                 <div className="max-h-64 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
                   {(audiences.has("students") || audiences.has("parents")) && filteredStudents.map(s => (
-                    <label key={s.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-white/60 dark:hover:bg-white/10/50">
+                    <label key={s.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-white/60 dark:hover:bg-white/10">
                       <input type="checkbox" checked={selStudents.has(s.id)} onChange={() => toggleSet(setSelStudents, s.id)}
                         className="w-4 h-4 rounded accent-neutral-900 dark:accent-neutral-100" />
                       <span className="text-[13px] text-neutral-800 dark:text-neutral-200 flex-1">{s.name}</span>
@@ -491,7 +491,7 @@ export default function SmsPage() {
                     </label>
                   ))}
                   {audiences.has("teachers") && filteredTeachers.map(t => (
-                    <label key={t.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-white/60 dark:hover:bg-white/10/50">
+                    <label key={t.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-white/60 dark:hover:bg-white/10">
                       <input type="checkbox" checked={selTeachers.has(t.id)} onChange={() => toggleSet(setSelTeachers, t.id)}
                         className="w-4 h-4 rounded accent-neutral-900 dark:accent-neutral-100" />
                       <span className="text-[13px] text-neutral-800 dark:text-neutral-200 flex-1">{t.user?.name} <span className="text-[11px] text-purple-500">· ustoz</span></span>
@@ -581,7 +581,7 @@ export default function SmsPage() {
         footer={
           <>
             <Button onClick={submitBuy} disabled={buying}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {buying ? "Yuborilmoqda..." : "So'rov yuborish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowBuy(false)}>Bekor</Button>
@@ -624,7 +624,7 @@ export default function SmsPage() {
         footer={
           <>
             <Button onClick={submitNewTemplate} disabled={tplSaving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {tplSaving ? "Yuborilmoqda..." : "Moderatsiyaga yuborish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowAddTpl(false)}>Bekor</Button>
