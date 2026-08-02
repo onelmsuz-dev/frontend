@@ -22,7 +22,7 @@ function formatCurrency(v: number) {
   return `${v} so'm`;
 }
 
-const PIE_COLORS = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4"];
+const PIE_COLORS = ["#6366f1", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4"];
 const COURSE_COLORS = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500", "bg-pink-500", "bg-yellow-500"];
 
 const DATE_RANGES: { label: string; months: number }[] = [
@@ -69,8 +69,8 @@ export default function ReportsPage() {
           <div className="relative">
             <button
               onClick={() => setShowDateDrop(v => !v)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700
-                bg-white dark:bg-neutral-900 text-[13px] font-medium text-neutral-700 dark:text-neutral-300
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/60 dark:border-white/10
+                glass-panel text-[13px] font-medium text-neutral-700 dark:text-neutral-300
                 hover:border-neutral-400 transition-colors">
               {selectedRange.label}
               <ChevronDown className={cn("w-3.5 h-3.5 text-neutral-400 transition-transform", showDateDrop && "rotate-180")} />
@@ -78,13 +78,13 @@ export default function ReportsPage() {
             {showDateDrop && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowDateDrop(false)} />
-                <div className="absolute top-full left-0 mt-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-lg z-50 min-w-[140px] overflow-hidden">
+                <div className="absolute top-full left-0 mt-1.5 glass-strong border border-white/60 dark:border-white/10 rounded-xl shadow-lg z-50 min-w-[140px] overflow-hidden">
                   {DATE_RANGES.map(r => (
                     <button key={r.months} onClick={() => { setMonthCount(r.months); setShowDateDrop(false); }}
                       className={cn(
-                        "w-full text-left px-3 py-2 text-[13px] hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors",
+                        "w-full text-left px-3 py-2 text-[13px] hover:bg-white/60 dark:hover:bg-white/10 transition-colors",
                         monthCount === r.months
-                          ? "font-semibold text-neutral-900 dark:text-neutral-100 bg-neutral-50 dark:bg-neutral-800"
+                          ? "font-semibold text-neutral-900 dark:text-neutral-100 glass-soft"
                           : "text-neutral-600 dark:text-neutral-400"
                       )}>
                       {r.label}
@@ -107,7 +107,7 @@ export default function ReportsPage() {
             const Icon = s.icon;
             return (
               <div key={s.label}
-                className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+                className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", s.bg)}>
                     <Icon className={cn("w-4.5 h-4.5", s.text)} />
@@ -122,7 +122,7 @@ export default function ReportsPage() {
 
         {/* Charts row */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 mb-4">Moliyaviy hisobot ({selectedRange.label.toLowerCase()})</p>
             {revenue.length === 0 ? (
               <div className="h-[220px] flex items-center justify-center text-neutral-400 text-sm">Ma'lumot yuklanmoqda...</div>
@@ -136,14 +136,14 @@ export default function ReportsPage() {
                     formatter={(v: unknown) => formatCurrency(v as number)}
                     contentStyle={{ background: chart.tooltip, border: `1px solid ${chart.tooltipBorder}`, borderRadius: 8, color: chart.tooltipText }}
                   />
-                  <Bar dataKey="kirim"  name="Kirim"  fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="kirim"  name="Kirim"  fill="#6366f1" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="chiqim" name="Chiqim" fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
           </div>
 
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 mb-4">O'quvchilar bo'yicha kurs taqsimoti</p>
             {courseDistribution.length === 0 ? (
               <div className="h-[220px] flex items-center justify-center text-neutral-400 text-sm">Ma'lumot yuklanmoqda...</div>
@@ -166,14 +166,14 @@ export default function ReportsPage() {
 
         {/* Courses summary table */}
         {courses.length > 0 && (
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/50 dark:border-white/10">
               <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">Kurslar bo'yicha umumiy ko'rsatkich</p>
             </div>
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {courses.map((course, idx) => (
                 <div key={course.id}
-                  className="flex items-center justify-between px-5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                  className="flex items-center justify-between px-5 py-3 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                   <div className="flex items-center gap-3">
                     <span className="text-[11px] text-neutral-400 dark:text-neutral-500 w-5 font-mono shrink-0">{idx + 1}</span>
                     <div className={cn("w-2 h-8 rounded-full shrink-0", course.color ?? COURSE_COLORS[idx % COURSE_COLORS.length])} />

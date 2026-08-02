@@ -122,7 +122,7 @@ function GlobalSearch() {
       {/* Mobile: icon button to expand */}
       {!expanded && (
         <button
-          className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+          className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
           onClick={() => { setExpanded(true); setTimeout(() => inputRef.current?.focus(), 50); }}
         >
           <Search className="w-4 h-4" />
@@ -138,9 +138,9 @@ function GlobalSearch() {
           onChange={e => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           placeholder="Qidirish..."
-          className="pl-9 pr-8 h-9 w-44 sm:w-56 text-[13px] bg-neutral-100 dark:bg-neutral-800 border-0 rounded-xl
+          className="glass-soft pl-9 pr-8 h-9 w-44 sm:w-56 text-[13px] border border-white/60 dark:border-white/10 rounded-full
             text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none
-            focus:bg-neutral-50 dark:focus:bg-neutral-700 transition-colors"
+            focus:border-indigo-300 dark:focus:border-indigo-400/40 transition-colors"
         />
         {query && (
           <button onClick={clear}
@@ -157,8 +157,8 @@ function GlobalSearch() {
       </div>
 
       {showPanel && (
-        <div className="absolute right-0 top-full mt-1.5 w-80 bg-white dark:bg-neutral-900
-          border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-1.5 glass-strong w-80
+          border border-white/60 dark:border-white/10 rounded-3xl shadow-xl z-50 overflow-hidden">
 
           {loading && (
             <div className="px-4 py-6 text-center text-[12px] text-neutral-400">Qidirilmoqda...</div>
@@ -174,12 +174,12 @@ function GlobalSearch() {
             <>
               {results!.students.length > 0 && (
                 <div>
-                  <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-neutral-100 dark:border-neutral-800">
+                  <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-white/50 dark:border-white/10">
                     O'quvchilar
                   </p>
                   {results!.students.map(s => (
                     <Link key={s.id} href={`/students/${s.id}`} onClick={clear}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
                       <div className={cn("w-7 h-7 rounded-xl flex items-center justify-center text-white text-[11px] font-bold shrink-0",
                         s.isActive ? "bg-gradient-to-br from-blue-400 to-indigo-500" : "bg-gradient-to-br from-amber-400 to-orange-400")}>
                         {s.name[0]}
@@ -195,12 +195,12 @@ function GlobalSearch() {
 
               {results!.groups.length > 0 && (
                 <div>
-                  <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-neutral-100 dark:border-neutral-800">
+                  <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-white/50 dark:border-white/10">
                     Guruhlar
                   </p>
                   {results!.groups.map(g => (
                     <Link key={g.id} href={`/groups/${g.id}`} onClick={clear}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
                       <div className="w-7 h-7 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
                         <BookOpen className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                       </div>
@@ -219,12 +219,12 @@ function GlobalSearch() {
 
               {results!.leads.length > 0 && (
                 <div>
-                  <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-neutral-100 dark:border-neutral-800">
+                  <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-white/50 dark:border-white/10">
                     Arizalar (CRM)
                   </p>
                   {results!.leads.map(l => (
                     <Link key={l.id} href="/leads" onClick={clear}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
                       <div className="w-7 h-7 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
                         <UserPlus className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                       </div>
@@ -266,15 +266,14 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
   }, [showNotif]);
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between px-4 lg:px-6 h-[56px] lg:h-[60px]
-      bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md
-      border-b border-neutral-200/60 dark:border-neutral-800/60">
+    <header className="glass-panel sticky top-0 z-30 mb-3 flex h-[56px] items-center justify-between border-b border-white/60 dark:border-white/10 px-4
+      lg:top-4 lg:mx-5 lg:mb-1 lg:h-[64px] lg:rounded-3xl lg:border lg:border-white/60 lg:dark:border-white/10 lg:px-5">
       <div className="min-w-0 flex-1 mr-3">
-        <h1 className="font-bold text-[16px] lg:text-[18px] text-neutral-900 dark:text-neutral-100 tracking-tight leading-none truncate">
+        <h1 className="font-semibold text-[16px] lg:text-[18px] text-neutral-900 dark:text-neutral-100 tracking-tight leading-none truncate">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-[11px] lg:text-[12px] text-neutral-400 dark:text-neutral-500 mt-0.5 truncate">{subtitle}</p>
+          <p className="text-[11px] lg:text-[12px] text-neutral-500 dark:text-neutral-400 mt-1 truncate">{subtitle}</p>
         )}
       </div>
 
@@ -287,8 +286,8 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
         <div className="relative" ref={panelRef}>
           <button onClick={() => setShowNotif(v => !v)}
             className="relative w-9 h-9 flex items-center justify-center rounded-xl transition-colors
-              text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100
-              hover:bg-neutral-100 dark:hover:bg-neutral-800">
+              text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-300
+              hover:bg-white/60 dark:hover:bg-white/10">
             <Bell className="w-4 h-4" />
             {unread > 0 && (
               <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-red-500 rounded-full
@@ -299,9 +298,9 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
           </button>
 
           {showNotif && (
-            <div className="absolute right-0 top-full mt-1.5 w-80 bg-white dark:bg-neutral-900
-              border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl z-50 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800">
+            <div className="absolute right-0 top-full mt-1.5 glass-strong w-80
+              border border-white/60 dark:border-white/10 rounded-3xl shadow-xl z-50 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10">
                 <div className="flex items-center gap-2">
                   <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Bildirishnomalar</h3>
                   {unread > 0 && (
@@ -328,7 +327,7 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
                   items.map((n: Notification) => (
                     <div key={n.id}
                       className={cn(
-                        "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/50",
+                        "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-white/50 dark:hover:bg-white/5",
                         !n.isRead && "bg-blue-50/50 dark:bg-blue-900/10",
                       )}>
                       <NotifIcon type={n.type} />
@@ -357,14 +356,14 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
             {/* Mobile: icon only */}
             <button
               onClick={action.onClick}
-              className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors"
+              className="lg:hidden w-9 h-9 flex items-center justify-center rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
             </button>
             {/* Desktop: label + icon */}
             <Button size="sm" onClick={action.onClick}
-              className="hidden lg:flex gap-1.5 h-9 px-4 text-[13px] bg-neutral-900 hover:bg-neutral-800
-                dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-200 text-white rounded-xl">
+              className="hidden lg:flex gap-1.5 h-9 px-4 text-[13px] bg-indigo-600 hover:bg-indigo-700
+                text-white rounded-2xl shadow-sm">
               <Plus className="w-3.5 h-3.5" />
               {action.label}
             </Button>

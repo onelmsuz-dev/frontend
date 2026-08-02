@@ -144,7 +144,7 @@ export default function CoursesPage() {
                   className={cn("px-2 py-0.5 rounded-md text-[11px] font-medium border transition-colors",
                     form.duration === d
                       ? "bg-indigo-600 text-white border-indigo-600"
-                      : "border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:border-neutral-400")}>
+                      : "border-white/60 dark:border-white/10 text-neutral-500 hover:border-neutral-400")}>
                   {d}
                 </button>
               ))}
@@ -189,7 +189,7 @@ export default function CoursesPage() {
           ].map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+              <div key={s.label} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                 <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
                   <Icon className={cn("w-4.5 h-4.5", s.text)} />
                 </div>
@@ -215,7 +215,7 @@ export default function CoursesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {isLoading
             ? Array.from({length:3}).map((_,i) => (
-                <div key={i} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+                <div key={i} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
                   <div className="h-1.5 bg-neutral-200 dark:bg-neutral-700 animate-pulse" />
                   <div className="p-5 space-y-4">
                     <div className="flex justify-between"><div className="space-y-1.5 flex-1"><Skeleton className="h-4 w-28" /><Skeleton className="h-3 w-36" /></div></div>
@@ -225,7 +225,7 @@ export default function CoursesPage() {
               ))
             : filtered.map((course: any) => (
                 <div key={course.id}
-                  className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                  className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
                   <div className={cn("h-1.5 w-full", course.color ?? "bg-blue-500")} />
                   <div className="p-5">
                     <div className="flex items-start justify-between mb-4">
@@ -249,24 +249,24 @@ export default function CoursesPage() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-neutral-50 dark:bg-neutral-800/60 rounded-xl p-3">
+                      <div className="glass-soft rounded-xl p-3">
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Clock className="w-3.5 h-3.5" /><span className="text-[11px]">Davomiyligi</span></div>
                         <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course.duration}</p>
                       </div>
-                      <div className="bg-neutral-50 dark:bg-neutral-800/60 rounded-xl p-3">
+                      <div className="glass-soft rounded-xl p-3">
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Wallet className="w-3.5 h-3.5" /><span className="text-[11px]">Narxi</span></div>
                         <p className="text-[13px] font-bold text-blue-700 dark:text-blue-400">{formatCurrency(course.price)}</p>
                       </div>
-                      <div className="bg-neutral-50 dark:bg-neutral-800/60 rounded-xl p-3">
+                      <div className="glass-soft rounded-xl p-3">
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><BookOpen className="w-3.5 h-3.5" /><span className="text-[11px]">Guruhlar</span></div>
                         <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course._count?.groups ?? 0} ta</p>
                       </div>
-                      <div className="bg-neutral-50 dark:bg-neutral-800/60 rounded-xl p-3">
+                      <div className="glass-soft rounded-xl p-3">
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Users className="w-3.5 h-3.5" /><span className="text-[11px]">O'quvchilar</span></div>
                         <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course.studentCount ?? 0} ta</p>
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+                    <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 flex items-center justify-between">
                       <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Oylik daromad</span>
                       <span className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400">
                         {formatCurrency((course.price ?? 0) * (course.studentCount ?? 0))}

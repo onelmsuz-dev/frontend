@@ -192,14 +192,14 @@ export default function FinancePage() {
       {showExpModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
           onClick={e => e.target === e.currentTarget && setShowExpModal(false)}>
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="glass-strong rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/50 dark:border-white/10">
               <div className="flex items-center gap-2">
                 <TrendingDown className="w-5 h-5 text-red-500" />
                 <h2 className="font-bold text-[15px] text-neutral-900 dark:text-neutral-100">Xarajat qo'shish</h2>
               </div>
               <button onClick={() => setShowExpModal(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 transition-colors">
+                className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-400 transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -208,7 +208,7 @@ export default function FinancePage() {
                 <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">Kategoriya</Label>
                 <select value={expForm.category}
                   onChange={e => { setExpForm(p => ({...p, category: e.target.value})); setExpErr(""); }}
-                  className="w-full h-9 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
+                  className="w-full h-9 px-3 text-sm rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
                   <option value="">Kategoriyani tanlang...</option>
                   {["Ijara", "Kommunal", "Maosh", "Reklama", "Ta'mirlash", "Jihozlar", "Maktab buyumlari", "Boshqa"].map(c => (
                     <option key={c} value={c}>{c}</option>
@@ -231,7 +231,7 @@ export default function FinancePage() {
                 <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">Sana (ixtiyoriy)</Label>
                 <input type="date" value={expForm.date}
                   onChange={e => setExpForm(p => ({...p, date: e.target.value}))}
-                  className="w-full h-9 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none" />
+                  className="w-full h-9 px-3 text-sm rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none" />
               </div>
               {expErr && (
                 <p className="text-[12px] text-red-600 dark:text-red-400 font-medium">{expErr}</p>
@@ -239,7 +239,7 @@ export default function FinancePage() {
             </div>
             <div className="px-5 pb-5 flex gap-2">
               <Button
-                className="flex-1 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 h-10"
+ className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 h-10"
                 disabled={expSaving} onClick={submitExpense}>
                 {expSaving ? "Saqlanmoqda..." : "Qo'shish"}
               </Button>
@@ -262,7 +262,7 @@ export default function FinancePage() {
             const Icon = s.icon;
             return (
               <div key={s.label}
-                className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+                className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                 <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
                   <Icon className={cn("w-4.5 h-4.5", s.text)} />
                 </div>
@@ -277,7 +277,7 @@ export default function FinancePage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-0.5 bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl w-fit">
+        <div className="flex gap-0.5 glass-soft p-1 rounded-xl w-fit">
           {TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={cn(
@@ -299,7 +299,7 @@ export default function FinancePage() {
               type="month"
               value={payMonth}
               onChange={e => setPayMonth(e.target.value)}
-              className="h-9 px-3 text-[13px] rounded-xl border border-neutral-200 dark:border-neutral-700
+              className="h-9 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10
                 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none
                 focus:border-neutral-400 transition-colors"
             />
@@ -310,8 +310,8 @@ export default function FinancePage() {
           </div>
         )}
         {activeTab === "kirim" && (
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/50 dark:border-white/10">
               <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">
                 To'lovlar tarixi ({payments.length} ta)
               </p>
@@ -324,7 +324,7 @@ export default function FinancePage() {
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-neutral-50 dark:bg-neutral-800/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
+                <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'quvchi</TableHead>
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Guruh</TableHead>
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Sana</TableHead>
@@ -344,7 +344,7 @@ export default function FinancePage() {
                       </TableRow>
                     ))
                   : payments.map((p: any) => (
-                      <TableRow key={p.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                      <TableRow key={p.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl flex items-center justify-center text-emerald-700 dark:text-emerald-400 text-[12px] font-bold shrink-0">
@@ -379,18 +379,18 @@ export default function FinancePage() {
 
         {/* Xarajatlar */}
         {activeTab === "chiqim" && (
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/50 dark:border-white/10">
               <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">Xarajatlar ({expenses.length} ta)</p>
               <button onClick={() => { setExpErr(""); setExpForm({ category: "", description: "", amount: "", date: "" }); setShowExpModal(true); }}
-                className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-xl border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                 <Plus className="w-3.5 h-3.5" /> Xarajat qo'shish
               </button>
             </div>
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-neutral-50 dark:bg-neutral-800/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
+                <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Kategoriya</TableHead>
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Tavsif</TableHead>
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Sana</TableHead>
@@ -399,7 +399,7 @@ export default function FinancePage() {
               </TableHeader>
               <TableBody>
                 {expenses.map((e: any) => (
-                  <TableRow key={e.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                  <TableRow key={e.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                     <TableCell>
                       <span className="text-[11px] bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-lg font-medium">
                         {e.category}
@@ -434,15 +434,15 @@ export default function FinancePage() {
                   type="month"
                   value={salaryMonth}
                   onChange={e => setSalaryMonth(e.target.value)}
-                  className="h-9 px-3 text-sm rounded-xl border border-neutral-200 dark:border-neutral-700
+                  className="h-9 px-3 text-sm rounded-xl border border-white/60 dark:border-white/10
                     bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none"
                 />
               </div>
               <button
                 onClick={generateSalaries}
                 disabled={generating}
-                className="flex items-center gap-2 h-9 px-4 rounded-xl bg-neutral-900 dark:bg-neutral-100
-                  text-white dark:text-neutral-900 text-[13px] font-semibold hover:opacity-80 transition-opacity disabled:opacity-50">
+                className="flex items-center gap-2 h-9 px-4 rounded-xl bg-indigo-600 dark:bg-indigo-500
+                  text-white text-[13px] font-semibold hover:opacity-80 transition-opacity disabled:opacity-50">
                 <RefreshCw className={cn("w-3.5 h-3.5", generating && "animate-spin")} />
                 {generating ? "Hisoblanmoqda..." : "Oylikni hisoblash"}
               </button>
@@ -454,17 +454,17 @@ export default function FinancePage() {
             {/* Summary cards */}
             {salaries.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+                <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                   <p className="text-[11px] text-neutral-400 mb-1">Jami o'qituvchilar</p>
                   <p className="text-[20px] font-black text-neutral-900 dark:text-neutral-100">{salaries.length}</p>
                 </div>
-                <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+                <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                   <p className="text-[11px] text-neutral-400 mb-1">Jami oylik</p>
                   <p className="text-[20px] font-black text-violet-600 dark:text-violet-400">
                     {formatCurrency(salaries.reduce((s: number, r: any) => s + r.calculatedSalary, 0))}
                   </p>
                 </div>
-                <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+                <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                   <p className="text-[11px] text-neutral-400 mb-1">To'langan</p>
                   <p className="text-[20px] font-black text-emerald-600 dark:text-emerald-400">
                     {salaries.filter((r: any) => r.status === "PAID").length} / {salaries.length}
@@ -474,8 +474,8 @@ export default function FinancePage() {
             )}
 
             {/* Salary table */}
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-100 dark:border-neutral-800">
+            <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/50 dark:border-white/10">
                 <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">
                   O'qituvchilar oylik hisobi — {salaryMonth}
                 </p>
@@ -484,7 +484,7 @@ export default function FinancePage() {
               <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-neutral-50 dark:bg-neutral-800/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
+                  <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'qituvchi</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Turi</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Yig'ilgan</TableHead>
@@ -506,7 +506,7 @@ export default function FinancePage() {
                         </TableRow>
                       ))
                     : salaries.map((s: any) => (
-                        <TableRow key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                        <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                           <TableCell>
                             <div className="flex items-center gap-2.5">
                               <div className="w-9 h-9 bg-gradient-to-br from-violet-400 to-blue-500 rounded-xl flex items-center justify-center text-white text-[13px] font-bold shrink-0">
@@ -569,7 +569,7 @@ export default function FinancePage() {
                     onClick={generateSalaries}
                     disabled={generating}
                     className="inline-flex items-center gap-1.5 text-[12px] font-semibold px-4 py-2 rounded-xl
-                      bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 hover:opacity-80 transition-opacity">
+                      bg-indigo-600 text-white dark:bg-indigo-500 hover:opacity-80 transition-opacity">
                     <RefreshCw className="w-3.5 h-3.5" />
                     Oylikni hisoblash
                   </button>
@@ -593,7 +593,7 @@ export default function FinancePage() {
                 Jami qarz: {formatCurrency(totalDebt)}
               </span>
               <button onClick={chargeMonthlyDues} disabled={chargingDues}
-                className="ml-auto inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors disabled:opacity-50">
+                className="ml-auto inline-flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-xl border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:bg-white/60 dark:hover:bg-white/10 transition-colors disabled:opacity-50">
                 <RefreshCw className={cn("w-3.5 h-3.5", chargingDues && "animate-spin")} />
                 {chargingDues ? "Hisoblanmoqda..." : "Oylik to'lovni hisoblash"}
               </button>
@@ -605,11 +605,11 @@ export default function FinancePage() {
               Tizim buni har oy avtomatik ham bajaradi (birinchi kirishda) — bu tugma darhol tekshirish uchun.
             </p>
 
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+            <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-neutral-50 dark:bg-neutral-800/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
+                    <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                       <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'quvchi</TableHead>
                       <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Guruh</TableHead>
                       <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'qituvchi</TableHead>
@@ -629,7 +629,7 @@ export default function FinancePage() {
                       : debtors.map(s => {
                           const sg = s.groups?.[0];
                           return (
-                            <TableRow key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                            <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                               <TableCell>
                                 <div className="flex items-center gap-2.5">
                                   <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-400 to-orange-400 flex items-center justify-center text-white text-[11px] font-bold shrink-0">

@@ -107,7 +107,7 @@ export default function DashboardPage() {
             const Icon = s.icon;
             return (
               <div key={s.title}
-                className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+                className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                 <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
                   <Icon className={cn("w-4.5 h-4.5", s.text)} />
                 </div>
@@ -140,7 +140,7 @@ export default function DashboardPage() {
         )}
 
         {/* Area chart — still uses mock revenue until finance API is ready */}
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+        <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100">Moliyaviy ko'rsatkich</h3>
@@ -159,8 +159,8 @@ export default function DashboardPage() {
             <AreaChart data={revenueData}>
               <defs>
                 <linearGradient id="g-kirim" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#818cf8" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
@@ -170,7 +170,7 @@ export default function DashboardPage() {
                 formatter={(v: unknown) => formatCurrency(v as number)}
                 contentStyle={{ background: chart.tooltip, border: `1px solid ${chart.tooltipBorder}`, borderRadius: 10, color: chart.tooltipText }}
               />
-              <Area type="monotone" dataKey="kirim" stroke="#14b8a6" fill="url(#g-kirim)" strokeWidth={2.5} name="Kirim" />
+              <Area type="monotone" dataKey="kirim" stroke="#818cf8" fill="url(#g-kirim)" strokeWidth={2.5} name="Kirim" />
               <Area type="monotone" dataKey="chiqim" stroke="#f87171" fill="none" strokeWidth={1.5} strokeDasharray="6 3" name="Chiqim" />
             </AreaChart>
           </ResponsiveContainer>
@@ -180,8 +180,8 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Leads */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-100 dark:border-neutral-800">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/50 dark:border-white/10">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center">
                   <Target className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
@@ -194,7 +194,7 @@ export default function DashboardPage() {
             </div>
             {leadsLoading
               ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                  <div key={i} className="flex items-center gap-3 px-5 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
                     <Skeleton className="w-8 h-8 rounded-xl shrink-0" />
                     <div className="flex-1 space-y-1"><Skeleton className="h-3 w-28" /><Skeleton className="h-2.5 w-20" /></div>
                     <Skeleton className="h-5 w-14 rounded-lg" />
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                 ))
               : leads.slice(0, 5).map((l: any) => (
                   <div key={l.id}
-                    className="flex items-center gap-3 px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                    className="flex items-center gap-3 px-5 py-3 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                     <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-violet-500 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0">
                       {l.name[0]}
                     </div>
@@ -223,8 +223,8 @@ export default function DashboardPage() {
 
           {/* Payments + attendance */}
           <div className="flex flex-col gap-5">
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-100 dark:border-neutral-800">
+            <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/50 dark:border-white/10">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-900/40 flex items-center justify-center">
                     <CreditCard className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -237,7 +237,7 @@ export default function DashboardPage() {
               </div>
               {paymentsLoading
                 ? Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                    <div key={i} className="flex items-center justify-between px-5 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
                       <div className="flex items-center gap-2.5">
                         <Skeleton className="w-7 h-7 rounded-xl shrink-0" />
                         <div className="space-y-1"><Skeleton className="h-3 w-24" /><Skeleton className="h-2.5 w-16" /></div>
@@ -247,7 +247,7 @@ export default function DashboardPage() {
                   ))
                 : payments.slice(0, 4).map((p: any) => (
                     <div key={p.id}
-                      className="flex items-center justify-between px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                      className="flex items-center justify-between px-5 py-3 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                       <div className="flex items-center gap-2.5">
                         <div className="w-7 h-7 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center text-white text-[11px] font-bold shrink-0">
                           {p.student?.name?.[0] ?? "?"}

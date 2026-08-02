@@ -115,7 +115,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         footer={
           <>
             <Button onClick={submitAdd} disabled={addSaving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {addSaving ? "Qo'shilmoqda..." : "Qo'shish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowAdd(false)}>Bekor</Button>
@@ -147,7 +147,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         {/* Info cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Group info */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-4">
               <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", group.color ?? "bg-blue-100 text-blue-700")}>
                 <BookOpen className="w-5 h-5" />
@@ -156,7 +156,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             </div>
             <h2 className="font-bold text-neutral-900 dark:text-neutral-100 mb-1">{group.name}</h2>
             <p className="text-[12px] text-neutral-500 dark:text-neutral-400">{group.course?.name}</p>
-            <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800 space-y-1.5">
+            <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 space-y-1.5">
               <div className="flex items-center gap-2 text-[12px] text-neutral-500">
                 <Clock className="w-3 h-3" />
                 {group.startTime} – {group.endTime}
@@ -173,7 +173,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Teacher */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">O'qituvchi</h3>
             {teacher ? (
               <div className="flex items-center gap-3">
@@ -194,14 +194,14 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
           </div>
 
           {/* Students stats */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">O'quvchilar</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[12px] text-neutral-500">Jami</span>
                 <span className="text-[14px] font-bold text-neutral-900 dark:text-neutral-100">{group.students?.length ?? 0}/{group.maxStudents}</span>
               </div>
-              <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+              <div className="h-2 glass-soft rounded-full overflow-hidden">
                 <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, ((group.students?.length ?? 0) / group.maxStudents) * 100)}%` }} />
               </div>
               <div className="flex gap-3">
@@ -219,8 +219,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         </div>
 
         {/* Students list */}
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2">
+        <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center gap-2">
             <Users className="w-4 h-4 text-neutral-400" />
             <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">O'quvchilar ro'yxati</h3>
           </div>
@@ -232,7 +232,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
               const s       = sg.student;
               const enroll  = ENROLL_CFG[sg.enrollmentStatus];
               return (
-                <div key={sg.id} className="flex items-center justify-between px-5 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                <div key={sg.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-8 h-8 rounded-xl flex items-center justify-center text-white text-[12px] font-bold",

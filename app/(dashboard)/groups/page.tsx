@@ -30,7 +30,7 @@ const STATUS_TABS = [
 ];
 
 const selectCls =
-  "w-full h-10 px-3 text-[13px] rounded-xl border border-neutral-200 dark:border-neutral-700 " +
+  "w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 " +
   "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-indigo-500 transition-colors";
 
 function Skeleton({ className }: { className?: string }) {
@@ -260,7 +260,7 @@ export default function GroupsPage() {
                 className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
                   form.scheduleDays.includes(d.value)
                     ? "bg-indigo-600 text-white border-indigo-600"
-                    : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
+                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
                 {d.label}
               </button>
             ))}
@@ -354,7 +354,7 @@ export default function GroupsPage() {
           ].map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.l} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+              <div key={s.l} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                 <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
                   <Icon className={cn("w-4.5 h-4.5", s.text)} />
                 </div>
@@ -368,7 +368,7 @@ export default function GroupsPage() {
 
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex p-1 gap-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-xl">
+          <div className="flex p-1 gap-0.5 glass-soft rounded-xl">
             {STATUS_TABS.map(t => (
               <button key={t.v} onClick={() => setStatusTab(t.v)}
                 className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
@@ -391,7 +391,7 @@ export default function GroupsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {isLoading
             ? Array.from({length:3}).map((_,i) => (
-                <div key={i} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 space-y-3">
+                <div key={i} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4 space-y-3">
                   {Array.from({length:4}).map((_,j) => <Skeleton key={j} className="h-4 w-full" />)}
                 </div>
               ))
@@ -403,7 +403,7 @@ export default function GroupsPage() {
                 const barColor  = occ >= 100 ? "bg-red-500" : occ >= 80 ? "bg-amber-500" : "bg-green-500";
                 const days      = (g.scheduleDays ?? []).map((d: string) => WEEKDAY_SHORT[d] ?? d).join(", ");
                 return (
-                  <div key={g.id} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 hover:shadow-md transition-shadow">
+                  <div key={g.id} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-[14px] text-neutral-900 dark:text-neutral-100 truncate">{g.name}</h3>
@@ -434,12 +434,12 @@ export default function GroupsPage() {
                         {g.room?.name && <><MapPin className="w-3.5 h-3.5 shrink-0 text-neutral-400 ml-2" />{g.room.name}</>}
                       </div>
                     </div>
-                    <div className="border-t border-neutral-100 dark:border-neutral-800 pt-3">
+                    <div className="border-t border-white/50 dark:border-white/10 pt-3">
                       <div className="flex items-center justify-between text-[11px] mb-1.5">
                         <span className="text-neutral-500">To'lganlik</span>
                         <span className="font-bold text-neutral-700 dark:text-neutral-300">{cnt}/{max} ({occ}%)</span>
                       </div>
-                      <div className="h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                      <div className="h-1.5 glass-soft rounded-full overflow-hidden">
                         <div className={cn("h-full rounded-full transition-all", barColor)} style={{ width: `${Math.min(occ, 100)}%` }} />
                       </div>
                     </div>

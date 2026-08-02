@@ -23,7 +23,7 @@ export function Segmented<T extends string>({
   return (
     <div
       className={cn(
-        "p-1 gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl",
+        "p-1 gap-1 glass-soft rounded-xl",
         grid ? "grid" : "flex",
         className,
       )}
@@ -69,7 +69,7 @@ export function GenderPicker({ value, onChange }: GenderPickerProps) {
               "flex-1 flex items-center gap-2.5 h-10 px-3 rounded-xl border transition-all",
               active
                 ? "border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/30"
-                : "border-neutral-200 dark:border-neutral-700 hover:border-neutral-300",
+                : "border-white/60 dark:border-white/10 hover:border-neutral-300",
             )}
           >
             <span

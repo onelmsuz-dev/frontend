@@ -22,6 +22,9 @@ const ROLE_LABELS: Record<string, string> = {
   STUDENT:        "O'quvchi",
 };
 
+const ACTIVE_ITEM = "bg-indigo-100/70 text-indigo-700 font-medium dark:bg-indigo-400/15 dark:text-indigo-200";
+const IDLE_ITEM   = "text-neutral-500 hover:bg-white/60 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100";
+
 export function TorNav() {
   const pathname = usePathname();
   const router   = useRouter();
@@ -49,22 +52,20 @@ export function TorNav() {
 
   return (
     <aside className={cn(
-      "rail-sidebar sticky top-0 h-dvh z-40 shrink-0 hidden lg:flex flex-col overflow-hidden",
-      open ? "w-[220px]" : "w-[72px]",
-      "bg-white dark:bg-neutral-900",
-      "border-r border-neutral-200/80 dark:border-neutral-800/80 shadow-sm"
+      "rail-sidebar glass-panel sticky top-4 z-40 hidden h-[calc(100dvh-32px)] shrink-0 flex-col overflow-hidden rounded-3xl border border-white/60 dark:border-white/10 lg:flex",
+      open ? "w-[220px]" : "w-[76px]"
     )}>
 
       {/* Logo */}
       <div className={cn(
-        "h-[60px] shrink-0 flex items-center border-b border-neutral-100 dark:border-neutral-800",
-        open ? "px-[18px] gap-3" : "justify-center"
+        "h-[60px] shrink-0 flex items-center",
+        open ? "px-4 gap-2.5" : "justify-center"
       )}>
-        <div className="w-9 h-9 bg-neutral-900 dark:bg-neutral-100 rounded-xl flex items-center justify-center shrink-0">
-          <span className="text-white dark:text-neutral-900 font-black text-[15px]">O</span>
+        <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 border border-indigo-300/50 bg-indigo-100/70 text-indigo-600 dark:border-indigo-400/30 dark:bg-indigo-400/10 dark:text-indigo-300">
+          <span className="font-bold text-[15px]">O</span>
         </div>
         {open && (
-          <span className="rail-label-in flex-1 font-bold text-[14px] text-neutral-900 dark:text-neutral-100 whitespace-nowrap">
+          <span className="rail-label-in flex-1 font-semibold text-[15px] text-neutral-900 dark:text-neutral-100 whitespace-nowrap">
             OneRoom
           </span>
         )}
@@ -72,19 +73,16 @@ export function TorNav() {
 
       {/* Nav */}
       <nav className={cn(
-        "flex-1 overflow-y-auto py-3 flex flex-col gap-0.5",
-        open ? "px-2" : "px-1"
+        "flex-1 overflow-y-auto py-2 flex flex-col gap-0.5 px-2"
       )}>
 
         {/* Toggle button */}
         <button
           onClick={() => setOpen(v => !v)}
           className={cn(
-            "w-full flex items-center h-10 rounded-xl transition-colors mb-1",
-            open ? "px-2.5 gap-3" : "justify-center",
-            "text-neutral-400 dark:text-neutral-500",
-            "hover:text-neutral-900 dark:hover:text-neutral-100",
-            "hover:bg-neutral-100 dark:hover:bg-neutral-800"
+            "w-full flex items-center h-10 rounded-2xl transition-colors mb-1",
+            open ? "px-3 gap-3" : "justify-center",
+            IDLE_ITEM
           )}
         >
           {open
@@ -101,7 +99,7 @@ export function TorNav() {
         {/* Nav sections */}
         {open ? filteredSections.map(section => (
           <div key={section.id} className="mb-1">
-            <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-2.5 mb-1 mt-2">
+            <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-600 uppercase tracking-wider px-3 mb-1 mt-2">
               {section.label}
             </p>
             {section.items.map(item => {
@@ -110,13 +108,11 @@ export function TorNav() {
               return (
                 <Link key={item.href} href={item.href}
                   className={cn(
-                    "flex items-center h-9 rounded-xl transition-colors px-2.5 gap-3",
-                    isActive
-                      ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
-                      : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    "flex items-center h-9 rounded-2xl transition-colors px-3 gap-3",
+                    isActive ? ACTIVE_ITEM : IDLE_ITEM
                   )}>
                   <Icon className="w-4 h-4 shrink-0" />
-                  <span className="text-[13px] font-medium whitespace-nowrap">{item.label}</span>
+                  <span className="text-[13px] whitespace-nowrap">{item.label}</span>
                 </Link>
               );
             })}
@@ -126,11 +122,10 @@ export function TorNav() {
           const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
           return (
             <Link key={item.href} href={item.href}
+              title={item.label}
               className={cn(
-                "flex items-center h-10 rounded-xl transition-colors justify-center",
-                isActive
-                  ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
-                  : "text-neutral-400 dark:text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                "flex items-center h-10 rounded-2xl transition-colors justify-center",
+                isActive ? ACTIVE_ITEM : IDLE_ITEM
               )}>
               <Icon className="w-5 h-5 shrink-0" />
             </Link>
@@ -140,11 +135,10 @@ export function TorNav() {
 
       {/* Bottom */}
       <div className={cn(
-        "pb-3 pt-2 border-t border-neutral-100 dark:border-neutral-800 shrink-0 flex flex-col gap-1",
-        open ? "px-2" : "px-1"
+        "pb-3 pt-2 border-t border-white/50 dark:border-white/10 shrink-0 flex flex-col gap-1 px-2"
       )}>
         <div className={cn(
-          "flex items-center h-10 rounded-xl transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800",
+          "flex items-center h-10 rounded-2xl transition-colors hover:bg-white/50 dark:hover:bg-white/5",
           open ? "px-2.5 gap-3" : "justify-center"
         )}>
           <ThemeToggle />
@@ -156,11 +150,11 @@ export function TorNav() {
         </div>
 
         <div className={cn(
-          "flex items-center h-10 rounded-xl transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800",
+          "flex items-center h-10 rounded-2xl transition-colors hover:bg-white/50 dark:hover:bg-white/5",
           open ? "px-2 gap-3" : "justify-center"
         )}>
-          <div className="w-8 h-8 bg-neutral-900 dark:bg-neutral-100 rounded-full flex items-center justify-center shrink-0">
-            <span className="text-white dark:text-neutral-900 text-[11px] font-bold">
+          <div className="w-8 h-8 bg-indigo-500 dark:bg-indigo-400/90 rounded-full flex items-center justify-center shrink-0">
+            <span className="text-white text-[11px] font-bold">
               {(session?.user?.name?.[0] ?? "U").toUpperCase()}
             </span>
           </div>
@@ -184,9 +178,9 @@ export function TorNav() {
             window.location.href = loginUrl;
           }}
           className={cn(
-            "w-full flex items-center h-9 rounded-xl transition-colors",
-            open ? "px-2.5 gap-3" : "justify-center",
-            "text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+            "w-full flex items-center h-9 rounded-2xl transition-colors",
+            open ? "px-3 gap-3" : "justify-center",
+            "text-red-500 hover:text-red-600 hover:bg-red-50/70 dark:hover:bg-red-900/20"
           )}
         >
           <LogOut className="w-4 h-4 shrink-0" />

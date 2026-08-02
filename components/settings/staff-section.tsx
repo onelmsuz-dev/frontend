@@ -257,7 +257,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
           </p>
         </div>
         <Button size="sm" onClick={openCreate} disabled={atLimit}
-          className="gap-1.5 shrink-0 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-xs h-8">
+ className="gap-1.5 shrink-0 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-xs h-8">
           <Plus className="w-3.5 h-3.5" /> Xodim qo'shish
         </Button>
       </div>
@@ -268,7 +268,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
           "flex items-center justify-between rounded-xl border px-3.5 py-2.5",
           atLimit
             ? "border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/20"
-            : "border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/40",
+            : "border-white/60 dark:border-white/10 glass-soft",
         )}>
           <span className="text-[12px] text-neutral-600 dark:text-neutral-300">
             Xodim limiti — <strong>{used}/{limit}</strong>
@@ -286,7 +286,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
       <div className="space-y-2">
         <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Rollar</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl p-3 bg-neutral-50/60 dark:bg-neutral-800/30">
+          <div className="border border-white/60 dark:border-white/10 rounded-xl p-3 bg-neutral-50/60 dark:bg-neutral-800/30">
             <div className="flex items-center justify-between">
               <span className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200">Admin</span>
               <span className="text-[11px] text-neutral-400">
@@ -297,7 +297,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
           </div>
 
           {roles.map(r => (
-            <div key={r.id} className="border border-neutral-200 dark:border-neutral-800 rounded-xl p-3">
+            <div key={r.id} className="border border-white/60 dark:border-white/10 rounded-xl p-3">
               <div className="flex items-center justify-between">
                 <span className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">{r.name}</span>
                 <div className="flex items-center gap-0.5 shrink-0">
@@ -323,11 +323,11 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
       </div>
 
       {/* Xodimlar ro'yxati */}
-      <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+      <Card className="border border-white/60 dark:border-white/10 shadow-none">
         <CardContent className="p-0">
           {usersLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+              <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
                 <Skeleton className="w-9 h-9 rounded-full" />
                 <div className="flex-1 space-y-1.5">
                   <Skeleton className="h-3 w-32" />
@@ -344,7 +344,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
           ) : (
             users.map(u => (
               <div key={u.id}
-                className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className={cn(
                     "w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0",
@@ -421,7 +421,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
         footer={
           <>
             <Button onClick={submitStaff} disabled={saving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {saving ? "Saqlanmoqda..." : editUser ? "Saqlash" : "Qo'shish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowModal(false)}>Bekor</Button>
@@ -454,7 +454,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
 
         <FormField label="Filial">
           <select value={form.branchId} onChange={e => setForm(p => ({ ...p, branchId: e.target.value }))}
-            className="w-full h-10 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 outline-none">
+            className="w-full h-10 px-3 text-sm rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 outline-none">
             <option value="">Filial tanlanmagan</option>
             {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
@@ -472,7 +472,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
         </FormField>
 
         {roleSel === ADMIN ? (
-          <p className="text-[12px] text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-800 rounded-xl px-3 py-2.5">
+          <p className="text-[12px] text-neutral-500 dark:text-neutral-400 glass-soft border border-white/60 dark:border-white/10 rounded-xl px-3 py-2.5">
             Admin barcha bo'limlarga to'liq kirish huquqiga ega — ruxsatlar sozlanmaydi.
           </p>
         ) : (
@@ -510,7 +510,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
         footer={
           <>
             <Button onClick={saveRole} disabled={roleSaving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {roleSaving ? "Saqlanmoqda..." : "Saqlash"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setEditRole(null)}>Bekor</Button>
@@ -534,7 +534,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
         footer={
           <>
             <Button onClick={confirmReset} disabled={resetSaving}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {resetSaving ? "Saqlanmoqda..." : "Parolni yangilash"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]"
@@ -584,8 +584,8 @@ function RoleChip({ label, active, onClick }: { label: string; active: boolean; 
       className={cn(
         "px-3 h-8 rounded-xl text-[12px] font-semibold border-2 transition-all",
         active
-          ? "border-neutral-900 dark:border-neutral-100 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
-          : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400 dark:hover:border-neutral-500",
+          ? "border-neutral-900 dark:border-neutral-100 bg-indigo-600 dark:bg-indigo-500 text-white"
+          : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400 dark:hover:border-neutral-500",
       )}>
       {label}
     </button>

@@ -61,9 +61,9 @@ export function ReceiptUpload({ value, onChange, className }: Props) {
         onChange={e => handleFile(e.target.files?.[0])} />
 
       {value ? (
-        <div className="relative rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-700">
+        <div className="relative rounded-xl overflow-hidden border border-white/60 dark:border-white/10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="Chek" className="w-full max-h-56 object-contain bg-neutral-50 dark:bg-neutral-800" />
+          <img src={value} alt="Chek" className="w-full max-h-56 object-contain glass-soft" />
           <button type="button" onClick={() => { onChange(""); setErr(""); }}
             className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-lg bg-black/60 text-white hover:bg-black/80 transition-colors">
             <X className="w-4 h-4" />
@@ -71,7 +71,7 @@ export function ReceiptUpload({ value, onChange, className }: Props) {
         </div>
       ) : (
         <button type="button" onClick={() => inputRef.current?.click()} disabled={loading}
-          className="w-full h-28 flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+          className="w-full h-28 flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-neutral-500 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
           {loading
             ? <Loader2 className="w-6 h-6 animate-spin" />
             : <><Upload className="w-6 h-6" /><span className="text-[12px] font-medium">Chek rasmini yuklang</span><span className="text-[10px] text-neutral-400 flex items-center gap-1"><ImageIcon className="w-3 h-3" /> JPG / PNG</span></>}

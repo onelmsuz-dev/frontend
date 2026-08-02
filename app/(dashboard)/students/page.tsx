@@ -144,7 +144,7 @@ export default function StudentsPage() {
           ].map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+              <div key={s.label} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                 <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
                   <Icon className={cn("w-4 h-4", s.text)} />
                 </div>
@@ -172,14 +172,14 @@ export default function StudentsPage() {
               <button key={f.v} onClick={() => setFilterEnroll(f.v)}
                 className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
                   filterEnroll === f.v
-                    ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-neutral-900"
-                    : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:border-neutral-400")}>
+                    ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
+                    : "glass-panel text-neutral-600 dark:text-neutral-400 border-white/60 dark:border-white/10 hover:border-neutral-400")}>
                 {f.l}
               </button>
             ))}
           </div>
           <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)}
-            className="text-xs h-9 px-2.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 outline-none">
+            className="text-xs h-9 px-2.5 rounded-lg border border-white/60 dark:border-white/10 glass-soft text-neutral-700 dark:text-neutral-300 outline-none">
             <option value="barchasi">Barcha guruhlar</option>
             {groups.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
           </select>
@@ -187,11 +187,11 @@ export default function StudentsPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+        <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-neutral-50 dark:bg-neutral-800/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
+              <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                 {["O'quvchi", "Telefon", "Guruh", "O'qituvchi", "Holat", "To'lov", ""].map(h => (
                   <TableHead key={h} className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{h}</TableHead>
                 ))}
@@ -213,7 +213,7 @@ export default function StudentsPage() {
                     const enroll  = ENROLL_CFG[sg?.enrollmentStatus ?? (s.isActive ? "FAOL" : "SINOV")];
                     const pay     = PAY_CFG[payStatus(s.balance ?? 0, sg?.enrollmentStatus)];
                     return (
-                      <TableRow key={s.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                      <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className={cn(

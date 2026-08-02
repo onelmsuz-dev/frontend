@@ -203,7 +203,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         footer={
           <>
             <Button onClick={submitPayment} disabled={paying}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {paying ? "Saqlanmoqda..." : "Qabul qilish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowPayModal(false)}>Bekor</Button>
@@ -220,8 +220,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               <button key={m} type="button" onClick={() => setPayForm(p => ({...p, method: m}))}
                 className={cn("h-10 rounded-xl border text-[13px] font-semibold transition-all",
                   payForm.method === m
-                    ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-neutral-900"
-                    : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:border-neutral-400")}>
+                    ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
+                    : "glass-panel text-neutral-600 dark:text-neutral-300 border-white/60 dark:border-white/10 hover:border-neutral-400")}>
                 {METHOD_LABELS[m]}
               </button>
             ))}
@@ -231,7 +231,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           <Input placeholder="Iyul oyi uchun..." value={payForm.note}
             onChange={e => setPayForm(p => ({...p, note: e.target.value}))} className="h-10" />
         </FormField>
-        <div className="flex items-center justify-between bg-neutral-50 dark:bg-neutral-800 rounded-xl px-4 py-2.5">
+        <div className="flex items-center justify-between glass-soft rounded-xl px-4 py-2.5">
           <span className="text-[12px] text-neutral-500">Joriy balans</span>
           <span className={cn("text-[13px] font-bold", student.balance >= 0 ? "text-green-600" : "text-red-600")}>
             {fmt(student.balance)}
@@ -272,7 +272,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         footer={
           <>
             <Button onClick={transferGroup} disabled={transferring}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {transferring ? "O'tkazilmoqda..." : "O'tkazish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowTransferModal(false)}>Bekor</Button>
@@ -280,7 +280,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         }>
         <FormField label="Yangi guruh" required error={transferErr.includes("guruh") ? transferErr : ""}>
           <select value={transferGroupId} onChange={e => { setTransferGroupId(e.target.value); setTransferErr(""); }}
-            className="w-full h-10 px-3 text-[13px] rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
+            className="w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
             <option value="">Guruhni tanlang...</option>
             {availableGroups.map((g: any) => (
               <option key={g.id} value={g.id}>{g.name} — {g.course?.name}</option>
@@ -304,7 +304,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         {/* Top cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Profile */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <div className="flex items-center gap-4 mb-4">
               <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center text-white text-xl font-black",
                 student.isActive
@@ -349,7 +349,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Group info */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">Guruh</h3>
             {group ? (
               <div className="space-y-2">
@@ -388,7 +388,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Finance */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Moliya</h3>
               <button onClick={() => { setPayErr(""); setShowPayModal(true); }}
@@ -409,7 +409,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               <div>
                 <p className="text-[11px] text-neutral-400 mb-0.5">Davomiylik</p>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                  <div className="flex-1 h-2 glass-soft rounded-full overflow-hidden">
                     <div className="h-full bg-green-500 rounded-full" style={{ width: `${rate}%` }} />
                   </div>
                   <span className="text-[12px] font-bold text-neutral-700 dark:text-neutral-300">{rate}%</span>
@@ -422,8 +422,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Payments */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-neutral-400" />
                 <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">So'nggi to'lovlar</h3>
@@ -452,8 +452,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Attendance */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-neutral-400" />
               <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Davomat tarixi</h3>
             </div>

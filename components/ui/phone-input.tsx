@@ -40,15 +40,15 @@ export function PhoneInput({
         ? "border-red-400 dark:border-red-500 bg-red-50/30 dark:bg-red-950/20"
         : isComplete
           ? "border-green-400 dark:border-green-600 focus-within:border-green-500"
-          : "border-neutral-200 dark:border-neutral-700 focus-within:border-neutral-900 dark:focus-within:border-neutral-400",
-      disabled && "opacity-50 cursor-not-allowed bg-neutral-50 dark:bg-neutral-800",
+          : "border-white/60 dark:border-white/10 focus-within:border-neutral-900 dark:focus-within:border-neutral-400",
+      disabled && "opacity-50 cursor-not-allowed glass-soft",
       className
     )}>
       <div className={cn(
         "flex items-center gap-1.5 pl-3 pr-2.5 shrink-0 h-full border-r",
         error
           ? "border-red-300 dark:border-red-700"
-          : "border-neutral-200 dark:border-neutral-700"
+          : "border-white/60 dark:border-white/10"
       )}>
         <span className="text-base leading-none">🇺🇿</span>
         <span className="text-[13px] font-bold text-neutral-500 dark:text-neutral-400 tracking-tight">+998</span>

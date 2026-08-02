@@ -42,8 +42,8 @@ function UsageBar({ icon: Icon, label, used, max }: { icon: any; label: string; 
           {used} / {max}
         </span>
       </div>
-      <div className="h-2 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
-        <div className={cn("h-full rounded-full transition-all", danger ? "bg-red-500" : "bg-neutral-900 dark:bg-neutral-100")}
+      <div className="h-2 rounded-full glass-soft overflow-hidden">
+        <div className={cn("h-full rounded-full transition-all", danger ? "bg-red-500" : "bg-indigo-600 dark:bg-indigo-500")}
           style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -91,10 +91,10 @@ export function TarifSection() {
   return (
     <div className="space-y-4">
       {/* Joriy tarif holati */}
-      <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+      <Card className="border border-white/60 dark:border-white/10 shadow-none">
         <CardContent className="p-5">
           {isLoading ? (
-            <div className="h-16 animate-pulse bg-neutral-100 dark:bg-neutral-800 rounded-xl" />
+            <div className="h-16 animate-pulse glass-soft rounded-xl" />
           ) : (
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div>
@@ -118,7 +118,7 @@ export function TarifSection() {
               <div className={cn(
                 "flex items-center gap-2 px-3 py-2 rounded-xl",
                 warning ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
-                        : "bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
+                        : "glass-soft text-neutral-600 dark:text-neutral-300"
               )}>
                 <Clock className="w-4 h-4" />
                 <span className="text-[13px] font-semibold">{daysLeft} kun qoldi</span>
@@ -172,12 +172,12 @@ export function TarifSection() {
               <Card key={plan.key} className={cn(
                 "border shadow-none transition-all",
                 current ? "border-neutral-900 dark:border-neutral-100 ring-1 ring-neutral-900 dark:ring-neutral-100"
-                        : "border-neutral-200 dark:border-neutral-800"
+                        : "border-white/60 dark:border-white/10"
               )}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-bold text-[15px] text-neutral-900 dark:text-neutral-100">{plan.label}</h4>
-                    {current && <span className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 font-semibold">Joriy</span>}
+                    {current && <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white font-semibold">Joriy</span>}
                   </div>
                   <p className="text-xl font-black text-neutral-900 dark:text-neutral-100">{fmtMoney(plan.price)}<span className="text-[12px] font-medium text-neutral-400">/oy</span></p>
                   <ul className="mt-3 space-y-1.5 text-[12px] text-neutral-600 dark:text-neutral-300">
@@ -186,7 +186,7 @@ export function TarifSection() {
                     <li className="flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5 text-green-500" /> {plan.maxStaff} ta xodim</li>
                   </ul>
                   <Button size="sm" onClick={() => openPay(plan)} disabled={hasPending}
-                    className="w-full mt-4 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="w-full mt-4 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
                     <Receipt className="w-3.5 h-3.5 mr-1.5" /> To'lov so'rovi
                   </Button>
                 </CardContent>
@@ -200,10 +200,10 @@ export function TarifSection() {
       {sub && sub.requests.length > 0 && (
         <div>
           <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">To'lov so'rovlari</p>
-          <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+          <Card className="border border-white/60 dark:border-white/10 shadow-none">
             <CardContent className="p-0">
               {sub.requests.map(r => (
-                <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
                   <div>
                     <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{r.plan} · {fmtMoney(r.amount)}</p>
                     <p className="text-[11px] text-neutral-400">{new Date(r.createdAt).toLocaleDateString("uz-UZ")} · {r.months} oy</p>
@@ -228,7 +228,7 @@ export function TarifSection() {
         footer={
           <>
             <Button onClick={submit} disabled={isMutating}
-              className="flex-1 h-9 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-white text-[13px]">
+ className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {isMutating ? "Yuborilmoqda..." : "So'rov yuborish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowPay(false)}>Bekor</Button>
@@ -236,10 +236,10 @@ export function TarifSection() {
         }
       >
         <div className="space-y-3">
-          <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-3 text-[13px]">
+          <div className="glass-soft rounded-xl p-3 text-[13px]">
             <div className="flex justify-between"><span className="text-neutral-500">Tarif</span><span className="font-semibold">{selPlan?.label}</span></div>
             <div className="flex justify-between mt-1"><span className="text-neutral-500">Oylik narx</span><span className="font-semibold">{fmtMoney(selPlan?.price ?? 0)}</span></div>
-            <div className="flex justify-between mt-1 pt-1 border-t border-neutral-200 dark:border-neutral-700">
+            <div className="flex justify-between mt-1 pt-1 border-t border-white/60 dark:border-white/10">
               <span className="text-neutral-500">Jami ({months} oy)</span>
               <span className="font-bold">{fmtMoney((selPlan?.price ?? 0) * (Number(months) || 1))}</span>
             </div>
