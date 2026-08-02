@@ -31,10 +31,10 @@ export function Modal({ open, onClose, title, subtitle, children, footer, size =
       )}
     >
       <div className={cn(
-        "bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full flex flex-col max-h-full min-h-0",
-        "border border-neutral-200/60 dark:border-neutral-800",
+        "glass-strong rounded-2xl shadow-2xl w-full flex flex-col max-h-full min-h-0",
+        "border border-white/60 dark:border-white/10",
       )}>
-        <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-white/50 dark:border-white/10 shrink-0">
           <div className="min-w-0 pr-3">
             <h2 className="font-bold text-[15px] text-neutral-900 dark:text-neutral-100">{title}</h2>
             {subtitle && <p className="text-[12px] text-neutral-400 mt-0.5">{subtitle}</p>}
@@ -42,7 +42,7 @@ export function Modal({ open, onClose, title, subtitle, children, footer, size =
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white/60 dark:hover:bg-white/10 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -52,7 +52,7 @@ export function Modal({ open, onClose, title, subtitle, children, footer, size =
           {children}
         </div>
 
-        <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-3 border-t border-neutral-100 dark:border-neutral-800 shrink-0 flex flex-col-reverse sm:flex-row gap-2 bg-white dark:bg-neutral-900 rounded-b-2xl">
+        <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-3 border-t border-white/50 dark:border-white/10 shrink-0 flex flex-col-reverse sm:flex-row gap-2 glass-panel rounded-b-2xl">
           {footer}
         </div>
       </div>
@@ -72,7 +72,7 @@ interface ConfirmDeleteModalProps {
 export function ConfirmDeleteModal({ open, onClose, onConfirm, loading, title, description }: ConfirmDeleteModalProps) {
   return (
     <ModalOverlay open={open} onClose={onClose} panelClassName="sm:max-w-sm">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full border border-neutral-200/60 dark:border-neutral-800 p-5 sm:p-6 space-y-5">
+      <div className="glass-strong rounded-2xl shadow-2xl w-full border border-white/60 dark:border-white/10 p-5 sm:p-6 space-y-5">
         <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mx-auto">
           <svg className="w-5 h-5 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -95,7 +95,7 @@ export function ConfirmDeleteModal({ open, onClose, onConfirm, loading, title, d
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 h-10 rounded-xl border border-neutral-200 dark:border-neutral-700 text-[13px] font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors"
+            className="flex-1 h-10 rounded-xl border border-white/60 dark:border-white/10 text-[13px] font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
           >
             Bekor
           </button>

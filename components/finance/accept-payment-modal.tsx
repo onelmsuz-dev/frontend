@@ -123,8 +123,8 @@ export function AcceptPaymentModal({
 
   return (
     <ModalOverlay open={open} onClose={handleClose}>
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full h-full flex flex-col overflow-hidden border border-neutral-200/60 dark:border-neutral-800">
-        <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
+      <div className="glass-strong rounded-2xl shadow-2xl w-full h-full flex flex-col overflow-hidden border border-white/60 dark:border-white/10">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-white/50 dark:border-white/10 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <CreditCard className="w-5 h-5 text-neutral-500 shrink-0" />
             <h2 className="font-bold text-[15px] text-neutral-900 dark:text-neutral-100 truncate">
@@ -134,7 +134,7 @@ export function AcceptPaymentModal({
           <button
             type="button"
             onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 transition-colors shrink-0"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-400 transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -146,7 +146,7 @@ export function AcceptPaymentModal({
             <select
               value={payForm.studentId}
               onChange={e => setPayForm(p => ({ ...p, studentId: e.target.value }))}
-              className="w-full h-10 sm:h-9 px-3 text-sm rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none"
+              className="w-full h-10 sm:h-9 px-3 text-sm rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none"
             >
               <option value="">O&apos;quvchini tanlang...</option>
               {students.map(s => (
@@ -163,7 +163,7 @@ export function AcceptPaymentModal({
                 "rounded-xl p-3 text-sm",
                 selectedStudent.balance < 0
                   ? "bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40"
-                  : "bg-neutral-50 dark:bg-neutral-800",
+                  : "glass-soft",
               )}
             >
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -205,8 +205,8 @@ export function AcceptPaymentModal({
                   className={cn(
                     "py-2.5 sm:py-2 rounded-xl text-[12px] font-semibold border transition-colors",
                     payForm.method === m
-                      ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-neutral-900 dark:border-neutral-100"
-                      : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800",
+                      ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900 dark:border-neutral-100"
+                      : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10",
                   )}
                 >
                   {METHOD_LABELS[m]}
@@ -233,7 +233,7 @@ export function AcceptPaymentModal({
           )}
         </div>
 
-        <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-3 border-t border-neutral-100 dark:border-neutral-800 shrink-0 flex flex-col-reverse sm:flex-row gap-2">
+        <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-3 border-t border-white/50 dark:border-white/10 shrink-0 flex flex-col-reverse sm:flex-row gap-2">
           <Button
             className="flex-1 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 h-10"
             disabled={saving}

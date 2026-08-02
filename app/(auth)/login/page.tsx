@@ -58,7 +58,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl p-6 space-y-5">
+    <div className="glass-strong border border-white/60 dark:border-white/10 rounded-2xl shadow-xl p-6 space-y-5">
       <div>
         <h2 className="text-[17px] font-bold text-neutral-900 dark:text-neutral-100">Kirish</h2>
         <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-0.5">
@@ -115,8 +115,8 @@ function LoginForm() {
           disabled={isPending}
           className={cn(
             "w-full h-10 rounded-xl font-semibold text-[14px] transition-all",
-            "bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:hover:bg-neutral-200",
-            "text-white dark:text-neutral-900",
+            "bg-indigo-600 hover:bg-indigo-700 shadow-sm",
+            "text-white",
             isPending && "opacity-60 cursor-not-allowed"
           )}
         >
@@ -137,7 +137,11 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950 flex items-center justify-center p-4">
+    <div className="relative min-h-screen flex items-center justify-center p-4">
+      {/* Same split backdrop as the app shell */}
+      <div className="app-bg-base fixed inset-0 -z-20" />
+      <div className="app-bg-split fixed inset-0 -z-10" />
+
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl overflow-hidden mx-auto mb-3 shadow-lg">
@@ -147,7 +151,7 @@ export default function LoginPage() {
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Smart O'quv Markaz Tizimi</p>
         </div>
         <Suspense fallback={
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xl p-6 h-64 animate-pulse" />
+          <div className="glass-strong border border-white/60 dark:border-white/10 rounded-2xl shadow-xl p-6 h-64 animate-pulse" />
         }>
           <LoginForm />
         </Suspense>

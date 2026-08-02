@@ -49,11 +49,11 @@ export default function SalaryPage() {
         {/* Oyliklar tarixi */}
         <div>
           <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">Oyliklar tarixi</p>
-          <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+          <Card className="border border-white/60 dark:border-white/10 shadow-none">
             <CardContent className="p-0">
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                  <div key={i} className="px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
                     <Skeleton className="h-4 w-full" />
                   </div>
                 ))
@@ -64,7 +64,7 @@ export default function SalaryPage() {
                 </div>
               ) : (
                 salaries.map(s => (
-                  <div key={s.id} className="flex items-center justify-between px-4 py-3.5 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                  <div key={s.id} className="flex items-center justify-between px-4 py-3.5 border-b border-white/50 dark:border-white/10 last:border-0">
                     <div>
                       <p className="text-[14px] font-semibold text-neutral-900 dark:text-neutral-100">{monthLabel(s.month)}</p>
                       <p className="text-[11px] text-neutral-400">
@@ -94,9 +94,9 @@ export default function SalaryPage() {
 
 function StatCard({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
-    <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+    <Card className="border border-white/60 dark:border-white/10 shadow-none">
       <CardContent className="p-4">
-        <div className="w-9 h-9 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mb-2">
+        <div className="w-9 h-9 rounded-lg glass-soft flex items-center justify-center mb-2">
           <Icon className="w-4 h-4 text-neutral-500" />
         </div>
         <p className="text-lg font-black text-neutral-900 dark:text-neutral-100 leading-tight">{value}</p>

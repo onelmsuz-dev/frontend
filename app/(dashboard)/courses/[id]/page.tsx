@@ -77,7 +77,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           ].map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+              <div key={s.label} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                 <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center mb-2", s.bg)}>
                   <Icon className={cn("w-4 h-4", s.text)} />
                 </div>
@@ -90,15 +90,15 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
         {/* Description */}
         {course.description && (
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">Tavsif</h3>
             <p className="text-[13px] text-neutral-700 dark:text-neutral-300 leading-relaxed">{course.description}</p>
           </div>
         )}
 
         {/* Groups */}
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2">
+        <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-neutral-400" />
             <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Guruhlar</h3>
           </div>
@@ -110,7 +110,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
               const st     = STATUS_CFG[g.status] ?? STATUS_CFG.ACTIVE;
               const teacher = g.teacher?.user;
               return (
-                <div key={g.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                <div key={g.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", g.color ?? "bg-blue-100 text-blue-700")}>
                       <BookOpen className="w-4 h-4" />

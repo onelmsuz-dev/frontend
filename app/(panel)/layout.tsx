@@ -10,9 +10,9 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
   const name = session?.user?.name ?? "Foydalanuvchi";
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+    <div className="min-h-screen glass-soft">
       {/* Top header */}
-      <header className="sticky top-0 z-30 bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-b border-neutral-200 dark:border-neutral-800">
+      <header className="sticky top-0 z-30 bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-b border-white/60 dark:border-white/10">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-neutral-900 dark:bg-neutral-100 rounded-xl flex items-center justify-center">

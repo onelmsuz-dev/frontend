@@ -85,7 +85,7 @@ export function BranchHeaderControls() {
           className={cn(
             "inline-flex items-center gap-1 h-9 px-2 sm:px-3 rounded-lg",
             "text-[13px] font-medium text-neutral-700 dark:text-neutral-200",
-            "hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors outline-none",
+            "hover:bg-white/60 dark:hover:bg-white/10 transition-colors outline-none",
           )}
         >
           <span className="max-w-[120px] sm:max-w-[160px] truncate">

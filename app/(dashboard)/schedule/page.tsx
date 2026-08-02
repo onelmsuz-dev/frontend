@@ -103,17 +103,17 @@ function MiniCal({ pickerMonth, onChangeMonth, today, selDay, weekStart, view, o
   const weekEnd = addDays(weekStart, 5);
 
   return (
-    <div className="w-[272px] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl p-4 select-none">
+    <div className="w-[272px] glass-strong border border-white/60 dark:border-white/10 rounded-2xl shadow-2xl p-4 select-none">
       <div className="flex items-center justify-between mb-3">
         <button onClick={() => onChangeMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth()-1, 1))}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors">
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </button>
         <span className="text-[13px] font-bold text-neutral-800 dark:text-neutral-100">
           {UZ_MONTHS[pickerMonth.getMonth()]} {pickerMonth.getFullYear()}
         </span>
         <button onClick={() => onChangeMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth()+1, 1))}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors">
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors">
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -137,20 +137,20 @@ function MiniCal({ pickerMonth, onChangeMonth, today, selDay, weekStart, view, o
               className={cn(
                 "h-8 flex items-center justify-center rounded-lg text-[12px] font-semibold transition-all",
                 !inMonth && "opacity-30",
-                isToday && "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900",
+                isToday && "bg-indigo-600 text-white dark:bg-indigo-500",
                 isSel && !isToday && "bg-neutral-200 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 ring-2 ring-neutral-400 dark:ring-neutral-500",
                 inWeek && !isSel && !isToday && "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-none",
-                inSelMon && !isSel && !isToday && "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300",
-                !isToday && !isSel && !inWeek && !inSelMon && "hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+                inSelMon && !isSel && !isToday && "glass-soft text-neutral-700 dark:text-neutral-300",
+                !isToday && !isSel && !inWeek && !inSelMon && "hover:bg-white/60 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300"
               )}>
               {d.getDate()}
             </button>
           );
         })}
       </div>
-      <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+      <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10">
         <button onClick={onToday}
-          className="w-full py-1.5 text-[12px] font-semibold rounded-lg text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+          className="w-full py-1.5 text-[12px] font-semibold rounded-lg text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
           Bugungi sana
         </button>
       </div>
@@ -396,7 +396,7 @@ export default function SchedulePage() {
     : [];
   const kunIsToday = sameDay(selDay, today);
 
-  const SELECT_CLS = "w-full h-10 px-3 text-[13px] rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-neutral-900 dark:focus:border-neutral-400 transition-colors";
+  const SELECT_CLS = "w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-neutral-900 dark:focus:border-neutral-400 transition-colors";
 
   function ErrorBox({ msg }: { msg: string }) {
     return msg ? (
@@ -528,8 +528,8 @@ export default function SchedulePage() {
               <button key={d.v} type="button" onClick={() => toggleGroupDay(d.v)}
                 className={cn("px-3 py-1.5 rounded-lg text-[12px] font-semibold border-2 transition-all",
                   groupForm.scheduleDays.includes(d.v)
-                    ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-neutral-900 dark:border-neutral-100"
-                    : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
+                    ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900 dark:border-neutral-100"
+                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
                 {DAYS_SHORT[d.v]}
               </button>
             ))}
@@ -598,7 +598,7 @@ export default function SchedulePage() {
                 className={cn("px-3 py-1.5 rounded-lg text-[12px] font-semibold border-2 transition-all",
                   darsForm.scheduleDays.includes(d.v)
                     ? "bg-blue-600 text-white border-blue-600"
-                    : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-blue-400 hover:text-blue-600")}>
+                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-blue-400 hover:text-blue-600")}>
                 {DAYS_SHORT[d.v]}
               </button>
             ))}
@@ -616,8 +616,8 @@ export default function SchedulePage() {
       </Modal>
 
       {/* ── Toolbar ────────────────────────────────────────────────────────── */}
-      <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-        <div className="flex p-1 gap-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-xl">
+      <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-white/50 dark:border-white/10 glass-panel">
+        <div className="flex p-1 gap-0.5 glass-soft rounded-xl">
           {([
             ["kun",   "Kun",   List],
             ["hafta", "Hafta", LayoutGrid],
@@ -637,7 +637,7 @@ export default function SchedulePage() {
 
         <div className="relative flex items-center gap-1 ml-2">
           <button onClick={onPrev}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors">
+            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button onClick={openPicker}
@@ -645,14 +645,14 @@ export default function SchedulePage() {
               "flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors",
               "text-[13px] font-semibold text-neutral-700 dark:text-neutral-200",
               "min-w-[200px] justify-center",
-              pickerOpen ? "bg-neutral-100 dark:bg-neutral-800" : "hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              pickerOpen ? "glass-soft" : "hover:bg-white/60 dark:hover:bg-white/10"
             )}>
             <CalendarDays className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 shrink-0" />
             {navLabel}
             <ChevronDown className={cn("w-3 h-3 text-neutral-400 shrink-0 transition-transform", pickerOpen && "rotate-180")} />
           </button>
           <button onClick={onNext}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors">
+            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors">
             <ChevronRight className="w-4 h-4" />
           </button>
 
@@ -671,7 +671,7 @@ export default function SchedulePage() {
         </div>
 
         <button onClick={goToday}
-          className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+          className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
           Bugun
         </button>
 
@@ -684,7 +684,7 @@ export default function SchedulePage() {
               Dars qo'shish
             </button>
             <button onClick={openGroupModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/60 dark:border-white/10 text-neutral-700 dark:text-neutral-300 text-xs font-semibold hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
               <Plus className="w-3.5 h-3.5" />
               Guruh qo'shish
             </button>
@@ -697,8 +697,8 @@ export default function SchedulePage() {
         <>
           <div className={cn(
             "shrink-0 flex items-center justify-between px-5 py-4",
-            "border-b border-neutral-100 dark:border-neutral-800",
-            kunIsToday ? "bg-neutral-900 dark:bg-neutral-950" : "bg-white dark:bg-neutral-900"
+            "border-b border-white/50 dark:border-white/10",
+            kunIsToday ? "bg-neutral-900 dark:bg-neutral-950" : "glass-panel"
           )}>
             <div>
               <p className={cn("text-[11px] font-bold uppercase tracking-widest",
@@ -716,7 +716,7 @@ export default function SchedulePage() {
             </div>
             <div className="flex flex-col items-center gap-1.5">
               <div className={cn("w-[60px] h-[60px] rounded-2xl flex flex-col items-center justify-center",
-                kunIsToday ? "bg-white/10" : "bg-neutral-100 dark:bg-neutral-800")}>
+                kunIsToday ? "bg-white/10" : "glass-soft")}>
                 <span className={cn("text-[10px] font-bold uppercase tracking-wider leading-none",
                   kunIsToday ? "text-neutral-400" : "text-neutral-400 dark:text-neutral-500")}>
                   {UZ_MONTHS_S[selDay.getMonth()]}
@@ -735,7 +735,7 @@ export default function SchedulePage() {
 
           <div className="flex-1 overflow-auto">
             <div className="flex">
-              <div className="shrink-0 border-r border-neutral-100 dark:border-neutral-800 relative" style={{ width: TIME_W, height: TOTAL_H }}>
+              <div className="shrink-0 border-r border-white/50 dark:border-white/10 relative" style={{ width: TIME_W, height: TOTAL_H }}>
                 {HOURS.map((h,i) => (
                   <span key={h} className="absolute right-2 text-[10px] font-medium text-neutral-400 dark:text-neutral-600 tabular-nums select-none" style={{ top: i*HOUR_H+3 }}>
                     {String(h).padStart(2,"0")}:00
@@ -743,8 +743,8 @@ export default function SchedulePage() {
                 ))}
               </div>
               <div className="flex-1 relative" style={{ height: TOTAL_H }}>
-                {HOURS.map((_,i) => <div key={i} className="absolute inset-x-0 border-t border-neutral-100 dark:border-neutral-800" style={{ top: i*HOUR_H }} />)}
-                {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-neutral-100 dark:border-neutral-800/60" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
+                {HOURS.map((_,i) => <div key={i} className="absolute inset-x-0 border-t border-white/50 dark:border-white/10" style={{ top: i*HOUR_H }} />)}
+                {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-white/50 dark:border-white/10/60" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
                 {kunUzIdx === null ? (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <p className="text-sm font-semibold text-neutral-400 dark:text-neutral-600">Dam olish kuni</p>
@@ -764,7 +764,7 @@ export default function SchedulePage() {
                             <Plus className="w-3.5 h-3.5" /> Dars qo'shish
                           </button>
                           <button onClick={openGroupModal}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[12px] font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-soft text-[12px] font-semibold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
                             <Plus className="w-3.5 h-3.5" /> Guruh qo'shish
                           </button>
                         </>
@@ -803,8 +803,8 @@ export default function SchedulePage() {
       {/* ══ HAFTA VIEW ════════════════════════════════════════════════════════ */}
       {view === "hafta" && (
         <div className="flex-1 overflow-auto">
-          <div className="sticky top-0 z-20 flex border-b border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-            <div style={{ width: TIME_W, minWidth: TIME_W }} className="shrink-0 border-r border-neutral-100 dark:border-neutral-800" />
+          <div className="sticky top-0 z-20 flex border-b border-white/50 dark:border-white/10 glass-panel">
+            <div style={{ width: TIME_W, minWidth: TIME_W }} className="shrink-0 border-r border-white/50 dark:border-white/10" />
             {weekDays.map((d, i) => {
               const isToday = sameDay(d, today);
               const isSel   = sameDay(d, selDay) && !isToday;
@@ -812,8 +812,8 @@ export default function SchedulePage() {
                 <button key={i} onClick={() => { setSelDay(new Date(d)); setView("kun"); }}
                   className={cn(
                     "flex-1 flex flex-col items-center justify-center py-3 gap-px",
-                    "border-r border-neutral-100 dark:border-neutral-800 last:border-r-0 cursor-pointer transition-colors",
-                    isToday ? "bg-neutral-900 dark:bg-white" : isSel ? "bg-neutral-100 dark:bg-neutral-800" : "hover:bg-neutral-50 dark:hover:bg-neutral-800/50"
+                    "border-r border-white/50 dark:border-white/10 last:border-r-0 cursor-pointer transition-colors",
+                    isToday ? "bg-neutral-900 dark:bg-white" : isSel ? "glass-soft" : "hover:bg-white/60 dark:hover:bg-white/10/50"
                   )}>
                   <span className={cn("text-[10px] font-bold uppercase tracking-widest",
                     isToday ? "text-white/50 dark:text-neutral-900/50" : isSel ? "text-neutral-500" : "text-neutral-400 dark:text-neutral-500")}>
@@ -832,7 +832,7 @@ export default function SchedulePage() {
             })}
           </div>
           <div className="flex">
-            <div className="shrink-0 border-r border-neutral-100 dark:border-neutral-800 relative" style={{ width: TIME_W, height: TOTAL_H }}>
+            <div className="shrink-0 border-r border-white/50 dark:border-white/10 relative" style={{ width: TIME_W, height: TOTAL_H }}>
               {HOURS.map((h,i) => (
                 <span key={h} className="absolute right-2 text-[10px] font-medium text-neutral-400 dark:text-neutral-600 tabular-nums select-none" style={{ top: i*HOUR_H+3 }}>
                   {String(h).padStart(2,"0")}:00
@@ -846,11 +846,11 @@ export default function SchedulePage() {
               const entries   = schedule.filter(s => s.day===uzDayName).sort((a,b) => toMin(a.time)-toMin(b.time));
               return (
                 <div key={ci}
-                  className={cn("flex-1 relative border-r border-neutral-100 dark:border-neutral-800 last:border-r-0",
+                  className={cn("flex-1 relative border-r border-white/50 dark:border-white/10 last:border-r-0",
                     isToday && "bg-blue-50/25 dark:bg-blue-900/10", isSel && "bg-neutral-50/80 dark:bg-neutral-800/30")}
                   style={{ height: TOTAL_H }}>
-                  {HOURS.map((_,i) => <div key={i} className="absolute inset-x-0 border-t border-neutral-100 dark:border-neutral-800" style={{ top: i*HOUR_H }} />)}
-                  {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-neutral-100 dark:border-neutral-800/60" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
+                  {HOURS.map((_,i) => <div key={i} className="absolute inset-x-0 border-t border-white/50 dark:border-white/10" style={{ top: i*HOUR_H }} />)}
+                  {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-white/50 dark:border-white/10/60" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
                   {entries.map(entry => {
                     const top     = blockTop(entry.time);
                     const height  = blockH(entry.time, entry.endTime);
@@ -894,21 +894,21 @@ export default function SchedulePage() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-px rounded-2xl overflow-hidden bg-neutral-200 dark:bg-neutral-700 border border-neutral-200 dark:border-neutral-700">
+          <div className="grid grid-cols-7 gap-px rounded-2xl overflow-hidden bg-neutral-200 dark:bg-neutral-700 border border-white/60 dark:border-white/10">
             {calCells.slice(0,42).map((d, i) => {
               const inMonth = d.getMonth()===monthDate.getMonth();
-              if (i>=35 && !inMonth) return <div key={i} className="bg-white dark:bg-neutral-900 h-24" />;
+              if (i>=35 && !inMonth) return <div key={i} className="glass-panel h-24" />;
               const isToday = sameDay(d, today);
               const isSel   = sameDay(d, selDay);
               const idx     = getUzIdx(d);
               const entries = idx!==null && inMonth ? schedule.filter(s => s.day===UZ_DAYS[idx]) : [];
               return (
                 <button key={i} onClick={() => { setSelDay(new Date(d)); setView("kun"); }}
-                  className={cn("bg-white dark:bg-neutral-900 h-24 p-1.5 text-left flex flex-col gap-1",
-                    "hover:bg-neutral-50 dark:hover:bg-neutral-800/70 transition-colors",
+                  className={cn("glass-panel h-24 p-1.5 text-left flex flex-col gap-1",
+                    "hover:bg-white/60 dark:hover:bg-white/10/70 transition-colors",
                     !inMonth && "opacity-25")}>
                   <span className={cn("w-6 h-6 flex items-center justify-center rounded-full text-[12px] font-bold shrink-0",
-                    isToday ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
+                    isToday ? "bg-indigo-600 text-white dark:bg-indigo-500"
                     : isSel  ? "bg-neutral-200 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 ring-2 ring-neutral-400"
                              : "text-neutral-700 dark:text-neutral-300")}>
                     {d.getDate()}

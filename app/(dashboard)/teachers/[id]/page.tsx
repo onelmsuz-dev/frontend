@@ -76,7 +76,7 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
         {/* Top cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Profile */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-xl font-black">
                 {user?.name?.[0] ?? "T"}
@@ -99,7 +99,7 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
               )}
               <div className="flex flex-wrap gap-1 pt-1">
                 {teacher.subjects?.map((s: string) => (
-                  <span key={s} className="text-[11px] px-2 py-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">
+                  <span key={s} className="text-[11px] px-2 py-0.5 rounded-lg glass-soft text-neutral-600 dark:text-neutral-300">
                     {s}
                   </span>
                 ))}
@@ -108,7 +108,7 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Salary info */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">Maosh</h3>
             <div className="space-y-3">
               <div>
@@ -120,7 +120,7 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
                   {salaryTypeLabel(teacher.salaryType)}
                 </p>
               </div>
-              <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <div className="pt-2 border-t border-white/50 dark:border-white/10">
                 <p className="text-[11px] text-neutral-400 mb-1">Oxirgi maosh</p>
                 {teacher.salaries?.[0] ? (
                   <div className="flex items-center justify-between">
@@ -140,7 +140,7 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Stats */}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">Statistika</h3>
             <div className="grid grid-cols-2 gap-3">
               {[
@@ -161,8 +161,8 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
         {/* Groups */}
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2">
+        <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-neutral-400" />
             <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Guruhlar</h3>
           </div>
@@ -171,7 +171,7 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
               <p className="text-[12px] text-neutral-400 p-6 text-center">Guruhlar yo'q</p>
             )}
             {teacher.groups?.map((g: any) => (
-              <div key={g.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+              <div key={g.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
                 <div>
                   <Link href={`/groups/${g.id}`}
                     className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 hover:text-blue-600 transition-colors">
@@ -195,8 +195,8 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
 
         {/* Salary history */}
         {teacher.salaries?.length > 0 && (
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-2">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-neutral-400" />
               <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Maosh tarixi</h3>
             </div>

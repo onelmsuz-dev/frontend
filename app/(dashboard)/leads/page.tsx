@@ -26,7 +26,7 @@ const SOURCE_COLORS: Record<string, string> = {
   "Instagram":    "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300",
   "Telegram":     "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
   "Do'st orqali": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-  "Website":      "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400",
+  "Website":      "glass-soft text-neutral-600 dark:text-neutral-400",
 };
 
 const SOURCES = ["Instagram", "Telegram", "Do'st orqali", "Website", "Boshqa"];
@@ -47,7 +47,7 @@ function Skeleton({ className }: { className?: string }) {
 function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: any; onMove: (id: string, status: LeadStatus) => void; onDelete: (lead: any) => void; onEdit: (lead: any) => void }) {
   const next = NEXT_STATUS[lead.status as LeadStatus];
   return (
-    <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-3 shadow-sm hover:shadow-md transition-shadow">
+    <div className="glass-panel rounded-xl border border-white/60 dark:border-white/10 p-3 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start gap-2.5 mb-2.5">
         <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center text-white font-bold text-[12px] shrink-0">
           {lead.name[0]}
@@ -67,7 +67,7 @@ function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: any; onMove: (id: 
       </div>
 
       {lead.course && (
-        <p className="text-[11px] text-neutral-600 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-800 rounded-lg px-2.5 py-1.5 mb-2">
+        <p className="text-[11px] text-neutral-600 dark:text-neutral-400 glass-soft rounded-lg px-2.5 py-1.5 mb-2">
           📚 {lead.course}
         </p>
       )}
@@ -78,9 +78,9 @@ function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: any; onMove: (id: 
         </p>
       )}
 
-      <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800">
+      <div className="flex items-center justify-between pt-2 border-t border-white/50 dark:border-white/10">
         <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full",
-          SOURCE_COLORS[lead.source] ?? "bg-neutral-100 dark:bg-neutral-800 text-neutral-600")}>
+          SOURCE_COLORS[lead.source] ?? "glass-soft text-neutral-600")}>
           {lead.source}
         </span>
         <div className="flex items-center gap-0.5">
@@ -91,7 +91,7 @@ function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: any; onMove: (id: 
           {next && (
             <button onClick={() => onMove(lead.id, next)}
               className="flex items-center gap-0.5 ml-1 px-2 py-0.5 text-[10px] font-semibold
-                bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900
+                bg-indigo-600 text-white dark:bg-indigo-500
                 rounded-lg hover:opacity-80 transition-opacity">
               {STATUS_CFG[next].label}
               <ChevronRight className="w-2.5 h-2.5" />
@@ -261,8 +261,8 @@ export default function LeadsPage() {
               <button key={s} onClick={() => setForm(p => ({...p, source: s}))}
                 className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
                   form.source === s
-                    ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-neutral-900 dark:border-neutral-100"
-                    : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
+                    ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900 dark:border-neutral-100"
+                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
                 {s}
               </button>
             ))}
@@ -316,8 +316,8 @@ export default function LeadsPage() {
               <button key={s} onClick={() => setEditForm(p => ({...p, source: s}))}
                 className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
                   editForm.source === s
-                    ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 border-neutral-900"
-                    : "border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
+                    ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
+                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
                 {s}
               </button>
             ))}
@@ -407,7 +407,7 @@ export default function LeadsPage() {
                 <div className="flex flex-col gap-2 min-h-24 flex-1">
                   {isLoading
                     ? Array.from({length:2}).map((_,i) => (
-                        <div key={i} className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-3 space-y-2">
+                        <div key={i} className="glass-panel rounded-xl border border-white/60 dark:border-white/10 p-3 space-y-2">
                           <div className="flex gap-2"><Skeleton className="w-8 h-8 shrink-0" /><div className="space-y-1 flex-1"><Skeleton className="h-3 w-24" /><Skeleton className="h-2.5 w-16" /></div></div>
                           <Skeleton className="h-7 w-full rounded-lg" />
                         </div>
@@ -417,7 +417,7 @@ export default function LeadsPage() {
                       ))
                   }
                   {!isLoading && colLeads.length === 0 && (
-                    <div className="border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl p-6 text-center text-neutral-400 dark:text-neutral-600 text-xs cursor-pointer hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors"
+                    <div className="border-2 border-dashed border-white/60 dark:border-white/10 rounded-xl p-6 text-center text-neutral-400 dark:text-neutral-600 text-xs cursor-pointer hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors"
                       onClick={() => openCreate(status)}>
                       + Lid qo'shish
                     </div>

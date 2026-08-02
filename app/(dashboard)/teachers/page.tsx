@@ -243,7 +243,7 @@ export default function TeachersPage() {
         {/* To'lov qabul qilish huquqi */}
         <button type="button"
           onClick={() => setForm(p => ({ ...p, acceptsPayments: !p.acceptsPayments }))}
-          className="w-full flex items-center justify-between gap-3 rounded-xl border border-neutral-200 dark:border-neutral-700 px-3.5 py-3 text-left hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
+          className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/60 dark:border-white/10 px-3.5 py-3 text-left hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
           <div>
             <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Guruh o'quvchilaridan to'lov qabul qiladimi?</p>
             <p className="text-[11px] text-neutral-400 mt-0.5">
@@ -333,7 +333,7 @@ export default function TeachersPage() {
           ].map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.l} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+              <div key={s.l} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
                 <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
                   <Icon className={cn("w-4.5 h-4.5", s.text)} />
                 </div>
@@ -352,7 +352,7 @@ export default function TeachersPage() {
             <Input placeholder="Ism, fan, telefon..." className="pl-9 h-9 text-sm w-64"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <div className="flex p-1 gap-0.5 bg-neutral-100 dark:bg-neutral-800 rounded-xl ml-auto">
+          <div className="flex p-1 gap-0.5 glass-soft rounded-xl ml-auto">
             {([["grid", LayoutGrid], ["list", List]] as [ViewMode, any][]).map(([id, Icon]) => (
               <button key={id} onClick={() => setViewMode(id)}
                 className={cn("w-8 h-7 flex items-center justify-center rounded-lg transition-all",
@@ -369,13 +369,13 @@ export default function TeachersPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {isLoading
               ? Array.from({length:3}).map((_,i) => (
-                  <div key={i} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 space-y-4">
+                  <div key={i} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5 space-y-4">
                     <div className="flex items-start gap-3"><Skeleton className="w-12 h-12 rounded-2xl shrink-0" /><div className="space-y-1.5 flex-1"><Skeleton className="h-4 w-28" /><Skeleton className="h-3 w-20" /></div></div>
                     <div className="grid grid-cols-2 gap-2"><Skeleton className="h-14 rounded-xl" /><Skeleton className="h-14 rounded-xl" /></div>
                   </div>
                 ))
               : filtered.map((t: any) => (
-                  <div key={t.id} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 hover:shadow-md transition-shadow">
+                  <div key={t.id} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center text-white font-black text-lg">
@@ -397,16 +397,16 @@ export default function TeachersPage() {
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mb-4">
-                      <div className="bg-neutral-50 dark:bg-neutral-800/60 rounded-xl p-2.5 flex items-center gap-2">
+                      <div className="glass-soft/60 rounded-xl p-2.5 flex items-center gap-2">
                         <BookOpen className="w-4 h-4 text-green-500 shrink-0" />
                         <div><p className="text-[10px] text-neutral-500">Guruhlar</p><p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{t._count?.groups ?? 0}</p></div>
                       </div>
-                      <div className="bg-neutral-50 dark:bg-neutral-800/60 rounded-xl p-2.5 flex items-center gap-2">
+                      <div className="glass-soft/60 rounded-xl p-2.5 flex items-center gap-2">
                         <Wallet className="w-4 h-4 text-purple-500 shrink-0" />
                         <div><p className="text-[10px] text-neutral-500">Maosh</p><p className="text-[12px] font-bold text-purple-700 dark:text-purple-400">{salaryDisplay(t.salaryType, t.salary)}</p></div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between border-t border-neutral-100 dark:border-neutral-800 pt-3">
+                    <div className="flex items-center justify-between border-t border-white/50 dark:border-white/10 pt-3">
                       <p className="text-[11px] text-neutral-400">{t.phone}</p>
                       <div className="flex gap-0.5">
                         <a href={`tel:${t.phone}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 transition-colors"><Phone className="w-3.5 h-3.5" /></a>
@@ -423,10 +423,10 @@ export default function TeachersPage() {
 
         {/* List */}
         {viewMode === "list" && (
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-neutral-50 dark:bg-neutral-800/60 hover:bg-neutral-50 dark:hover:bg-neutral-800/60">
+                <TableRow className="glass-soft/60 hover:bg-white/60 dark:hover:bg-white/10/60">
                   {["O'qituvchi","Fanlar","Guruhlar","Oylik","Status",""].map(h => (
                     <TableHead key={h} className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{h}</TableHead>
                   ))}
@@ -438,7 +438,7 @@ export default function TeachersPage() {
                       <TableRow key={i}>{Array.from({length:6}).map((_,j) => <TableCell key={j}><Skeleton className="h-3 w-full" /></TableCell>)}</TableRow>
                     ))
                   : filtered.map((t: any) => (
-                      <TableRow key={t.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                      <TableRow key={t.id} className="hover:bg-white/60 dark:hover:bg-white/10/50 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-2.5">
                             <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center text-white font-bold text-[13px] shrink-0">{t.user?.name?.[0] ?? "?"}</div>

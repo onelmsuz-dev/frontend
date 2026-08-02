@@ -48,7 +48,7 @@ export default function StudentPanelPage() {
   return (
     <div className="space-y-5">
       {/* Profil kartasi */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
         {pLoad ? (
           <div className="space-y-3"><Skeleton className="h-6 w-40" /><Skeleton className="h-4 w-56" /></div>
         ) : (
@@ -82,7 +82,7 @@ export default function StudentPanelPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-1 overflow-x-auto">
+      <div className="flex items-center gap-1 glass-panel border border-white/60 dark:border-white/10 rounded-xl p-1 overflow-x-auto">
         {TABS.map(t => {
           const Icon = t.icon;
           return (
@@ -90,8 +90,8 @@ export default function StudentPanelPage() {
               className={cn(
                 "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-medium whitespace-nowrap transition-colors",
                 tab === t.id
-                  ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
-                  : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                  ? "bg-indigo-600 text-white dark:bg-indigo-500"
+                  : "text-neutral-500 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10"
               )}>
               <Icon className="w-3.5 h-3.5" /> {t.label}
             </button>
@@ -111,18 +111,18 @@ export default function StudentPanelPage() {
 
       {/* ── To'lovlar ── */}
       {tab === "tolovlar" && (
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+        <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
           {payList.length === 0 ? (
             <Empty icon={Wallet} text="Hali to'lov yo'q" />
           ) : payList.map(p => (
-            <div key={p.id} className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+            <div key={p.id} className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
               <div>
                 <p className="text-[14px] font-semibold text-green-600 dark:text-green-400">+{fmtMoney(p.amount)}</p>
                 <p className="text-[11px] text-neutral-400">
                   {new Date(p.date).toLocaleDateString("uz-UZ")}{p.group?.name ? ` · ${p.group.name}` : ""}
                 </p>
               </div>
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500">{p.method}</span>
+              <span className="text-[11px] px-2 py-0.5 rounded-full glass-soft text-neutral-500">{p.method}</span>
             </div>
           ))}
         </div>
@@ -131,18 +131,18 @@ export default function StudentPanelPage() {
       {/* ── Davomat ── */}
       {tab === "davomat" && (
         <div className="space-y-3">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex items-center justify-between">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4 flex items-center justify-between">
             <span className="text-[13px] text-neutral-500">Davomat foizi</span>
             <span className="text-xl font-black text-neutral-900 dark:text-neutral-100">{att?.rate ?? 0}%</span>
           </div>
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
             {(att?.records ?? []).length === 0 ? (
               <Empty icon={CalendarCheck} text="Davomat yozuvi yo'q" />
             ) : (att?.records ?? []).map((r: any) => {
               const cfg = ATT_CFG[r.status] ?? ATT_CFG.KELDI;
               const Icon = cfg.icon;
               return (
-                <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
                   <div>
                     <p className="text-[13px] font-medium text-neutral-800 dark:text-neutral-200">{r.group?.name ?? "—"}</p>
                     <p className="text-[11px] text-neutral-400">{new Date(r.date).toLocaleDateString("uz-UZ")}</p>
@@ -163,7 +163,7 @@ export default function StudentPanelPage() {
           {groupList.length === 0 ? (
             <div className="sm:col-span-2"><Empty icon={BookOpen} text="Hali guruhga qo'shilmagansiz" /></div>
           ) : groupList.map(sg => (
-            <div key={sg.id} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+            <div key={sg.id} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-neutral-900 dark:text-neutral-100">{sg.group?.name}</h3>
                 <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold",
@@ -188,9 +188,9 @@ export default function StudentPanelPage() {
 
 function StatCard({ icon: Icon, label, value, trend }: { icon: any; label: string; value: string; trend?: "up" | "down" }) {
   return (
-    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
       <div className="flex items-center justify-between mb-2">
-        <div className="w-9 h-9 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+        <div className="w-9 h-9 rounded-lg glass-soft flex items-center justify-center">
           <Icon className="w-4 h-4 text-neutral-500" />
         </div>
         {trend && (trend === "up"

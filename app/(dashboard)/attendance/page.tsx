@@ -164,10 +164,10 @@ export default function AttendancePage() {
         {/* Date nav */}
         <div className="flex items-center gap-1.5">
           <button onClick={() => setCurrentDate(d => addDays(d, -1))}
-            className="w-9 h-9 flex items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors">
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-white/60 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-400 transition-colors">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <div className="px-4 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-center min-w-[150px]">
+          <div className="px-4 py-1.5 rounded-xl border border-white/60 dark:border-white/10 glass-panel text-center min-w-[150px]">
             <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">
               {currentDate.getDate()} {UZ_MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
             </p>
@@ -175,12 +175,12 @@ export default function AttendancePage() {
           </div>
           <button onClick={() => setCurrentDate(d => addDays(d, 1))}
             disabled={currentDate.getTime() >= today.getTime()}
-            className="w-9 h-9 flex items-center justify-center rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-white/60 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 text-neutral-600 dark:text-neutral-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
             <ChevronRight className="w-4 h-4" />
           </button>
           {!isToday && (
             <button onClick={() => setCurrentDate(new Date(today))}
-              className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+              className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
               Bugun
             </button>
           )}
@@ -205,7 +205,7 @@ export default function AttendancePage() {
                     className={cn("px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left",
                       selectedGroup === g.id
                         ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700 hover:border-neutral-400")}>
+                        : "glass-panel text-neutral-600 dark:text-neutral-400 border-white/60 dark:border-white/10 hover:border-neutral-400")}>
                     <span className="block">{g.name}</span>
                     <span className={cn("block text-[10px] font-normal", selectedGroup === g.id ? "text-white/70" : "text-neutral-400")}>
                       {g.startTime}-{g.endTime}
@@ -221,7 +221,7 @@ export default function AttendancePage() {
 
         {/* Selected group info */}
         {group && (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl px-4 py-3 text-[12px]">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 glass-panel border border-white/60 dark:border-white/10 rounded-2xl px-4 py-3 text-[12px]">
             <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300"><Users className="w-3.5 h-3.5 text-neutral-400" />{group.teacher?.user?.name ?? "—"}</span>
             <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300"><CalendarDays className="w-3.5 h-3.5 text-neutral-400" />{(group.scheduleDays ?? []).map((d: string) => WEEKDAY_SHORT[d] ?? d).join(", ") || "—"}</span>
             <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300"><Clock className="w-3.5 h-3.5 text-neutral-400" />{group.startTime}–{group.endTime}</span>
@@ -256,8 +256,8 @@ export default function AttendancePage() {
           {(ALL_STATUSES.map(k => [k, STATUS_CFG[k]] as const)).map(([key, cfg]) => {
             const Icon = cfg.icon;
             return (
-              <div key={key} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-2 bg-neutral-50 dark:bg-neutral-800/60", cfg.cls)}>
+              <div key={key} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
+                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-2 glass-soft/60", cfg.cls)}>
                   <Icon className="w-4.5 h-4.5" />
                 </div>
                 {studentsLoading ? <Skeleton className="h-6 w-8 mb-1" />
@@ -266,8 +266,8 @@ export default function AttendancePage() {
               </div>
             );
           })}
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 bg-neutral-50 dark:bg-neutral-800/60 text-neutral-400">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2 glass-soft/60 text-neutral-400">
               <Users className="w-4.5 h-4.5" />
             </div>
             {studentsLoading ? <Skeleton className="h-6 w-8 mb-1" />
@@ -278,7 +278,7 @@ export default function AttendancePage() {
 
         {/* Rate bar */}
         {stats.marked > 0 && (
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4">
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">Davomat darajasi <span className="text-neutral-400 font-normal">({stats.marked}/{stats.total} belgilandi)</span></p>
               <span className={cn("text-[13px] font-black",
@@ -288,7 +288,7 @@ export default function AttendancePage() {
                 {attendanceRate}%
               </span>
             </div>
-            <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+            <div className="h-2 glass-soft rounded-full overflow-hidden">
               <div className={cn("h-full rounded-full transition-all",
                 attendanceRate >= 90 ? "bg-green-500" : attendanceRate >= 70 ? "bg-amber-500" : "bg-red-500")}
                 style={{ width: `${attendanceRate}%` }} />
@@ -309,7 +309,7 @@ export default function AttendancePage() {
               <XCircle className="w-3.5 h-3.5" /> Barchasi kelmadi
             </button>
             <button onClick={clearAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-semibold border border-white/60 dark:border-white/10 text-neutral-500 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
               <Eraser className="w-3.5 h-3.5" /> Tozalash
             </button>
           </div>
@@ -323,8 +323,8 @@ export default function AttendancePage() {
                 const status = localStatus[s.id];
                 return (
                   <div key={s.id}
-                    className={cn("bg-white dark:bg-neutral-900 border rounded-2xl p-3 transition-colors",
-                      status ? "border-neutral-200 dark:border-neutral-800" : "border-dashed border-neutral-300 dark:border-neutral-700")}>
+                    className={cn("glass-panel border rounded-2xl p-3 transition-colors",
+                      status ? "border-white/60 dark:border-white/10" : "border-dashed border-neutral-300 dark:border-neutral-700")}>
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-[11px] text-neutral-400 dark:text-neutral-600 font-mono w-5 text-center shrink-0">{idx + 1}</span>
                       <div className="w-9 h-9 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center text-white text-[13px] font-bold shrink-0">
@@ -346,7 +346,7 @@ export default function AttendancePage() {
                                 !canMark && "opacity-40 cursor-not-allowed",
                                 active
                                   ? cfg.activeCls
-                                  : cn("bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700 hover:border-current", cfg.cls))}>
+                                  : cn("glass-panel border-white/60 dark:border-white/10 hover:border-current", cfg.cls))}>
                               {cfg.short}
                             </button>
                           );
@@ -358,7 +358,7 @@ export default function AttendancePage() {
                         value={localNote[s.id] ?? ""}
                         onChange={e => { setLocalNote(prev => ({ ...prev, [s.id]: e.target.value })); setDirty(true); }}
                         placeholder="Sabab / izoh..."
-                        className="mt-2 w-full h-8 px-2.5 text-[12px] rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-700 dark:text-neutral-300 outline-none focus:border-indigo-400 transition-colors"
+                        className="mt-2 w-full h-8 px-2.5 text-[12px] rounded-lg border border-white/60 dark:border-white/10 glass-soft/50 text-neutral-700 dark:text-neutral-300 outline-none focus:border-indigo-400 transition-colors"
                       />
                     )}
                   </div>
@@ -366,7 +366,7 @@ export default function AttendancePage() {
               })
           }
           {!studentsLoading && students.length === 0 && (
-            <div className="py-12 text-center text-sm text-neutral-400 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl">
+            <div className="py-12 text-center text-sm text-neutral-400 glass-panel border border-white/60 dark:border-white/10 rounded-2xl">
               {selectedGroup ? "Bu guruhda faol o'quvchi yo'q" : "Guruhni tanlang"}
             </div>
           )}
@@ -374,7 +374,7 @@ export default function AttendancePage() {
 
         {/* Sinov students */}
         {!studentsLoading && sinovStudents.length > 0 && (
-          <div className="bg-white dark:bg-neutral-900 border border-amber-200 dark:border-amber-900/40 rounded-2xl overflow-hidden">
+          <div className="glass-panel border border-amber-200 dark:border-amber-900/40 rounded-2xl overflow-hidden">
             <div className="px-5 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-900/40 flex items-center justify-between">
               <p className="text-[13px] font-bold text-amber-700 dark:text-amber-400">Sinov darsidagi o'quvchilar</p>
               <span className="text-[11px] bg-amber-200 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full font-semibold">
@@ -401,7 +401,7 @@ export default function AttendancePage() {
 
       {/* Sticky save bar */}
       {students.length > 0 && canMark && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-t border-neutral-200 dark:border-neutral-800 px-5 py-3 flex items-center gap-3">
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-t border-white/60 dark:border-white/10 px-5 py-3 flex items-center gap-3">
           <div className="text-[12px] text-neutral-500 dark:text-neutral-400">
             {stats.unmarked > 0
               ? <><strong className="text-neutral-700 dark:text-neutral-200">{stats.unmarked}</strong> ta belgilanmagan</>

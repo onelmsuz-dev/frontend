@@ -163,8 +163,8 @@ export default function SettingsPage() {
                   className={cn(
                     "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                     activeSection === s.id
-                      ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
-                      : "text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      ? "bg-indigo-600 text-white dark:bg-indigo-500"
+                      : "text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10"
                   )}>
                   <Icon className="w-4 h-4 shrink-0" />
                   {s.label}
@@ -184,7 +184,7 @@ export default function SettingsPage() {
 
           {/* ── O'quv markaz ── */}
           {activeSection === "markaz" && (
-            <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+            <Card className="border border-white/60 dark:border-white/10 shadow-none">
               <CardHeader className="pb-3">
                 <CardTitle className="text-[15px]">O'quv markaz ma'lumotlari</CardTitle>
               </CardHeader>
@@ -206,8 +206,8 @@ export default function SettingsPage() {
                     <div>
                       <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Subdomen</Label>
                       <div className="flex">
-                        <Input defaultValue={orgData?.subdomain ?? ""} disabled className="h-9 text-sm rounded-r-none bg-neutral-50 dark:bg-neutral-800" />
-                        <span className="flex items-center px-3 bg-neutral-100 dark:bg-neutral-800 border border-l-0 border-neutral-200 dark:border-neutral-700 rounded-r-lg text-sm text-neutral-500">.oneroom.uz</span>
+                        <Input defaultValue={orgData?.subdomain ?? ""} disabled className="h-9 text-sm rounded-r-none glass-soft" />
+                        <span className="flex items-center px-3 glass-soft border border-l-0 border-white/60 dark:border-white/10 rounded-r-lg text-sm text-neutral-500">.oneroom.uz</span>
                       </div>
                       <p className="text-[11px] text-neutral-400 mt-1.5">
                         Subdomen — markazning asosiy filiali. Qolgan filiallar shunga qo'shiladi.
@@ -215,7 +215,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Tarif rejasi</Label>
-                      <Input defaultValue={orgData?.plan ?? ""} disabled className="h-9 text-sm bg-neutral-50 dark:bg-neutral-800" />
+                      <Input defaultValue={orgData?.plan ?? ""} disabled className="h-9 text-sm glass-soft" />
                     </div>
                     {orgErr && (
                       <p className="text-[12px] text-red-600 dark:text-red-400">{orgErr}</p>
@@ -242,7 +242,7 @@ export default function SettingsPage() {
                 </Button>
               </div>
               {showBranchForm && (
-                <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+                <Card className="border border-white/60 dark:border-white/10 shadow-none">
                   <CardContent className="p-4 space-y-3">
                     <p className="text-sm font-semibold">Yangi filial</p>
                     <div className="grid grid-cols-2 gap-3">
@@ -271,11 +271,11 @@ export default function SettingsPage() {
               ) : (
                 <div className="space-y-3">
                   {branches.map(branch => (
-                    <Card key={branch.id} className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+                    <Card key={branch.id} className="border border-white/60 dark:border-white/10 shadow-none">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center shrink-0"><Building className="w-5 h-5 text-neutral-500" /></div>
+                            <div className="w-10 h-10 glass-soft rounded-xl flex items-center justify-center shrink-0"><Building className="w-5 h-5 text-neutral-500" /></div>
                             <div>
                               <div className="flex items-center gap-2">
                                 <h3 className="font-semibold text-[14px]">{branch.name}</h3>
@@ -297,7 +297,7 @@ export default function SettingsPage() {
                             </div>
                           )}
                         </div>
-                        <div className="flex gap-4 mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                        <div className="flex gap-4 mt-3 pt-3 border-t border-white/50 dark:border-white/10">
                           <div className="flex items-center gap-1.5"><DoorOpen className="w-3.5 h-3.5 text-neutral-400" /><span className="text-xs text-neutral-500">{branch.roomCount ?? 0} xona</span></div>
                         </div>
                       </CardContent>
@@ -318,14 +318,14 @@ export default function SettingsPage() {
                 <Button size="sm" onClick={() => { setShowRoomForm(v => !v); setRoomErr(""); }} className="gap-1.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-neutral-100 dark:text-neutral-900 text-xs h-8"><Plus className="w-3.5 h-3.5" /> Xona qo'shish</Button>
               </div>
               {showRoomForm && (
-                <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+                <Card className="border border-white/60 dark:border-white/10 shadow-none">
                   <CardContent className="p-4 space-y-3">
                     <p className="text-sm font-semibold">Yangi xona</p>
                     <div className="grid grid-cols-2 gap-3">
                       <div><Label className="text-xs text-neutral-500 mb-1 block">Xona nomi *</Label><Input placeholder="4-xona" value={newRoom.name} onChange={e => setNewRoom(p => ({...p, name: e.target.value}))} className="h-8 text-sm" /></div>
                       <div><Label className="text-xs text-neutral-500 mb-1 block">Sig'imi</Label><Input type="number" placeholder="15" value={newRoom.capacity} onChange={e => setNewRoom(p => ({...p, capacity: e.target.value}))} className="h-8 text-sm" /></div>
                       <div className="col-span-2"><Label className="text-xs text-neutral-500 mb-1 block">Filial</Label>
-                        <select value={newRoom.branchId || branches[0]?.id || ""} onChange={e => setNewRoom(p => ({...p, branchId: e.target.value}))} className="w-full h-8 px-2 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 outline-none">
+                        <select value={newRoom.branchId || branches[0]?.id || ""} onChange={e => setNewRoom(p => ({...p, branchId: e.target.value}))} className="w-full h-8 px-2 text-sm rounded-md border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 outline-none">
                           {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                         </select>
                       </div>
@@ -356,9 +356,9 @@ export default function SettingsPage() {
                       <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-2"><Building className="w-3.5 h-3.5" />{branch.name}</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {branchRooms.map(room => (
-                          <Card key={room.id} className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+                          <Card key={room.id} className="border border-white/60 dark:border-white/10 shadow-none">
                             <CardContent className="p-3 flex items-center gap-3">
-                              <div className="w-9 h-9 bg-neutral-100 dark:bg-neutral-800 rounded-lg flex items-center justify-center shrink-0"><DoorOpen className="w-4 h-4 text-neutral-500" /></div>
+                              <div className="w-9 h-9 glass-soft rounded-lg flex items-center justify-center shrink-0"><DoorOpen className="w-4 h-4 text-neutral-500" /></div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-[13px] font-semibold">{room.name}</p>
                                 {room.capacity && <span className="text-[10px] text-neutral-400">{room.capacity} o'rin</span>}
@@ -379,7 +379,7 @@ export default function SettingsPage() {
 
           {/* ── Bildirishnomalar ── */}
           {activeSection === "bildirishnoma" && (
-            <Card className="border border-neutral-200 dark:border-neutral-800 shadow-none">
+            <Card className="border border-white/60 dark:border-white/10 shadow-none">
               <CardHeader className="pb-3"><CardTitle className="text-[15px]">Bildirishnoma sozlamalari</CardTitle></CardHeader>
               <CardContent className="space-y-1">
                 {[
@@ -389,7 +389,7 @@ export default function SettingsPage() {
                   { label: "Yangi lid qo'shilganda email", checked: false },
                   { label: "Telegram bot bildirishnomalari", checked: false },
                 ].map(item => (
-                  <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+                  <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-white/50 dark:border-white/10 last:border-0">
                     <span className="text-sm text-neutral-700 dark:text-neutral-300">{item.label}</span>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" defaultChecked={item.checked} className="sr-only peer" />

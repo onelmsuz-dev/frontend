@@ -6,9 +6,13 @@ import { SubscriptionGate } from "@/components/subscription-gate";
 export function LayoutSwitcher({ children }: { children: React.ReactNode }) {
   return (
     <BranchProvider>
-      <div className="flex min-h-screen bg-neutral-50 dark:bg-neutral-950">
+      {/* Split diagonal backdrop — fixed so it stays put while content scrolls */}
+      <div className="app-bg-base fixed inset-0 -z-20" />
+      <div className="app-bg-split fixed inset-0 -z-10" />
+
+      <div className="relative flex min-h-screen gap-3 p-0 lg:gap-4 lg:p-4">
         <TorNav />
-        <main className="flex-1 min-h-screen min-w-0 pb-[65px] lg:pb-0">
+        <main className="min-h-screen min-w-0 flex-1 pb-[80px] lg:min-h-0 lg:pb-0">
           <SubscriptionGate>{children}</SubscriptionGate>
         </main>
         <BottomNav />

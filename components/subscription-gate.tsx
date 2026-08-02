@@ -32,7 +32,7 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
             </p>
           </div>
           <Link href="/settings"
-            className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-[13px] font-semibold hover:opacity-90 transition-opacity">
+            className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-indigo-600 text-white dark:bg-indigo-500 text-[13px] font-semibold hover:opacity-90 transition-opacity">
             <CreditCard className="w-4 h-4" />
             To'lov qilish
           </Link>

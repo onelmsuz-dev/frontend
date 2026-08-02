@@ -48,7 +48,7 @@ export function BottomNav() {
       )}
 
       {showMore && (
-        <div className="fixed bottom-[65px] left-0 right-0 z-50 lg:hidden bg-white dark:bg-neutral-900 rounded-t-2xl border-t border-neutral-200 dark:border-neutral-800 px-4 pt-3 pb-5 shadow-2xl">
+        <div className="glass-strong fixed bottom-[88px] left-3 right-3 z-50 lg:hidden rounded-3xl border border-white/60 dark:border-white/10 px-4 pt-3 pb-4 shadow-2xl">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
               Boshqa sahifalar
@@ -69,8 +69,8 @@ export function BottomNav() {
                   className={cn(
                     "flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl transition-colors",
                     isActive
-                      ? "bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900"
-                      : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                      ? "bg-indigo-100/80 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200"
+                      : "text-neutral-500 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10"
                   )}
                 >
                   <Icon className="w-5 h-5" />
@@ -80,7 +80,7 @@ export function BottomNav() {
             })}
           </div>
 
-          <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+          <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10">
             <button
               onClick={async () => {
                 setShowMore(false);
@@ -97,7 +97,7 @@ export function BottomNav() {
         </div>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200 dark:border-neutral-800 flex items-stretch">
+      <nav className="glass-strong fixed bottom-3 left-3 right-3 z-40 lg:hidden rounded-3xl border border-white/60 dark:border-white/10 shadow-xl flex items-stretch overflow-hidden">
         {BOTTOM_ITEMS.map(item => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
@@ -108,13 +108,13 @@ export function BottomNav() {
               className={cn(
                 "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 transition-colors",
                 isActive
-                  ? "text-neutral-900 dark:text-neutral-100"
+                  ? "text-indigo-600 dark:text-indigo-300"
                   : "text-neutral-400 dark:text-neutral-500"
               )}
             >
               <div className={cn(
                 "w-10 h-6 rounded-full flex items-center justify-center transition-colors",
-                isActive && "bg-neutral-100 dark:bg-neutral-800"
+                isActive && "bg-indigo-100/80 dark:bg-indigo-400/15"
               )}>
                 <Icon className={cn("w-[18px] h-[18px]", isActive && "stroke-[2.5]")} />
               </div>
@@ -127,12 +127,12 @@ export function BottomNav() {
           onClick={() => setShowMore(v => !v)}
           className={cn(
             "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 transition-colors",
-            showMore ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-400 dark:text-neutral-500"
+            showMore ? "text-indigo-600 dark:text-indigo-300" : "text-neutral-400 dark:text-neutral-500"
           )}
         >
           <div className={cn(
             "w-10 h-6 rounded-full flex items-center justify-center transition-colors",
-            showMore && "bg-neutral-100 dark:bg-neutral-800"
+            showMore && "bg-indigo-100/80 dark:bg-indigo-400/15"
           )}>
             <MoreHorizontal className={cn("w-[18px] h-[18px]", showMore && "stroke-[2.5]")} />
           </div>
