@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
 import { ConfirmDeleteModal } from "@/components/ui/modal";
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import {
   Search, Phone, Edit, GraduationCap,
-  CheckCircle, DollarSign, Trash2, ChevronRight, UserCheck, Clock,
+  CheckCircle, DollarSign, Trash2, UserCheck, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStudents } from "@/lib/hooks/useStudents";
@@ -53,6 +54,7 @@ function revalidate() {
 }
 
 export default function StudentsPage() {
+  const router = useRouter();
   const [search,       setSearch]       = useState("");
   const [filterEnroll, setFilterEnroll] = useState("barchasi");
   const [filterGroup,  setFilterGroup]  = useState("barchasi");
@@ -213,9 +215,14 @@ export default function StudentsPage() {
                     const enroll  = ENROLL_CFG[sg?.enrollmentStatus ?? (s.isActive ? "FAOL" : "SINOV")];
                     const pay     = PAY_CFG[payStatus(s.balance ?? 0, sg?.enrollmentStatus)];
                     return (
-                      <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
+                      <TableRow key={s.id}
+                        onClick={() => router.push(`/students/${s.id}`)}
+                        className="cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                         <TableCell>
-                          <div className="flex items-center gap-3">
+                          {/* Ism — Link: qator bosilishi bilan bir xil manzil, lekin
+                              klaviatura bilan ham yuriladi va hoverda URL ko'rinadi */}
+                          <Link href={`/students/${s.id}`} onClick={e => e.stopPropagation()}
+                            className="flex items-center gap-3 group/name">
                             <div className={cn(
                               "w-8 h-8 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0",
                               s.isActive
@@ -225,10 +232,10 @@ export default function StudentsPage() {
                               {s.name[0]}
                             </div>
                             <div>
-                              <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{s.name}</p>
+                              <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 group-hover/name:text-indigo-600 dark:group-hover/name:text-indigo-400 transition-colors">{s.name}</p>
                               <p className="text-[11px] text-neutral-400">{new Date(s.createdAt).toLocaleDateString("uz-UZ")}</p>
                             </div>
-                          </div>
+                          </Link>
                         </TableCell>
                         <TableCell>
                           <p className="text-[13px] text-neutral-700 dark:text-neutral-300">{s.phone}</p>
@@ -251,7 +258,8 @@ export default function StudentsPage() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center justify-end gap-1">
+                          {/* Amal tugmalari qator bosilishini ishga tushirmasligi kerak */}
+                          <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
                             {!s.isActive && sg && (
                               <button
                                 onClick={() => activate(s)}
@@ -270,10 +278,6 @@ export default function StudentsPage() {
                               className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
                               <Phone className="w-3.5 h-3.5" />
                             </a>
-                            <Link href={`/students/${s.id}`}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </Link>
                             <button onClick={() => setDeleteTarget(s)}
                               className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
                               <Trash2 className="w-3.5 h-3.5" />

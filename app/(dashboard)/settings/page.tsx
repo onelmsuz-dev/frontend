@@ -11,11 +11,12 @@ import { cn } from "@/lib/utils";
 import type { Branch, Room } from "@/types";
 import {
   Plus, Trash2, Users, Building, Bell,
-  MapPin, DoorOpen, Phone, CreditCard,
+  MapPin, DoorOpen, Phone, CreditCard, MessageSquare,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { useOrganization } from "@/lib/hooks/useOrganization";
+import { useSms, useSmsAutomation, useUpdateSmsAutomation } from "@/lib/hooks/useSms";
 import { TarifSection } from "@/components/settings/tarif-section";
 import { StaffSection } from "@/components/settings/staff-section";
 import { useMe } from "@/lib/hooks/useMe";
@@ -66,6 +67,28 @@ export default function SettingsPage() {
   const [orgForm, setOrgForm] = useState({ name: "" });
   const [orgSaving, setOrgSaving] = useState(false);
   const [orgErr, setOrgErr] = useState("");
+
+  // ── Bildirishnomalar ──
+  // Bu bo'lim ilgari to'liq soxta edi: toggle'lar `defaultChecked` bilan
+  // chizilgan, "Saqlash" hech qayerga bormas edi. Endi haqiqiy /api/sms va
+  // /api/sms/automation endpointlariga ulangan (SMS sahifasi bilan bir manba).
+  const { data: smsStatus, isLoading: smsLoading } = useSms();
+  const { data: automation, mutate: mutateAutomation } = useSmsAutomation();
+  const { trigger: saveAutomation, isMutating: automationSaving } = useUpdateSmsAutomation();
+  const [automationErr, setAutomationErr] = useState("");
+
+  const smsBalance    = smsStatus?.balance ?? 0;
+  const smsConfigured = smsStatus?.configured ?? false;
+
+  async function toggleAbsenceSms(enabled: boolean, templateId?: string | null) {
+    setAutomationErr("");
+    try {
+      await saveAutomation({ enabled, templateId: templateId ?? automation?.absence.templateId } as any);
+      mutateAutomation();
+    } catch (e: any) {
+      setAutomationErr(e?.error ?? "Saqlab bo'lmadi");
+    }
+  }
 
   async function addBranch() {
     if (!newBranch.name.trim()) { setBranchErr("Filial nomi majburiy"); return; }
@@ -379,27 +402,125 @@ export default function SettingsPage() {
 
           {/* ── Bildirishnomalar ── */}
           {activeSection === "bildirishnoma" && (
-            <Card className="border border-white/60 dark:border-white/10 shadow-none">
-              <CardHeader className="pb-3"><CardTitle className="text-[15px]">Bildirishnoma sozlamalari</CardTitle></CardHeader>
-              <CardContent className="space-y-1">
-                {[
-                  { label: "SMS bildirishnomalar (Eskiz.uz orqali)", checked: true },
-                  { label: "Davomat haqida ota-onaga SMS", checked: true },
-                  { label: "To'lov eslatmasi (oylik)", checked: true },
-                  { label: "Yangi lid qo'shilganda email", checked: false },
-                  { label: "Telegram bot bildirishnomalari", checked: false },
-                ].map(item => (
-                  <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-white/50 dark:border-white/10 last:border-0">
-                    <span className="text-sm text-neutral-700 dark:text-neutral-300">{item.label}</span>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" defaultChecked={item.checked} className="sr-only peer" />
-                      <div className="w-9 h-5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:bg-neutral-900 dark:peer-checked:bg-neutral-100 peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white dark:after:bg-neutral-900 after:rounded-full after:h-4 after:w-4 after:transition-all" />
-                    </label>
+            <div className="space-y-4">
+
+              {/* SMS holati — haqiqiy ma'lumot */}
+              <Card className="border border-white/60 dark:border-white/10 shadow-none">
+                <CardHeader className="pb-3"><CardTitle className="text-[15px]">SMS holati</CardTitle></CardHeader>
+                <CardContent className="space-y-2.5">
+                  <div className="flex items-center justify-between py-2 border-b border-white/50 dark:border-white/10">
+                    <div className="flex items-center gap-2.5">
+                      <MessageSquare className="w-4 h-4 text-neutral-400 shrink-0" />
+                      <span className="text-sm text-neutral-700 dark:text-neutral-300">Eskiz.uz shlyuzi</span>
+                    </div>
+                    {smsLoading ? <Skeleton className="h-5 w-20" /> : (
+                      <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold",
+                        smsConfigured
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400")}>
+                        {smsConfigured ? "Ulangan" : "Ulanmagan"}
+                      </span>
+                    )}
                   </div>
-                ))}
- <Button className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 mt-3">Saqlash</Button>
-              </CardContent>
-            </Card>
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-2.5">
+                      <Bell className="w-4 h-4 text-neutral-400 shrink-0" />
+                      <span className="text-sm text-neutral-700 dark:text-neutral-300">SMS balansi</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {smsLoading
+                        ? <Skeleton className="h-5 w-16" />
+                        : <span className={cn("text-[13px] font-black",
+                            smsBalance > 0 ? "text-neutral-900 dark:text-neutral-100" : "text-red-500")}>
+                            {smsBalance} ta
+                          </span>}
+                      <a href="/sms" className="text-[11px] font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+                        SMS bo'limi →
+                      </a>
+                    </div>
+                  </div>
+                  {!smsLoading && !smsConfigured && (
+                    <p className="text-[11px] text-neutral-400">
+                      Shlyuz platforma darajasida sozlanadi — ulanmagan bo'lsa hech qanday SMS yuborilmaydi.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Ishlaydigan avtomatik bildirishnoma */}
+              <Card className="border border-white/60 dark:border-white/10 shadow-none">
+                <CardHeader className="pb-3"><CardTitle className="text-[15px]">Avtomatik bildirishnomalar</CardTitle></CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-start justify-between gap-3 rounded-xl border border-white/50 dark:border-white/10 px-3.5 py-3">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">
+                        Davomat: &quot;Kelmadi&quot; belgilanganda ota-onaga SMS
+                      </p>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                        O&apos;qituvchi o&apos;quvchini &quot;Kelmadi&quot; deb belgilasa — ota-onasiga
+                        (raqami bo&apos;lmasa o&apos;ziga) tanlangan matn avtomatik yuboriladi.
+                      </p>
+                      {automation?.absence.enabled && (
+                        <select
+                          value={automation.absence.templateId ?? ""}
+                          onChange={e => toggleAbsenceSms(true, e.target.value)}
+                          className="mt-2 h-8 px-2.5 text-[12px] rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
+                          {(automation.availableTemplates ?? []).length === 0 && <option value="">Tasdiqlangan matn yo&apos;q</option>}
+                          {(automation.availableTemplates ?? []).map(t => (
+                            <option key={t.id} value={t.id}>{t.title}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        const next = !automation?.absence.enabled;
+                        if (next && !automation?.availableTemplates?.length) {
+                          setAutomationErr("Avval SMS bo'limida tasdiqlangan matn qo'shing");
+                          return;
+                        }
+                        toggleAbsenceSms(next, automation?.availableTemplates?.[0]?.id);
+                      }}
+                      disabled={automationSaving}
+                      className={cn(
+                        "relative w-10 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60",
+                        automation?.absence.enabled ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-600",
+                      )}>
+                      <span className={cn(
+                        "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                        automation?.absence.enabled && "translate-x-4",
+                      )} />
+                    </button>
+                  </div>
+                  {automationErr && <p className="text-[12px] text-red-600 dark:text-red-400">{automationErr}</p>}
+                  <p className="text-[11px] text-neutral-400">
+                    O&apos;zgarish darhol saqlanadi — alohida tasdiqlash shart emas.
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Hali yo'q imkoniyatlar — soxta tugma o'rniga rostini aytamiz */}
+              <Card className="border border-white/60 dark:border-white/10 shadow-none">
+                <CardHeader className="pb-3"><CardTitle className="text-[15px]">Rejalashtirilgan</CardTitle></CardHeader>
+                <CardContent className="space-y-1">
+                  {[
+                    { label: "To'lov eslatmasi (oylik)",        note: "Rejalashtiruvchi (cron) kerak" },
+                    { label: "Yangi lid qo'shilganda email",    note: "Email yuborish integratsiyasi yo'q" },
+                    { label: "Telegram bot bildirishnomalari",  note: "Bot integratsiyasi yo'q" },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-white/50 dark:border-white/10 last:border-0">
+                      <div className="min-w-0">
+                        <p className="text-sm text-neutral-400 dark:text-neutral-500">{item.label}</p>
+                        <p className="text-[11px] text-neutral-400 dark:text-neutral-600">{item.note}</p>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-lg font-semibold bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 shrink-0">
+                        Tez orada
+                      </span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </div>

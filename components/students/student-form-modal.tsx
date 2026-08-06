@@ -191,13 +191,6 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
         </>
       }
     >
-      {/* Avatar (harf) */}
-      <div className="flex justify-center">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-black text-3xl">
-          {form.name.trim()?.[0]?.toUpperCase() ?? "?"}
-        </div>
-      </div>
-
       <FormField label="Ism familiya" required error={fErr.name}>
         <Input placeholder="Alisher Navoiy" value={form.name}
           onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setFErr(p => ({ ...p, name: undefined })); }}

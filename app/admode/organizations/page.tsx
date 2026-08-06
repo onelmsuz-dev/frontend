@@ -63,6 +63,7 @@ export default function OrganizationsPage() {
   const [createErr,  setCreateErr]  = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteErr,  setDeleteErr]  = useState("");
 
   // Password reset state
   const [resetOrg,  setResetOrg]   = useState<any>(null);
@@ -150,12 +151,25 @@ export default function OrganizationsPage() {
   }
 
   async function deleteOrg(id: string, name: string) {
-    if (!confirm(`"${name}" tashkilotini o'chirasizmi? Bu amalni qaytarib bo'lmaydi!`)) return;
-    setDeletingId(id);
+    if (!confirm(
+      `"${name}" tashkilotini o'chirasizmi?\n\n` +
+      "Uning barcha o'quvchilari, o'qituvchilari, guruhlari, to'lovlari va " +
+      "foydalanuvchilari ham o'chadi. Subdomen bo'shab, qayta ishlatish mumkin bo'ladi.\n\n" +
+      "Bu amalni qaytarib bo'lmaydi!"
+    )) return;
+    setDeletingId(id); setDeleteErr("");
     try {
-      await fetch(`/api/admode/organizations/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admode/organizations/${id}`, { method: "DELETE" });
+      // Ilgari natija tekshirilmasdi: xato bo'lsa ham "o'chdi" ko'rinardi,
+      // aslida markaz ham, foydalanuvchilari ham joyida qolib ketardi.
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setDeleteErr(d.error ?? `O'chirib bo'lmadi (${res.status})`);
+        return;
+      }
       mutate();
-    } finally { setDeletingId(null); }
+    } catch { setDeleteErr("Serverga ulanib bo'lmadi"); }
+    finally { setDeletingId(null); }
   }
 
   return (
@@ -342,6 +356,17 @@ export default function OrganizationsPage() {
           <option value="BLOCKED">Bloklangan</option>
         </select>
       </div>
+
+      {deleteErr && (
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+          <p className="text-[13px] text-red-700 dark:text-red-300 flex-1">{deleteErr}</p>
+          <button onClick={() => setDeleteErr("")}
+            className="text-[12px] font-semibold text-red-600 dark:text-red-400 hover:underline shrink-0">
+            Yopish
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden">

@@ -9,7 +9,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import Link from "next/link";
-import { Search, Phone, Users, BookOpen, Wallet, LayoutGrid, List, Plus, Pencil, Trash2, AlertCircle, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, Phone, Users, BookOpen, Wallet, LayoutGrid, List, Plus, Pencil, Trash2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { useBranch } from "@/lib/contexts/branch-context";
@@ -39,6 +40,7 @@ const EMPTY = {
 };
 
 export default function TeachersPage() {
+  const router = useRouter();
   const { activeBranchId } = useBranch();
   const [search,      setSearch]      = useState("");
   const [viewMode,    setViewMode]    = useState<ViewMode>("grid");
@@ -170,13 +172,6 @@ export default function TeachersPage() {
           </>
         }
       >
-        {/* Avatar (harf) — rasm yuklash keyinroq qo'shiladi */}
-        <div className="flex justify-center">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-black text-3xl shrink-0">
-            {form.name.trim()?.[0]?.toUpperCase() ?? "?"}
-          </div>
-        </div>
-
         <FormField label="Ism familiya" required={!editTarget}>
           <Input
             placeholder="Jamshid Tursunov"
@@ -375,21 +370,24 @@ export default function TeachersPage() {
                   </div>
                 ))
               : filtered.map((t: any) => (
-                  <div key={t.id} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5 hover:shadow-md transition-shadow">
+                  <div key={t.id}
+                    onClick={() => router.push(`/teachers/${t.id}`)}
+                    className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5 cursor-pointer hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
+                      <Link href={`/teachers/${t.id}`} onClick={e => e.stopPropagation()}
+                        className="flex items-center gap-3 group/name">
                         <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center text-white font-black text-lg">
                           {t.user?.name?.[0] ?? "?"}
                         </div>
                         <div>
-                          <p className="font-bold text-[14px] text-neutral-900 dark:text-neutral-100">{t.user?.name}</p>
+                          <p className="font-bold text-[14px] text-neutral-900 dark:text-neutral-100 group-hover/name:text-indigo-600 dark:group-hover/name:text-indigo-400 transition-colors">{t.user?.name}</p>
                           <div className="flex gap-1 flex-wrap mt-1">
                             {(t.subjects ?? []).map((s: string) => (
                               <span key={s} className="text-[10px] bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-medium">{s}</span>
                             ))}
                           </div>
                         </div>
-                      </div>
+                      </Link>
                       <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold shrink-0",
                         t.status === "ACTIVE" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                           : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400")}>
@@ -408,11 +406,11 @@ export default function TeachersPage() {
                     </div>
                     <div className="flex items-center justify-between border-t border-white/50 dark:border-white/10 pt-3">
                       <p className="text-[11px] text-neutral-400">{t.phone}</p>
-                      <div className="flex gap-0.5">
+                      {/* Amal tugmalari karta bosilishini ishga tushirmasligi kerak */}
+                      <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
                         <a href={`tel:${t.phone}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 transition-colors"><Phone className="w-3.5 h-3.5" /></a>
                         <button onClick={() => openEdit(t)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"><Pencil className="w-3.5 h-3.5" /></button>
                         <button onClick={() => { setError(""); setDeleteTarget(t); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-                        <Link href={`/teachers/${t.id}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><ChevronRight className="w-3.5 h-3.5" /></Link>
                       </div>
                     </div>
                   </div>
@@ -438,12 +436,17 @@ export default function TeachersPage() {
                       <TableRow key={i}>{Array.from({length:6}).map((_,j) => <TableCell key={j}><Skeleton className="h-3 w-full" /></TableCell>)}</TableRow>
                     ))
                   : filtered.map((t: any) => (
-                      <TableRow key={t.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
+                      <TableRow key={t.id}
+                        onClick={() => router.push(`/teachers/${t.id}`)}
+                        className="cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                         <TableCell>
-                          <div className="flex items-center gap-2.5">
+                          {/* Ism — Link: qator bosilishi bilan bir xil manzil, lekin
+                              klaviatura bilan ham yuriladi va hoverda URL ko'rinadi */}
+                          <Link href={`/teachers/${t.id}`} onClick={e => e.stopPropagation()}
+                            className="flex items-center gap-2.5 group/name">
                             <div className="w-9 h-9 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center text-white font-bold text-[13px] shrink-0">{t.user?.name?.[0] ?? "?"}</div>
-                            <div><p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{t.user?.name}</p><p className="text-[11px] text-neutral-400">{t.phone}</p></div>
-                          </div>
+                            <div><p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 group-hover/name:text-indigo-600 dark:group-hover/name:text-indigo-400 transition-colors">{t.user?.name}</p><p className="text-[11px] text-neutral-400">{t.phone}</p></div>
+                          </Link>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1 flex-wrap">
@@ -462,11 +465,11 @@ export default function TeachersPage() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-0.5">
+                          {/* Amal tugmalari qator bosilishini ishga tushirmasligi kerak */}
+                          <div className="flex items-center justify-end gap-0.5" onClick={e => e.stopPropagation()}>
                             <a href={`tel:${t.phone}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 transition-colors"><Phone className="w-3.5 h-3.5" /></a>
                             <button onClick={() => openEdit(t)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"><Pencil className="w-3.5 h-3.5" /></button>
                             <button onClick={() => { setError(""); setDeleteTarget(t); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-                            <Link href={`/teachers/${t.id}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"><ChevronRight className="w-3.5 h-3.5" /></Link>
                           </div>
                         </TableCell>
                       </TableRow>
