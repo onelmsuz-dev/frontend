@@ -64,6 +64,7 @@ export default function OrganizationsPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteErr,  setDeleteErr]  = useState("");
+  const [gamiId,     setGamiId]     = useState<string | null>(null);
 
   // Password reset state
   const [resetOrg,  setResetOrg]   = useState<any>(null);
@@ -122,6 +123,26 @@ export default function OrganizationsPage() {
       });
       mutate();
     } finally { setTogglingId(null); }
+  }
+
+  /** Markazga gamifikatsiya ruxsatini berish/olish (2-daraja kalit).
+   *  Global kalit "Sozlamalar" sahifasida. */
+  async function toggleGamification(id: string, cur: boolean) {
+    setGamiId(id);
+    try {
+      const res = await fetch(`/api/admode/organizations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gamificationAllowed: !cur }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setDeleteErr(d.error ?? "Gamifikatsiya kalitini o'zgartirib bo'lmadi");
+        return;
+      }
+      mutate();
+    } catch { setDeleteErr("Serverga ulanib bo'lmadi"); }
+    finally { setGamiId(null); }
   }
 
   async function changePlan(id: string, plan: string) {
@@ -374,7 +395,7 @@ export default function OrganizationsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80">
-                {["Tashkilot", "Tarif", "O'quvchi", "O'qituvchi", "Guruh", "Daromad", "Holat", "Qo'shilgan", "Amallar"].map(h => (
+                {["Tashkilot", "Tarif", "O'quvchi", "O'qituvchi", "Guruh", "Daromad", "Holat", "Gamifikatsiya", "Qo'shilgan", "Amallar"].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-[10px] font-bold text-neutral-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -385,7 +406,7 @@ export default function OrganizationsPage() {
               {isLoading
                 ? Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i} className="border-b border-neutral-200 dark:border-neutral-800/50">
-                      {Array.from({ length: 9 }).map((_, j) => (
+                      {Array.from({ length: 10 }).map((_, j) => (
                         <td key={j} className="px-4 py-3.5"><Skeleton className="h-3.5 w-full" /></td>
                       ))}
                     </tr>
@@ -449,6 +470,26 @@ export default function OrganizationsPage() {
                             ? <div className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /><span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Faol</span></div>
                             : <div className="flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /><span className="text-[11px] text-red-600 dark:text-red-400 font-medium">Blok</span></div>
                           }
+                        </td>
+                        {/* Gamifikatsiya — MARKAZ kaliti (global kalitdan pastda turadi) */}
+                        <td className="px-4 py-3.5">
+                          <button
+                            onClick={() => toggleGamification(org.id, org.gamificationAllowed !== false)}
+                            disabled={gamiId === org.id}
+                            title={org.gamificationAllowed !== false
+                              ? "Bu markazda gamifikatsiya ruxsat etilgan — o'chirish uchun bosing"
+                              : "Bu markazda gamifikatsiya taqiqlangan — yoqish uchun bosing"}
+                            className={cn(
+                              "relative w-9 h-5 rounded-full transition-colors disabled:opacity-40",
+                              org.gamificationAllowed !== false
+                                ? "bg-emerald-500"
+                                : "bg-neutral-300 dark:bg-neutral-600",
+                            )}>
+                            <span className={cn(
+                              "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                              org.gamificationAllowed !== false && "translate-x-4",
+                            )} />
+                          </button>
                         </td>
                         {/* Date */}
                         <td className="px-4 py-3.5">

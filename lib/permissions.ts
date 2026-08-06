@@ -116,6 +116,7 @@ export const NAV_PERMISSIONS: Record<string, Role[]> = {
   "/groups":     ["SUPER_ADMIN", "TEACHER", "RECEPTIONIST", "ACCOUNTANT"],
   "/schedule":   ["SUPER_ADMIN", "TEACHER", "RECEPTIONIST"],
   "/attendance": ["SUPER_ADMIN", "TEACHER"],
+  "/gamification": ["SUPER_ADMIN", "TEACHER"],
   "/students":   ["SUPER_ADMIN", "TEACHER", "RECEPTIONIST"],
   "/teachers":   ["SUPER_ADMIN"],
   "/finance":    ["SUPER_ADMIN", "ACCOUNTANT"],

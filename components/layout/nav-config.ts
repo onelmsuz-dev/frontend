@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, CalendarDays,
   ClipboardList, Wallet, BarChart3, Settings, UserCheck, Target,
-  Home, Megaphone, Layers, Banknote, Wrench, MessageSquare, type LucideIcon,
+  Home, Megaphone, Layers, Banknote, Wrench, MessageSquare, Trophy, type LucideIcon,
 } from "lucide-react";
 
 export interface NavItem {
@@ -40,6 +40,7 @@ export const navSections: NavSection[] = [
       { href: "/groups", label: "Guruhlar", icon: Users, perm: "groups.view" },
       { href: "/schedule", label: "Jadval", icon: CalendarDays, perm: "schedule.view" },
       { href: "/attendance", label: "Davomat", icon: UserCheck, perm: "attendance.view" },
+      { href: "/gamification", label: "Gamifikatsiya", icon: Trophy, perm: "gamification.view" },
     ],
   },
   {

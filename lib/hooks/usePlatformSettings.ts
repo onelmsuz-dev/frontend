@@ -6,6 +6,8 @@ const fetcher = (url: string) => fetch(url).then(r => r.json());
 export interface PlatformSettings {
   paymentCardNumber: string;
   paymentCardOwner: string | null;
+  /** Gamifikatsiyaning GLOBAL kaliti — o'chirilsa hech bir markazda ishlamaydi. */
+  gamificationEnabled: boolean;
 }
 
 /** Tarif/SMS-paket to'lovi uchun qaysi kartaga o'tkazish kerakligi. */

@@ -6,7 +6,7 @@ import useSWR from "swr";
 import { cn } from "@/lib/utils";
 import {
   ShieldCheck, Building2, GraduationCap, Users, Wallet,
-  Lock, Check, Loader2, AlertCircle, Eye, EyeOff, CreditCard,
+  Lock, Check, Loader2, AlertCircle, Eye, EyeOff, CreditCard, Trophy,
 } from "lucide-react";
 import {
   usePlatformSettings, useUpdatePlatformSettings, formatCardNumber,
@@ -45,6 +45,7 @@ export default function SettingsPage() {
   const [cardNumber, setCardNumber] = useState("");
   const [cardOwner,  setCardOwner]  = useState("");
   const [cardMsg,    setCardMsg]    = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [gamiSaving, setGamiSaving] = useState(false);
 
   useEffect(() => {
     if (platformSettings) {
@@ -213,6 +214,51 @@ export default function SettingsPage() {
             Saqlash
           </button>
         </form>
+      </div>
+
+      {/* Gamifikatsiya — GLOBAL kalit (1-daraja) */}
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Trophy className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+          <h2 className="text-[13px] font-bold text-neutral-900 dark:text-white">Gamifikatsiya (global)</h2>
+        </div>
+        <p className="text-[11px] text-neutral-500 mb-4">
+          O&apos;chirilsa <strong>barcha markazlarda</strong> ishlamaydi — markaz o&apos;z sozlamasini
+          yoqib qo&apos;ygan bo&apos;lsa ham. Yig&apos;ilgan ballar o&apos;chmaydi, faqat yangi ball berilmaydi.
+          Alohida markazni cheklash uchun &quot;Markazlar&quot; sahifasidan foydalaning.
+        </p>
+
+        <div className="flex items-start justify-between gap-3 bg-neutral-100/50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-800 rounded-xl px-4 py-3 max-w-sm">
+          <div className="min-w-0">
+            <p className="text-[13px] font-semibold text-neutral-900 dark:text-white">
+              {platformSettings?.gamificationEnabled === false ? "O'chirilgan" : "Yoqilgan"}
+            </p>
+            <p className="text-[11px] text-neutral-500 mt-0.5">
+              {platformSettings?.gamificationEnabled === false
+                ? "Hech bir markazda ishlamayapti"
+                : "Markazlar o'zi yoqib ishlata oladi"}
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              setGamiSaving(true);
+              try {
+                await saveCard({ gamificationEnabled: !(platformSettings?.gamificationEnabled ?? true) } as any);
+                mutateSettings();
+              } catch { /* xato bo'lsa holat o'zgarmaydi */ }
+              finally { setGamiSaving(false); }
+            }}
+            disabled={gamiSaving}
+            className={cn(
+              "relative w-11 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60",
+              (platformSettings?.gamificationEnabled ?? true) ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600",
+            )}>
+            <span className={cn(
+              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+              (platformSettings?.gamificationEnabled ?? true) && "translate-x-5",
+            )} />
+          </button>
+        </div>
       </div>
 
       {/* Platforma holati */}
