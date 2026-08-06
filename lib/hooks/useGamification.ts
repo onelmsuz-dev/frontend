@@ -49,6 +49,10 @@ export interface GamificationSettings {
   manualEnabled: boolean;
   manualMaxPerDay: number;
 
+  shopEnabled: boolean;
+  /** 1 coin necha so'm — DISCOUNT sovg'a narxini avtomatik hisoblash uchun. */
+  discountRate: number;
+
   leaderboardEnabled: boolean;
   levels: { level: number; name: string; minXp: number }[];
 }
@@ -176,3 +180,119 @@ export const REASON_COLORS: Record<string, string> = {
   REVOKE:          "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
   ADJUSTMENT:      "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300",
 };
+
+// ─── Do'kon ───────────────────────────────────────────────────────────────────
+
+export type RewardKind = "PHYSICAL" | "DISCOUNT" | "PRIVILEGE";
+export type RedemptionStatus = "PENDING" | "APPROVED" | "DELIVERED" | "REJECTED";
+
+export interface Reward {
+  id: string;
+  title: string;
+  description: string | null;
+  emoji: string;
+  kind: RewardKind;
+  cost: number;
+  discountAmount: number | null;
+  stock: number | null;
+  isActive: boolean;
+  sortOrder: number;
+  branchId: string | null;
+  branch?: { id: string; name: string } | null;
+  _count?: { redemptions: number };
+}
+
+export interface Redemption {
+  id: string;
+  rewardTitle: string;
+  rewardEmoji: string;
+  kind: RewardKind;
+  cost: number;
+  discountAmount: number | null;
+  status: RedemptionStatus;
+  note: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  student?: { id: string; name: string; phone: string; coinBalance: number };
+}
+
+/** Markaz — do'kon boshqaruvi. */
+export function useRewards() {
+  return useSWR<{ rewards: Reward[]; discountRate: number; coinName: string; coinIcon: string }>(
+    "/api/gamification/rewards", fetcher,
+  );
+}
+
+/** Markaz — sovg'a so'rovlari. */
+export function useRedemptions(status = "PENDING") {
+  return useSWR<{ rows: Redemption[]; pendingCount: number }>(
+    `/api/gamification/redemptions?status=${status}`, fetcher,
+  );
+}
+
+/** O'quvchi — do'kon. */
+export function usePanelShop() {
+  return useSWR<{
+    active: boolean;
+    rewards: Omit<Reward, "isActive" | "sortOrder" | "branchId">[];
+    coinBalance: number;
+    coinName: string;
+    coinIcon: string;
+  }>("/api/panel/gamification/shop", fetcher);
+}
+
+/** O'quvchi — mening so'rovlarim. */
+export function usePanelRedemptions() {
+  return useSWR<Redemption[]>("/api/panel/gamification/redemptions", fetcher);
+}
+
+export const KIND_LABELS: Record<RewardKind, string> = {
+  PHYSICAL:  "Jismoniy sovg'a",
+  DISCOUNT:  "To'lovga chegirma",
+  PRIVILEGE: "Imtiyoz",
+};
+
+export const KIND_COLORS: Record<RewardKind, string> = {
+  PHYSICAL:  "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  DISCOUNT:  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  PRIVILEGE: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+};
+
+export const STATUS_LABELS: Record<RedemptionStatus, string> = {
+  PENDING:   "Kutilmoqda",
+  APPROVED:  "Tasdiqlandi",
+  DELIVERED: "Topshirildi",
+  REJECTED:  "Rad etildi",
+};
+
+export const STATUS_COLORS: Record<RedemptionStatus, string> = {
+  PENDING:   "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  APPROVED:  "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  DELIVERED: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  REJECTED:  "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+};
+
+/**
+ * Sovg'a narxini "necha darsda yig'iladi" ga aylantiradi.
+ *
+ * Markaz egasi uchun eng muhim ko'rsatkich: 500 coin'lik sumka 50 ta dars
+ * degani — bu bir yarim yil. Narx real yoki emasligini shu ko'rsatadi.
+ */
+export function costInLessons(cost: number, coinPerLesson: number) {
+  if (coinPerLesson <= 0) return null;
+  const lessons = Math.ceil(cost / coinPerLesson);
+  const weeks = Math.ceil(lessons / 3); // odatda haftada 3 dars
+  return { lessons, weeks, months: Math.round((weeks / 4.3) * 10) / 10 };
+}
+
+/** Bitta o'quvchi oyiga o'rtacha necha coin yig'adi (12 dars + o'z vaqtida to'lov). */
+export function monthlyEarning(s: Pick<GamificationSettings,
+  "attendanceCoin" | "onTimeCoin" | "streakCoin" | "streakEvery" | "attendanceEnabled" | "paymentEnabled">) {
+  const lessons = 12; // haftada 3 dars × 4 hafta
+  const attendance = s.attendanceEnabled ? s.attendanceCoin * lessons : 0;
+  const streak = s.attendanceEnabled && s.streakEvery > 0
+    ? Math.floor(lessons / s.streakEvery) * s.streakCoin : 0;
+  const payment = s.paymentEnabled ? s.onTimeCoin : 0;
+  return attendance + streak + payment;
+}

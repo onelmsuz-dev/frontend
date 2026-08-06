@@ -11,16 +11,19 @@ import {
 } from "@/components/ui/table";
 import {
   Trophy, Search, Sparkles, Flame, Coins, Settings2, Lock,
-  TrendingUp, Plus, Users,
+  TrendingUp, Plus, Users, Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mutate } from "swr";
 import { useGroups } from "@/lib/hooks/useGroups";
 import {
   useGamificationSettings, useGamificationStudents, useGamificationLeaderboard,
-  useStudentPointHistory, REASON_LABELS, REASON_COLORS,
+  useStudentPointHistory, useRedemptions, REASON_LABELS, REASON_COLORS,
   type GamificationStudent,
 } from "@/lib/hooks/useGamification";
+import { useMe } from "@/lib/hooks/useMe";
+import { ShopTab } from "@/components/gamification/shop-tab";
+import { RedemptionsTab } from "@/components/gamification/redemptions-tab";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -29,6 +32,8 @@ function Skeleton({ className }: { className?: string }) {
 const TABS = [
   { id: "reyting",   label: "Reyting" },
   { id: "oquvchi",   label: "O'quvchilar" },
+  { id: "dokon",     label: "Do'kon" },
+  { id: "sorovlar",  label: "So'rovlar" },
   { id: "sozlama",   label: "Sozlamalar" },
 ];
 
@@ -54,6 +59,13 @@ function monthOptions() {
 export default function GamificationPage() {
   const [tab, setTab] = useState("reyting");
   const { data: settings, isLoading: settingsLoading, error: settingsError } = useGamificationSettings();
+  const { me } = useMe();
+  // Do'kon va so'rovlarni faqat shu ruxsatga egalar boshqara oladi
+  const perms: string[] = me?.permissions ?? [];
+  const canManage = perms.includes("*") || perms.includes("gamification.rewards");
+  // Tab yorlig'idagi kutilayotgan so'rovlar soni
+  const { data: pending } = useRedemptions("PENDING");
+  const pendingCount = pending?.pendingCount ?? 0;
 
   return (
     <div>
@@ -109,7 +121,7 @@ export default function GamificationPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 flex-wrap">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={cn("px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all",
@@ -117,12 +129,20 @@ export default function GamificationPage() {
                   ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
                   : "glass-panel text-neutral-600 dark:text-neutral-400 border-white/60 dark:border-white/10 hover:border-neutral-400")}>
               {t.label}
+              {t.id === "sorovlar" && pendingCount > 0 && (
+                <span className={cn("ml-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-black",
+                  tab === "sorovlar" ? "bg-white/25" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300")}>
+                  {pendingCount}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         {tab === "reyting" && <LeaderboardTab />}
         {tab === "oquvchi" && <StudentsTab settingsActive={!!settings?.active} coinIcon={settings?.coinIcon ?? "🪙"} />}
+        {tab === "dokon" && <ShopTab canManage={canManage} />}
+        {tab === "sorovlar" && <RedemptionsTab canManage={canManage} />}
         {tab === "sozlama" && <SettingsTab />}
       </div>
     </div>
@@ -512,6 +532,23 @@ function SettingsTab() {
         </div>
         <p className="text-[11px] text-neutral-400">
           &quot;Oldindan&quot; — o&apos;quvchining qarzi yo&apos;q holda to&apos;laganda. Ikkalasi mos kelsa, oldindan ustun.
+        </p>
+      </div>
+
+      {/* Do'kon */}
+      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Store className="w-4 h-4 text-pink-500" />
+          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Do&apos;kon</p>
+        </div>
+        <Row title="Yoqilgan" desc="O'quvchilar coinni sovg'aga almashtira oladi"
+          checked={s.shopEnabled} disabled={saving} onToggle={v => save({ shopEnabled: v })} />
+        <div className="grid grid-cols-2 gap-3">
+          <NumField label="1 coin = necha so'm" value={s.discountRate} onSave={v => save({ discountRate: v })} />
+        </div>
+        <p className="text-[11px] text-neutral-400">
+          Faqat &quot;To&apos;lovga chegirma&quot; turidagi sovg&apos;a narxini avtomatik hisoblashda ishlatiladi.
+          Masalan {s.discountRate} bo&apos;lsa, 1000 coin = {(1000 * s.discountRate).toLocaleString("uz-UZ")} so&apos;m.
         </p>
       </div>
 
