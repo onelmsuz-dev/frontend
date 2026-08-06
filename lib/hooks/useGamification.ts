@@ -49,6 +49,13 @@ export interface GamificationSettings {
   manualEnabled: boolean;
   manualMaxPerDay: number;
 
+  referralEnabled: boolean;
+  referralXp: number;
+  referralCoin: number;
+  referralMilestone: number;
+  referralMilestoneXp: number;
+  referralMilestoneCoin: number;
+
   shopEnabled: boolean;
   /** 1 coin necha so'm — DISCOUNT sovg'a narxini avtomatik hisoblash uchun. */
   discountRate: number;
@@ -295,4 +302,23 @@ export function monthlyEarning(s: Pick<GamificationSettings,
     ? Math.floor(lessons / s.streakEvery) * s.streakCoin : 0;
   const payment = s.paymentEnabled ? s.onTimeCoin : 0;
   return attendance + streak + payment;
+}
+
+// ─── Referal ──────────────────────────────────────────────────────────────────
+
+export interface ReferralSummary {
+  active: boolean;
+  code: string | null;
+  coinName?: string;
+  coinIcon?: string;
+  reward?: { xp: number; coin: number };
+  milestone?: { at: number; xp: number; coin: number } | null;
+  invited: { id: string; name: string; createdAt: string; rewarded: boolean }[];
+  rewarded: number;
+  pending: number;
+}
+
+/** O'quvchi — taklif bloki (kod, taklif qilinganlar, mukofot qiymatlari). */
+export function usePanelReferral() {
+  return useSWR<ReferralSummary>("/api/panel/gamification/referral", fetcher);
 }

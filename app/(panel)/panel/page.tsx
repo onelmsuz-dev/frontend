@@ -13,6 +13,7 @@ import {
   usePanelGamification, usePanelLeaderboard, REASON_LABELS, REASON_COLORS,
 } from "@/lib/hooks/useGamification";
 import { PanelShop } from "@/components/gamification/panel-shop";
+import { PanelReferral } from "@/components/gamification/panel-referral";
 
 function fmtMoney(v: number) {
   return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
@@ -325,6 +326,9 @@ function PointsTab({ data }: { data: NonNullable<ReturnType<typeof usePanelGamif
           </p>
         )}
       </div>
+
+      {/* Do'st taklif qilish */}
+      <PanelReferral />
 
       {/* Do'kon */}
       <PanelShop />

@@ -36,6 +36,7 @@ function emptyForm() {
     source: "", gender: "MALE" as Gender,
     parentPhone: "", parentName: "",
     groupId: "", joinDate: todayStr(),
+    referralCode: "",
   };
 }
 
@@ -55,6 +56,11 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
   // Collapsible sections
   const [openGroup, setOpenGroup] = useState(true);
   const [openParent, setOpenParent] = useState(false);
+
+  // ── Referal: kod bo'yicha taklif qiluvchini topish ────────────────────────
+  const [referrer, setReferrer] = useState<{ id: string; name: string; phone: string } | null>(null);
+  const [refLoading, setRefLoading] = useState(false);
+  const [refErr, setRefErr] = useState("");
 
   // Group filters
   const [fBranch, setFBranch] = useState("");
@@ -81,6 +87,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
         gender: initial.gender ?? "MALE",
         parentPhone: initial.parentPhone ?? "", parentName: initial.parentName ?? "",
         groupId: "", joinDate: todayStr(),
+        referralCode: initial.referredBy?.referralCode ?? "",
       });
       setOpenParent(!!(initial.parentPhone || initial.parentName));
       setOpenGroup(false);
@@ -88,9 +95,31 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       setForm(emptyForm());
       setOpenGroup(true); setOpenParent(false);
     }
-    setFErr({}); setErr("");
+    setFErr({}); setErr(""); setReferrer(null); setRefErr("");
     setFBranch(""); setFTeacher(""); setFCourse(""); setShowNewGroup(false);
   }, [open, isEdit, initial]);
+
+  // Kod yozilganda 400ms kutib tekshiramiz — har harfda so'rov ketmasin
+  useEffect(() => {
+    const code = form.referralCode.trim();
+    if (code.length < 4) { setReferrer(null); setRefErr(""); return; }
+    let cancelled = false;
+    setRefLoading(true); setRefErr("");
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/gamification/referral/lookup?code=${encodeURIComponent(code)}`);
+        const d = await r.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!r.ok) { setReferrer(null); setRefErr(d.error ?? "Topilmadi"); }
+        else { setReferrer(d); setRefErr(""); }
+      } catch {
+        if (!cancelled) { setReferrer(null); setRefErr("Tekshirib bo'lmadi"); }
+      } finally {
+        if (!cancelled) setRefLoading(false);
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [form.referralCode]);
 
   const filteredGroups = useMemo(() =>
     groups.filter(g =>
@@ -154,6 +183,9 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       if (form.source) body.source = form.source;
       if (form.parentPhone.replace(/\D/g, "").length === 12) body.parentPhone = form.parentPhone;
       if (form.parentName.trim()) body.parentName = form.parentName.trim();
+      // Referal — kod bo'sh bo'lsa bog'lanish olib tashlanadi (tahrirlashda)
+      if (referrer) body.referredById = referrer.id;
+      else if (isEdit && !form.referralCode.trim()) body.referredById = "";
 
       if (!isEdit) {
         if (form.groupId) { body.groupId = form.groupId; body.joinDate = form.joinDate; }
@@ -215,6 +247,29 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
           </select>
         </FormField>
       </div>
+
+      <FormField
+        label="Kim tavsiya qildi?"
+        error={refErr || undefined}
+        hint={referrer ? undefined : "Do'sti bergan referal kodi — ixtiyoriy"}
+      >
+        <Input
+          placeholder="Masalan: S7K4M2"
+          value={form.referralCode}
+          onChange={e => setForm(p => ({ ...p, referralCode: e.target.value.toUpperCase() }))}
+          className="h-10 uppercase tracking-wider"
+        />
+        {refLoading && <p className="text-[11px] text-neutral-400 mt-1.5">Tekshirilmoqda...</p>}
+        {referrer && (
+          <div className="flex items-center gap-2 mt-1.5 px-2.5 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+            <UserPlus className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />
+            <p className="text-[12px] text-green-700 dark:text-green-300">
+              <span className="font-semibold">{referrer.name}</span> tavsiya qilgan —
+              birinchi to&apos;lovdan keyin unga ball beriladi
+            </p>
+          </div>
+        )}
+      </FormField>
 
       <FormField label={isEdit ? "Yangi parol" : "Parol"} hint={isEdit ? "Bo'sh qoldirsangiz o'zgarmaydi" : "Ixtiyoriy — o'quvchi paneli uchun"}>
         <Input type="password" placeholder="Kamida 6 belgi" value={form.password}

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import {
   Trophy, Search, Sparkles, Flame, Coins, Settings2, Lock,
-  TrendingUp, Plus, Users, Store,
+  TrendingUp, Plus, Users, Store, UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mutate } from "swr";
@@ -532,6 +532,35 @@ function SettingsTab() {
         </div>
         <p className="text-[11px] text-neutral-400">
           &quot;Oldindan&quot; — o&apos;quvchining qarzi yo&apos;q holda to&apos;laganda. Ikkalasi mos kelsa, oldindan ustun.
+        </p>
+      </div>
+
+      {/* Referal */}
+      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <UserPlus className="w-4 h-4 text-purple-500" />
+          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Do&apos;st taklif qilish</p>
+        </div>
+        <Row title="Yoqilgan"
+          desc="O'quvchi do'stini taklif qilsa ball oladi — do'st birinchi to'lovni qilgach"
+          checked={s.referralEnabled} disabled={saving} onToggle={v => save({ referralEnabled: v })} />
+        <div className="grid grid-cols-2 gap-3">
+          <NumField label="Har do'st uchun — XP" value={s.referralXp} onSave={v => save({ referralXp: v })} />
+          <NumField label="Har do'st uchun — Coin" value={s.referralCoin} onSave={v => save({ referralCoin: v })} />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <NumField label="Bonus (necha do'stda)" value={s.referralMilestone} onSave={v => save({ referralMilestone: v })} />
+          <NumField label="Bonus — XP" value={s.referralMilestoneXp} onSave={v => save({ referralMilestoneXp: v })} />
+          <NumField label="Bonus — Coin" value={s.referralMilestoneCoin} onSave={v => save({ referralMilestoneCoin: v })} />
+        </div>
+        <p className="text-[11px] text-neutral-400">
+          Mukofot <strong>ro&apos;yxatdan o&apos;tishda emas, birinchi to&apos;lovdan keyin</strong> beriladi —
+          soxta o&apos;quvchi qo&apos;shib ball yig&apos;ishning oldini oladi.
+          {s.referralMilestone > 0
+            ? ` ${s.referralMilestone} ta do'st taklif qilganda qo'shimcha ${s.referralMilestoneCoin} coin bonus beriladi (0 = o'chiq).`
+            : " Bosqichli bonus o'chiq."}
+          {" "}Har o&apos;quvchi o&apos;z panelidan 6 belgili kodini oladi va do&apos;stiga beradi;
+          qabulxona o&apos;quvchi qo&apos;shayotganda shu kodni kiritadi.
         </p>
       </div>
 
