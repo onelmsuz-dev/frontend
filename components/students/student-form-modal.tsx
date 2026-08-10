@@ -10,6 +10,7 @@ import { FormField } from "@/components/ui/form-field";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GenderPicker } from "@/components/ui/segmented";
 import { useGroups } from "@/lib/hooks/useGroups";
+import { useStudents } from "@/lib/hooks/useStudents";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { useBranches } from "@/lib/hooks/useBranches";
@@ -99,10 +100,27 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
     setFBranch(""); setFTeacher(""); setFCourse(""); setShowNewGroup(false);
   }, [open, isEdit, initial]);
 
-  // Kod yozilganda 400ms kutib tekshiramiz — har harfda so'rov ketmasin
+  /**
+   * Taklif qiluvchini topish.
+   *
+   * Ilgari faqat REFERAL KODI bo'yicha qidirardi, lekin qabulxona odatda
+   * ism eshitadi ("Nodir aytgandi") va kodni qayerdan olishni bilmaydi —
+   * kod faqat o'quvchining o'z panelida ko'rinadi. Endi bitta maydon
+   * ikkalasini ham qabul qiladi: 6 belgili kod bo'lsa to'g'ridan-to'g'ri
+   * topadi, aks holda ism/telefon bo'yicha ro'yxat chiqaradi.
+   */
+  const refQuery = form.referralCode.trim();
+  const looksLikeCode = /^[A-Za-z0-9]{6}$/.test(refQuery);
+  const { data: refCandidatesRaw } = useStudents({
+    search: !referrer && !looksLikeCode && refQuery.length >= 2 ? refQuery : undefined,
+  });
+  const refCandidates: any[] = (!referrer && !looksLikeCode && refQuery.length >= 2 && Array.isArray(refCandidatesRaw))
+    ? refCandidatesRaw.filter((c: any) => c.id !== initial?.id).slice(0, 6)
+    : [];
+
   useEffect(() => {
-    const code = form.referralCode.trim();
-    if (code.length < 4) { setReferrer(null); setRefErr(""); return; }
+    const code = form.referralCode.trim().toUpperCase();
+    if (!/^[A-Z0-9]{6}$/.test(code)) { setRefLoading(false); return; }
     let cancelled = false;
     setRefLoading(true); setRefErr("");
     const t = setTimeout(async () => {
@@ -110,7 +128,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
         const r = await fetch(`/api/gamification/referral/lookup?code=${encodeURIComponent(code)}`);
         const d = await r.json().catch(() => ({}));
         if (cancelled) return;
-        if (!r.ok) { setReferrer(null); setRefErr(d.error ?? "Topilmadi"); }
+        if (!r.ok) { setReferrer(null); setRefErr(d.error ?? "Bunday kod topilmadi"); }
         else { setReferrer(d); setRefErr(""); }
       } catch {
         if (!cancelled) { setReferrer(null); setRefErr("Tekshirib bo'lmadi"); }
@@ -251,22 +269,48 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       <FormField
         label="Kim tavsiya qildi?"
         error={refErr || undefined}
-        hint={referrer ? undefined : "Do'sti bergan referal kodi — ixtiyoriy"}
+        hint={referrer ? undefined : "O'quvchi ismini yozing yoki do'sti bergan kodni kiriting — ixtiyoriy"}
       >
         <Input
-          placeholder="Masalan: S7K4M2"
+          placeholder="Ism yozing yoki kod: S7K4M2"
           value={form.referralCode}
-          onChange={e => setForm(p => ({ ...p, referralCode: e.target.value.toUpperCase() }))}
-          className="h-10 uppercase tracking-wider"
+          onChange={e => {
+            setForm(p => ({ ...p, referralCode: e.target.value }));
+            setReferrer(null); setRefErr("");
+          }}
+          className="h-10"
         />
         {refLoading && <p className="text-[11px] text-neutral-400 mt-1.5">Tekshirilmoqda...</p>}
+
+        {/* Ism bo'yicha topilganlar — tanlansa referredById to'g'ridan-to'g'ri qo'yiladi */}
+        {refCandidates.length > 0 && (
+          <div className="mt-1.5 rounded-xl border border-white/60 dark:border-white/10 glass-soft overflow-hidden">
+            {refCandidates.map((c: any) => (
+              <button key={c.id} type="button"
+                onClick={() => { setReferrer({ id: c.id, name: c.name, phone: c.phone }); setRefErr(""); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-white/60 dark:hover:bg-white/10 transition-colors border-b border-white/50 dark:border-white/10 last:border-0">
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                  {c.name[0]}
+                </div>
+                <span className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">{c.name}</span>
+                <span className="text-[11px] text-neutral-400 ml-auto shrink-0">{c.phone}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         {referrer && (
           <div className="flex items-center gap-2 mt-1.5 px-2.5 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
             <UserPlus className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />
-            <p className="text-[12px] text-green-700 dark:text-green-300">
+            <p className="text-[12px] text-green-700 dark:text-green-300 flex-1">
               <span className="font-semibold">{referrer.name}</span> tavsiya qilgan —
               birinchi to&apos;lovdan keyin unga ball beriladi
             </p>
+            <button type="button"
+              onClick={() => { setReferrer(null); setForm(p => ({ ...p, referralCode: "" })); }}
+              className="text-[11px] font-semibold text-green-700 dark:text-green-300 hover:underline shrink-0">
+              Bekor
+            </button>
           </div>
         )}
       </FormField>

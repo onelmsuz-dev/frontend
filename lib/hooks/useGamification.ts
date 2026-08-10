@@ -73,6 +73,8 @@ export interface GamificationStudent {
   coinEarned: number;
   streak: number;
   bestStreak: number;
+  /** Referal kodi — xodim o'quvchi qo'shayotganda shu bo'yicha topadi. */
+  referralCode: string | null;
   level: LevelInfo;
 }
 
@@ -231,10 +233,11 @@ export function useRewards() {
   );
 }
 
-/** Markaz — sovg'a so'rovlari. */
-export function useRedemptions(status = "PENDING") {
+/** Markaz — sovg'a so'rovlari. `status = null` bo'lsa so'rov yuborilmaydi
+ *  (ruxsati yo'q foydalanuvchi keraksiz 403 olmasin). */
+export function useRedemptions(status: string | null = "PENDING") {
   return useSWR<{ rows: Redemption[]; pendingCount: number }>(
-    `/api/gamification/redemptions?status=${status}`, fetcher,
+    status ? `/api/gamification/redemptions?status=${status}` : null, fetcher,
   );
 }
 

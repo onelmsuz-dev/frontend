@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
-import { ConfirmDeleteModal } from "@/components/ui/modal";
+import { StudentDeleteModal } from "@/components/students/student-delete-modal";
 import { StudentFormModal } from "@/components/students/student-form-modal";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -63,7 +63,6 @@ export default function StudentsPage() {
   const [modalMode,    setModalMode]    = useState<"create" | "edit" | null>(null);
   const [modalInitial, setModalInitial] = useState<any>(null);
 
-  const [saving,       setSaving]       = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [activating,   setActivating]   = useState<string | null>(null);
 
@@ -104,13 +103,6 @@ export default function StudentsPage() {
     } finally { setActivating(null); }
   }
 
-  async function deleteStudent() {
-    if (!deleteTarget) return;
-    setSaving(true);
-    await fetch(`/api/students/${deleteTarget.id}`, { method: "DELETE" });
-    revalidate();
-    setDeleteTarget(null); setSaving(false);
-  }
 
   return (
     <div>
@@ -128,11 +120,10 @@ export default function StudentsPage() {
         onSaved={revalidate}
       />
 
-      <ConfirmDeleteModal
-        open={!!deleteTarget} onClose={() => setDeleteTarget(null)}
-        onConfirm={deleteStudent} loading={saving}
-        title="O'quvchini o'chirish"
-        description={<><span className="font-semibold">{deleteTarget?.name}</span> o'chirilsinmi?</>}
+      <StudentDeleteModal
+        student={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDone={revalidate}
       />
 
       <div className="p-5 space-y-5">

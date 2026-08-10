@@ -29,12 +29,18 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
 
-const TABS = [
+/**
+ * Tablar ruxsatga bog'langan. Ilgari hammasi hammaga ko'rinardi:
+ * o'qituvchida `gamification.view` bor (darsda ball berish uchun), shuning
+ * uchun u sozlamalar va sovg'a so'rovlarini ham ko'rardi — bosganda esa
+ * backend 403 qaytarardi. Endi u tablarni umuman ko'rmaydi.
+ */
+const TABS: { id: string; label: string; perm?: string }[] = [
   { id: "reyting",   label: "Reyting" },
   { id: "oquvchi",   label: "O'quvchilar" },
-  { id: "dokon",     label: "Do'kon" },
-  { id: "sorovlar",  label: "So'rovlar" },
-  { id: "sozlama",   label: "Sozlamalar" },
+  { id: "dokon",     label: "Do'kon",      perm: "gamification.rewards" },
+  { id: "sorovlar",  label: "So'rovlar",   perm: "gamification.rewards" },
+  { id: "sozlama",   label: "Sozlamalar",  perm: "gamification.manage" },
 ];
 
 const MEDALS = ["🥇", "🥈", "🥉"];
@@ -60,12 +66,17 @@ export default function GamificationPage() {
   const [tab, setTab] = useState("reyting");
   const { data: settings, isLoading: settingsLoading, error: settingsError } = useGamificationSettings();
   const { me } = useMe();
-  // Do'kon va so'rovlarni faqat shu ruxsatga egalar boshqara oladi
   const perms: string[] = me?.permissions ?? [];
-  const canManage = perms.includes("*") || perms.includes("gamification.rewards");
-  // Tab yorlig'idagi kutilayotgan so'rovlar soni
-  const { data: pending } = useRedemptions("PENDING");
+  const has = (p: string) => perms.includes("*") || perms.includes(p);
+  const canManage = has("gamification.rewards");
+  const visibleTabs = TABS.filter(t => !t.perm || has(t.perm));
+
+  // Tab yorlig'idagi kutilayotgan so'rovlar soni — faqat boshqara oladiganlarga
+  const { data: pending } = useRedemptions(canManage ? "PENDING" : null);
   const pendingCount = pending?.pendingCount ?? 0;
+
+  // Ruxsati yo'q tabga o'tib qolmasin (masalan rol o'zgarganda)
+  const activeTab = visibleTabs.some(t => t.id === tab) ? tab : (visibleTabs[0]?.id ?? "reyting");
 
   return (
     <div>
@@ -111,9 +122,11 @@ export default function GamificationPage() {
               {!settings.blockedBy && (
                 <p className="text-amber-700 dark:text-amber-300">
                   Gamifikatsiya o&apos;chiq — ball berilmayapti.
-                  <button onClick={() => setTab("sozlama")} className="ml-1 font-semibold underline">
-                    Sozlamalardan yoqing
-                  </button>
+                  {has("gamification.manage") ? (
+                    <button onClick={() => setTab("sozlama")} className="ml-1 font-semibold underline">
+                      Sozlamalardan yoqing
+                    </button>
+                  ) : " Markaz egasi Sozlamalardan yoqishi kerak."}
                 </p>
               )}
             </div>
@@ -122,16 +135,16 @@ export default function GamificationPage() {
 
         {/* Tabs */}
         <div className="flex gap-1.5 flex-wrap">
-          {TABS.map(t => (
+          {visibleTabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={cn("px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                tab === t.id
+                activeTab === t.id
                   ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
                   : "glass-panel text-neutral-600 dark:text-neutral-400 border-white/60 dark:border-white/10 hover:border-neutral-400")}>
               {t.label}
               {t.id === "sorovlar" && pendingCount > 0 && (
                 <span className={cn("ml-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-black",
-                  tab === "sorovlar" ? "bg-white/25" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300")}>
+                  activeTab === "sorovlar" ? "bg-white/25" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300")}>
                   {pendingCount}
                 </span>
               )}
@@ -139,11 +152,11 @@ export default function GamificationPage() {
           ))}
         </div>
 
-        {tab === "reyting" && <LeaderboardTab />}
-        {tab === "oquvchi" && <StudentsTab settingsActive={!!settings?.active} coinIcon={settings?.coinIcon ?? "🪙"} />}
-        {tab === "dokon" && <ShopTab canManage={canManage} />}
-        {tab === "sorovlar" && <RedemptionsTab canManage={canManage} />}
-        {tab === "sozlama" && <SettingsTab />}
+        {activeTab === "reyting" && <LeaderboardTab />}
+        {activeTab === "oquvchi" && <StudentsTab settingsActive={!!settings?.active} coinIcon={settings?.coinIcon ?? "🪙"} />}
+        {activeTab === "dokon" && <ShopTab canManage={canManage} />}
+        {activeTab === "sorovlar" && <RedemptionsTab canManage={canManage} />}
+        {activeTab === "sozlama" && <SettingsTab />}
       </div>
     </div>
   );
@@ -272,7 +285,7 @@ function StudentsTab({ settingsActive, coinIcon }: { settingsActive: boolean; co
           <Table>
             <TableHeader>
               <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
-                {["", "O'QUVCHI", "DARAJA", "XP", coinIcon.toUpperCase(), "STREAK", ""].map((h, i) => (
+                {["", "O'QUVCHI", "DARAJA", "XP", coinIcon.toUpperCase(), "STREAK", "REFERAL KODI", ""].map((h, i) => (
                   <TableHead key={i} className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{h}</TableHead>
                 ))}
               </TableRow>
@@ -281,7 +294,7 @@ function StudentsTab({ settingsActive, coinIcon }: { settingsActive: boolean; co
               {isLoading
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
+                      {Array.from({ length: 8 }).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-3 w-full" /></TableCell>
                       ))}
                     </TableRow>
@@ -319,6 +332,19 @@ function StudentsTab({ settingsActive, coinIcon }: { settingsActive: boolean; co
                         {s.streak > 0
                           ? <span className="flex items-center gap-1 text-[12px] font-semibold text-orange-500"><Flame className="w-3.5 h-3.5" />{s.streak}</span>
                           : <span className="text-[12px] text-neutral-400">—</span>}
+                      </TableCell>
+                      {/* Referal kodi — xodim o'quvchi qo'shayotganda shu kerak bo'ladi */}
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        {s.referralCode ? (
+                          <button
+                            onClick={() => navigator.clipboard?.writeText(s.referralCode!).catch(() => {})}
+                            title="Nusxalash"
+                            className="text-[12px] font-black tracking-widest text-neutral-700 dark:text-neutral-300 px-2 py-1 rounded-lg glass-soft border border-white/60 dark:border-white/10 hover:border-indigo-400 transition-colors">
+                            {s.referralCode}
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-neutral-400">panelga kirmagan</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <TrendingUp className="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 inline" />

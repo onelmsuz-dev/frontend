@@ -267,13 +267,13 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Transfer group modal */}
       <Modal open={showTransferModal} onClose={() => { setShowTransferModal(false); setTransferGroupId(""); setTransferErr(""); }}
-        title="Guruh almashtirish"
-        subtitle={`Hozir: ${group?.name ?? "guruhsiz"}`}
+        title={group ? "Guruh almashtirish" : "Guruhga qo'shish"}
+        subtitle={group ? `Hozir: ${group.name}` : "O'quvchi hali guruhga biriktirilmagan"}
         footer={
           <>
             <Button onClick={transferGroup} disabled={transferring}
  className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
-              {transferring ? "O'tkazilmoqda..." : "O'tkazish"}
+              {transferring ? "Saqlanmoqda..." : group ? "O'tkazish" : "Qo'shish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowTransferModal(false)}>Bekor</Button>
           </>
@@ -289,7 +289,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         </FormField>
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-4 py-3">
           <p className="text-[12px] text-amber-700 dark:text-amber-400">
-            Joriy guruh (<strong>{group?.name}</strong>) dan chiqariladi va yangi guruhga faol sifatida qo'shiladi.
+            {group
+              ? <>Joriy guruh (<strong>{group.name}</strong>) dan chiqariladi va yangi guruhga faol sifatida qo&apos;shiladi.</>
+              : <>O&apos;quvchi tanlangan guruhga <strong>faol</strong> sifatida qo&apos;shiladi va kurs to&apos;lovi balansdan yechiladi.</>}
           </p>
         </div>
         {transferErr && !transferErr.includes("guruh") && (
@@ -383,7 +385,16 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               </div>
             ) : (
-              <p className="text-[13px] text-neutral-400">Guruhga biriktirilmagan</p>
+              /* Guruhsiz o'quvchi. Ilgari bu yerda faqat matn turardi va
+                 o'quvchini guruhga qo'shishning umuman iloji yo'q edi —
+                 backend (`POST /api/student-groups`) esa tayyor edi. */
+              <div className="space-y-2.5">
+                <p className="text-[13px] text-neutral-400">Guruhga biriktirilmagan</p>
+                <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setShowTransferModal(true); }}
+                  className="flex items-center gap-1.5 text-[12px] px-3 py-2 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                  <Plus className="w-3.5 h-3.5" /> Guruhga qo'shish
+                </button>
+              </div>
             )}
           </div>
 
