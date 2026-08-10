@@ -16,6 +16,7 @@ import { useRooms } from "@/lib/hooks/useRooms";
 import { useBranch } from "@/lib/contexts/branch-context";
 import { WEEKDAYS, WEEKDAY_SHORT, SCHEDULE_PRESETS, todayStr } from "@/lib/form-constants";
 import { mutate } from "swr";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
 
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
   ACTIVE:    { label: "Faol",    cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -48,6 +49,12 @@ function revalidate() {
 }
 
 export default function GroupsPage() {
+  // Amal tugmalari ruxsatga bog'landi — ilgari hammaga ko'rinardi va
+  // bosilganda backend 403 qaytarardi (o'qituvchida bu ruxsatlar yo'q).
+  const { me } = useMe();
+  const canCreate = hasPerm(me?.permissions, "groups.create");
+  const canUpdate = hasPerm(me?.permissions, "groups.update");
+  const canDelete = hasPerm(me?.permissions, "groups.delete");
   const { activeBranchId } = useBranch();
   const [search,    setSearch]    = useState("");
   const [statusTab, setStatusTab] = useState("barchasi");
@@ -206,7 +213,7 @@ export default function GroupsPage() {
       <TopHeader
         title="Guruhlar"
         subtitle={isLoading ? "Yuklanmoqda..." : `Jami ${groups.length} ta guruh`}
-        action={{ label: "Yangi guruh", onClick: openCreate }}
+        action={canCreate ? { label: "Yangi guruh", onClick: openCreate } : undefined}
       />
 
       <Modal
@@ -411,12 +418,16 @@ export default function GroupsPage() {
                       </div>
                       <div className="flex items-center gap-1 ml-2">
                         <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold shrink-0", cfg.cls)}>{cfg.label}</span>
-                        <button onClick={() => openEdit(g)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-orange-600 hover:bg-orange-50 transition-colors">
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => { setError(""); setDeleteTarget(g); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canUpdate && (
+                          <button onClick={() => openEdit(g)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-orange-600 hover:bg-orange-50 transition-colors">
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => { setError(""); setDeleteTarget(g); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <Link href={`/groups/${g.id}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
                           <ChevronRight className="w-3.5 h-3.5" />
                         </Link>

@@ -10,10 +10,15 @@ import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import {
+  useGamificationSettings, useStudentPointHistory,
+  REASON_LABELS, REASON_COLORS,
+} from "@/lib/hooks/useGamification";
+import { levelFromXp } from "@/lib/levels";
 import { mutate } from "swr";
 import {
   Phone, Calendar, DollarSign, ArrowLeft, AlertCircle,
-  Plus, LogOut, Shuffle, UserCheck,
+  Plus, LogOut, Shuffle, UserCheck, Trophy,
 } from "lucide-react";
 
 function fmt(v: number) {
@@ -40,7 +45,7 @@ const METHOD_LABELS: Record<string, string> = { NAQD: "Naqd pul", KARTA: "Karta"
 
 export default function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { data: student, isLoading, mutate: revalidate } = useStudent(id);
+  const { data: student, isLoading, error, mutate: revalidate } = useStudent(id);
   const { data: groupsRaw } = useGroups({ status: "ACTIVE" });
   const allGroups: any[] = Array.isArray(groupsRaw) ? groupsRaw : [];
 
@@ -163,19 +168,35 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       </div>
     );
   }
-  if (!student || student.error) {
+  if (error || !student) {
+    const status = (error as Error & { status?: number })?.status;
     return (
       <div className="p-5 flex flex-col items-center py-20 text-neutral-400">
         <AlertCircle className="w-10 h-10 mb-2 opacity-40" />
-        <p className="text-sm">O'quvchi topilmadi</p>
+        <p className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">
+          {status === 403 ? "Bu o'quvchini ko'rishga ruxsatingiz yo'q" : "O'quvchi topilmadi"}
+        </p>
+        {status === 403 && (
+          <p className="text-[12px] mt-1 max-w-sm text-center">
+            O&apos;qituvchi faqat o&apos;z guruhidagi o&apos;quvchilarni ko&apos;ra oladi.
+          </p>
+        )}
+        {error && status !== 403 && status !== 404 && (
+          <p className="text-[12px] mt-1">{(error as Error).message}</p>
+        )}
         <Link href="/students" className="mt-3 text-sm text-blue-500 hover:underline">Orqaga</Link>
       </div>
     );
   }
 
-  const activeSg  = student.groups?.find((g: any) => g.enrollmentStatus !== "CHIQIB_KETGAN");
+  // BARCHA faol a'zoliklar. Ilgari `.find()` bilan faqat BIRINCHISI olinardi —
+  // ikki guruhda o'qiydigan o'quvchining ikkinchi guruhi va kursi umuman
+  // ko'rinmasdi ("guruhlari, kurslari to'g'ri ishlamayapti").
+  const activeSgs: any[] = (student.groups ?? []).filter(
+    (g: any) => g.enrollmentStatus !== "CHIQIB_KETGAN",
+  );
+  const activeSg  = activeSgs[0];
   const group     = activeSg?.group;
-  const teacher   = group?.teacher?.user;
   const enroll    = ENROLL_CFG[activeSg?.enrollmentStatus ?? (student.isActive ? "FAOL" : "SINOV")];
   const attended  = student.attendance?.filter((a: any) => a.status === "KELDI").length ?? 0;
   const total     = student.attendance?.filter((a: any) => a.status !== "SINOV_DARSI").length ?? 0;
@@ -352,26 +373,44 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
           {/* Group info */}
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
-            <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">Guruh</h3>
+            <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+              {activeSgs.length > 1 ? `Guruhlari (${activeSgs.length})` : "Guruh"}
+            </h3>
             {group ? (
               <div className="space-y-2">
-                <Link href={`/groups/${group.id}`}
-                  className="text-[14px] font-bold text-blue-600 hover:underline">{group.name}</Link>
-                <p className="text-[12px] text-neutral-500">{group.course?.name}</p>
-                {teacher && (
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-[10px] font-bold">
-                      {teacher.name[0]}
+                {/* Barcha faol guruhlar — o'quvchi bir nechta guruhda bo'lishi mumkin */}
+                {activeSgs.map((sg: any, i: number) => {
+                  const g = sg.group;
+                  const t = g?.teacher?.user;
+                  return (
+                    <div key={sg.id}
+                      className={cn("space-y-1.5", i > 0 && "pt-2.5 mt-2.5 border-t border-white/50 dark:border-white/10")}>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Link href={`/groups/${g.id}`}
+                          className="text-[14px] font-bold text-blue-600 hover:underline">{g.name}</Link>
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold",
+                          ENROLL_CFG[sg.enrollmentStatus]?.cls ?? "bg-neutral-100 text-neutral-500")}>
+                          {ENROLL_CFG[sg.enrollmentStatus]?.label ?? sg.enrollmentStatus}
+                        </span>
+                      </div>
+                      <p className="text-[12px] text-neutral-500">{g.course?.name}</p>
+                      {t && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-[10px] font-bold">
+                            {t.name[0]}
+                          </div>
+                          <Link href={`/teachers/${g.teacher?.id}`}
+                            className="text-[12px] text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors">
+                            {t.name}
+                          </Link>
+                        </div>
+                      )}
+                      <p className="text-[11px] text-neutral-400">
+                        {g.scheduleDays?.join(", ").toUpperCase()} · {g.startTime}–{g.endTime}
+                      </p>
                     </div>
-                    <Link href={`/teachers/${group.teacher?.id}`}
-                      className="text-[12px] text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors">
-                      {teacher.name}
-                    </Link>
-                  </div>
-                )}
-                <p className="text-[11px] text-neutral-400">
-                  {group.scheduleDays?.join(", ").toUpperCase()} · {group.startTime}–{group.endTime}
-                </p>
+                  );
+                })}
                 {/* Group actions */}
                 <div className="flex gap-2 pt-1">
                   <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setShowTransferModal(true); }}
@@ -430,6 +469,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         </div>
+
+        {/* Gamifikatsiya — API allaqachon qaytarardi, lekin sahifa ko'rsatmasdi */}
+        <StudentPointsCard student={student} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Payments */}
@@ -492,6 +534,96 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Gamifikatsiya kartasi ────────────────────────────────────────────────────
+
+/**
+ * O'quvchining ball holati.
+ *
+ * `GET /api/students/:id` javobida `xpTotal`, `coinBalance`, `streak`,
+ * `referralCode` allaqachon bor edi — sahifa ularni umuman chizmasdi.
+ * Gamifikatsiya markazda o'chiq bo'lsa blok ko'rsatilmaydi.
+ */
+function StudentPointsCard({ student }: { student: any }) {
+  const { data: cfg } = useGamificationSettings();
+  const { data: history } = useStudentPointHistory(cfg?.active ? student.id : undefined);
+
+  if (!cfg?.active) return null;
+
+  const level = levelFromXp(student.xpTotal ?? 0);
+
+  return (
+    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/50 dark:border-white/10">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center">
+            <Trophy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Gamifikatsiya</h3>
+        </div>
+        {student.referralCode && (
+          <span className="text-[11px] font-black tracking-widest text-neutral-500 dark:text-neutral-400">
+            {student.referralCode}
+          </span>
+        )}
+      </div>
+
+      <div className="p-4 space-y-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <PointStat value={`${level.level}`} label={level.name} cls="text-indigo-600 dark:text-indigo-400" />
+          <PointStat value={String(student.xpTotal ?? 0)} label="Jami XP" cls="text-neutral-900 dark:text-neutral-100" />
+          <PointStat value={`${cfg.coinIcon} ${student.coinBalance ?? 0}`} label={`${cfg.coinName} balansi`} cls="text-amber-600 dark:text-amber-400" />
+          <PointStat value={String(student.streak ?? 0)} label="Ketma-ket dars" cls="text-orange-500" />
+        </div>
+
+        {level.nextXp != null && (
+          <div>
+            <div className="h-1.5 rounded-full bg-neutral-200/70 dark:bg-white/10 overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                style={{ width: `${level.progress}%` }} />
+            </div>
+            <p className="text-[11px] text-neutral-400 mt-1">
+              Keyingi darajagacha {level.nextXp - (student.xpTotal ?? 0)} XP
+            </p>
+          </div>
+        )}
+
+        {(history ?? []).length > 0 && (
+          <div className="pt-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5">So&apos;nggi ballar</p>
+            <div className="space-y-1">
+              {(history ?? []).slice(0, 5).map(t => (
+                <div key={t.id} className="flex items-center gap-2.5 text-[12px]">
+                  <span className={cn("text-[10px] px-2 py-0.5 rounded-lg font-semibold shrink-0",
+                    REASON_COLORS[t.reason] ?? "bg-neutral-100 text-neutral-600")}>
+                    {REASON_LABELS[t.reason] ?? t.reason}
+                  </span>
+                  <span className="text-neutral-400 flex-1 truncate">{t.note}</span>
+                  <span className="text-neutral-400 shrink-0">{new Date(t.createdAt).toLocaleDateString("uz-UZ")}</span>
+                  {t.coin !== 0 && (
+                    <span className={cn("font-bold shrink-0 w-14 text-right",
+                      t.coin > 0 ? "text-amber-600 dark:text-amber-400" : "text-red-500")}>
+                      {t.coin > 0 ? "+" : ""}{t.coin} {cfg.coinIcon}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PointStat({ value, label, cls }: { value: string; label: string; cls: string }) {
+  return (
+    <div className="glass-soft rounded-xl p-3">
+      <p className={cn("text-[16px] font-black leading-none", cls)}>{value}</p>
+      <p className="text-[11px] text-neutral-400 mt-1 truncate">{label}</p>
     </div>
   );
 }

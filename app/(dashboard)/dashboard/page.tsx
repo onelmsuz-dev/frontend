@@ -10,7 +10,9 @@ import {
 import { useChartColors } from "@/hooks/use-chart-colors";
 import { TopHeader } from "@/components/layout/top-header";
 import { cn } from "@/lib/utils";
+import { useSession } from "next-auth/react";
 import { useDashboard } from "@/lib/hooks/useDashboard";
+import { TeacherDashboard, type TeacherDashboardData } from "@/components/dashboard/teacher-dashboard";
 import { usePayments } from "@/lib/hooks/usePayments";
 import { useLeads } from "@/lib/hooks/useLeads";
 import { useBranchQueryString, useBranch } from "@/lib/contexts/branch-context";
@@ -41,6 +43,27 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 export default function DashboardPage() {
+  const { data: session } = useSession();
+  const role = (session?.user as any)?.role;
+
+  // O'qituvchi butunlay boshqa dashboard ko'radi: markaz daromadi, qarzdorlar
+  // va lidlar unga tegishli emas. Rol sessiyadan olinadi — shunda o'qituvchi
+  // uchun `useLeads`/`usePayments` UMUMAN chaqirilmaydi (ular 403 qaytaradi).
+  if (role === "TEACHER") return <TeacherDashboardPage />;
+  return <OwnerDashboardPage />;
+}
+
+function TeacherDashboardPage() {
+  const { data: stats, isLoading } = useDashboard();
+  return (
+    <div>
+      <TopHeader title="Dashboard" subtitle="Mening guruhlarim va darslarim" />
+      <TeacherDashboard data={stats as TeacherDashboardData} loading={isLoading} />
+    </div>
+  );
+}
+
+function OwnerDashboardPage() {
   const chart = useChartColors();
   const reportsQs = useBranchQueryString();
   const { activeBranch } = useBranch();

@@ -11,6 +11,7 @@ import { Search, BookOpen, Users, Wallet, Clock, Edit, Trash2, ChevronRight } fr
 import { cn } from "@/lib/utils";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { mutate } from "swr";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -35,6 +36,12 @@ const DURATION_PRESETS = ["1 oy", "3 oy", "6 oy", "9 oy", "12 oy"];
 const EMPTY = { name: "", description: "", duration: "", price: "", color: "bg-blue-500" };
 
 export default function CoursesPage() {
+  // Amal tugmalari ruxsatga bog'landi — ilgari hammaga ko'rinardi va
+  // bosilganda backend 403 qaytarardi (o'qituvchida bu ruxsatlar yo'q).
+  const { me } = useMe();
+  const canCreate = hasPerm(me?.permissions, "courses.create");
+  const canUpdate = hasPerm(me?.permissions, "courses.update");
+  const canDelete = hasPerm(me?.permissions, "courses.delete");
   const [search,    setSearch]    = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editId,    setEditId]    = useState<string | null>(null);
@@ -105,7 +112,7 @@ export default function CoursesPage() {
       <TopHeader
         title="Kurslar"
         subtitle={isLoading ? "Yuklanmoqda..." : `Jami ${courses.length} ta kurs`}
-        action={{ label: "Yangi kurs", onClick: openCreate }}
+        action={canCreate ? { label: "Yangi kurs", onClick: openCreate } : undefined}
       />
 
       <Modal
@@ -234,14 +241,18 @@ export default function CoursesPage() {
                         <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">{course.description ?? "—"}</p>
                       </div>
                       <div className="flex gap-0.5 ml-2 shrink-0">
-                        <button onClick={() => openEdit(course)}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
-                          <Edit className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => { setError(""); setDeleteTarget(course); }}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canUpdate && (
+                          <button onClick={() => openEdit(course)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => { setError(""); setDeleteTarget(course); }}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <Link href={`/courses/${course.id}`}
                           className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                           <ChevronRight className="w-3.5 h-3.5" />

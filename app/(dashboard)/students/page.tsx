@@ -17,6 +17,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useGroups } from "@/lib/hooks/useGroups";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { payStatusFromBalance, PAY_STATUS_CFG } from "@/lib/payment-status";
 import { mutate } from "swr";
 
 function fmt(v: number) {
@@ -31,12 +33,7 @@ const ENROLL_CFG: Record<string, { label: string; cls: string }> = {
   FAOL:           { label: "Faol",   cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
   CHIQIB_KETGAN:  { label: "Ketgan", cls: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-500" },
 };
-const PAY_CFG: Record<string, { label: string; cls: string }> = {
-  TOLANDI: { label: "To'langan", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
-  QARZDOR: { label: "Qarzdor",   cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
-  QISMAN:  { label: "Qisman",   cls: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  SINOVDA: { label: "Sinovda",  cls: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-500" },
-};
+
 
 /**
  * To'lov holati balansdan olinadi — "Jami qarz" bilan bir manba. Sinov
@@ -44,10 +41,6 @@ const PAY_CFG: Record<string, { label: string; cls: string }> = {
  * balans 0 bo'lgani uchun "To'langan" deb ko'rsatish noto'g'ri, "Sinovda"
  * ko'rsatiladi (to'lov hali dахldor emas).
  */
-function payStatus(balance: number, enrollmentStatus?: string): keyof typeof PAY_CFG {
-  if (enrollmentStatus === "SINOV") return "SINOVDA";
-  return balance < 0 ? "QARZDOR" : "TOLANDI";
-}
 
 function revalidate() {
   mutate((key: string) => typeof key === "string" && key.startsWith("/api/students"), undefined, { revalidate: true });
@@ -55,6 +48,12 @@ function revalidate() {
 
 export default function StudentsPage() {
   const router = useRouter();
+  // Ruxsat bo'yicha amallar. Ilgari tugmalar hammaga ko'rinardi va bosilganda
+  // backend 403 qaytarardi — o'qituvchiga go'yo o'zgartira olganday tuyulardi.
+  const { me } = useMe();
+  const canCreate = hasPerm(me?.permissions, "students.create");
+  const canUpdate = hasPerm(me?.permissions, "students.update");
+  const canDelete = hasPerm(me?.permissions, "students.delete");
   const [search,       setSearch]       = useState("");
   const [filterEnroll, setFilterEnroll] = useState("barchasi");
   const [filterGroup,  setFilterGroup]  = useState("barchasi");
@@ -109,7 +108,7 @@ export default function StudentsPage() {
       <TopHeader
         title="O'quvchilar"
         subtitle={isLoading ? "Yuklanmoqda..." : `Jami ${stats.jami} ta o'quvchi`}
-        action={{ label: "Yangi o'quvchi", onClick: openCreate }}
+        action={canCreate ? { label: "Yangi o'quvchi", onClick: openCreate } : undefined}
       />
 
       <StudentFormModal
@@ -204,7 +203,7 @@ export default function StudentsPage() {
                     const group   = sg?.group;
                     const teacher = group?.teacher?.user;
                     const enroll  = ENROLL_CFG[sg?.enrollmentStatus ?? (s.isActive ? "FAOL" : "SINOV")];
-                    const pay     = PAY_CFG[payStatus(s.balance ?? 0, sg?.enrollmentStatus)];
+                    const pay     = PAY_STATUS_CFG[payStatusFromBalance(s.balance, sg?.enrollmentStatus)];
                     return (
                       <TableRow key={s.id}
                         onClick={() => router.push(`/students/${s.id}`)}
@@ -251,7 +250,7 @@ export default function StudentsPage() {
                         <TableCell>
                           {/* Amal tugmalari qator bosilishini ishga tushirmasligi kerak */}
                           <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
-                            {!s.isActive && sg && (
+                            {canUpdate && !s.isActive && sg && (
                               <button
                                 onClick={() => activate(s)}
                                 disabled={activating === s.id}
@@ -261,18 +260,22 @@ export default function StudentsPage() {
                                 {activating === s.id ? "..." : "Faollashtirish"}
                               </button>
                             )}
-                            <button onClick={() => openEdit(s)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition-colors">
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
+                            {canUpdate && (
+                              <button onClick={() => openEdit(s)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition-colors">
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             <a href={`tel:${s.phone}`}
                               className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
                               <Phone className="w-3.5 h-3.5" />
                             </a>
-                            <button onClick={() => setDeleteTarget(s)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {canDelete && (
+                              <button onClick={() => setDeleteTarget(s)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

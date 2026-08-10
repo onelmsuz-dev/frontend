@@ -18,6 +18,7 @@ import {
 import { PanelShop } from "@/components/gamification/panel-shop";
 import { PanelReferral } from "@/components/gamification/panel-referral";
 import { PasswordCard } from "@/components/gamification/panel-password";
+import { payStatusFromBalance, PAY_STATUS_CFG } from "@/lib/payment-status";
 
 function fmtMoney(v: number) {
   return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
@@ -296,12 +297,15 @@ export default function StudentPanelPage() {
                     <p className="text-[12px] text-neutral-500">{sg.group?.course?.name}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold",
-                      sg.paymentStatus === "TOLANDI"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
-                      {sg.paymentStatus === "TOLANDI" ? "To'langan" : "Qarzdor"}
-                    </span>
+                    {/* Balansdan hisoblanadi — saqlangan `paymentStatus` eskiradi */}
+                    {(() => {
+                      const st = payStatusFromBalance(balance, sg.enrollmentStatus);
+                      return (
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold", PAY_STATUS_CFG[st].cls)}>
+                          {PAY_STATUS_CFG[st].label}
+                        </span>
+                      );
+                    })()}
                     {sg.enrollmentStatus === "SINOV" && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                         Sinov
