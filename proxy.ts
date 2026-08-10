@@ -14,12 +14,16 @@ function isLocalOrIpHost(hostname: string): boolean {
   return false;
 }
 
-function getSubdomainFromReq(req: NextRequest): string | null {
+function getHostname(req: NextRequest): string {
   const host =
     req.headers.get("x-forwarded-host") ??
     req.headers.get("host") ??
     req.nextUrl.hostname;
-  const hostname = host.split(":")[0].toLowerCase();
+  return host.split(":")[0].toLowerCase();
+}
+
+function getSubdomainFromReq(req: NextRequest): string | null {
+  const hostname = getHostname(req);
   if (isLocalOrIpHost(hostname)) return null;
 
   const parts = hostname.split(".");
@@ -27,6 +31,18 @@ function getSubdomainFromReq(req: NextRequest): string | null {
     return parts[0];
   }
   return null;
+}
+
+/**
+ * Marketing (asosiy) domenmi — `oneroom.uz` yoki `www.oneroom.uz`.
+ *
+ * Bu tekshiruv `localhost` va `*.vercel.app` dan ATAYLAB farqlanadi: ularda
+ * ham subdomen yo'q, lekin u yerda `/dashboard` ochilishi kerak (lokal
+ * ishlab chiqish va preview deploy'lar buzilmasin).
+ */
+function isMarketingHost(req: NextRequest): boolean {
+  const h = getHostname(req);
+  return h === "oneroom.uz" || h === "www.oneroom.uz";
 }
 
 export const proxy = auth((req) => {
@@ -53,6 +69,7 @@ export const proxy = auth((req) => {
 
   // ── Subdomain routing (demo.oneroom.uz, birnchi.oneroom.uz, ...) ─────────
   const subdomain = getSubdomainFromReq(req);
+  const userSubdomain = (req.auth?.user as any)?.orgSubdomain ?? null;
 
   // O'quvchi → /panel, boshqalar → /dashboard
   const home = role === "STUDENT" ? "/panel" : "/dashboard";
@@ -60,7 +77,6 @@ export const proxy = auth((req) => {
 
   if (subdomain) {
     const origin = `https://${subdomain}.oneroom.uz`;
-    const userSubdomain = (req.auth?.user as any)?.orgSubdomain ?? null;
 
     // Login bo'lgan bo'lsa, bu subdomain'ga tegishli ekanini tekshir
     if (isLoggedIn && userSubdomain !== subdomain) {
@@ -88,7 +104,42 @@ export const proxy = auth((req) => {
     return res;
   }
 
-  // ── Asosiy domen (oneroom.uz) ────────────────────────────────────────────
+  // ── Marketing domeni (oneroom.uz / www.oneroom.uz) ───────────────────────
+  //
+  // Bu yerda TASHKILOT KONTEKSTI YO'Q: `x-org-subdomain` header'i qo'yilmaydi,
+  // shuning uchun backend qaysi markaz ekanini aniqlay olmaydi va /dashboard,
+  // /students kabi sahifalar baribir bo'sh ishlaydi. Shu sababli ilova
+  // sahifalari landingga yo'naltiriladi.
+  //
+  // Login qilgan foydalanuvchi bo'lsa — landingga emas, O'Z SUBDOMENIGA
+  // yuboramiz: u haqiqatan ishlaydigan joy o'sha.
+  if (isMarketingHost(req)) {
+    // BFF proxy va NextAuth admode uchun asosiy domenda ishlashi shart
+    if (pathname.startsWith("/api/")) return NextResponse.next();
+
+    if (pathname === "/") return NextResponse.next();
+
+    if (pathname === "/login") {
+      if (isLoggedIn && role === "PLATFORM_ADMIN") {
+        return Response.redirect(new URL("/admode", req.nextUrl));
+      }
+      if (isLoggedIn && userSubdomain) {
+        return Response.redirect(`https://${userSubdomain}.oneroom.uz${home}`);
+      }
+      return NextResponse.next();
+    }
+
+    // Qolgan barcha ilova sahifalari (/dashboard, /students, /panel, ...)
+    if (isLoggedIn && role === "PLATFORM_ADMIN") {
+      return Response.redirect(new URL("/admode", req.nextUrl));
+    }
+    if (isLoggedIn && userSubdomain) {
+      return Response.redirect(`https://${userSubdomain}.oneroom.uz${pathname}`);
+    }
+    return Response.redirect(new URL("/", req.nextUrl));
+  }
+
+  // ── localhost / IP / *.vercel.app — ishlab chiqish va preview ────────────
   if (pathname === "/") return NextResponse.next();
   if (pathname === "/login") {
     if (isLoggedIn) return Response.redirect(new URL(home, req.nextUrl));
