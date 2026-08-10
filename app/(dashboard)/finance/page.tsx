@@ -15,6 +15,7 @@ import {
   AlertTriangle, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FinanceInsights } from "@/components/finance/finance-insights";
 import Link from "next/link";
 import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
 import { usePayments } from "@/lib/hooks/usePayments";
@@ -275,6 +276,9 @@ export default function FinancePage() {
             );
           })}
         </div>
+
+        {/* Tahlil — yig'ilish darajasi, qarzdorlar, to'lov usullari */}
+        <FinanceInsights />
 
         {/* Tabs */}
         <div className="flex gap-0.5 glass-soft p-1 rounded-xl w-fit">

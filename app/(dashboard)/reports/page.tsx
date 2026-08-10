@@ -12,6 +12,7 @@ import { useCourses } from "@/lib/hooks/useCourses";
 import { useBranchQueryString } from "@/lib/contexts/branch-context";
 import { TrendingUp, Users, BookOpen, CalendarCheck, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { OverviewSections } from "@/components/reports/overview-sections";
 import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -23,7 +24,6 @@ function formatCurrency(v: number) {
 }
 
 const PIE_COLORS = ["#6366f1", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4"];
-const COURSE_COLORS = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500", "bg-pink-500", "bg-yellow-500"];
 
 const DATE_RANGES: { label: string; months: number }[] = [
   { label: "Bu oy",         months: 1 },
@@ -164,35 +164,9 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/* Courses summary table */}
-        {courses.length > 0 && (
-          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/50 dark:border-white/10">
-              <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">Kurslar bo'yicha umumiy ko'rsatkich</p>
-            </div>
-            <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {courses.map((course, idx) => (
-                <div key={course.id}
-                  className="flex items-center justify-between px-5 py-3 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] text-neutral-400 dark:text-neutral-500 w-5 font-mono shrink-0">{idx + 1}</span>
-                    <div className={cn("w-2 h-8 rounded-full shrink-0", course.color ?? COURSE_COLORS[idx % COURSE_COLORS.length])} />
-                    <div>
-                      <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{course.name}</p>
-                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{course._count?.groups ?? 0} ta guruh · {course.duration}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course.studentCount ?? 0} ta</p>
-                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                      {formatCurrency((course.price ?? 0) * (course.studentCount ?? 0))}/oy
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Kengaytirilgan statistika — o'quvchi harakati, davomat, lidlar,
+            kurs va o'qituvchi kesimi */}
+        <OverviewSections months={monthCount} />
 
       </div>
     </div>
