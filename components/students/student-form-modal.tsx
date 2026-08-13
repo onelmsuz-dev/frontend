@@ -201,9 +201,12 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       if (form.source) body.source = form.source;
       if (form.parentPhone.replace(/\D/g, "").length === 12) body.parentPhone = form.parentPhone;
       if (form.parentName.trim()) body.parentName = form.parentName.trim();
-      // Referal — kod bo'sh bo'lsa bog'lanish olib tashlanadi (tahrirlashda)
+      // Referal. Bog'lanishni FAQAT o'quvchida u allaqachon bo'lgan va
+      // foydalanuvchi maydonni bo'shatgan holda olib tashlaymiz — aks holda
+      // ro'yxat javobida `referredBy` bo'lmasa (yoki yuklanmagan bo'lsa)
+      // tahrirlash mavjud bog'lanishni jimgina o'chirib yuborardi.
       if (referrer) body.referredById = referrer.id;
-      else if (isEdit && !form.referralCode.trim()) body.referredById = "";
+      else if (isEdit && initial?.referredBy && !form.referralCode.trim()) body.referredById = "";
 
       if (!isEdit) {
         if (form.groupId) { body.groupId = form.groupId; body.joinDate = form.joinDate; }
