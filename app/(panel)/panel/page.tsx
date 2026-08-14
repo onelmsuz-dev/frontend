@@ -9,14 +9,13 @@ import {
 } from "@/lib/hooks/usePanel";
 import {
   User, Wallet, CalendarCheck, BookOpen, Phone, TrendingDown, TrendingUp,
-  CheckCircle2, XCircle, Clock, CircleSlash, Trophy, Flame, AlertTriangle,
-  CalendarDays, MapPin, ShieldAlert, Users,
+  CheckCircle2, XCircle, Clock, CircleSlash, Trophy, AlertTriangle,
+  CalendarDays, MapPin, ShieldAlert, Users, Store,
 } from "lucide-react";
-import {
-  usePanelGamification, usePanelLeaderboard, REASON_LABELS, REASON_COLORS,
-} from "@/lib/hooks/useGamification";
+import { usePanelGamification } from "@/lib/hooks/useGamification";
+import { PanelPoints } from "@/components/gamification/panel-points";
+import { PointsBanner } from "@/components/gamification/points-banner";
 import { PanelShop } from "@/components/gamification/panel-shop";
-import { PanelReferral } from "@/components/gamification/panel-referral";
 import { PasswordCard } from "@/components/gamification/panel-password";
 import { payStatusFromBalance, PAY_STATUS_CFG } from "@/lib/payment-status";
 
@@ -35,6 +34,7 @@ const ATT_CFG: Record<string, { label: string; icon: any; cls: string; chip: str
 const BASE_TABS = [
   { id: "profil",    label: "Profil",     icon: User },
   { id: "ballarim",  label: "Ballarim",   icon: Trophy },
+  { id: "dokon",     label: "Do'kon",     icon: Store },
   { id: "jadval",    label: "Jadval",     icon: CalendarDays },
   { id: "tolovlar",  label: "To'lovlar",  icon: Wallet },
   { id: "davomat",   label: "Davomat",    icon: CalendarCheck },
@@ -76,10 +76,21 @@ export default function StudentPanelPage() {
   const { data: payments } = useStudentPayments();
   const { data: att } = useStudentAttendance();
   const { data: schedule } = useStudentSchedule();
-  // Gamifikatsiya o'chiq bo'lsa (yoki xato bo'lsa) tab umuman ko'rsatilmaydi
+  /**
+   * Gamifikatsiya tablari.
+   *
+   * MUHIM: ilgari `!!gami?.active` ishlatilardi — ya'ni so'rov hali
+   * YUKLANAYOTGAN bo'lsa yoki XATO bergan bo'lsa ham tab yashirinardi va
+   * o'quvchi gamifikatsiya borligini umuman bilmasdi. Ma'lumot yo'qligi
+   * funksiya o'chirilganini anglatmaydi. Endi faqat markaz uni ANIQ
+   * o'chirib qo'ygani ma'lum bo'lgandagina yashiriladi; qolgan holatlarda
+   * tab ochiladi va ichida sabab (yuklanmoqda / xato / yoqilmagan) yoziladi.
+   */
   const { data: gami } = usePanelGamification();
-  const gamiActive = !!gami?.active;
-  const TABS = BASE_TABS.filter(t => t.id !== "ballarim" || gamiActive);
+  const gamiKnownOff = gami != null && gami.active === false;
+  const TABS = BASE_TABS.filter(
+    t => (t.id !== "ballarim" && t.id !== "dokon") || !gamiKnownOff,
+  );
 
   const balance = profile?.balance ?? 0;
   const groupList: any[] = Array.isArray(groups) ? groups : [];
@@ -214,11 +225,21 @@ export default function StudentPanelPage() {
       </div>
 
       {/* ── Ballarim ── */}
-      {tab === "ballarim" && gamiActive && gami && <PointsTab data={gami} />}
+      {tab === "ballarim" && <PanelPoints />}
+
+      {/* ── Do'kon ── */}
+      {tab === "dokon" && <PanelShop />}
 
       {/* ── Profil ── */}
       {tab === "profil" && (
         <div className="space-y-4">
+          {/*
+            Ball xulosasi profilda ATAYLAB birinchi turadi. Ilgari gamifikatsiya
+            faqat alohida tab ichida edi va o'quvchi uni bosmasa ball yig'ilayotganini
+            bilmasdi — ya'ni butun tizim ko'rinmas edi.
+          */}
+          <PointsBanner onOpen={() => setTab("ballarim")} onShop={() => setTab("dokon")} />
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <StatCard icon={CalendarCheck} label="Umumiy davomat" value={`${att?.rate ?? 0}%`}
               trend={(att?.rate ?? 0) >= 80 ? "up" : "down"} />
@@ -503,150 +524,6 @@ function Empty({ icon: Icon, text }: { icon: any; text: string }) {
     <div className="py-12 text-center text-neutral-400">
       <Icon className="w-8 h-8 mx-auto mb-2 opacity-30" />
       <p className="text-sm">{text}</p>
-    </div>
-  );
-}
-
-// ─── Ballarim ─────────────────────────────────────────────────────────────────
-
-function PointsTab({ data }: { data: NonNullable<ReturnType<typeof usePanelGamification>["data"]> }) {
-  const [groupId, setGroupId] = useState<string | undefined>(undefined);
-  const { data: board } = usePanelLeaderboard(groupId);
-  const { student, level, coinIcon, coinName, monthXp, history } = data;
-
-  const rows = board?.rows ?? [];
-  const myIndex = rows.findIndex(r => r.id === student.id);
-
-  return (
-    <div className="space-y-4">
-      {/* Daraja va progress */}
-      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">
-            Daraja {level.level} · {level.name}
-          </p>
-          <p className="text-[12px] text-neutral-400">
-            {level.nextXp != null ? `${student.xpTotal} / ${level.nextXp} XP` : `${student.xpTotal} XP`}
-          </p>
-        </div>
-        <div className="h-2.5 rounded-full bg-neutral-200/70 dark:bg-white/10 overflow-hidden">
-          <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all"
-            style={{ width: `${level.progress}%` }} />
-        </div>
-        <p className="text-[11px] text-neutral-400 mt-1.5">
-          {level.nextXp != null
-            ? `Keyingi darajagacha ${level.nextXp - student.xpTotal} XP`
-            : "Eng yuqori darajaga yetdingiz"}
-        </p>
-
-        <div className="grid grid-cols-3 gap-3 mt-4">
-          <div className="glass-soft rounded-xl p-3">
-            <p className="text-[18px] font-black text-amber-600 dark:text-amber-400 leading-none">
-              {coinIcon} {student.coinBalance}
-            </p>
-            <p className="text-[11px] text-neutral-400 mt-1">{coinName} balansi</p>
-          </div>
-          <div className="glass-soft rounded-xl p-3">
-            <p className="flex items-center gap-1 text-[18px] font-black text-orange-500 leading-none">
-              <Flame className="w-4 h-4" />{student.streak}
-            </p>
-            <p className="text-[11px] text-neutral-400 mt-1">Ketma-ket dars</p>
-          </div>
-          <div className="glass-soft rounded-xl p-3">
-            <p className="text-[18px] font-black text-indigo-600 dark:text-indigo-400 leading-none">{monthXp}</p>
-            <p className="text-[11px] text-neutral-400 mt-1">Bu oy XP</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Reyting — guruh ichida, oylik */}
-      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/50 dark:border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center">
-              <Trophy className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Guruhim reytingi</h3>
-          </div>
-          {(board?.groups?.length ?? 0) > 1 && (
-            <select value={board?.groupId ?? ""} onChange={e => setGroupId(e.target.value)}
-              className="text-[11px] h-7 px-2 rounded-lg border border-white/60 dark:border-white/10 glass-soft text-neutral-700 dark:text-neutral-300 outline-none">
-              {board?.groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
-          )}
-        </div>
-
-        {rows.length === 0 ? (
-          <Empty icon={Trophy} text="Bu oyda hali ball yig'ilmagan" />
-        ) : rows.map((r, i) => {
-          const isMe = r.id === student.id;
-          return (
-            <div key={r.id} className={cn(
-              "flex items-center gap-3 px-5 py-2.5 border-b border-white/50 dark:border-white/10 last:border-0",
-              isMe && "bg-indigo-50/70 dark:bg-indigo-400/10",
-            )}>
-              <span className="w-6 text-center text-[13px] font-black text-neutral-400 shrink-0">
-                {i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}
-              </span>
-              <p className={cn("flex-1 text-[13px] truncate",
-                isMe ? "font-black text-indigo-700 dark:text-indigo-300" : "font-medium text-neutral-700 dark:text-neutral-300")}>
-                {isMe ? "Siz" : r.name}
-              </p>
-              {r.streak > 0 && (
-                <span className="flex items-center gap-0.5 text-[11px] font-semibold text-orange-500 shrink-0">
-                  <Flame className="w-3 h-3" />{r.streak}
-                </span>
-              )}
-              <span className="text-[13px] font-black text-neutral-900 dark:text-neutral-100 shrink-0">{r.xp}</span>
-            </div>
-          );
-        })}
-
-        {myIndex >= 0 && (
-          <p className="px-5 py-2.5 text-[11px] text-neutral-400 border-t border-white/50 dark:border-white/10">
-            {board?.month} · guruhda {myIndex + 1}-o&apos;rindasiz. Reyting har oy yangilanadi.
-          </p>
-        )}
-      </div>
-
-      {/* Do'st taklif qilish */}
-      <PanelReferral />
-
-      {/* Do'kon */}
-      <PanelShop />
-
-      {/* Tarix */}
-      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-white/50 dark:border-white/10">
-          <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">So&apos;nggi ballar</h3>
-        </div>
-        {history.length === 0 ? (
-          <Empty icon={Trophy} text="Hali ball yozuvi yo'q" />
-        ) : history.map(t => (
-          <div key={t.id} className="flex items-center gap-3 px-5 py-2.5 border-b border-white/50 dark:border-white/10 last:border-0">
-            <span className={cn("text-[10px] px-2 py-0.5 rounded-lg font-semibold shrink-0",
-              REASON_COLORS[t.reason] ?? "bg-neutral-100 text-neutral-600")}>
-              {REASON_LABELS[t.reason] ?? t.reason}
-            </span>
-            <div className="flex-1 min-w-0">
-              {t.note && <p className="text-[12px] text-neutral-600 dark:text-neutral-400 truncate">{t.note}</p>}
-              <p className="text-[10px] text-neutral-400">{new Date(t.createdAt).toLocaleDateString("uz-UZ")}</p>
-            </div>
-            <div className="text-right shrink-0">
-              {t.xp !== 0 && (
-                <p className={cn("text-[12px] font-black", t.xp > 0 ? "text-indigo-600 dark:text-indigo-400" : "text-red-500")}>
-                  {t.xp > 0 ? "+" : ""}{t.xp} XP
-                </p>
-              )}
-              {t.coin !== 0 && (
-                <p className={cn("text-[11px] font-bold", t.coin > 0 ? "text-amber-600 dark:text-amber-400" : "text-red-500")}>
-                  {t.coin > 0 ? "+" : ""}{t.coin} {coinIcon}
-                </p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
