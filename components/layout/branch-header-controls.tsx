@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { ChevronDown, Plus, Check } from "lucide-react";
 import { mutate } from "swr";
 import { useBranch } from "@/lib/contexts/branch-context";
-import { useMe } from "@/lib/hooks/useMe";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { AcceptPaymentModal } from "@/components/finance/accept-payment-modal";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,18 @@ export function BranchHeaderControls() {
   const role = session?.user?.role;
   const canManage = role === "SUPER_ADMIN";
 
-  // TO'LOV tugmasi: o'qituvchi bo'lsa faqat to'lov huquqi berilganda ko'rinadi.
-  // Boshqa rollar (admin/xodim) — avvalgidek ko'radi.
-  const canAcceptPayment = role === "TEACHER" ? me?.acceptsPayments === true : true;
+  /**
+   * TO'LOV tugmasi — o'qituvchiga UMUMAN ko'rsatilmaydi.
+   *
+   * Ilgari `acceptsPayments` sozlamasiga qarab ko'rsatilardi (schema default'i
+   * `true`, ya'ni deyarli hamma o'qituvchida chiqardi). Lekin o'qituvchida
+   * `payments.create` ruxsati yo'q — tugma bosilsa backend 403 qaytarardi.
+   * Ya'ni bu ishlamaydigan tugma edi va to'lov markaz ishi.
+   *
+   * Qolgan rollar uchun ruxsat bo'yicha tekshiriladi.
+   */
+  const canAcceptPayment =
+    role !== "TEACHER" && hasPerm(me?.permissions, "payments.create");
 
   const {
     branches,
