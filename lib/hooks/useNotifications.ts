@@ -1,6 +1,6 @@
 import useSWR, { mutate as globalMutate } from "swr";
+import { fetcher } from "@/lib/fetcher";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
 const KEY = "/api/notifications";
 
 export function useNotifications() {

@@ -1,7 +1,6 @@
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
-
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+import { fetcher } from "@/lib/fetcher";
 
 export interface PlatformSettings {
   paymentCardNumber: string;

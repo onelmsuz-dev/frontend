@@ -53,6 +53,33 @@ export const proxy = auth((req) => {
   const isApiAuth = pathname.startsWith("/api/auth");
   if (isApiAuth) return NextResponse.next();
 
+  /**
+   * BFF proxy — `/api/*` HECH QACHON sahifaga yo'naltirilmaydi.
+   *
+   * DIQQAT, bu jiddiy xato edi: quyidagi subdomen shoxobchasi `/api/*` ni ham
+   * oddiy sahifa deb qarardi. Login qilgan O'QUVCHI uchun `isPanel` sharti
+   * yo'l `/panel` bilan boshlanishini tekshiradi — `/api/panel/profile` esa
+   * unga TO'G'RI KELMAYDI. Natijada o'quvchining har bir API chaqiruvi
+   * `/panel` ga 302 qilinardi, brauzer `fetch` uni avtomatik kuzatib HTML
+   * sahifani 200 status bilan olardi. `r.ok` true bo'lgani uchun hech qanday
+   * xato ko'tarilmasdi, `r.json()` esa yiqilib `{}` qaytarardi — butun
+   * o'quvchi paneli (profil, guruhlar, to'lovlar, davomat, jadval,
+   * gamifikatsiya) jimgina bo'sh ko'rinardi.
+   *
+   * Xodim va o'qituvchida bu shart yonmaydi (99-qatordagi tekshiruv `isPanel`
+   * bo'lishini talab qiladi), shuning uchun dashboard ishlab turgan va xato
+   * faqat o'quvchi panelida yashiringan.
+   *
+   * Ruxsat baribir backendda tekshiriladi (JwtAuthGuard) — bu yerdagi
+   * yo'naltirish faqat sahifalar uchun ma'noga ega.
+   */
+  if (pathname.startsWith("/api/")) {
+    const res = NextResponse.next();
+    const sub = getSubdomainFromReq(req);
+    if (sub) res.headers.set("x-org-subdomain", sub);
+    return res;
+  }
+
   // ── /admode routes ──────────────────────────────────────────────────────
   if (pathname.startsWith("/admode")) {
     if (pathname === "/admode/login") {
@@ -114,9 +141,7 @@ export const proxy = auth((req) => {
   // Login qilgan foydalanuvchi bo'lsa — landingga emas, O'Z SUBDOMENIGA
   // yuboramiz: u haqiqatan ishlaydigan joy o'sha.
   if (isMarketingHost(req)) {
-    // BFF proxy va NextAuth admode uchun asosiy domenda ishlashi shart
-    if (pathname.startsWith("/api/")) return NextResponse.next();
-
+    // `/api/*` yuqorida, global istisnoda hal qilingan.
     if (pathname === "/") return NextResponse.next();
 
     if (pathname === "/login") {

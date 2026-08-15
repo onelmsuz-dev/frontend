@@ -1,6 +1,5 @@
 import useSWR from "swr";
-
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+import { fetcher } from "@/lib/fetcher";
 
 export function useBranches() {
   return useSWR("/api/branches", fetcher);

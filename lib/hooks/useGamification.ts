@@ -1,14 +1,5 @@
 import useSWR from "swr";
-
-/** Xatoni yutmaydigan fetcher — `useSms.ts` bilan bir xil yondashuv:
- *  "ruxsat yo'q" yoki "o'chirilgan" holatlari bo'sh ro'yxat bo'lib
- *  ko'rinmasligi kerak. */
-const fetcher = async (url: string) => {
-  const r = await fetch(url);
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data?.error ?? `So'rov bajarilmadi (${r.status})`);
-  return data;
-};
+import { fetcher } from "@/lib/fetcher";
 
 // ─── Turlar ───────────────────────────────────────────────────────────────────
 

@@ -1,8 +1,7 @@
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 import { useBranch } from "@/lib/contexts/branch-context";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { fetcher } from "@/lib/fetcher";
 
 async function poster(url: string, { arg }: { arg: unknown }) {
   const r = await fetch(url, {

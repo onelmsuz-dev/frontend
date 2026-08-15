@@ -1,23 +1,5 @@
 import useSWR from "swr";
-
-/**
- * Xatoni yutmaydigan fetcher.
- *
- * Ilgari bu yerda oddiy `r.json()` turgan edi: so'rov 403/404 qaytarsa ham
- * SWR uni "muvaffaqiyat" deb qabul qilardi va sahifa ism/telefonsiz bo'sh
- * holda chizilardi — foydalanuvchi nima bo'lganini bilmasdi. Endi xato
- * `error` bo'lib qaytadi va panel aniq sabab ko'rsatadi.
- */
-const fetcher = async (url: string) => {
-  const r = await fetch(url);
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const err = new Error(data?.error ?? `So'rov bajarilmadi (${r.status})`) as Error & { status?: number };
-    err.status = r.status;
-    throw err;
-  }
-  return data;
-};
+import { fetcher } from "@/lib/fetcher";
 
 // ─── O'quvchi paneli ──────────────────────────────────────────────────────────
 

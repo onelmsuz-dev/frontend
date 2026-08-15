@@ -1,15 +1,6 @@
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
-
-/** Oddiy fetcherlardan farqli — xato holatini yutib yubormaydi, aks holda
- *  "ruxsat yo'q" yoki "server xatosi" holatlari jim bo'sh ro'yxat bo'lib
- *  ko'rinib, sababini aniqlash imkonsiz bo'lib qoladi. */
-const fetcher = async (url: string) => {
-  const r = await fetch(url);
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data?.error ?? `So'rov bajarilmadi (${r.status})`);
-  return data;
-};
+import { fetcher } from "@/lib/fetcher";
 
 async function poster(url: string, { arg }: { arg: unknown }) {
   const r = await fetch(url, {

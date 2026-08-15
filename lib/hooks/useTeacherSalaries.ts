@@ -1,6 +1,5 @@
 import useSWR from "swr";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { fetcher } from "@/lib/fetcher";
 
 export function useTeacherSalaries(month?: string) {
   const url = month

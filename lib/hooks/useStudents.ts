@@ -1,24 +1,7 @@
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 import { useBranch } from "@/lib/contexts/branch-context";
-
-/**
- * Xatoni yutmaydigan fetcher.
- *
- * Ilgari oddiy `r.json()` edi: 403/404 ham "muvaffaqiyat" deb qabul
- * qilinardi va o'quvchi profili guruhsiz, to'lovsiz, balanssiz bo'sh
- * chizilardi — sabab esa hech qayerda ko'rinmasdi.
- */
-const fetcher = async (url: string) => {
-  const r = await fetch(url);
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const err = new Error(data?.error ?? `So'rov bajarilmadi (${r.status})`) as Error & { status?: number };
-    err.status = r.status;
-    throw err;
-  }
-  return data;
-};
+import { fetcher } from "@/lib/fetcher";
 
 async function poster(url: string, { arg }: { arg: unknown }) {
   const r = await fetch(url, {

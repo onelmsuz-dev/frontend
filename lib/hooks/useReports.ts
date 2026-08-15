@@ -1,12 +1,6 @@
 import useSWR from "swr";
 import { useBranch } from "@/lib/contexts/branch-context";
-
-const fetcher = async (url: string) => {
-  const r = await fetch(url);
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data?.error ?? `So'rov bajarilmadi (${r.status})`);
-  return data;
-};
+import { fetcher } from "@/lib/fetcher";
 
 // ─── Moliya tahlili ───────────────────────────────────────────────────────────
 
