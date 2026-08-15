@@ -75,6 +75,14 @@ export const proxy = auth((req) => {
    */
   if (pathname.startsWith("/api/")) {
     const res = NextResponse.next();
+    // Pastdagi sahifa shoxobchasi bilan bir xil xatti-harakat saqlanadi.
+    // DIQQAT: `res.headers.set` JAVOB headerini qo'yadi, so'rovnikini emas —
+    // ya'ni bu qiymat BFF'ning `req.headers.get("x-org-subdomain")` iga
+    // yetib bormaydi. Backend ham uni hech qayerda o'qimaydi (faqat CORS
+    // ro'yxatida turibdi), tashkilot JWT'dagi `organizationId` dan
+    // aniqlanadi. Shu sabab bu qator zararsiz, lekin ishonch qilib
+    // bo'lmaydi — kelajakda subdomen konteksti kerak bo'lsa
+    // `NextResponse.next({ request: { headers } })` ishlatilishi shart.
     const sub = getSubdomainFromReq(req);
     if (sub) res.headers.set("x-org-subdomain", sub);
     return res;
