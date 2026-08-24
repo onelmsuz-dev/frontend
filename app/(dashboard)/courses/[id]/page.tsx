@@ -6,7 +6,7 @@ import useSWR from "swr";
 import { TopHeader } from "@/components/layout/top-header";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft, BookOpen, Users, DollarSign, Clock, AlertCircle, TrendingUp,
+  ArrowLeft, BookOpen, Users, DollarSign, Clock, AlertCircle,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -51,8 +51,10 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const totalStudents = course.groups?.reduce((s: number, g: any) => s + (g.students?.length ?? 0), 0) ?? 0;
+  // Karta sarlavhasi "Guruhlar" — demak JAMI guruh soni. Ilgari faqat ACTIVE
+  // sanalardi va ochilishini kutayotgan guruhi bor kurs "0 ta" ko'rinardi.
+  const totalGroups   = course.groups?.length ?? 0;
   const activeGroups  = course.groups?.filter((g: any) => g.status === "ACTIVE").length ?? 0;
-  const totalRevenue  = totalStudents * course.price;
 
   return (
     <div>
@@ -72,7 +74,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           {[
             { label: "Narx",         value: fmt(course.price),   icon: DollarSign,  bg: "bg-blue-50 dark:bg-blue-950/40",   text: "text-blue-600 dark:text-blue-400" },
             { label: "Davomiylik",   value: course.duration,     icon: Clock,       bg: "bg-purple-50 dark:bg-purple-950/40", text: "text-purple-600 dark:text-purple-400" },
-            { label: "Guruhlar",     value: `${activeGroups} ta`, icon: BookOpen,    bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-600 dark:text-green-400" },
+            { label: totalGroups === activeGroups ? "Guruhlar" : `Guruhlar (${activeGroups} faol)`,
+              value: `${totalGroups} ta`, icon: BookOpen,    bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-600 dark:text-green-400" },
             { label: "O'quvchilar",  value: `${totalStudents} ta`, icon: Users,      bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-600 dark:text-amber-400" },
           ].map(s => {
             const Icon = s.icon;

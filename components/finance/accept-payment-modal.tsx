@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { mutate } from "swr";
 import { CreditCard, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
 import { useStudents } from "@/lib/hooks/useStudents";
-import { useBranch } from "@/lib/contexts/branch-context";
 import { cn } from "@/lib/utils";
 
 function formatCurrency(v: number) {
@@ -26,14 +25,21 @@ const METHOD_LABELS: Record<string, string> = {
   PAYME: "Payme",
 };
 
+type Membership = {
+  groupId: string;
+  enrollmentStatus?: string;
+  group?: { name?: string };
+};
+
 type PayForm = {
   studentId: string;
+  groupId: string;
   amount: string;
   method: string;
   note: string;
 };
 
-const EMPTY_FORM: PayForm = { studentId: "", amount: "", method: "NAQD", note: "" };
+const EMPTY_FORM: PayForm = { studentId: "", groupId: "", amount: "", method: "NAQD", note: "" };
 
 type AcceptPaymentModalProps = {
   open: boolean;
@@ -46,7 +52,6 @@ export function AcceptPaymentModal({
   onClose,
   defaultStudentId,
 }: AcceptPaymentModalProps) {
-  const { activeBranchId } = useBranch();
   const { data: studentsRaw } = useStudents();
 
   const [payForm, setPayForm] = useState<PayForm>(EMPTY_FORM);
@@ -55,18 +60,12 @@ export function AcceptPaymentModal({
 
   const allStudents: any[] = Array.isArray(studentsRaw) ? studentsRaw : [];
 
-  const students = useMemo(() => {
-    if (!activeBranchId) return allStudents;
-    return allStudents.filter(s =>
-      s.groups?.some((sg: any) => {
-        const g = sg.group;
-        if (!g) return false;
-        if (g.branchId === activeBranchId) return true;
-        if (!g.branchId && g.room?.branchId === activeBranchId) return true;
-        return false;
-      }),
-    );
-  }, [allStudents, activeBranchId]);
+  // Filial bo'yicha filtr SERVERDA bajariladi (`useStudents` branchId yuboradi).
+  // Bu yerda takroran filtrlash kerak emas edi va zarar ham qilardi: filtr
+  // `group.branchId` / `room.branchId` maydonlariga qarardi, ular esa
+  // o'quvchilar ro'yxati javobida umuman yo'q — natijada filial tanlanganda
+  // modalda BITTA HAM o'quvchi ko'rinmasdi.
+  const students = allStudents;
 
   useEffect(() => {
     if (!open) return;
@@ -79,6 +78,22 @@ export function AcceptPaymentModal({
 
   const selectedStudent = students.find(s => s.id === payForm.studentId);
 
+  // To'lov QAYSI guruh uchun ekani — foizli o'qituvchi maoshi va kurs kesimidagi
+  // tushum shunga qarab hisoblanadi. Ilgari `groups[0]` olinardi: o'quvchi
+  // chiqib ketgan guruhga ham tushib ketishi mumkin edi.
+  const payableGroups: Membership[] = (selectedStudent?.groups ?? []).filter(
+    (sg: Membership) => sg.enrollmentStatus !== "CHIQIB_KETGAN",
+  );
+
+  // Tanlangan guruh — o'quvchi almashsa eski tanlov o'z-o'zidan bekor bo'ladi,
+  // bitta a'zolik bo'lsa avtomatik o'sha tanlanadi (effekt kerak emas).
+  const selectedGroupId =
+    payableGroups.some(g => g.groupId === payForm.groupId)
+      ? payForm.groupId
+      : payableGroups.length === 1
+        ? payableGroups[0].groupId
+        : "";
+
   function handleClose() {
     setPayForm(EMPTY_FORM);
     setPayFormErr("");
@@ -88,11 +103,13 @@ export function AcceptPaymentModal({
   async function submitPayment() {
     if (!payForm.studentId) { setPayFormErr("O'quvchini tanlang"); return; }
     if (!payForm.amount || Number(payForm.amount) <= 0) { setPayFormErr("Summani kiriting"); return; }
+    if (payableGroups.length > 1 && !selectedGroupId) {
+      setPayFormErr("Qaysi guruh uchun to'lov ekanini tanlang"); return;
+    }
     setPayFormErr("");
     setSaving(true);
     try {
-      const student = students.find(s => s.id === payForm.studentId) ?? selectedStudent;
-      const groupId = student?.groups?.[0]?.groupId;
+      const groupId = selectedGroupId || payableGroups[0]?.groupId;
       const res = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -179,6 +196,26 @@ export function AcceptPaymentModal({
               >
                 Balans: {formatCurrency(selectedStudent.balance)}
               </p>
+            </div>
+          )}
+
+          {payableGroups.length > 1 && (
+            <div>
+              <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">
+                Qaysi guruh uchun
+              </Label>
+              <select
+                value={selectedGroupId}
+                onChange={e => setPayForm(p => ({ ...p, groupId: e.target.value }))}
+                className="w-full h-10 sm:h-9 px-3 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+              >
+                <option value="">Tanlang…</option>
+                {payableGroups.map(sg => (
+                  <option key={sg.groupId} value={sg.groupId}>
+                    {sg.group?.name ?? sg.groupId}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 

@@ -46,7 +46,7 @@ const METHOD_LABELS: Record<string, string> = { NAQD: "Naqd pul", KARTA: "Karta"
 export default function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: student, isLoading, error, mutate: revalidate } = useStudent(id);
-  const { data: groupsRaw } = useGroups({ status: "ACTIVE" });
+  const { data: groupsRaw } = useGroups({ status: "ACTIVE,UPCOMING" });
   const allGroups: any[] = Array.isArray(groupsRaw) ? groupsRaw : [];
 
   // Payment modal
@@ -55,35 +55,49 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const [payErr,       setPayErr]       = useState("");
   const [paying,       setPaying]       = useState(false);
 
-  // Exit group modal
-  const [showExitModal, setShowExitModal] = useState(false);
-  const [exiting,       setExiting]       = useState(false);
+  // Guruh amallari. `targetSg` — AYNAN qaysi a'zolik ustida ish ketayotgani.
+  // Ilgari bu yerda faqat "birinchi faol guruh" olinardi: ikki fanga
+  // qatnashadigan o'quvchida chiqarish/almashtirish har doim tasodifiy
+  // guruhga tegardi va ikkinchisiga umuman yetib bo'lmasdi.
+  const [exitTarget,   setExitTarget]   = useState<any>(null);
+  const [exiting,      setExiting]      = useState(false);
 
-  // Transfer group modal
-  const [showTransferModal, setShowTransferModal] = useState(false);
-  const [transferGroupId,   setTransferGroupId]   = useState("");
-  const [transferErr,       setTransferErr]       = useState("");
-  const [transferring,      setTransferring]      = useState(false);
+  /** null → yopiq; { sg: null } → yangi guruhga QO'SHISH; { sg } → SHU guruhni almashtirish. */
+  const [groupModal,      setGroupModal]      = useState<{ sg: any | null } | null>(null);
+  const [transferGroupId, setTransferGroupId] = useState("");
+  const [transferErr,     setTransferErr]     = useState("");
+  const [transferring,    setTransferring]    = useState(false);
 
-  const [activating, setActivating] = useState(false);
+  const [activating,      setActivating]      = useState<string | null>(null);
+  const [groupActionErr,  setGroupActionErr]  = useState("");
 
   function revalidateAll() {
     revalidate();
     mutate((k: string) => typeof k === "string" && k.startsWith("/api/students"), undefined, { revalidate: true });
   }
 
-  // ── Faollashtirish (sinovdan → faol) ─────────────────────────────────────────
-  async function activateStudent() {
-    const sg = student?.groups?.find((g: any) => g.enrollmentStatus !== "CHIQIB_KETGAN");
+  // ── Faollashtirish — AYNAN bitta a'zolikni sinovdan faolga o'tkazadi ────────
+  //
+  // Har bir guruh alohida faollashtiriladi: o'quvchi ingliz tiliga to'lab,
+  // matematikada hali sinovda bo'lishi mumkin. Ilgari bitta tugma "birinchi"
+  // a'zolikni faollashtirardi va ikkinchisiga yo'l yo'q edi.
+  async function activateMembership(sg: any) {
     if (!sg) return;
-    setActivating(true);
+    setActivating(sg.id);
     try {
-      await fetch(`/api/student-groups/${sg.id}`, {
+      const res = await fetch(`/api/student-groups/${sg.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enrollmentStatus: "FAOL" }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setGroupActionErr(d.error ?? "Faollashtirib bo'lmadi");
+        return;
+      }
+      setGroupActionErr("");
       revalidateAll();
-    } finally { setActivating(false); }
+    } catch { setGroupActionErr("Serverga ulanib bo'lmadi"); }
+    finally { setActivating(null); }
   }
 
   // ── Payment ──────────────────────────────────────────────────────────────────
@@ -92,7 +106,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     if (!amount || amount <= 0) { setPayErr("Summa to'g'ri kiriting"); return; }
     setPaying(true); setPayErr("");
     try {
-      const sg = student?.groups?.[0];
+      // Chiqib ketmagan a'zolik — ilgari `groups[0]` olinardi va to'lov
+      // o'quvchi tashlab ketgan guruhga (ya'ni boshqa o'qituvchiga) yozilardi.
+      const sg = (student?.groups ?? []).find(
+        (g: { enrollmentStatus?: string }) => g.enrollmentStatus !== "CHIQIB_KETGAN",
+      ) ?? student?.groups?.[0];
       const res = await fetch("/api/payments", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,9 +127,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     finally { setPaying(false); }
   }
 
-  // ── Exit group ───────────────────────────────────────────────────────────────
+  // ── Guruhdan chiqarish — faqat TANLANGAN a'zolik ────────────────────────────
   async function exitGroup() {
-    const sg = student?.groups?.find((g: any) => g.enrollmentStatus !== "CHIQIB_KETGAN");
+    const sg = exitTarget;
     if (!sg) return;
     setExiting(true);
     try {
@@ -119,38 +137,55 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enrollmentStatus: "CHIQIB_KETGAN" }),
       });
-      // Also mark student inactive
-      await fetch(`/api/students/${id}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: false }),
-      });
+      // O'quvchi faqat BOSHQA guruhi qolmagan bo'lsa nofaol bo'ladi.
+      // Ilgari bu shartsiz bajarilardi: ikki fanga qatnashadigan o'quvchi
+      // bittasidan chiqarilganda butunlay nofaol bo'lib, ro'yxatdan
+      // yo'qolib qolardi.
+      const others = (student?.groups ?? []).filter(
+        (g: any) => g.id !== sg.id && g.enrollmentStatus !== "CHIQIB_KETGAN",
+      );
+      if (others.length === 0) {
+        await fetch(`/api/students/${id}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isActive: false }),
+        });
+      }
       revalidateAll();
-      setShowExitModal(false);
+      setExitTarget(null);
     } finally { setExiting(false); }
   }
 
-  // ── Transfer group ────────────────────────────────────────────────────────────
-  async function transferGroup() {
-    if (!transferGroupId) { setTransferErr("Yangi guruhni tanlang"); return; }
-    const sg = student?.groups?.find((g: any) => g.enrollmentStatus !== "CHIQIB_KETGAN");
+  // ── Guruhga qo'shish / guruhni almashtirish ─────────────────────────────────
+  //
+  // Ikkalasi bitta oyna: `groupModal.sg` bor bo'lsa — AYNAN o'sha a'zolik
+  // yangisiga almashtiriladi; `null` bo'lsa — mavjudlariga qo'shimcha
+  // guruh qo'shiladi. Ilgari faqat "almashtirish" bor edi va u har doim
+  // eski guruhdan chiqarib yuborardi, ya'ni ikkinchi fanni qo'shishning
+  // umuman iloji yo'q edi.
+  async function submitGroupModal() {
+    if (!transferGroupId) { setTransferErr("Guruhni tanlang"); return; }
+    const replacing = groupModal?.sg ?? null;
     setTransferring(true); setTransferErr("");
     try {
-      // 1. Set current group to CHIQIB_KETGAN
-      if (sg) {
-        await fetch(`/api/student-groups/${sg.id}`, {
-          method: "PATCH", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ enrollmentStatus: "CHIQIB_KETGAN" }),
-        });
-      }
-      // 2. Add to new group (FAOL)
+      // 1) Yangi guruhga qo'shamiz. AVVAL shu — muvaffaqiyatsiz bo'lsa
+      //    (guruh to'lgan, boshqa markazniki) o'quvchi eski guruhida
+      //    o'zgarishsiz qoladi, ya'ni guruhsiz osilib qolmaydi.
       const res = await fetch("/api/student-groups", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ studentId: id, groupId: transferGroupId }),
       });
       const data = await res.json();
       if (!res.ok) { setTransferErr(data.error ?? "Xatolik"); return; }
+
+      // 2) Almashtirish bo'lsa — eskisini yopamiz.
+      if (replacing) {
+        await fetch(`/api/student-groups/${replacing.id}`, {
+          method: "PATCH", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enrollmentStatus: "CHIQIB_KETGAN" }),
+        });
+      }
       revalidateAll();
-      setShowTransferModal(false);
+      setGroupModal(null);
       setTransferGroupId("");
     } catch { setTransferErr("Serverga ulanib bo'lmadi"); }
     finally { setTransferring(false); }
@@ -195,15 +230,22 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const activeSgs: any[] = (student.groups ?? []).filter(
     (g: any) => g.enrollmentStatus !== "CHIQIB_KETGAN",
   );
-  const activeSg  = activeSgs[0];
-  const group     = activeSg?.group;
-  const enroll    = ENROLL_CFG[activeSg?.enrollmentStatus ?? (student.isActive ? "FAOL" : "SINOV")];
+  // Umumiy holat: kamida bitta FAOL a'zolik bo'lsa — faol, aks holda sinov.
+  const overallEnroll =
+    activeSgs.length === 0 ? (student.isActive ? "FAOL" : "CHIQIB_KETGAN")
+    : activeSgs.some((g: any) => g.enrollmentStatus === "FAOL") ? "FAOL"
+    : "SINOV";
+  const enroll    = ENROLL_CFG[overallEnroll];
   const attended  = student.attendance?.filter((a: any) => a.status === "KELDI").length ?? 0;
   const total     = student.attendance?.filter((a: any) => a.status !== "SINOV_DARSI").length ?? 0;
   const rate      = total > 0 ? Math.round((attended / total) * 100) : 0;
 
-  // Groups available for transfer (exclude current group)
-  const availableGroups = allGroups.filter(g => g.id !== activeSg?.groupId);
+  // Tanlash mumkin bo'lgan guruhlar — o'quvchi ALLAQACHON a'zo bo'lganlari
+  // chiqarib tashlanadi (backend baribir "allaqachon ro'yxatda" deb rad
+  // etardi). Almashtirishda esa almashtirilayotgan guruhning o'zi ham
+  // ro'yxatda turishi keraksiz.
+  const memberGroupIds = new Set(activeSgs.map((sg: any) => sg.groupId));
+  const availableGroups = allGroups.filter(g => !memberGroupIds.has(g.id));
 
   return (
     <div>
@@ -266,56 +308,83 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         )}
       </Modal>
 
-      {/* Exit group modal */}
-      <Modal open={showExitModal} onClose={() => setShowExitModal(false)}
+      {/* Guruhdan chiqarish — aynan tanlangan a'zolik */}
+      <Modal open={!!exitTarget} onClose={() => setExitTarget(null)}
         title="Guruhdan chiqarish"
-        subtitle={`${student.name} — ${group?.name ?? "guruh"}`}
+        subtitle={`${student.name} — ${exitTarget?.group?.name ?? "guruh"}`}
         footer={
           <>
             <Button onClick={exitGroup} disabled={exiting}
               className="flex-1 h-9 bg-red-600 hover:bg-red-700 text-white text-[13px]">
               {exiting ? "Chiqarilmoqda..." : "Ha, chiqarish"}
             </Button>
-            <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowExitModal(false)}>Bekor</Button>
+            <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setExitTarget(null)}>Bekor</Button>
           </>
         }>
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-xl px-4 py-3">
           <p className="text-[13px] text-red-700 dark:text-red-400">
-            <strong>{student.name}</strong> <strong>{group?.name}</strong> guruhidan chiqariladi va nofaol holatga o'tkaziladi.
+            <strong>{student.name}</strong> <strong>{exitTarget?.group?.name}</strong> guruhidan chiqariladi.
           </p>
+          {(() => {
+            const others = activeSgs.filter((g: any) => g.id !== exitTarget?.id);
+            return others.length > 0 ? (
+              <p className="text-[12px] text-red-600/80 dark:text-red-400/80 mt-1.5">
+                Qolgan {others.length} ta guruhi ({others.map((g: any) => g.group?.name).join(", ")})
+                saqlanadi — o&apos;quvchi faol bo&apos;lib qoladi.
+              </p>
+            ) : (
+              <p className="text-[12px] text-red-600/80 dark:text-red-400/80 mt-1.5">
+                Bu uning yagona guruhi — o&apos;quvchi nofaol holatga o&apos;tkaziladi.
+              </p>
+            );
+          })()}
         </div>
       </Modal>
 
-      {/* Transfer group modal */}
-      <Modal open={showTransferModal} onClose={() => { setShowTransferModal(false); setTransferGroupId(""); setTransferErr(""); }}
-        title={group ? "Guruh almashtirish" : "Guruhga qo'shish"}
-        subtitle={group ? `Hozir: ${group.name}` : "O'quvchi hali guruhga biriktirilmagan"}
+      {/* Guruhga qo'shish / almashtirish — bitta oyna, ikki rejim */}
+      <Modal open={!!groupModal} onClose={() => { setGroupModal(null); setTransferGroupId(""); setTransferErr(""); }}
+        title={groupModal?.sg ? "Guruh almashtirish" : "Guruhga qo'shish"}
+        subtitle={groupModal?.sg
+          ? `Hozir: ${groupModal.sg.group?.name}`
+          : activeSgs.length > 0
+            ? `Hozirgi ${activeSgs.length} ta guruhi saqlanadi`
+            : "O'quvchi hali guruhga biriktirilmagan"}
         footer={
           <>
-            <Button onClick={transferGroup} disabled={transferring}
- className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
-              {transferring ? "Saqlanmoqda..." : group ? "O'tkazish" : "Qo'shish"}
+            <Button onClick={submitGroupModal} disabled={transferring || availableGroups.length === 0}
+              className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
+              {transferring ? "Saqlanmoqda..." : groupModal?.sg ? "O'tkazish" : "Qo'shish"}
             </Button>
-            <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowTransferModal(false)}>Bekor</Button>
+            <Button variant="outline" className="h-9 px-4 text-[13px]"
+              onClick={() => { setGroupModal(null); setTransferGroupId(""); setTransferErr(""); }}>Bekor</Button>
           </>
         }>
-        <FormField label="Yangi guruh" required error={transferErr.includes("guruh") ? transferErr : ""}>
-          <select value={transferGroupId} onChange={e => { setTransferGroupId(e.target.value); setTransferErr(""); }}
-            className="w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
-            <option value="">Guruhni tanlang...</option>
-            {availableGroups.map((g: any) => (
-              <option key={g.id} value={g.id}>{g.name} — {g.course?.name}</option>
-            ))}
-          </select>
-        </FormField>
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-4 py-3">
-          <p className="text-[12px] text-amber-700 dark:text-amber-400">
-            {group
-              ? <>Joriy guruh (<strong>{group.name}</strong>) dan chiqariladi va yangi guruhga faol sifatida qo&apos;shiladi.</>
-              : <>O&apos;quvchi tanlangan guruhga <strong>faol</strong> sifatida qo&apos;shiladi va kurs to&apos;lovi balansdan yechiladi.</>}
+        {availableGroups.length === 0 ? (
+          <p className="text-[13px] text-neutral-500 dark:text-neutral-400 text-center py-4">
+            Qo&apos;shish uchun boshqa guruh yo&apos;q — o&apos;quvchi mavjud guruhlarning hammasida.
           </p>
-        </div>
-        {transferErr && !transferErr.includes("guruh") && (
+        ) : (
+          <>
+            <FormField label={groupModal?.sg ? "Yangi guruh" : "Guruh"} required
+              error={transferErr.includes("guruh") || transferErr.includes("Guruh") ? transferErr : ""}>
+              <select value={transferGroupId} onChange={e => { setTransferGroupId(e.target.value); setTransferErr(""); }}
+                className="w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
+                <option value="">Guruhni tanlang...</option>
+                {availableGroups.map((g: any) => (
+                  <option key={g.id} value={g.id}>{g.name} — {g.course?.name}</option>
+                ))}
+              </select>
+            </FormField>
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-4 py-3">
+              <p className="text-[12px] text-amber-700 dark:text-amber-400">
+                {groupModal?.sg
+                  ? <><strong>{groupModal.sg.group?.name}</strong> dan chiqarilib, tanlangan guruhga <strong>faol</strong> sifatida qo&apos;shiladi va kurs to&apos;lovi balansdan yechiladi.</>
+                  : <>Mavjud guruhlariga <strong>qo&apos;shimcha</strong> qilib biriktiriladi (hech qaysisidan chiqarilmaydi) va shu kursning to&apos;lovi balansdan yechiladi.</>}
+              </p>
+            </div>
+          </>
+        )}
+        {transferErr && !transferErr.includes("guruh") && !transferErr.includes("Guruh") && (
           <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 rounded-xl px-3 py-2.5">
             <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
             <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{transferErr}</p>
@@ -324,8 +393,10 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       </Modal>
 
       <div className="p-5 space-y-5">
-        {/* Top cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Yuqori kartochkalar — profil va moliya. Guruhlar pastda, to'liq
+            kenglikda: bir o'quvchida 3-4 ta guruh bo'lishi mumkin va ular
+            tor ustunga sig'masdi. */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Profile */}
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <div className="flex items-center gap-4 mb-4">
@@ -343,14 +414,6 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               </div>
             </div>
 
-            {/* Sinovdagi o'quvchini faollashtirish */}
-            {activeSg && activeSg.enrollmentStatus === "SINOV" && (
-              <button onClick={activateStudent} disabled={activating}
-                className="w-full mb-3 flex items-center justify-center gap-1.5 h-9 rounded-xl text-[13px] font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-60">
-                <UserCheck className="w-4 h-4" />
-                {activating ? "Faollashtirilmoqda..." : "Faollashtirish (kurs to'lovi yoziladi)"}
-              </button>
-            )}
             <div className="space-y-2">
               <a href={`tel:${student.phone}`}
                 className="flex items-center gap-2 text-[13px] text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors">
@@ -369,72 +432,6 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 {new Date(student.createdAt).toLocaleDateString("uz-UZ")} dan beri
               </div>
             </div>
-          </div>
-
-          {/* Group info */}
-          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
-            <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
-              {activeSgs.length > 1 ? `Guruhlari (${activeSgs.length})` : "Guruh"}
-            </h3>
-            {group ? (
-              <div className="space-y-2">
-                {/* Barcha faol guruhlar — o'quvchi bir nechta guruhda bo'lishi mumkin */}
-                {activeSgs.map((sg: any, i: number) => {
-                  const g = sg.group;
-                  const t = g?.teacher?.user;
-                  return (
-                    <div key={sg.id}
-                      className={cn("space-y-1.5", i > 0 && "pt-2.5 mt-2.5 border-t border-white/50 dark:border-white/10")}>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Link href={`/groups/${g.id}`}
-                          className="text-[14px] font-bold text-blue-600 hover:underline">{g.name}</Link>
-                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold",
-                          ENROLL_CFG[sg.enrollmentStatus]?.cls ?? "bg-neutral-100 text-neutral-500")}>
-                          {ENROLL_CFG[sg.enrollmentStatus]?.label ?? sg.enrollmentStatus}
-                        </span>
-                      </div>
-                      <p className="text-[12px] text-neutral-500">{g.course?.name}</p>
-                      {t && (
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-[10px] font-bold">
-                            {t.name[0]}
-                          </div>
-                          <Link href={`/teachers/${g.teacher?.id}`}
-                            className="text-[12px] text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors">
-                            {t.name}
-                          </Link>
-                        </div>
-                      )}
-                      <p className="text-[11px] text-neutral-400">
-                        {g.scheduleDays?.join(", ").toUpperCase()} · {g.startTime}–{g.endTime}
-                      </p>
-                    </div>
-                  );
-                })}
-                {/* Group actions */}
-                <div className="flex gap-2 pt-1">
-                  <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setShowTransferModal(true); }}
-                    className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg font-semibold bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
-                    <Shuffle className="w-3 h-3" /> Guruh almashtirish
-                  </button>
-                  <button onClick={() => setShowExitModal(true)}
-                    className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg font-semibold bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
-                    <LogOut className="w-3 h-3" /> Chiqarish
-                  </button>
-                </div>
-              </div>
-            ) : (
-              /* Guruhsiz o'quvchi. Ilgari bu yerda faqat matn turardi va
-                 o'quvchini guruhga qo'shishning umuman iloji yo'q edi —
-                 backend (`POST /api/student-groups`) esa tayyor edi. */
-              <div className="space-y-2.5">
-                <p className="text-[13px] text-neutral-400">Guruhga biriktirilmagan</p>
-                <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setShowTransferModal(true); }}
-                  className="flex items-center gap-1.5 text-[12px] px-3 py-2 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Guruhga qo'shish
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Finance */}
@@ -469,6 +466,105 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         </div>
+
+          {/* Guruhlar — har biri mustaqil kartochka, o'z amallari bilan.
+              Ilgari bu yerda bitta "Guruh almashtirish" va bitta "Chiqarish"
+              tugmasi bo'lib, ikkalasi ham HAR DOIM birinchi guruhga tegardi:
+              ikki fanga qatnashadigan o'quvchining ikkinchi guruhini boshqarish
+              mumkin emas edi. */}
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                {activeSgs.length > 1 ? `Guruhlari (${activeSgs.length})` : "Guruh"}
+              </h3>
+              {availableGroups.length > 0 && (
+                <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg: null }); }}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                  <Plus className="w-3 h-3" /> Guruhga qo&apos;shish
+                </button>
+              )}
+            </div>
+
+            {activeSgs.length === 0 ? (
+              <div className="space-y-2.5 py-2">
+                <p className="text-[13px] text-neutral-400">Guruhga biriktirilmagan</p>
+                <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg: null }); }}
+                  className="flex items-center gap-1.5 text-[12px] px-3 py-2 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                  <Plus className="w-3.5 h-3.5" /> Guruhga qo&apos;shish
+                </button>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 gap-2.5">
+                {activeSgs.map((sg: any) => {
+                  const g = sg.group;
+                  const t = g?.teacher?.user;
+                  const isTrial = sg.enrollmentStatus === "SINOV";
+                  return (
+                    <div key={sg.id}
+                      className={cn("rounded-xl border p-3 space-y-2",
+                        isTrial
+                          ? "border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-900/10"
+                          : "border-white/60 dark:border-white/10 glass-soft")}>
+                      <div className="flex items-start justify-between gap-2">
+                        <Link href={`/groups/${g.id}`}
+                          className="text-[13px] font-bold text-blue-600 hover:underline leading-tight">
+                          {g.name}
+                        </Link>
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0",
+                          ENROLL_CFG[sg.enrollmentStatus]?.cls ?? "bg-neutral-100 text-neutral-500")}>
+                          {ENROLL_CFG[sg.enrollmentStatus]?.label ?? sg.enrollmentStatus}
+                        </span>
+                      </div>
+
+                      <p className="text-[12px] text-neutral-500">{g.course?.name}</p>
+
+                      {t && (
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded-md bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-[9px] font-bold">
+                            {t.name[0]}
+                          </div>
+                          <Link href={`/teachers/${g.teacher?.id}`}
+                            className="text-[12px] text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors truncate">
+                            {t.name}
+                          </Link>
+                        </div>
+                      )}
+
+                      <p className="text-[11px] text-neutral-400">
+                        {g.scheduleDays?.join(", ").toUpperCase()} · {g.startTime}–{g.endTime}
+                      </p>
+
+                      {isTrial && (
+                        <button onClick={() => activateMembership(sg)} disabled={activating === sg.id}
+                          className="w-full flex items-center justify-center gap-1.5 h-8 rounded-lg text-[12px] font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-60">
+                          <UserCheck className="w-3.5 h-3.5" />
+                          {activating === sg.id ? "Faollashtirilmoqda..." : "Faollashtirish"}
+                        </button>
+                      )}
+
+                      <div className="flex gap-1.5 pt-0.5">
+                        <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg }); }}
+                          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                          <Shuffle className="w-3 h-3" /> Almashtirish
+                        </button>
+                        <button onClick={() => setExitTarget(sg)}
+                          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                          <LogOut className="w-3 h-3" /> Chiqarish
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {groupActionErr && (
+              <div className="flex items-center gap-2 mt-3 bg-red-50 dark:bg-red-900/20 border border-red-100 rounded-xl px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{groupActionErr}</p>
+              </div>
+            )}
+          </div>
 
         {/* Gamifikatsiya — API allaqachon qaytarardi, lekin sahifa ko'rsatmasdi */}
         <StudentPointsCard student={student} />

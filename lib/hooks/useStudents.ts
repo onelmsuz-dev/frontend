@@ -29,12 +29,34 @@ async function deleter(url: string) {
   return r.json();
 }
 
-export function useStudents(params?: { groupId?: string; search?: string }) {
+export interface StudentsQuery {
+  groupId?: string;
+  search?: string;
+  /** O'qituvchi bo'yicha — o'quvchining istalgan guruhi shu ustozniki bo'lsa. */
+  teacherId?: string;
+  /** "qarzdor" | "tolangan" — balans bo'yicha. */
+  debt?: string;
+  /** "SINOV" | "FAOL" | "CHIQIB_KETGAN" — a'zolik holati. */
+  enrollmentStatus?: string;
+}
+
+/**
+ * Filtrlash SERVERDA bajariladi.
+ *
+ * Ilgari sahifa butun ro'yxatni tortib, brauzerda filtrlardi. Javob 1000 ta
+ * qatorga cheklangani uchun katta markazda filtr "qolgan 1000 tadan" ishlab,
+ * natija to'liq bo'lmasdi. Endi har bir filtr so'rovga qo'shiladi — SWR uchun
+ * kalit ham o'zgaradi, ya'ni har bir kombinatsiya alohida keshlanadi.
+ */
+export function useStudents(params?: StudentsQuery) {
   const { activeBranchId } = useBranch();
   const query = new URLSearchParams();
-  if (params?.groupId)  query.set("groupId", params.groupId);
-  if (params?.search)   query.set("q",       params.search);
-  if (activeBranchId)   query.set("branchId", activeBranchId);
+  if (params?.groupId)   query.set("groupId",   params.groupId);
+  if (params?.search)    query.set("q",         params.search);
+  if (params?.teacherId) query.set("teacherId", params.teacherId);
+  if (params?.debt)      query.set("debt",      params.debt);
+  if (params?.enrollmentStatus) query.set("enrollmentStatus", params.enrollmentStatus);
+  if (activeBranchId)    query.set("branchId",  activeBranchId);
   const qs = query.toString();
   return useSWR(`/api/students${qs ? `?${qs}` : ""}`, fetcher);
 }

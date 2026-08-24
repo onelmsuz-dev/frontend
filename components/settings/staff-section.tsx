@@ -448,7 +448,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
           required={!editUser}
           hint={editUser ? "Bo'sh qoldirsangiz o'zgarmaydi" : undefined}
         >
-          <Input type="password" placeholder="Kamida 6 belgi" value={form.password}
+          <Input noAutofill name="staff-new-password" type="password" placeholder="Kamida 6 belgi" value={form.password}
             onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="h-10" />
         </FormField>
 
@@ -543,7 +543,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
         }
       >
         <FormField label="Yangi parol" required>
-          <Input type="password" placeholder="Kamida 6 belgi" value={resetPassword} autoFocus
+          <Input noAutofill name="staff-reset-password" type="password" placeholder="Kamida 6 belgi" value={resetPassword} autoFocus
             onChange={e => { setResetPassword(e.target.value); setResetErr(""); }} className="h-10" />
         </FormField>
         {resetErr && <ErrorBox text={resetErr} />}

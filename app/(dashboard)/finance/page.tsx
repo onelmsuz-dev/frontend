@@ -20,8 +20,10 @@ import Link from "next/link";
 import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
 import { usePayments } from "@/lib/hooks/usePayments";
 import { useTeachers } from "@/lib/hooks/useTeachers";
+import { useGroups } from "@/lib/hooks/useGroups";
 import { useStudents } from "@/lib/hooks/useStudents";
 import useSWR, { mutate } from "swr";
+import { useBranch, useBranchQueryString } from "@/lib/contexts/branch-context";
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -43,6 +45,12 @@ type Tab = "kirim" | "chiqim" | "oylik" | "qarzdorlar";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
+/** Filtr maydonlari uchun umumiy ko'rinish. */
+const FILTER_CLS =
+  "h-9 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 " +
+  "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none " +
+  "focus:border-neutral-400 transition-colors";
+
 export default function FinancePage() {
   const [activeTab,    setActiveTab]    = useState<Tab>("kirim");
 
@@ -56,6 +64,10 @@ export default function FinancePage() {
   const now2 = new Date();
   const defaultPayMonth = `${now2.getFullYear()}-${String(now2.getMonth() + 1).padStart(2, "0")}`;
   const [payMonth, setPayMonth] = useState(defaultPayMonth);
+  // To'lovlar filtri: guruh / aniq sana / to'lov usuli
+  const [payGroupId, setPayGroupId] = useState("");
+  const [payDate,    setPayDate]    = useState("");
+  const [payMethod,  setPayMethod]  = useState("");
   const [showPayModal,  setShowPayModal]  = useState(false);
 
   // Xarajat
@@ -77,12 +89,28 @@ export default function FinancePage() {
   const [chargingDues,  setChargingDues]  = useState(false);
   const [chargeMsg,     setChargeMsg]     = useState("");
 
-  const { data: paymentsRaw, isLoading: paymentsLoading } = usePayments({ month: payMonth });
+  const { activeBranchId } = useBranch();
+  const { data: paymentsRaw, isLoading: paymentsLoading } = usePayments({
+    month:   payDate ? undefined : payMonth,   // aniq sana tanlansa oy shart emas
+    date:    payDate || undefined,
+    groupId: payGroupId || undefined,
+    method:  payMethod || undefined,
+  });
+  const { data: groupsRaw } = useGroups();
+  const groupOptions: { id: string; name: string }[] = Array.isArray(groupsRaw) ? groupsRaw : [];
   const { data: teachersRaw }                             = useTeachers();
-  const { data: expensesRaw, isLoading: expensesLoading } = useSWR("/api/expenses", fetcher);
+  // Xarajat ham to'lov bilan BIR XIL qamrovda bo'lishi shart: o'sha oy va
+  // o'sha filial. Ilgari butun tarix, barcha filiallar bo'yicha olinardi va
+  // "Sof foyda" bir oylik tushumdan hamma vaqtdagi xarajatni ayirardi.
+  const expensesQs = useBranchQueryString({ month: payMonth });
+  const { data: expensesRaw, isLoading: expensesLoading } =
+    useSWR(`/api/expenses${expensesQs}`, fetcher);
   const { data: studentsRaw, isLoading: studentsLoading } = useStudents();
+  // Oylik ham aktiv filial bo'yicha — yonidagi "To'lovlar" tabi allaqachon
+  // filialga bog'langan, oylik esa butun markazni ko'rsatib turardi.
+  const salaryQs = useBranchQueryString({ month: salaryMonth });
   const { data: salariesRaw, isLoading: salariesLoading, mutate: mutateSalaries } =
-    useSWR(`/api/teacher-salaries?month=${salaryMonth}`, fetcher);
+    useSWR(`/api/teacher-salaries${salaryQs}`, fetcher);
 
   const payments: any[] = Array.isArray(paymentsRaw) ? paymentsRaw : [];
   const teachers: any[] = Array.isArray(teachersRaw) ? teachersRaw : [];
@@ -123,12 +151,15 @@ export default function FinancePage() {
           category:    expForm.category.trim(),
           description: expForm.description.trim(),
           amount,
+          // Sarlavhada tanlangan filial — aks holda yozuv egasining "uy"
+          // filialiga tushib, boshqa filial hisobotini buzardi.
+          ...(activeBranchId ? { branchId: activeBranchId } : {}),
           ...(expForm.date ? { date: expForm.date } : {}),
         }),
       });
       const data = await res.json();
       if (!res.ok) { setExpErr(data.error ?? "Xatolik"); return; }
-      mutate("/api/expenses");
+      mutate((k: string) => typeof k === "string" && k.startsWith("/api/expenses"));
       mutate("/api/reports");
       setShowExpModal(false);
       setExpForm({ category: "", description: "", amount: "", date: "" });
@@ -142,7 +173,10 @@ export default function FinancePage() {
       const res  = await fetch("/api/teacher-salaries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month: salaryMonth }),
+        body: JSON.stringify({
+          month: salaryMonth,
+          ...(activeBranchId ? { branchId: activeBranchId } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setSalaryErr(data.error ?? "Xatolik"); return; }
@@ -173,7 +207,13 @@ export default function FinancePage() {
       const res = await fetch("/api/student-groups/charge-monthly", { method: "POST" });
       const data = await res.json();
       if (!res.ok) { setChargeMsg(data.error ?? "Xatolik"); return; }
-      setChargeMsg(data.charged > 0 ? `${data.charged} ta o'quvchiga ${data.month} oyi uchun to'lov yozildi` : "Barcha o'quvchilar allaqachon shu oy uchun hisoblangan");
+      setChargeMsg(
+        data.alreadyRunning
+          ? "Hisoblash hozir ishlamoqda — bir necha soniyadan so'ng yangilang"
+          : data.charged > 0
+            ? `${data.charged} ta o'quvchiga ${data.month} oyi uchun to'lov yozildi`
+            : "Barcha o'quvchilar allaqachon shu oy uchun hisoblangan",
+      );
       mutate((k: string) => typeof k === "string" && k.startsWith("/api/students"), undefined, { revalidate: true });
     } catch { setChargeMsg("Serverga ulanib bo'lmadi"); }
     finally { setChargingDues(false); }
@@ -295,18 +335,59 @@ export default function FinancePage() {
           ))}
         </div>
 
-        {/* To'lovlar */}
+        {/* To'lovlar — filtrlar */}
         {activeTab === "kirim" && (
-          <div className="flex items-center gap-3 mb-4">
-            <span className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">Oy:</span>
+          <div className="flex flex-wrap items-center gap-2.5 mb-4">
+            <label className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300">Oy:</label>
             <input
               type="month"
               value={payMonth}
+              disabled={!!payDate}
               onChange={e => setPayMonth(e.target.value)}
-              className="h-9 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10
-                bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none
-                focus:border-neutral-400 transition-colors"
+              className={cn(FILTER_CLS, payDate && "opacity-50 cursor-not-allowed")}
             />
+
+            <label className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-300 ml-1">Sana:</label>
+            <input
+              type="date"
+              value={payDate}
+              onChange={e => setPayDate(e.target.value)}
+              className={FILTER_CLS}
+            />
+
+            <select
+              value={payGroupId}
+              onChange={e => setPayGroupId(e.target.value)}
+              className={FILTER_CLS}
+            >
+              <option value="">Barcha guruhlar</option>
+              {groupOptions.map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={payMethod}
+              onChange={e => setPayMethod(e.target.value)}
+              className={FILTER_CLS}
+            >
+              <option value="">Barcha usullar</option>
+              {Object.entries(METHOD_LABELS).map(([m, label]) => (
+                <option key={m} value={m}>{label}</option>
+              ))}
+            </select>
+
+            {(payDate || payGroupId || payMethod) && (
+              <button
+                onClick={() => { setPayDate(""); setPayGroupId(""); setPayMethod(""); }}
+                className="h-9 px-3 text-[12px] font-semibold rounded-xl text-neutral-500
+                  hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-white/60
+                  dark:hover:bg-white/10 transition-colors"
+              >
+                Tozalash
+              </button>
+            )}
+
             <span className="text-[12px] text-neutral-400">{payments.length} ta to'lov</span>
             <span className="ml-auto text-[13px] font-bold text-green-600 dark:text-green-400">
               Jami: {formatCurrency(totalPayments)}
@@ -386,9 +467,14 @@ export default function FinancePage() {
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/50 dark:border-white/10">
               <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">Xarajatlar ({expenses.length} ta)</p>
+              {/* Asosiy amal — ko'rinadigan (to'ldirilgan) tugma bo'lishi kerak.
+                  Ilgari shaffof fonli, och kulrang matnli edi va deyarli
+                  bilinmasdi. */}
               <button onClick={() => { setExpErr(""); setExpForm({ category: "", description: "", amount: "", date: "" }); setShowExpModal(true); }}
-                className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-xl border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
-                <Plus className="w-3.5 h-3.5" /> Xarajat qo'shish
+                className="flex items-center gap-1.5 text-[12.5px] font-semibold px-3.5 h-9 rounded-xl
+                  bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm
+                  transition-colors">
+                <Plus className="w-4 h-4" /> Xarajat qo'shish
               </button>
             </div>
             <div className="overflow-x-auto">
@@ -422,7 +508,15 @@ export default function FinancePage() {
             </Table>
             </div>
             {!expensesLoading && expenses.length === 0 && (
-              <div className="py-12 text-center text-sm text-neutral-400">Hali xarajat yo'q</div>
+              <div className="py-12 flex flex-col items-center gap-3">
+                <p className="text-sm text-neutral-400">Bu oyda xarajat yozilmagan</p>
+                <button onClick={() => { setExpErr(""); setExpForm({ category: "", description: "", amount: "", date: "" }); setShowExpModal(true); }}
+                  className="flex items-center gap-1.5 text-[12.5px] font-semibold px-3.5 h-9 rounded-xl
+                    bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm
+                    transition-colors">
+                  <Plus className="w-4 h-4" /> Xarajat qo'shish
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -491,7 +585,7 @@ export default function FinancePage() {
                   <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'qituvchi</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Turi</TableHead>
-                    <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Yig'ilgan</TableHead>
+                    <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right" title="Faqat shu oyga tegishli tushum — oldindan to'langan ortiqcha summa keyingi oyga o'tadi">Yig'ilgan (shu oy)</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Hisoblangan</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-center">Holat</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Amal</TableHead>

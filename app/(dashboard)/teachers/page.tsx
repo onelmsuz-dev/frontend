@@ -174,6 +174,8 @@ export default function TeachersPage() {
       >
         <FormField label="Ism familiya" required={!editTarget}>
           <Input
+            noAutofill
+            name="teacher-name"
             placeholder="Jamshid Tursunov"
             value={form.name}
             onChange={e => setForm(p => ({...p, name: e.target.value}))}
@@ -221,8 +223,10 @@ export default function TeachersPage() {
         <div className="-mt-1">
           <FormField label={SALARY_CFG[form.salaryType].fieldLabel} required hint={SALARY_CFG[form.salaryType].hint}>
             <Input
+              noAutofill
               type="number"
               inputMode="numeric"
+              name="teacher-salary"
               placeholder={SALARY_CFG[form.salaryType].placeholder}
               value={form.salary}
               onChange={e => setForm(p => ({...p, salary: e.target.value}))}
@@ -272,6 +276,8 @@ export default function TeachersPage() {
           )}
           <div className="flex gap-2">
             <Input
+              noAutofill
+              name="teacher-subject"
               placeholder="Fan nomi (Matematika)"
               value={subInput}
               onChange={e => setSubInput(e.target.value)}
@@ -290,7 +296,9 @@ export default function TeachersPage() {
           hint={editTarget ? "Bo'sh qoldirsangiz o'zgarmaydi" : undefined}
         >
           <Input
+            noAutofill
             type="password"
+            name="teacher-new-password"
             placeholder="Kamida 6 belgi"
             value={form.password}
             onChange={e => setForm(p => ({...p, password: e.target.value}))}

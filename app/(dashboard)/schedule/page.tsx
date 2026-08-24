@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { cn } from "@/lib/utils";
 import { useGroups } from "@/lib/hooks/useGroups";
+import { todayStr } from "@/lib/form-constants";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { mutate } from "swr";
@@ -56,7 +57,7 @@ const GROUP_COLORS = [
 const EMPTY_FORM = {
   name: "", courseId: "", teacherId: "", maxStudents: "15",
   scheduleDays: [] as string[], startTime: "09:00", endTime: "11:00",
-  startDate: new Date().toISOString().slice(0, 10), status: "ACTIVE",
+  startDate: todayStr(), status: "ACTIVE",
 };
 
 type ViewMode = "kun" | "hafta" | "oy";
@@ -79,6 +80,10 @@ function sameDay(a: Date, b: Date) {
 }
 function getUzIdx(date: Date): number|null {
   const v=JS_TO_IDX[date.getDay()]; return v!==undefined?v:null;
+}
+/** Mahalliy kalendar kuni "YYYY-MM-DD" (toISOString UTC'ga siljitadi — ishlatilmaydi). */
+function dayKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
 // ─── Mini calendar popover ───────────────────────────────────────────────────
@@ -196,7 +201,10 @@ export default function SchedulePage() {
   const [darsSaving,    setDarsSaving]    = useState(false);
   const [darsError,     setDarsError]     = useState("");
 
-  const { data: groupsRaw, isLoading } = useGroups({ status: "ACTIVE" });
+  // Faol + ochilishini kutayotgan guruhlar. Faqat ACTIVE olinsa, 26-avgustda
+  // boshlanadigan guruh jadvalda umuman ko'rinmasdi — hatto o'sha kunning
+  // o'zida ham. Har bir blok pastda guruh sanalari bo'yicha filtrlanadi.
+  const { data: groupsRaw, isLoading } = useGroups({ status: "ACTIVE,UPCOMING" });
   const { data: coursesRaw }           = useCourses();
   const { data: teachersRaw }          = useTeachers();
 
@@ -209,6 +217,7 @@ export default function SchedulePage() {
     const entries: Array<{
       id: string; groupName: string; teacherName: string; courseName: string;
       day: string; time: string; endTime: string; room: string; color: string;
+      startDate: string; endDate: string | null; upcoming: boolean;
     }> = [];
     groups.forEach((g, gi) => {
       const color = g.color || GROUP_COLORS[gi % GROUP_COLORS.length];
@@ -224,11 +233,27 @@ export default function SchedulePage() {
           endTime:     g.endTime,
           room:        g.room?.name ?? "—",
           color,
+          startDate:   String(g.startDate ?? "").slice(0, 10),
+          endDate:     g.endDate ? String(g.endDate).slice(0, 10) : null,
+          upcoming:    g.status === "UPCOMING",
         });
       });
     });
     return entries;
   }, [groups]);
+
+  /**
+   * Aynan SHU kundagi darslar. Hafta kuni mos kelishi yetarli emas — guruh
+   * boshlangan sanadan oldin ham, tugagandan keyin ham blok chizilib turardi.
+   */
+  const entriesOn = useCallback((date: Date) => {
+    const idx = getUzIdx(date);
+    if (idx === null) return [];
+    const key = dayKey(date);
+    return schedule
+      .filter(s => s.day === UZ_DAYS[idx] && key >= s.startDate && (!s.endDate || key <= s.endDate))
+      .sort((a, b) => toMin(a.time) - toMin(b.time));
+  }, [schedule]);
 
   function toggleGroupDay(d: string) {
     setGroupForm(p => ({
@@ -290,7 +315,7 @@ export default function SchedulePage() {
           name: autoName, courseId: darsForm.courseId, teacherId: darsForm.teacherId,
           maxStudents: 20,
           scheduleDays: darsForm.scheduleDays, startTime: darsForm.startTime, endTime: darsForm.endTime,
-          startDate: new Date().toISOString().slice(0, 10), status: "ACTIVE",
+          startDate: todayStr(), status: "ACTIVE",
         }),
       });
       const data = await res.json();
@@ -392,7 +417,7 @@ export default function SchedulePage() {
   const kunUzIdx   = getUzIdx(selDay);
   const kunDayName = kunUzIdx!==null ? UZ_DAYS[kunUzIdx] : "Yakshanba";
   const kunEntries = kunUzIdx!==null
-    ? schedule.filter(s=>s.day===UZ_DAYS[kunUzIdx]).sort((a,b)=>toMin(a.time)-toMin(b.time))
+    ? entriesOn(selDay)
     : [];
   const kunIsToday = sameDay(selDay, today);
 
@@ -508,7 +533,7 @@ export default function SchedulePage() {
                     onChange={e => setQTeacherForm(p => ({...p, phone: e.target.value}))} className="h-8 text-[12px]" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <Input placeholder="Parol (min 6)" type="password" value={qTeacherForm.password}
+                  <Input noAutofill name="quick-teacher-password" placeholder="Parol (min 6)" type="password" value={qTeacherForm.password}
                     onChange={e => setQTeacherForm(p => ({...p, password: e.target.value}))} className="h-8 text-[12px]" />
                   <Input placeholder="Fan (ixtiyoriy)" value={qTeacherForm.subjects}
                     onChange={e => setQTeacherForm(p => ({...p, subjects: e.target.value}))} className="h-8 text-[12px]" />
@@ -776,11 +801,15 @@ export default function SchedulePage() {
                   const height = blockH(entry.time, entry.endTime);
                   return (
                     <div key={entry.id}
-                      className={cn("absolute inset-x-3 rounded-xl overflow-hidden cursor-pointer border border-l-[4px] shadow-sm transition-all hover:brightness-95 hover:shadow-md", entry.color)}
+                      className={cn("absolute inset-x-3 rounded-xl overflow-hidden cursor-pointer border border-l-[4px] shadow-sm transition-all hover:brightness-95 hover:shadow-md",
+                        entry.color, entry.upcoming && "border-dashed opacity-80")}
                       style={{ top: top+2, height: Math.max(height-4,24) }}>
                       <div className="px-3 py-2 h-full flex flex-col overflow-hidden">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="font-bold text-[13px] leading-tight">{entry.groupName}</p>
+                          <p className="font-bold text-[13px] leading-tight">
+                            {entry.groupName}
+                            {entry.upcoming && <span className="ml-1.5 text-[10px] font-semibold opacity-60">· yangi</span>}
+                          </p>
                           <span className="text-[11px] opacity-60 tabular-nums shrink-0 mt-0.5">{entry.time}–{entry.endTime}</span>
                         </div>
                         {height >= 56 && <p className="text-[11px] opacity-60 mt-1">{entry.courseName}</p>}
@@ -842,8 +871,7 @@ export default function SchedulePage() {
             {weekDays.map((d, ci) => {
               const isToday   = sameDay(d, today);
               const isSel     = sameDay(d, selDay) && !isToday;
-              const uzDayName = UZ_DAYS[ci];
-              const entries   = schedule.filter(s => s.day===uzDayName).sort((a,b) => toMin(a.time)-toMin(b.time));
+              const entries   = entriesOn(d);
               return (
                 <div key={ci}
                   className={cn("flex-1 relative border-r border-white/50 dark:border-white/10 last:border-r-0",
@@ -857,7 +885,8 @@ export default function SchedulePage() {
                     const compact = height < 52;
                     return (
                       <div key={entry.id}
-                        className={cn("absolute inset-x-1 rounded-lg overflow-hidden cursor-pointer border border-l-[3px] shadow-sm transition-all hover:brightness-95 hover:shadow-md", entry.color)}
+                        className={cn("absolute inset-x-1 rounded-lg overflow-hidden cursor-pointer border border-l-[3px] shadow-sm transition-all hover:brightness-95 hover:shadow-md",
+                          entry.color, entry.upcoming && "border-dashed opacity-80")}
                         style={{ top: top+2, height: Math.max(height-4,20) }}>
                         <div className="px-2 py-1.5 h-full flex flex-col overflow-hidden">
                           <p className={cn("font-bold truncate leading-tight", compact?"text-[10px]":"text-[12px]")}>
@@ -900,8 +929,7 @@ export default function SchedulePage() {
               if (i>=35 && !inMonth) return <div key={i} className="glass-soft h-24" />;
               const isToday = sameDay(d, today);
               const isSel   = sameDay(d, selDay);
-              const idx     = getUzIdx(d);
-              const entries = idx!==null && inMonth ? schedule.filter(s => s.day===UZ_DAYS[idx]) : [];
+              const entries = inMonth ? entriesOn(d) : [];
               return (
                 <button key={i} onClick={() => { setSelDay(new Date(d)); setView("kun"); }}
                   className={cn("glass-soft h-24 p-1.5 text-left flex flex-col gap-1",

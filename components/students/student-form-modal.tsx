@@ -68,7 +68,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
   const [fTeacher, setFTeacher] = useState("");
   const [fCourse, setFCourse] = useState("");
 
-  const { data: groupsRaw } = useGroups({ status: "ACTIVE" });
+  const { data: groupsRaw } = useGroups({ status: "ACTIVE,UPCOMING" });
   const { data: coursesRaw } = useCourses();
   const { data: teachersRaw } = useTeachers();
   const { data: branchesRaw } = useBranches();
@@ -319,7 +319,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       </FormField>
 
       <FormField label={isEdit ? "Yangi parol" : "Parol"} hint={isEdit ? "Bo'sh qoldirsangiz o'zgarmaydi" : "Ixtiyoriy — o'quvchi paneli uchun"}>
-        <Input type="password" placeholder="Kamida 6 belgi" value={form.password}
+        <Input noAutofill name="student-new-password" type="password" placeholder="Kamida 6 belgi" value={form.password}
           onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="h-10" />
       </FormField>
 

@@ -44,7 +44,21 @@ export const SCHEDULE_PRESETS = [
   { label: "Har kuni", days: ["DUSHANBA", "SESHANBA", "CHORSHANBA", "PAYSHANBA", "JUMA", "SHANBA"] },
 ] as const;
 
-/** "YYYY-MM-DD" bugungi sana (input[type=date] uchun). */
-export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+/**
+ * "YYYY-MM-DD" bugungi sana (input[type=date] uchun).
+ *
+ * `toISOString()` UTC qaytaradi: Toshkentda (UTC+5) tunda 00:00–05:00 oralig'ida
+ * KECHAGI sana chiqib qolardi — shu sababli yarim tundan keyin ochilgan guruh
+ * kechagi kun bilan yaratilardi.
+ */
+export function todayStr(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
+/**
+ * Davomat darsdan necha daqiqa OLDIN belgilanishi mumkin.
+ * Backenddagi `ATTENDANCE_GRACE_MINUTES` bilan bir xil bo'lishi shart — aks
+ * holda server qabul qiladigan vaqtda interfeys "Dars hali boshlanmadi" deb
+ * tugmalarni yopib turadi.
+ */
+export const ATTENDANCE_GRACE_MINUTES = 15;

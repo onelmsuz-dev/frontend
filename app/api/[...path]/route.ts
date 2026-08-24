@@ -34,6 +34,11 @@ async function handler(
   if (INTERNAL_SECRET) headers["x-internal-secret"] = INTERNAL_SECRET;
   const subdomain = req.headers.get("x-org-subdomain");
   if (subdomain) headers["x-org-subdomain"] = subdomain;
+  // Haqiqiy mijoz IP'si — backenddagi rate-limit shu bo'yicha kalitlanadi.
+  // Aks holda barcha so'rovlar BFF'ning yagona chiqish IP'sidan kelib,
+  // butun platforma bitta hisoblagichni bo'lishardi.
+  const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (clientIp) headers["x-real-client-ip"] = clientIp;
 
   const method = req.method.toUpperCase();
   const hasBody = method !== "GET" && method !== "HEAD";

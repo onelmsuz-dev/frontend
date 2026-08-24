@@ -6,8 +6,8 @@ import { useGroup } from "@/lib/hooks/useGroups";
 import { TopHeader } from "@/components/layout/top-header";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft, Users, BookOpen, Clock, Calendar,
-  GraduationCap, AlertCircle, CheckCircle, UserCheck, Plus,
+  ArrowLeft, BookOpen, Clock, Calendar,
+  GraduationCap, AlertCircle, CheckCircle,
 } from "lucide-react";
 import { mutate } from "swr";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GroupAttendanceSection } from "@/components/groups/group-attendance-section";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -27,11 +28,6 @@ const STATUS_CFG: Record<string, { label: string; cls: string }> = {
   COMPLETED: { label: "Yakunlangan", cls: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800" },
 };
 
-const ENROLL_CFG: Record<string, { label: string; cls: string }> = {
-  SINOV:         { label: "Sinov", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-  FAOL:          { label: "Faol",  cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
-  CHIQIB_KETGAN: { label: "Ketgan", cls: "bg-neutral-100 text-neutral-500" },
-};
 
 const DAY_LABELS: Record<string, string> = {
   du: "Du", se: "Se", ch: "Ch", pa: "Pa", ju: "Ju", sha: "Sha", ya: "Ya",
@@ -41,6 +37,8 @@ const DAY_LABELS: Record<string, string> = {
 export default function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: group, isLoading } = useGroup(id);
+  const { me } = useMe();
+  const canUpdate = hasPerm(me?.permissions, "students.update");
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ name: "", phone: "", parentPhone: "" });
@@ -167,7 +165,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
               </div>
               <div className="flex items-center gap-2 text-[12px] text-neutral-500">
                 <GraduationCap className="w-3 h-3" />
-                {new Date(group.startDate).toLocaleDateString("uz-UZ")} dan boshlanadi
+                {new Date(group.startDate).toLocaleDateString("uz-UZ")}{" "}
+                {group.status === "UPCOMING" ? "dan boshlanadi" : "dan boshlangan"}
               </div>
             </div>
           </div>
@@ -218,53 +217,19 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
 
-        {/* Students list */}
-        <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center gap-2">
-            <Users className="w-4 h-4 text-neutral-400" />
-            <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">O'quvchilar ro'yxati</h3>
-          </div>
-          <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-            {group.students?.length === 0 && (
-              <p className="text-[12px] text-neutral-400 p-6 text-center">O'quvchilar yo'q</p>
-            )}
-            {group.students?.map((sg: any) => {
-              const s       = sg.student;
-              const enroll  = ENROLL_CFG[sg.enrollmentStatus];
-              return (
-                <div key={sg.id} className="flex items-center justify-between px-5 py-3 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-8 h-8 rounded-xl flex items-center justify-center text-white text-[12px] font-bold",
-                      s.isActive
-                        ? "bg-gradient-to-br from-blue-400 to-indigo-500"
-                        : "bg-gradient-to-br from-amber-400 to-orange-400"
-                    )}>
-                      {s.name[0]}
-                    </div>
-                    <div>
-                      <Link href={`/students/${s.id}`}
-                        className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 hover:text-blue-600 transition-colors">
-                        {s.name}
-                      </Link>
-                      <p className="text-[11px] text-neutral-400">{s.phone}</p>
-                    </div>
-                  </div>
-                  <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-semibold", enroll?.cls)}>
-                    {enroll?.label ?? sg.enrollmentStatus}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Davomat */}
+        {/* O'quvchilar ro'yxati VA davomat — bitta panel.
+            Ilgari ikkita alohida blok bo'lib, bir xil o'quvchilar ikki marta
+            chizilardi: yuqorida ism/telefon, pastda yana o'sha ismlar davomat
+            tugmalari bilan. */}
         <GroupAttendanceSection
           groupId={id}
           scheduleDays={group.scheduleDays ?? []}
           startTime={group.startTime}
+          startDate={group.startDate}
+          endDate={group.endDate}
           studentGroups={group.students ?? []}
+          onChanged={() => mutate(`/api/groups/${id}`)}
+          canUpdate={canUpdate}
         />
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { TopHeader } from "@/components/layout/top-header";
 import {
   ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, FileCheck,
@@ -9,7 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useStudents } from "@/lib/hooks/useStudents";
-import { WEEKDAY_SHORT } from "@/lib/form-constants";
+import { WEEKDAY_SHORT, ATTENDANCE_GRACE_MINUTES } from "@/lib/form-constants";
 
 const UZ_MONTHS = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
 const UZ_DAYS   = ["Yakshanba","Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba"];
@@ -25,6 +26,14 @@ const STATUS_CFG: Record<Status, { label: string; short: string; cls: string; ac
   SABABLI:    { label: "Sababli",    short: "Sababli", cls: "text-blue-600 dark:text-blue-400",    activeCls: "bg-blue-500 text-white border-blue-500",     icon: FileCheck },
 };
 const ALL_STATUSES: Status[] = ["KELDI", "KELMADI", "KECH_KELDI", "SABABLI"];
+
+/** O'quvchining guruhdagi a'zoligi — davomat ro'yxati shu bo'yicha tuziladi. */
+type Membership = {
+  id: string;
+  groupId: string;
+  enrollmentStatus?: string;
+  leftAt?: string | null;
+};
 
 function addDays(date: Date, n: number) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
 function toDateStr(d: Date) {
@@ -44,13 +53,22 @@ export default function AttendancePage() {
   const [saving,        setSaving]        = useState(false);
   const [dirty,         setDirty]         = useState(false);
   const [savedFlash,    setSavedFlash]    = useState(false);
+  const [saveErr,       setSaveErr]       = useState("");
 
   const { data: groupsRaw, isLoading: groupsLoading } = useGroups({ status: "ACTIVE" });
   const groups: any[] = Array.isArray(groupsRaw) ? groupsRaw : [];
 
+  // Tanlangan guruh ro'yxatdan chiqib ketishi mumkin (holati o'zgardi, filial
+  // almashtirildi). Ilgari `selectedGroup` eski id bilan qolib ketardi:
+  // yuqorida "Faol guruh yo'q" yozilib turgani holda pastda o'sha guruh
+  // o'quvchilari ro'yxati chizilaverardi.
   useEffect(() => {
-    if (!selectedGroup && groups.length > 0) setSelectedGroup(groups[0].id);
-  }, [groups, selectedGroup]);
+    if (groupsLoading) return;
+    if (groups.length === 0) { if (selectedGroup) setSelectedGroup(""); return; }
+    if (!selectedGroup || !groups.some(g => g.id === selectedGroup)) {
+      setSelectedGroup(groups[0].id);
+    }
+  }, [groups, groupsLoading, selectedGroup]);
 
   const dateStr = toDateStr(currentDate);
   const isToday = currentDate.getTime() === today.getTime();
@@ -59,9 +77,19 @@ export default function AttendancePage() {
   const { data: studentsRaw, isLoading: studentsLoading } = useStudents(
     selectedGroup ? { groupId: selectedGroup } : undefined
   );
-  const allStudents:  any[] = Array.isArray(studentsRaw) ? studentsRaw : [];
-  const students:     any[] = allStudents.filter(s => s.isActive);
-  const sinovStudents:any[] = allStudents.filter(s => !s.isActive);
+  const allStudents: any[] = Array.isArray(studentsRaw) ? studentsRaw : [];
+
+  // Ro'yxat SHU GURUHDAGI a'zolik bo'yicha tuziladi, `Student.isActive`
+  // bo'yicha emas: u global bayroq — boshqa guruhda o'qiyotgan, bu guruhdan
+  // esa chiqib ketgan o'quvchi ham "faol" bo'lib ro'yxatda qolib ketardi.
+  const membership = (s: { groups?: Membership[] }): Membership | undefined =>
+    s.groups?.find(g => g.groupId === selectedGroup);
+  const enrolled = allStudents.filter(s => {
+    const sg = membership(s);
+    return !!sg && sg.enrollmentStatus !== "CHIQIB_KETGAN" && !sg.leftAt;
+  });
+  const students     = enrolled.filter(s => membership(s)?.enrollmentStatus !== "SINOV");
+  const sinovStudents = enrolled.filter(s => membership(s)?.enrollmentStatus === "SINOV");
 
   // Load existing attendance for date+group
   useEffect(() => {
@@ -102,9 +130,16 @@ export default function AttendancePage() {
   const lessonStarted = !isToday || !group || (() => {
     const [h, m] = group.startTime.split(":").map(Number);
     const now = new Date();
-    return now.getHours() * 60 + now.getMinutes() >= h * 60 + m;
+    return now.getHours() * 60 + now.getMinutes() >= h * 60 + m - ATTENDANCE_GRACE_MINUTES;
   })();
-  const canMark = !!isLessonDay && lessonStarted;
+  // Guruh ochilgan sanadan oldingi (yoki tugagandan keyingi) kunni backend
+  // baribir rad etadi — buni interfeysda ham ko'rsatamiz, aks holda belgilash
+  // ochiq turadi va faqat "Saqlash" bosilganda xato chiqadi.
+  const groupStartStr = group?.startDate ? String(group.startDate).slice(0, 10) : null;
+  const groupEndStr   = group?.endDate   ? String(group.endDate).slice(0, 10)   : null;
+  const beforeGroupStart = !!groupStartStr && dateStr < groupStartStr;
+  const afterGroupEnd    = !!groupEndStr   && dateStr > groupEndStr;
+  const canMark = !!isLessonDay && lessonStarted && !beforeGroupStart && !afterGroupEnd;
 
   function setStatus(studentId: string, status: Status) {
     if (!canMark) return;
@@ -125,6 +160,7 @@ export default function AttendancePage() {
   async function saveAttendance() {
     if (!selectedGroup || students.length === 0 || !canMark) return;
     setSaving(true);
+    setSaveErr("");
     try {
       const records = students
         .filter(s => localStatus[s.id]) // faqat belgilanganlar
@@ -139,14 +175,24 @@ export default function AttendancePage() {
         })
         .filter(r => r.studentGroupId);
 
-      await fetch("/api/attendance", {
+      const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ groupId: selectedGroup, date: dateStr, records }),
       });
+      // Javob tekshirilmasa, server rad etgan (dars boshlanmagan, ruxsat yo'q,
+      // obuna tugagan) holatda ham ekranda "Saqlandi" chiqib, butun jadval
+      // jimgina yo'qolardi.
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSaveErr(data?.error ?? "Saqlanmadi — qayta urinib ko'ring");
+        return;
+      }
       setDirty(false);
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
+    } catch {
+      setSaveErr("Serverga ulanib bo'lmadi");
     } finally {
       setSaving(false);
     }
@@ -214,7 +260,12 @@ export default function AttendancePage() {
                 ))
             }
             {!groupsLoading && groups.length === 0 && (
-              <p className="text-sm text-neutral-400">Faol guruh yo'q</p>
+              <p className="text-sm text-neutral-400">
+                Faol guruh yo'q — davomat faqat boshlangan guruhlarda belgilanadi.{" "}
+                <Link href="/groups" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+                  Guruhlar
+                </Link>
+              </p>
             )}
           </div>
         </div>
@@ -229,8 +280,20 @@ export default function AttendancePage() {
           </div>
         )}
 
+        {/* Guruh hali ochilmagan / allaqachon tugagan — ogohlantirish */}
+        {group && (beforeGroupStart || afterGroupEnd) && (
+          <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl px-4 py-3">
+            <CalendarDays className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-[13px] text-amber-700 dark:text-amber-400">
+              {beforeGroupStart
+                ? <>Guruh <strong>{groupStartStr}</strong> dan boshlangan — undan oldingi kunga davomat qo'yib bo'lmaydi.</>
+                : <>Guruh <strong>{groupEndStr}</strong> da tugagan — undan keyingi kunga davomat qo'yib bo'lmaydi.</>}
+            </p>
+          </div>
+        )}
+
         {/* Dars kuni emas — ogohlantirish */}
-        {group && !isLessonDay && (
+        {group && !isLessonDay && !beforeGroupStart && !afterGroupEnd && (
           <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl px-4 py-3">
             <CalendarDays className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <p className="text-[13px] text-amber-700 dark:text-amber-400">
@@ -242,7 +305,7 @@ export default function AttendancePage() {
         )}
 
         {/* Dars kuni, lekin hali boshlanmagan — ogohlantirish */}
-        {group && isLessonDay && !lessonStarted && (
+        {group && isLessonDay && !lessonStarted && !beforeGroupStart && !afterGroupEnd && (
           <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl px-4 py-3">
             <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
             <p className="text-[13px] text-amber-700 dark:text-amber-400">
@@ -407,9 +470,14 @@ export default function AttendancePage() {
               ? <><strong className="text-neutral-700 dark:text-neutral-200">{stats.unmarked}</strong> ta belgilanmagan</>
               : <span className="text-green-600 dark:text-green-400 font-semibold">Barchasi belgilandi ✓</span>}
           </div>
-          {savedFlash && (
+          {savedFlash && !saveErr && (
             <span className="flex items-center gap-1 text-[12px] font-semibold text-green-600 dark:text-green-400">
               <Check className="w-4 h-4" /> Saqlandi
+            </span>
+          )}
+          {saveErr && (
+            <span className="text-[12px] font-semibold text-red-600 dark:text-red-400">
+              {saveErr}
             </span>
           )}
           <button onClick={saveAttendance} disabled={saving || !dirty}

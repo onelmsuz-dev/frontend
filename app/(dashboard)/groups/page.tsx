@@ -168,6 +168,20 @@ export default function GroupsPage() {
     }));
   }
 
+  // Status va boshlanish sanasi bir-biriga bog'liq (server ham shu qoidani
+  // qo'llaydi) — foydalanuvchi natijani oldindan bilib tursin.
+  const statusHint = (() => {
+    const startsLater = form.startDate > todayStr();
+    if (form.status === "COMPLETED") return undefined;
+    if (form.status === "ACTIVE" && startsLater) {
+      return editId
+        ? `Guruh bugundan (${todayStr()}) ochilgan hisoblanadi`
+        : "Boshlanish sanasi kelguncha 'Keladi' bo'lib turadi";
+    }
+    if (form.status === "UPCOMING" && !startsLater) return "Boshlanish sanasi kelgan — guruh 'Faol' bo'ladi";
+    return undefined;
+  })();
+
   async function submit() {
     if (!form.name.trim() || !form.courseId || !form.teacherId) { setError("Nom, kurs va o'qituvchi majburiy"); return; }
     if (form.scheduleDays.length === 0) { setError("Kamida 1 ta dars kuni tanlang"); return; }
@@ -181,7 +195,10 @@ export default function GroupsPage() {
         startDate: form.startDate, status: form.status,
       };
       if (form.roomId) body.roomId = form.roomId;
-      if (form.endDate) body.endDate = form.endDate;
+      // Tahrirda bo'sh qiymat ham yuboriladi — aks holda tugash sanasini
+      // olib tashlab bo'lmasdi (server "yuborilmadi" ni "o'zgarmadi" deb
+      // tushunardi va guruh o'z-o'zidan "Tugagan" bo'lib qolaverardi).
+      if (editId || form.endDate) body.endDate = form.endDate;
       if (!editId && activeBranchId) body.branchId = activeBranchId;
 
       const res = await fetch(editId ? `/api/groups/${editId}` : "/api/groups", {
@@ -331,7 +348,7 @@ export default function GroupsPage() {
             <Input type="number" value={form.maxStudents} min="1" max="50"
               onChange={e => setForm(p => ({...p, maxStudents: e.target.value}))} className="h-10" />
           </FormField>
-          <FormField label="Status">
+          <FormField label="Status" hint={statusHint}>
             <select value={form.status} onChange={e => setForm(p => ({...p, status: e.target.value}))} className={selectCls}>
               <option value="ACTIVE">Faol</option>
               <option value="UPCOMING">Keladi</option>

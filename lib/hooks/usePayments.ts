@@ -13,11 +13,19 @@ async function poster(url: string, { arg }: { arg: unknown }) {
   return r.json();
 }
 
-export function usePayments(params?: { studentId?: string; groupId?: string; month?: string }) {
+export function usePayments(params?: {
+  studentId?: string;
+  groupId?: string;
+  month?: string;
+  method?: string;
+  date?: string;
+}) {
   const qs = useBranchQueryString({
     studentId: params?.studentId,
     groupId:   params?.groupId,
     month:     params?.month,
+    method:    params?.method,
+    date:      params?.date,
   });
   return useSWR(`/api/payments${qs}`, fetcher);
 }
