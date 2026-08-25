@@ -335,7 +335,7 @@ export function AdsFunnel() {
 
                 <Field label="Telefon raqamingiz" required>
                   <div className="flex items-stretch gap-2">
-                    <span className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-[14px] font-semibold text-slate-600">
+                    <span className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 px-3 text-[16px] font-semibold text-slate-600 sm:text-[14px]">
                       <Phone className="h-3.5 w-3.5 text-slate-400" /> +998
                     </span>
                     <input
@@ -414,8 +414,18 @@ export function AdsFunnel() {
 
 // ── Qayta ishlatiladigan bo'laklar ────────────────────────────────────────
 
+/**
+ * DIQQAT: mobilda shrift 16px — 14px EMAS.
+ *
+ * iOS Safari fokusdagi maydon shrifti 16px dan kichik bo'lsa sahifani
+ * avtomatik kattalashtiradi (zoom) va odam matn yozgach sahifa qiyshaygan
+ * holda qoladi. `maximum-scale=1` bilan zoomni o'chirish — noto'g'ri
+ * yechim: u ko'zi ojiz foydalanuvchiga sahifani kattalashtirish imkonini
+ * ham yopadi. Shu sabab kichik ekranda 16px, `sm` dan boshlab dizayndagi
+ * 14px.
+ */
 const FIELD_BASE =
-  "w-full rounded-2xl border border-slate-200 bg-white px-3.5 text-[14px] text-slate-900 " +
+  "w-full rounded-2xl border border-slate-200 bg-white px-3.5 text-[16px] text-slate-900 sm:text-[14px] " +
   "outline-none transition-colors placeholder:text-slate-300 " +
   "focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
 
