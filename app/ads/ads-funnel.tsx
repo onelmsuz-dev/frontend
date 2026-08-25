@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   ArrowLeft, ArrowRight, Check, Clock3, Loader2, AlertCircle,
-  ShieldCheck, Headphones, Sparkles, User, Phone,
+  ShieldCheck, Headphones, Sparkles, User, Phone, Building2,
 } from "lucide-react";
 import { ADS_QUESTIONS } from "@/lib/ads-questions";
 
@@ -33,7 +33,7 @@ export function AdsFunnel() {
   const [step,    setStep]    = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [name,    setName]    = useState("");
-  const [surname, setSurname] = useState("");
+  const [center,  setCenter]  = useState("");
   const [phone,   setPhone]   = useState("");
   const [honey,   setHoney]   = useState("");
   const [sending, setSending] = useState(false);
@@ -96,7 +96,7 @@ export function AdsFunnel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name:  name.trim(),
-          ...(surname.trim() ? { surname: surname.trim() } : {}),
+          ...(center.trim() ? { center: center.trim() } : {}),
           phone: "+998" + phone.replace(/\D/g, ""),
           ...answers,
           ...(honey ? { contact_ref: honey } : {}),
@@ -315,14 +315,17 @@ export function AdsFunnel() {
                   </div>
                 </Field>
 
-                <Field label="Familiyangiz" optional>
+                {/* Markaz nomi majburiy EMAS: reklama formasida har bir
+                    majburiy maydon konversiyani pasaytiradi. To'ldirilsa
+                    sotuvchi qo'ng'iroqdan oldin markazni topib oladi. */}
+                <Field label="Markaz nomi" optional>
                   <div className="relative">
-                    <User className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-300" />
+                    <Building2 className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-300" />
                     <input
-                      value={surname}
-                      onChange={e => setSurname(e.target.value)}
-                      autoComplete="family-name"
-                      placeholder="Karimov"
+                      value={center}
+                      onChange={e => setCenter(e.target.value)}
+                      autoComplete="organization"
+                      placeholder="Bilim Ziyo o'quv markazi"
                       className={`${INPUT} pl-10`}
                     />
                   </div>
