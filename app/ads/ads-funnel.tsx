@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Check, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Clock3, Loader2, AlertCircle, ShieldCheck } from "lucide-react";
 import { ADS_QUESTIONS } from "@/lib/ads-questions";
 
 /**
@@ -23,6 +23,9 @@ type Answers = Record<string, string>;
 const TOTAL_STEPS = ADS_QUESTIONS.length + 1; // savollar + kontakt qadami
 
 export function AdsFunnel() {
+  // Intro ATAYLAB alohida holat, `step = -1` emas: qadam raqami va progress
+  // hisobi manfiy qiymat bilan chalkashardi ("0-qadam / 6").
+  const [started, setStarted] = useState(false);
   const [step,    setStep]    = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [name,    setName]    = useState("");
@@ -82,6 +85,43 @@ export function AdsFunnel() {
     }
   }
 
+  // ── Intro ───────────────────────────────────────────────────────────────
+  //
+  // Reklamadan kelgan odam "nega men bu savollarga javob berishim kerak?"
+  // degan savolga javob olmasa, birinchi savoldayoq chiqib ketadi. Shu sabab
+  // avval bir jumlada nima taklif qilinayotgani aytiladi.
+  if (!started) {
+    return (
+      <Shell>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/50 sm:p-8">
+          <h1 className="text-[22px] leading-snug font-bold text-slate-900 sm:text-[26px]">
+            O&apos;quv markazingiz uchun CRM tizim
+          </h1>
+          <p className="mt-3 text-[14px] leading-relaxed text-slate-600">
+            Biz o&apos;quv markazlariga tizim o&apos;rnatib beramiz — davomat,
+            to&apos;lovlar, qarzdorlik va hisobotlar bir joyda.
+          </p>
+          <p className="mt-2 text-[14px] leading-relaxed text-slate-600">
+            {/* Savollar soni katalogdan: 6-savol yoqilsa matn o'zi yangilanadi. */}
+            Markazingizga mosini tanlash uchun {ADS_QUESTIONS.length} ta qisqa
+            savol beramiz.
+          </p>
+
+          <button
+            onClick={() => setStarted(true)}
+            className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-[15px] font-semibold text-white transition-colors hover:bg-blue-700"
+          >
+            Boshladik <ArrowRight className="h-4 w-4" />
+          </button>
+
+          <p className="mt-3 flex items-center justify-center gap-1.5 text-[12px] text-slate-400">
+            <Clock3 className="h-3.5 w-3.5" /> ~1 daqiqa vaqtingizni oladi
+          </p>
+        </div>
+      </Shell>
+    );
+  }
+
   // ── Muvaffaqiyat ────────────────────────────────────────────────────────
   if (done) {
     return (
@@ -127,14 +167,14 @@ export function AdsFunnel() {
       </div>
 
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/50 sm:p-8">
-        {step > 0 && (
-          <button
-            onClick={() => { setStep(s => s - 1); setErr(null); }}
-            className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-400 transition-colors hover:text-slate-700"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Orqaga
-          </button>
-        )}
+        {/* Birinchi savolda "Orqaga" intro'ga qaytaradi — odam nima uchun
+            javob berayotganini qayta o'qiy olsin. */}
+        <button
+          onClick={() => { setErr(null); if (step === 0) setStarted(false); else setStep(s => s - 1); }}
+          className="mb-4 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-400 transition-colors hover:text-slate-700"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Orqaga
+        </button>
 
         {/* ── Savol qadami ── */}
         {question && (
