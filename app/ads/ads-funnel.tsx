@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   ArrowLeft, ArrowRight, Check, Clock3, Loader2, AlertCircle,
-  ShieldCheck, Headphones, Sparkles, User, Phone, Building2,
+  ShieldCheck, Headphones, Sparkles, User, Phone, Building2, MessageSquare,
 } from "lucide-react";
 import { ADS_QUESTIONS } from "@/lib/ads-questions";
 
@@ -34,6 +34,7 @@ export function AdsFunnel() {
   const [answers, setAnswers] = useState<Answers>({});
   const [name,    setName]    = useState("");
   const [center,  setCenter]  = useState("");
+  const [message, setMessage] = useState("");
   const [phone,   setPhone]   = useState("");
   const [honey,   setHoney]   = useState("");
   const [sending, setSending] = useState(false);
@@ -97,6 +98,7 @@ export function AdsFunnel() {
         body: JSON.stringify({
           name:  name.trim(),
           ...(center.trim() ? { center: center.trim() } : {}),
+          ...(message.trim() ? { message: message.trim() } : {}),
           phone: "+998" + phone.replace(/\D/g, ""),
           ...answers,
           ...(honey ? { contact_ref: honey } : {}),
@@ -296,12 +298,12 @@ export function AdsFunnel() {
               <h1 className="mt-2 text-[20px] leading-snug font-bold text-balance text-slate-900 sm:text-[23px]">
                 Siz bilan qanday bog&apos;lanaylik?
               </h1>
-              <p className="mt-2 text-[13px] leading-relaxed text-pretty text-slate-500">
+              <p className="mt-2 text-[13px] leading-relaxed text-pretty text-slate-500 [@media(max-height:720px)]:hidden">
                 Mutaxassisimiz qo&apos;ng&apos;iroq qilib, markazingizga mos
                 yechimni ko&apos;rsatadi.
               </p>
 
-              <div className="mt-5 space-y-3.5">
+              <div className="mt-5 space-y-3.5 [@media(max-height:720px)]:mt-3 [@media(max-height:720px)]:space-y-2.5">
                 <Field label="Ismingiz" required>
                   <div className="relative">
                     <User className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-slate-300" />
@@ -343,6 +345,21 @@ export function AdsFunnel() {
                       autoComplete="tel-national"
                       placeholder="90 123 45 67"
                       className={`${INPUT} tabular-nums`}
+                    />
+                  </div>
+                </Field>
+
+                {/* Izoh eng oxirida: majburiy maydonlar birinchi ko'rinsin,
+                    ixtiyoriysi ularni pastga surib yubormasin. */}
+                <Field label="Izoh" optional>
+                  <div className="relative">
+                    <MessageSquare className="pointer-events-none absolute top-3.5 left-3.5 h-4 w-4 text-slate-300" />
+                    <textarea
+                      value={message}
+                      onChange={e => setMessage(e.target.value)}
+                      maxLength={1000}
+                      placeholder="Qo'shimcha savol yoki ma'lumot..."
+                      className={`${TEXTAREA} pl-10`}
                     />
                   </div>
                 </Field>
@@ -397,10 +414,21 @@ export function AdsFunnel() {
 
 // ── Qayta ishlatiladigan bo'laklar ────────────────────────────────────────
 
-const INPUT =
-  "h-12 w-full rounded-2xl border border-slate-200 bg-white px-3.5 text-[14px] text-slate-900 " +
+const FIELD_BASE =
+  "w-full rounded-2xl border border-slate-200 bg-white px-3.5 text-[14px] text-slate-900 " +
   "outline-none transition-colors placeholder:text-slate-300 " +
   "focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
+
+const INPUT = `${FIELD_BASE} h-12 [@media(max-height:720px)]:h-11`;
+
+/**
+ * Izoh maydoni past ekranda bir qatorga qisqaradi.
+ *
+ * Sababi: u qo'shilgach 1280x620 va iPhone SE da "Arizani yuborish" tugmasi
+ * ekrandan chiqib ketdi. Balandlik `rows` bilan emas, CSS bilan boshqariladi
+ * — `rows` media so'rovga bo'ysunmaydi.
+ */
+const TEXTAREA = `${FIELD_BASE} h-[76px] resize-none py-3 [@media(max-height:720px)]:h-11 [@media(max-height:720px)]:py-2.5`;
 
 const TRUST = [
   { icon: ShieldCheck, label: "Ma'lumotlar xavfsiz" },
