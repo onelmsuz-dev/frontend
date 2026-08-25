@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { todayStr } from "@/lib/form-constants";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { mutate } from "swr";
+import { businessToday } from "@/lib/time";
 import {
   ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, List, ChevronDown, Plus,
 } from "lucide-react";
@@ -166,7 +168,9 @@ function MiniCal({ pickerMonth, onChangeMonth, today, selDay, weekStart, view, o
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function SchedulePage() {
-  const today = useMemo(() => { const d=new Date(); d.setHours(0,0,0,0); return d; }, []);
+  // "Bugun" — Toshkent bo'yicha (qurilma soati boshqa mintaqada bo'lsa ham).
+  const router = useRouter();
+  const today = useMemo(() => businessToday(), []);
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "SUPER_ADMIN";
 
@@ -215,7 +219,7 @@ export default function SchedulePage() {
   // Convert groups to flat schedule entries
   const schedule = useMemo(() => {
     const entries: Array<{
-      id: string; groupName: string; teacherName: string; courseName: string;
+      id: string; groupId: string; groupName: string; teacherName: string; courseName: string;
       day: string; time: string; endTime: string; room: string; color: string;
       startDate: string; endDate: string | null; upcoming: boolean;
     }> = [];
@@ -225,6 +229,7 @@ export default function SchedulePage() {
         const dayName = DAY_MAP[d] ?? d;
         entries.push({
           id: `${g.id}-${d}`,
+          groupId:     g.id,
           groupName:   g.name,
           teacherName: g.teacher?.user?.name ?? "—",
           courseName:  g.course?.name ?? "—",
@@ -640,6 +645,12 @@ export default function SchedulePage() {
         <ErrorBox msg={darsError} />
       </Modal>
 
+      {/* Jadval tanasi — sarlavha kartochkasi bilan BIR XIL o'lchamda ichkariga
+          suriladi. Ilgari sarlavha suzuvchi yumaloq kartochka, tana esa chetdan
+          chetgacha tekis edi va ikkalasi ustma-ust tushib qolgandek ko'rinardi. */}
+      <div className="flex-1 flex flex-col overflow-hidden mt-2 lg:mt-3 lg:mx-5 lg:mb-4
+        lg:rounded-2xl lg:border lg:border-white/60 lg:dark:border-white/10">
+
       {/* ── Toolbar ────────────────────────────────────────────────────────── */}
       <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-white/50 dark:border-white/10 glass-panel">
         <div className="flex p-1 gap-0.5 glass-soft rounded-xl">
@@ -801,7 +812,12 @@ export default function SchedulePage() {
                   const height = blockH(entry.time, entry.endTime);
                   return (
                     <div key={entry.id}
-                      className={cn("absolute inset-x-3 rounded-xl overflow-hidden cursor-pointer border border-l-[4px] shadow-sm transition-all hover:brightness-95 hover:shadow-md",
+                      role="link"
+                      tabIndex={0}
+                      title={`${entry.groupName} — guruhni ochish`}
+                      onClick={() => router.push(`/groups/${entry.groupId}`)}
+                      onKeyDown={(e) => { if (e.key === "Enter") router.push(`/groups/${entry.groupId}`); }}
+                      className={cn("absolute inset-x-3 rounded-xl overflow-hidden cursor-pointer border border-l-[4px] shadow-sm transition-all hover:brightness-95 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500",
                         entry.color, entry.upcoming && "border-dashed opacity-80")}
                       style={{ top: top+2, height: Math.max(height-4,24) }}>
                       <div className="px-3 py-2 h-full flex flex-col overflow-hidden">
@@ -885,7 +901,12 @@ export default function SchedulePage() {
                     const compact = height < 52;
                     return (
                       <div key={entry.id}
-                        className={cn("absolute inset-x-1 rounded-lg overflow-hidden cursor-pointer border border-l-[3px] shadow-sm transition-all hover:brightness-95 hover:shadow-md",
+                        role="link"
+                        tabIndex={0}
+                        title={`${entry.groupName} — guruhni ochish`}
+                        onClick={() => router.push(`/groups/${entry.groupId}`)}
+                        onKeyDown={(e) => { if (e.key === "Enter") router.push(`/groups/${entry.groupId}`); }}
+                        className={cn("absolute inset-x-1 rounded-lg overflow-hidden cursor-pointer border border-l-[3px] shadow-sm transition-all hover:brightness-95 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500",
                           entry.color, entry.upcoming && "border-dashed opacity-80")}
                         style={{ top: top+2, height: Math.max(height-4,20) }}>
                         <div className="px-2 py-1.5 h-full flex flex-col overflow-hidden">
@@ -955,6 +976,8 @@ export default function SchedulePage() {
           </div>
         </div>
       )}
+
+      </div>
     </div>
   );
 }

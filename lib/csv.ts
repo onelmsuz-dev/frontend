@@ -42,8 +42,19 @@ export function exportPhone(v: unknown): string {
   return String(v ?? "").replace(/\D/g, "");
 }
 
+/**
+ * `sep=;` — Excel uchun ajratgich ko'rsatmasi.
+ *
+ * Excel foydalanuvchining lokal sozlamasidagi ajratgichni ishlatadi: ingliz
+ * lokalida `,` kutiladi va `;` bilan yozilgan fayl BITTA USTUNGA tushib
+ * qoladi. Bu qator buni kafolatli hal qiladi. O'z parserimiz uni tashlab
+ * yuboradi (`parseDelimited`), ya'ni yuklab olingan namunani to'ldirib
+ * qaytarib yuklash ishlaydi.
+ */
+const SEP_HINT = `sep=${SEP}\r\n`;
+
 export function toCsv(headers: string[], rows: unknown[][]): string {
-  return BOM + [headers, ...rows].map((r) => r.map(cell).join(SEP)).join("\r\n");
+  return BOM + SEP_HINT + [headers, ...rows].map((r) => r.map(cell).join(SEP)).join("\r\n") + "\r\n";
 }
 
 /** Matnni brauzerda fayl sifatida yuklab beradi. */
@@ -67,7 +78,13 @@ export function downloadFile(filename: string, content: string, mime = "text/csv
  * foydalanuvchi qaysi yo'l bilan kelganini o'ylab o'tirmasin.
  */
 export function parseDelimited(text: string): string[][] {
-  const src = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
+  let src = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n");
+  if (!src.trim()) return [];
+
+  // Excel uchun qo'yilgan `sep=;` ko'rsatmasi ma'lumot emas — tashlab yuboramiz
+  // (o'zimiz yuklab bergan namunani qaytarib yuklash ishlashi uchun).
+  const sepDirective = /^sep=(.)\n/i.exec(src);
+  if (sepDirective) src = src.slice(sepDirective[0].length);
   if (!src.trim()) return [];
 
   const firstLine = src.split("\n")[0];

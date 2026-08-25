@@ -22,6 +22,12 @@ interface Props {
   onDone: () => void;
   canUpdate: boolean;
   canSendSms: boolean;
+  /**
+   * Tashqaridan SMS oynasini ochish (o'quvchilar ro'yxatidagi qatordagi SMS
+   * tugmasi bitta o'quvchini tanlab, shu oynani ochadi — mantiq takrorlanmasin).
+   */
+  smsOpen?: boolean;
+  onSmsOpenChange?: (open: boolean) => void;
 }
 
 const selectCls =
@@ -39,9 +45,17 @@ const selectCls =
  * guruhdan chiqarib yuborish qaytarib bo'lmaydigan ish, foydalanuvchi
  * nima bo'layotganini aniq ko'rishi kerak.
  */
-export function StudentBulkBar({ selected, groups, onClear, onDone, canUpdate, canSendSms }: Props) {
-  const [action,   setAction]   = useState<BulkAction | null>(null);
-  const [smsOpen,  setSmsOpen]  = useState(false);
+export function StudentBulkBar({
+  selected, groups, onClear, onDone, canUpdate, canSendSms,
+  smsOpen: smsOpenProp, onSmsOpenChange,
+}: Props) {
+  const [action,       setAction]       = useState<BulkAction | null>(null);
+  const [smsOpenLocal, setSmsOpenLocal] = useState(false);
+  const smsOpen = smsOpenProp ?? smsOpenLocal;
+  const setSmsOpen = (v: boolean) => {
+    setSmsOpenLocal(v);
+    onSmsOpenChange?.(v);
+  };
   const [groupId,  setGroupId]  = useState("");
   const [asTrial,  setAsTrial]  = useState(false);
   const [message,  setMessage]  = useState("");

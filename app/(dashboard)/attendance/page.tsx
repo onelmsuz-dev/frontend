@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { WEEKDAY_SHORT, ATTENDANCE_GRACE_MINUTES } from "@/lib/form-constants";
+import { businessMinutesOfDay, businessToday } from "@/lib/time";
 
 const UZ_MONTHS = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
 const UZ_DAYS   = ["Yakshanba","Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba"];
@@ -44,7 +45,8 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 export default function AttendancePage() {
-  const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
+  // "Bugun" — Toshkent bo'yicha; backend ham aynan shu mintaqada qaror qiladi.
+  const today = useMemo(() => businessToday(), []);
 
   const [currentDate,   setCurrentDate]   = useState(new Date(today));
   const [selectedGroup, setSelectedGroup] = useState<string>("");
@@ -129,8 +131,8 @@ export default function AttendancePage() {
   // kunlar uchun cheklov yo'q (kun allaqachon to'liq o'tgan).
   const lessonStarted = !isToday || !group || (() => {
     const [h, m] = group.startTime.split(":").map(Number);
-    const now = new Date();
-    return now.getHours() * 60 + now.getMinutes() >= h * 60 + m - ATTENDANCE_GRACE_MINUTES;
+    // Server ham shu mintaqada tekshiradi — ikkalasi bir xil javob bersin.
+    return businessMinutesOfDay() >= h * 60 + m - ATTENDANCE_GRACE_MINUTES;
   })();
   // Guruh ochilgan sanadan oldingi (yoki tugagandan keyingi) kunni backend
   // baribir rad etadi — buni interfeysda ham ko'rsatamiz, aks holda belgilash

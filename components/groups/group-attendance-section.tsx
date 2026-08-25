@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ATTENDANCE_GRACE_MINUTES } from "@/lib/form-constants";
+import { businessMinutesOfDay, businessToday } from "@/lib/time";
 
 type Status = "KELDI" | "KELMADI" | "KECH_KELDI" | "SABABLI";
 
@@ -64,7 +65,8 @@ export function GroupAttendanceSection({
   groupId, scheduleDays, startTime, startDate, endDate, studentGroups,
   onChanged, canUpdate = true,
 }: Props) {
-  const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+  // Toshkent bo'yicha — backend ham aynan shu mintaqada qaror qiladi.
+  const today = useMemo(() => businessToday(), []);
   const [currentDate, setCurrentDate] = useState(new Date(today));
   const [localStatus, setLocalStatus] = useState<Record<string, Status>>({});
   const [dirty,        setDirty]      = useState(false);
@@ -92,8 +94,9 @@ export function GroupAttendanceSection({
   const lessonStarted = !isToday || (() => {
     const [h, m] = (startTime ?? "00:00").split(":").map(Number);
     if (!Number.isFinite(h) || !Number.isFinite(m)) return true;
-    const now = new Date(nowMs);
-    return now.getHours() * 60 + now.getMinutes() >= h * 60 + m - ATTENDANCE_GRACE_MINUTES;
+    // Jonli soat (nowMs) — Toshkent daqiqalariga aylantiriladi; qurilma
+    // mintaqasi boshqacha bo'lsa ham server bilan bir xil javob chiqadi.
+    return businessMinutesOfDay(new Date(nowMs)) >= h * 60 + m - ATTENDANCE_GRACE_MINUTES;
   })();
   // Guruh ochilishi/tugashi ham hisobga olinadi. Ilgari bu yerda faqat dars
   // kuni va vaqti tekshirilardi: 26-avgustda ochiladigan guruhda 24-avgust

@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Search, Phone, Edit, GraduationCap, CheckCircle, DollarSign, Trash2,
+  Search, Phone, MessageSquare, Edit, GraduationCap, CheckCircle, DollarSign, Trash2,
   UserCheck, Clock, Upload, Download, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -87,6 +87,10 @@ export default function StudentsPage() {
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [activating,   setActivating]   = useState<string | null>(null);
   const [selectedIds,  setSelectedIds]  = useState<Set<string>>(new Set());
+  // Qatordagi SMS tugmasi: shu o'quvchini tanlab, ommaviy paneldagi SMS
+  // oynasini ochadi — yuborish mantiqi bitta joyda qoladi.
+  const [smsOpen,      setSmsOpen]      = useState(false);
+  const smsToOne = (id: string) => { setSelectedIds(new Set([id])); setSmsOpen(true); };
 
   // Filtrlar SERVERGA yuboriladi — javob 1000 ta bilan cheklangani uchun
   // brauzerda filtrlash katta markazda to'liq natija bermasdi.
@@ -442,6 +446,12 @@ export default function StudentsPage() {
                               className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
                               <Phone className="w-3.5 h-3.5" />
                             </a>
+                            {canSendSms && (
+                              <button onClick={() => smsToOne(s.id)} title="SMS yuborish"
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                                <MessageSquare className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                             {canDelete && (
                               <button onClick={() => setDeleteTarget(s)} title="O'chirish"
                                 className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
@@ -477,6 +487,8 @@ export default function StudentsPage() {
           onDone={revalidate}
           canUpdate={canUpdate}
           canSendSms={canSendSms}
+          smsOpen={smsOpen}
+          onSmsOpenChange={setSmsOpen}
         />
       </div>
     </div>
