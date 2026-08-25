@@ -19,7 +19,7 @@ const footerLinks = {
     { label: "Biz haqimizda", href: "/about" },
     { label: "Blog", href: "/blog" },
     { label: "Hamkorlik", href: "/partners" },
-    { label: "Bog'lanish", href: "/contact" },
+    { label: "Bog'lanish", href: "/#contact" },
   ],
   Huquqiy: [
     { label: "Maxfiylik siyosati", href: "/privacy" },

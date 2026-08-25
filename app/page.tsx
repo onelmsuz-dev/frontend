@@ -10,6 +10,7 @@ import { TestimonialsSection } from "@/components/landing/testimonials-section";
 import { FaqSection } from "@/components/landing/faq-section";
 import { faqItems } from "@/components/landing/faq-data";
 import { CtaSection } from "@/components/landing/cta-section";
+import { ContactSection } from "@/components/landing/contact-section";
 import { LandingFooter } from "@/components/landing/landing-footer";
 
 // ─── SEO Metadata ──────────────────────────────────────────────────────────────
@@ -274,6 +275,7 @@ export default function LandingPage() {
           <TestimonialsSection />
           <FaqSection />
           <CtaSection />
+          <ContactSection />
         </main>
         <LandingFooter />
       </div>

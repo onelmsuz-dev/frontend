@@ -10,6 +10,7 @@ const navLinks = [
   { label: "Qanday ishlaydi", href: "#how-it-works" },
   { label: "Narxlar", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
+  { label: "Bog'lanish", href: "#contact" },
 ];
 
 export function LandingHeader() {
