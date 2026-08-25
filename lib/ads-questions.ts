@@ -9,6 +9,10 @@
  * Nega 5 ta savol: reklama sahifasida har bir qo'shimcha qadam konversiyani
  * pasaytiradi. Shu 5 tasi leadni segmentlash uchun yetarli — markaz
  * kattaligi, og'riq nuqtasi va sotib olishga tayyorligi.
+ *
+ * Nega har savolda ENG KO'PI 4 ta variant: ro'yxat uzun bo'lsa odam o'qimay
+ * birinchisini bosadi. Ortiqcha variantlar o'chirilmagan — yaqinlari
+ * BIRLASHTIRILGAN, ya'ni qamrov o'sha, tanlash esa osonlashgan.
  */
 
 export interface AdsQuestion {
@@ -27,8 +31,7 @@ export const ADS_QUESTIONS: AdsQuestion[] = [
     options: [
       { value: "1-100",    label: "1–100" },
       { value: "101-300",  label: "101–300" },
-      { value: "301-500",  label: "301–500" },
-      { value: "501-1000", label: "501–1000" },
+      { value: "301-1000", label: "301–1000" },
       { value: "1000+",    label: "1000+" },
     ],
   },
@@ -36,37 +39,30 @@ export const ADS_QUESTIONS: AdsQuestion[] = [
     id: "problem",
     title: "Markazingizni boshqarishda hozir eng katta muammo nimada?",
     options: [
-      { value: "davomat",     label: "Davomatni nazorat qilish" },
-      { value: "guruhlar",    label: "O'quvchilar va guruhlarni boshqarish" },
-      { value: "qarzdorlik",  label: "Qarzdorliklarni nazorat qilish" },
-      { value: "moliya",      label: "Oylik va moliyani hisoblash" },
-      { value: "hisobot",     label: "Hisobot va statistikalarni olish" },
-      { value: "aloqa",       label: "O'quvchilar bilan aloqa qilish" },
-      { value: "bir-nechta",  label: "Bir nechta muammo bor" },
+      { value: "davomat-guruh",  label: "Davomat va guruhlarni boshqarish" },
+      { value: "qarzdorlik",     label: "Qarzdorliklarni nazorat qilish" },
+      { value: "moliya-hisobot", label: "Moliya, oyliklar va hisobotlar" },
+      { value: "bir-nechta",     label: "Bir nechta muammo bor" },
     ],
   },
   {
     id: "tool",
-    title: "Hozir markazingizni boshqarish uchun qanday vositadan foydalanasiz?",
+    title: "Hozir markazingizni qanday boshqarasiz?",
     options: [
       { value: "excel",    label: "Excel / Google Sheets" },
-      { value: "daftar",   label: "Daftar yoki qo'lda" },
-      { value: "crm",      label: "Boshqa CRM / dastur" },
+      { value: "qolda",    label: "Qo'lda — daftar yoki tizim yo'q" },
       { value: "telegram", label: "Telegram orqali" },
-      { value: "yoq",      label: "Hech qanday tizim yo'q" },
+      { value: "crm",      label: "Boshqa CRM / dastur" },
     ],
   },
   {
     id: "goal",
     title: "Platformadan eng avvalo nimani hal qilishni kutasiz?",
     options: [
-      { value: "yagona-tizim",  label: "Markazni yagona tizim orqali boshqarish" },
-      { value: "davomat",       label: "Davomatni avtomatlashtirish" },
-      { value: "qarzdorlik",    label: "Qarzdorliklarni nazorat qilish" },
-      { value: "moliya",        label: "Moliyaviy hisob-kitoblarni yuritish" },
-      { value: "hisobot",       label: "Hisobot va statistikalarni olish" },
-      { value: "kommunikatsiya",label: "O'quvchilar bilan kommunikatsiyani avtomatlashtirish" },
-      { value: "boshqa",        label: "Boshqa" },
+      { value: "yagona-tizim",      label: "Markazni yagona tizim orqali boshqarish" },
+      { value: "avtomatlashtirish", label: "Davomat va to'lovlarni avtomatlashtirish" },
+      { value: "moliya-hisobot",    label: "Moliya va hisobotlarni yuritish" },
+      { value: "kommunikatsiya",    label: "O'quvchilar bilan kommunikatsiya" },
     ],
   },
   {
@@ -77,7 +73,6 @@ export const ADS_QUESTIONS: AdsQuestion[] = [
       { value: "1-oy",        label: "1 oy ichida" },
       { value: "1-3-oy",      label: "1–3 oy ichida" },
       { value: "organyapman", label: "Hozircha o'rganib chiqyapman" },
-      { value: "reja-yoq",    label: "Aniq rejam yo'q" },
     ],
   },
 ];
@@ -94,12 +89,9 @@ export const CRITERIA_QUESTION: AdsQuestion = {
   id: "criteria",
   title: "Platformani tanlashda siz uchun eng muhim mezon qaysi?",
   options: [
-    { value: "narx",      label: "Narxi" },
-    { value: "funksiya",  label: "Funksiyalar" },
-    { value: "qulaylik",  label: "Foydalanish qulayligi" },
-    { value: "telegram",  label: "Telegram integratsiyasi" },
-    { value: "analitika", label: "Hisobot va analitika" },
-    { value: "yordam",    label: "Texnik yordam" },
-    { value: "boshqa",    label: "Boshqa" },
+    { value: "narx",     label: "Narxi" },
+    { value: "funksiya", label: "Funksiyalar" },
+    { value: "qulaylik", label: "Foydalanish qulayligi" },
+    { value: "yordam",   label: "Texnik yordam" },
   ],
 };
