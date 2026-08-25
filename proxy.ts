@@ -53,6 +53,11 @@ export const proxy = auth((req) => {
   const isApiAuth = pathname.startsWith("/api/auth");
   if (isApiAuth) return NextResponse.next();
 
+  // `/ads` — reklama so'rovnomasi: har qanday hostda, login talab qilmasdan
+  // ochiladi. Login qilgan odam ham ko'ra olishi kerak (masalan admin
+  // reklamani tekshirayotgan bo'lishi mumkin), shu sabab shart yo'q.
+  if (pathname === "/ads") return NextResponse.next();
+
   /**
    * BFF proxy — `/api/*` HECH QACHON sahifaga yo'naltirilmaydi.
    *
