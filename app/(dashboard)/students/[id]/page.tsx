@@ -43,6 +43,14 @@ const ENROLL_CFG: Record<string, { label: string; cls: string }> = {
 const METHODS = ["NAQD", "KARTA", "CLICK", "PAYME"] as const;
 const METHOD_LABELS: Record<string, string> = { NAQD: "Naqd pul", KARTA: "Karta", CLICK: "Click", PAYME: "Payme" };
 
+/** O'quvchining guruhdagi a'zoligi. */
+type Membership = {
+  id?: string;
+  groupId: string;
+  enrollmentStatus?: string;
+  group?: { name?: string };
+};
+
 export default function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: student, isLoading, error, mutate: revalidate } = useStudent(id);
@@ -51,7 +59,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
   // Payment modal
   const [showPayModal, setShowPayModal] = useState(false);
-  const [payForm,      setPayForm]      = useState({ amount: "", method: "NAQD", note: "" });
+  const [payForm,      setPayForm]      = useState({ amount: "", method: "NAQD", note: "", groupId: "" });
   const [payErr,       setPayErr]       = useState("");
   const [paying,       setPaying]       = useState(false);
 
@@ -101,16 +109,32 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   }
 
   // ── Payment ──────────────────────────────────────────────────────────────────
+  // To'lov uchun mos a'zoliklar (guruhni tashlab ketganlar chiqarib tashlanadi)
+  const payableGroups: Membership[] = (student?.groups ?? []).filter(
+    (sg: Membership) => sg.enrollmentStatus !== "CHIQIB_KETGAN",
+  );
+  const selectedPayGroupId =
+    payableGroups.some((g: Membership) => g.groupId === payForm.groupId)
+      ? payForm.groupId
+      : payableGroups.length === 1
+        ? payableGroups[0].groupId
+        : "";
+
   async function submitPayment() {
     const amount = parseFloat(payForm.amount.replace(/\s/g, ""));
     if (!amount || amount <= 0) { setPayErr("Summa to'g'ri kiriting"); return; }
+    if (payableGroups.length > 1 && !selectedPayGroupId) {
+      setPayErr("Qaysi guruh uchun to'lov ekanini tanlang"); return;
+    }
     setPaying(true); setPayErr("");
     try {
-      // Chiqib ketmagan a'zolik — ilgari `groups[0]` olinardi va to'lov
-      // o'quvchi tashlab ketgan guruhga (ya'ni boshqa o'qituvchiga) yozilardi.
-      const sg = (student?.groups ?? []).find(
-        (g: { enrollmentStatus?: string }) => g.enrollmentStatus !== "CHIQIB_KETGAN",
-      ) ?? student?.groups?.[0];
+      // To'lov QAYSI guruh uchun ekani — foizli o'qituvchi maoshi shunga
+      // qarab hisoblanadi. Bir nechta faol a'zolik bo'lsa foydalanuvchi
+      // o'zi tanlaydi; ilgari birinchi qaytgan a'zolik olinardi va pul
+      // tasodifiy o'qituvchiga yozilardi.
+      const sg = payableGroups.find((g: Membership) => g.groupId === selectedPayGroupId)
+        ?? payableGroups[0]
+        ?? student?.groups?.[0];
       const res = await fetch("/api/payments", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,7 +146,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       if (!res.ok) { setPayErr(data.error ?? "Xatolik"); return; }
       revalidateAll();
       setShowPayModal(false);
-      setPayForm({ amount: "", method: "NAQD", note: "" });
+      setPayForm({ amount: "", method: "NAQD", note: "", groupId: "" });
     } catch { setPayErr("Serverga ulanib bo'lmadi"); }
     finally { setPaying(false); }
   }
@@ -272,6 +296,22 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowPayModal(false)}>Bekor</Button>
           </>
         }>
+        {payableGroups.length > 1 && (
+          <FormField label="Qaysi guruh uchun" required>
+            <select
+              value={selectedPayGroupId}
+              onChange={e => { setPayForm(p => ({ ...p, groupId: e.target.value })); setPayErr(""); }}
+              className="w-full h-10 px-3 text-[13px] rounded-xl glass-panel border border-white/60 dark:border-white/10 outline-none"
+            >
+              <option value="">Tanlang…</option>
+              {payableGroups.map((sg: Membership) => (
+                <option key={sg.groupId} value={sg.groupId}>
+                  {sg.group?.name ?? sg.groupId}
+                </option>
+              ))}
+            </select>
+          </FormField>
+        )}
         <FormField label="Summa (UZS)" required>
           <Input placeholder="500 000" value={payForm.amount} type="number" min="0"
             onChange={e => { setPayForm(p => ({...p, amount: e.target.value})); setPayErr(""); }}
