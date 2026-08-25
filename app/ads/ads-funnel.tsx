@@ -223,7 +223,7 @@ export function AdsFunnel() {
         */}
         <div
           key={step}
-          className="min-h-[336px] animate-in fade-in slide-in-from-right-3 duration-300 sm:min-h-[368px] motion-reduce:animate-none"
+          className="min-h-[336px] animate-in fade-in slide-in-from-right-3 duration-300 sm:min-h-[368px] motion-reduce:animate-none [@media(max-height:720px)]:min-h-0"
         >
           {/* ── Savol ── */}
           {question && (
@@ -503,7 +503,7 @@ function AsideProgress({ step }: { step: number }) {
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xl shadow-slate-300/25 sm:p-7">
+    <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xl shadow-slate-300/25 sm:p-7 [@media(max-height:720px)]:p-4">
       {children}
     </div>
   );
@@ -526,22 +526,38 @@ function Shell({ children, aside }: { children: React.ReactNode; aside?: React.R
       <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-96 w-96 rounded-full bg-blue-200/35 blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-32 h-[28rem] w-[28rem] rounded-full bg-indigo-200/30 blur-3xl" />
 
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-6 sm:px-6 sm:py-10">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col px-4 py-6 sm:px-6 sm:py-10 [@media(max-height:720px)]:py-4">
         {/* Brend */}
-        <div className="mb-6 flex items-center justify-center gap-2.5 lg:mb-10 lg:justify-start">
+        <div className="mb-6 flex items-center justify-center gap-2.5 lg:mb-10 lg:justify-start [@media(max-height:720px)]:mb-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/25">
             <span className="text-[15px] font-black text-white">O</span>
           </div>
           <div className="leading-none">
             <p className="text-[16px] font-bold text-slate-900">OneRoom</p>
-            <p className="mt-1 text-[11px] text-slate-400">Smart O&apos;quv Markaz Tizimi</p>
+            <p className="mt-1 text-[11px] text-slate-400 [@media(max-height:720px)]:hidden">Smart O&apos;quv Markaz Tizimi</p>
           </div>
         </div>
 
-        <div className="grid flex-1 items-center gap-10 lg:grid-cols-[1fr_minmax(0,460px)] lg:gap-14">
+        {/*
+          Kontent markazdan yuqoriroqda turadi: bo'sh joy tepa va past
+          orasida 1:2 nisbatda taqsimlanadi, ya'ni blok balandlikning
+          uchdan bir qismida joylashadi.
+
+          Nega sobit `pb-[26vh]` EMAS: past ekranda (masalan 1280×620 yoki
+          iPhone SE) u kontakt formasini pastga surib, "Arizani yuborish"
+          tugmasi ekrandan chiqib ketardi — eng muhim qadamda skroll talab
+          qilinardi. Bo'sh ajratgichlar esa joy qolmasa O'ZI YIG'ILADI
+          (`basis-0` + `grow`), ya'ni tor ekranda kontent hech narsa
+          yo'qotmaydi.
+        */}
+        <div aria-hidden className="grow basis-0" />
+
+        <div className="grid items-center gap-10 lg:grid-cols-[1fr_minmax(0,460px)] lg:gap-14">
           {aside && <div className="hidden lg:block">{aside}</div>}
           <div className="w-full">{children}</div>
         </div>
+
+        <div aria-hidden className="grow-[2] basis-0" />
       </div>
     </div>
   );
