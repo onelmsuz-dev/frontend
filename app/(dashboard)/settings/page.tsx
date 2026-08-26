@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { ConfirmDeleteModal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
-import { OnboardingRestoreCard } from "@/components/onboarding/onboarding-restore-card";
 import { OnboardingSettingsPanel } from "@/components/onboarding/onboarding-settings-panel";
 import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
 import type { Branch, Room } from "@/types";
@@ -258,8 +257,6 @@ export default function SettingsPage() {
 
           {/* ── O'quv markaz ── */}
           {activeSection === "markaz" && (
-            <>
-            <OnboardingRestoreCard />
             <Card className="border border-white/60 dark:border-white/10 shadow-none">
               <CardHeader className="pb-3">
                 <CardTitle className="text-[15px]">O'quv markaz ma'lumotlari</CardTitle>
@@ -345,7 +342,6 @@ export default function SettingsPage() {
                 )}
               </CardContent>
             </Card>
-            </>
           )}
 
           {/* ── Yo'l ko'rsatuvchi ── */}
