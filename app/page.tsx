@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { SITE_URL, ORG_ID, WEBSITE_ID } from "@/lib/seo/site";
 import { LandingHeader } from "@/components/landing/landing-header";
 import { HeroSection } from "@/components/landing/hero-section";
 import { StatsSection } from "@/components/landing/stats-section";
@@ -33,16 +34,16 @@ export const metadata: Metadata = {
     "o'quv markazi dasturi",
     "o'quv markazi boshqaruv platformasi",
   ],
-  authors: [{ name: "OneRoom", url: "https://oneroom.uz" }],
+  authors: [{ name: "OneRoom", url: SITE_URL }],
   creator: "OneRoom",
   publisher: "OneRoom",
   alternates: {
-    canonical: "https://oneroom.uz",
+    canonical: SITE_URL,
   },
   openGraph: {
     type: "website",
     locale: "uz_UZ",
-    url: "https://oneroom.uz",
+    url: SITE_URL,
     siteName: "OneRoom",
     title: "OneRoom — O'quv Markazlar uchun LMS va CRM Tizimi",
     description:
@@ -74,13 +75,13 @@ export const metadata: Metadata = {
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "@id": "https://oneroom.uz/#organization",
+  "@id": ORG_ID,
   name: "OneRoom",
   alternateName: "One Room",
-  url: "https://oneroom.uz",
+  url: SITE_URL,
   logo: {
     "@type": "ImageObject",
-    url: "https://oneroom.uz/logo.png",
+    url: `${SITE_URL}/logo.png`,
     width: 200,
     height: 60,
   },
@@ -127,12 +128,12 @@ const organizationSchema = {
 const softwareSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "@id": "https://oneroom.uz/#software",
+  "@id": `${SITE_URL}/#software`,
   name: "OneRoom",
   applicationCategory: "BusinessApplication",
   applicationSubCategory: "Education Management Software",
   operatingSystem: "Web",
-  url: "https://oneroom.uz",
+  url: SITE_URL,
   description:
     "OneRoom — o'quv markazlar uchun to'liq boshqaruv platformasi. O'quvchilar ro'yxatga olish, to'lovlar kuzatuvi, dars jadvali, davomot nazorati, CRM va hisobotlar modullari mavjud.",
   featureList: [
@@ -178,26 +179,26 @@ const softwareSchema = {
     },
   ],
   provider: {
-    "@id": "https://oneroom.uz/#organization",
+    "@id": ORG_ID,
   },
 };
 
 const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "@id": "https://oneroom.uz/#website",
-  url: "https://oneroom.uz",
+  "@id": WEBSITE_ID,
+  url: SITE_URL,
   name: "OneRoom",
   description: "O'quv markazlar uchun LMS va CRM platforma",
   inLanguage: "uz",
   publisher: {
-    "@id": "https://oneroom.uz/#organization",
+    "@id": ORG_ID,
   },
   potentialAction: {
     "@type": "SearchAction",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: "https://oneroom.uz/search?q={search_term_string}",
+      urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
     },
     "query-input": "required name=search_term_string",
   },
@@ -224,7 +225,7 @@ const breadcrumbSchema = {
       "@type": "ListItem",
       position: 1,
       name: "Bosh sahifa",
-      item: "https://oneroom.uz",
+      item: SITE_URL,
     },
   ],
 };
