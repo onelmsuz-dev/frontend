@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { SITE_URL } from "@/lib/seo/site";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -10,8 +11,16 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  // Bitta joyda — barcha bola sahifalar (landing va cluster) shundan meros
+  // oladi, `app/opengraph-image.tsx` ham absolyut URL qurish uchun shuni ishlatadi.
+  metadataBase: new URL(SITE_URL),
   title: "OneRoom — Smart O'quv Markaz",
   description: "O'quv markazlarni boshqarish platformasi",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

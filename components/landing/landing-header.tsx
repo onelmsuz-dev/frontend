@@ -3,18 +3,22 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
+import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
 
+// `/#features` (bosh sahifaga yo'naltirib, keyin scroll qiladi) — shunda
+// bu havolalar cluster landinglardan ham ishlaydi, faqat bosh sahifadan emas.
 const navLinks = [
-  { label: "Imkoniyatlar", href: "#features" },
-  { label: "Qanday ishlaydi", href: "#how-it-works" },
-  { label: "Narxlar", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
-  { label: "Bog'lanish", href: "#contact" },
+  { label: "Imkoniyatlar", href: "/#features" },
+  { label: "Qanday ishlaydi", href: "/#how-it-works" },
+  { label: "Narxlar", href: "/#pricing" },
+  { label: "FAQ", href: "/#faq" },
+  { label: "Bog'lanish", href: "/#contact" },
 ];
 
 export function LandingHeader() {
   const [open, setOpen] = useState(false);
+  const [solutionsOpen, setSolutionsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -64,14 +68,49 @@ export function LandingHeader() {
             className="hidden md:flex items-center gap-1"
             aria-label="Asosiy menyu"
           >
+            {/* Yechimlar — dropdown, cluster landinglarga ichki havolalar */}
+            <div
+              className="relative"
+              onMouseEnter={() => setSolutionsOpen(true)}
+              onMouseLeave={() => setSolutionsOpen(false)}
+            >
+              <button
+                type="button"
+                onClick={() => setSolutionsOpen((v) => !v)}
+                aria-expanded={solutionsOpen}
+                aria-haspopup="true"
+                className="flex items-center gap-1 rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              >
+                Yechimlar
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${solutionsOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+              </button>
+              {solutionsOpen && (
+                <div className="absolute left-0 top-full pt-2">
+                  <div className="w-80 rounded-2xl border border-slate-100 bg-white p-2 shadow-xl shadow-slate-900/10">
+                    {CLUSTER_PAGES.map((p) => (
+                      <Link
+                        key={p.href}
+                        href={p.href}
+                        onClick={() => setSolutionsOpen(false)}
+                        className="block rounded-xl px-3.5 py-2.5 transition-colors hover:bg-slate-50"
+                      >
+                        <span className="block text-sm font-semibold text-slate-900">{p.navLabel}</span>
+                        <span className="block text-xs text-slate-500">{p.blurb}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
                 className="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -111,15 +150,29 @@ export function LandingHeader() {
           className="md:hidden border-t border-slate-100 bg-white px-4 pb-5 pt-3 shadow-lg"
         >
           <nav className="flex flex-col gap-0.5" aria-label="Mobil menyu">
+            <p className="px-3 pt-1.5 pb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+              Yechimlar
+            </p>
+            {CLUSTER_PAGES.map((p) => (
+              <Link
+                key={p.href}
+                href={p.href}
+                onClick={() => setOpen(false)}
+                className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                {p.navLabel}
+              </Link>
+            ))}
+            <div className="my-2 border-t border-slate-100" />
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
                 className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </nav>
           <div className="mt-4 flex flex-col gap-2.5 border-t border-slate-100 pt-4">

@@ -2,8 +2,30 @@ import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
 
 const { auth } = NextAuth(authConfig);
+
+/**
+ * Marketing domenidagi SEO landing sahifalari (login talab qilmaydi) va
+ * Next.js'ning o'zi generatsiya qiladigan metadata yo'llari.
+ *
+ * DIQQAT: buni qo'shmasak, quyidagi "qolgan barcha ilova sahifalari"
+ * qoidasi `/davomat`, `/oquv-markaz-crm` kabi landinglarni ham login yoki
+ * bosh sahifaga qayta yo'naltirib yuborardi — Googlebot ularni umuman
+ * ko'ra olmasdi.
+ */
+const PUBLIC_MARKETING_PATHS = new Set<string>([
+  ...CLUSTER_PAGES.map((p) => p.href),
+  "/robots.txt",
+  "/sitemap.xml",
+  "/opengraph-image",
+  "/twitter-image",
+]);
+
+function isPublicMarketingPath(pathname: string): boolean {
+  return PUBLIC_MARKETING_PATHS.has(pathname);
+}
 
 function isLocalOrIpHost(hostname: string): boolean {
   if (hostname === "localhost" || hostname === "127.0.0.1") return true;
@@ -156,6 +178,7 @@ export const proxy = auth((req) => {
   if (isMarketingHost(req)) {
     // `/api/*` yuqorida, global istisnoda hal qilingan.
     if (pathname === "/") return NextResponse.next();
+    if (isPublicMarketingPath(pathname)) return NextResponse.next();
 
     if (pathname === "/login") {
       if (isLoggedIn && role === "PLATFORM_ADMIN") {
@@ -179,6 +202,7 @@ export const proxy = auth((req) => {
 
   // ── localhost / IP / *.vercel.app — ishlab chiqish va preview ────────────
   if (pathname === "/") return NextResponse.next();
+  if (isPublicMarketingPath(pathname)) return NextResponse.next();
   if (pathname === "/login") {
     if (isLoggedIn) return Response.redirect(new URL(home, req.nextUrl));
     return NextResponse.next();

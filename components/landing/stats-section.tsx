@@ -30,7 +30,16 @@ export function StatsSection() {
       aria-label="OneRoom afzalliklari"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <dl className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        {/*
+          DIQQAT: bu yerda ataylab <dl>/<dt>/<dd> EMAS, oddiy <div> ishlatiladi.
+          HTML5 qoidasiga ko'ra <dl>ning bevosita bola <div>i faqat <dt>+<dd>
+          juftligini o'z ichiga olishi kerak — ikonka uchun qo'shimcha <div>
+          bo'lgani sababli bu qoidani buzardi (Lighthouse "definition-list"
+          va "dlitem" xatolari). Bu ro'yxat haqiqiy atama-ta'rif jufti ham
+          emas, oddiy xususiyatlar to'plami — shu sabab semantik jihatdan ham
+          <dl> to'g'ri tanlov emas edi.
+        */}
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {pillars.map(({ icon: Icon, title, description }, i) => (
             <div
               key={title}
@@ -42,12 +51,12 @@ export function StatsSection() {
                 <Icon className="h-4.5 w-4.5 text-blue-400" aria-hidden="true" />
               </div>
               <div>
-                <dt className="text-sm font-semibold text-white">{title}</dt>
-                <dd className="mt-1 text-xs text-slate-400 leading-relaxed">{description}</dd>
+                <p className="text-sm font-semibold text-white">{title}</p>
+                <p className="mt-1 text-xs text-slate-400 leading-relaxed">{description}</p>
               </div>
             </div>
           ))}
-        </dl>
+        </div>
       </div>
     </section>
   );

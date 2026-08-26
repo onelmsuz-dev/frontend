@@ -1,11 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
+import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
 
 const footerLinks = {
   Mahsulot: [
-    { label: "Imkoniyatlar", href: "#features" },
-    { label: "Narxlar", href: "#pricing" },
-    { label: "Qanday ishlaydi", href: "#how-it-works" },
+    { label: "Imkoniyatlar", href: "/#features" },
+    { label: "Narxlar", href: "/#pricing" },
+    { label: "Qanday ishlaydi", href: "/#how-it-works" },
     { label: "Yangiliklar", href: "/blog" },
     { label: "Yo'l haritasi", href: "/roadmap" },
   ],
@@ -21,6 +22,7 @@ const footerLinks = {
     { label: "Hamkorlik", href: "/partners" },
     { label: "Bog'lanish", href: "/#contact" },
   ],
+  Yechimlar: CLUSTER_PAGES.map((p) => ({ label: p.navLabel, href: p.href })),
   Huquqiy: [
     { label: "Maxfiylik siyosati", href: "/privacy" },
     { label: "Foydalanish shartlari", href: "/terms" },
@@ -64,7 +66,7 @@ export function LandingFooter() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-14 pb-8 sm:pt-16 lg:pt-20">
 
         {/* Top: brand + links */}
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-7">
           {/* Brand — full-width on mobile, 2 cols on lg */}
           <div className="sm:col-span-2 lg:col-span-2">
             <Link href="/" className="inline-flex items-center gap-2.5" aria-label="OneRoom bosh sahifa">
@@ -101,8 +103,8 @@ export function LandingFooter() {
             </div>
           </div>
 
-          {/* Links — 2-col on mobile, then 4-col */}
-          <div className="grid grid-cols-2 gap-8 sm:col-span-2 lg:col-span-4 lg:grid-cols-4">
+          {/* Links — 2-col on mobile, then 5-col */}
+          <div className="grid grid-cols-2 gap-8 sm:col-span-2 lg:col-span-5 lg:grid-cols-5">
             {Object.entries(footerLinks).map(([category, links]) => (
               <div key={category}>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300 mb-3.5">
@@ -128,10 +130,12 @@ export function LandingFooter() {
         {/* Divider */}
         <div className="mt-12 border-t border-white/5 pt-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-400">
               © {new Date().getFullYear()} OneRoom. Barcha huquqlar himoyalangan.
             </p>
-            <address className="not-italic text-xs text-slate-500 flex flex-wrap gap-x-3 gap-y-1">
+            {/* text-slate-500 emas: bg-slate-950 ustida 4.13:1 berardi (WCAG AA
+                normal matn uchun 4.5:1 kerak) — Lighthouse color-contrast xatosi. */}
+            <address className="not-italic text-xs text-slate-400 flex flex-wrap gap-x-3 gap-y-1">
               <span>Toshkent, O'zbekiston</span>
               <a href="mailto:info@oneroom.uz" className="hover:text-slate-300 transition-colors">
                 info@oneroom.uz

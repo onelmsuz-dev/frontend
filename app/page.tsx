@@ -4,6 +4,7 @@ import { LandingHeader } from "@/components/landing/landing-header";
 import { HeroSection } from "@/components/landing/hero-section";
 import { StatsSection } from "@/components/landing/stats-section";
 import { FeaturesSection } from "@/components/landing/features-section";
+import { SolutionsSection } from "@/components/landing/solutions-section";
 import { HowItWorksSection } from "@/components/landing/how-it-works-section";
 import { PricingSection } from "@/components/landing/pricing-section";
 import { TestimonialsSection } from "@/components/landing/testimonials-section";
@@ -18,21 +19,23 @@ export const metadata: Metadata = {
   title: "OneRoom — O'quv Markazlar uchun LMS va CRM Tizimi | O'zbekiston",
   description:
     "OneRoom — O'zbekistondagi o'quv markazlar uchun №1 boshqaruv platformasi. O'quvchilar, to'lovlar, jadval, davomot va hisobotlarni bitta tizimda boshqaring. Bepul boshlang.",
+  // DIQQAT: bu ro'yxat ataylab qisqa va faqat ENG KENG/brend darajasidagi
+  // atamalarni o'z ichiga oladi. Davomat, to'lov, qarzdorlik, hisobot va
+  // "CRM narxi/eng yaxshi CRM" каби aniq-mos atamalar tegishli cluster
+  // sahifalarga (`/davomat`, `/tolovlar`, ..., `/oquv-markaz-crm`) berilgan —
+  // aks holda bosh sahifa o'z cluster sahifalari bilan bir xil so'zga
+  // raqobatlashib, ikkalasi ham pastroq chiqib qolardi (keyword cannibalization).
   keywords: [
-    "o'quv markaz boshqaruvi",
-    "LMS O'zbekiston",
-    "CRM o'quv markaz",
-    "o'quvchilar boshqaruvi",
-    "to'lov kuzatuvi o'quv markaz",
-    "dars jadvali tizimi",
-    "davomot nazorati",
     "OneRoom",
-    "ta'lim markaz dasturi",
+    "o'quv markaz uchun CRM",
+    "o'quv markazi boshqaruv tizimi",
+    "o'quv markazini boshqarish dasturi",
+    "o'quv markazi dasturi",
+    "o'quv markazi boshqaruv platformasi",
   ],
   authors: [{ name: "OneRoom", url: "https://oneroom.uz" }],
   creator: "OneRoom",
   publisher: "OneRoom",
-  metadataBase: new URL("https://oneroom.uz"),
   alternates: {
     canonical: "https://oneroom.uz",
   },
@@ -44,21 +47,14 @@ export const metadata: Metadata = {
     title: "OneRoom — O'quv Markazlar uchun LMS va CRM Tizimi",
     description:
       "O'zbekistondagi 500+ o'quv markaz ishongan platforma. O'quvchilar, to'lovlar, jadval va davomatni bitta ekrandan boshqaring.",
-    images: [
-      {
-        url: "https://oneroom.uz/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "OneRoom — O'quv Markaz Boshqaruv Platformasi",
-      },
-    ],
+    // `images` ataylab yo'q — `app/opengraph-image.tsx` file-convention rasmi
+    // avtomatik ishlatiladi. Bu yerda qo'yilsa, o'sha generatsiyani bosib ketardi.
   },
   twitter: {
     card: "summary_large_image",
     title: "OneRoom — O'quv Markazlar uchun LMS va CRM",
     description:
       "O'quvchilar, to'lovlar, jadval va davomatni bitta platformada. Bepul boshlang.",
-    images: ["https://oneroom.uz/og-image.png"],
     creator: "@oneroomuz",
   },
   robots: {
@@ -135,7 +131,7 @@ const softwareSchema = {
   name: "OneRoom",
   applicationCategory: "BusinessApplication",
   applicationSubCategory: "Education Management Software",
-  operatingSystem: "Web, iOS, Android",
+  operatingSystem: "Web",
   url: "https://oneroom.uz",
   description:
     "OneRoom — o'quv markazlar uchun to'liq boshqaruv platformasi. O'quvchilar ro'yxatga olish, to'lovlar kuzatuvi, dars jadvali, davomot nazorati, CRM va hisobotlar modullari mavjud.",
@@ -149,37 +145,36 @@ const softwareSchema = {
     "Excel va PDF eksport",
     "Real vaqt hisobotlari",
   ],
-  screenshot: "https://oneroom.uz/screenshot.png",
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "4.9",
-    ratingCount: "312",
-    bestRating: "5",
-    worstRating: "1",
-  },
+  // DIQQAT: `aggregateRating` ataylab YO'Q. Real baholar yig'ilmagunicha
+  // soxta reyting qo'shish Google'ning structured-data siyosatiga zid va
+  // qo'lda tekshiruvda saytga jarima keltirishi mumkin.
+  // DIQQAT: raqamlar `components/landing/pricing-section.tsx` bilan bir xil
+  // bo'lishi shart — Google structured data'ni ko'rinadigan matn bilan
+  // solishtiradi, mos kelmasa rich snippet rad etilishi mumkin.
   offers: [
     {
       "@type": "Offer",
       name: "Starter",
-      price: "0",
+      price: "270000",
       priceCurrency: "UZS",
-      description: "Bepul tarif — 50 tagacha o'quvchi, 1 filial",
+      billingIncrement: "P1M",
+      description: "Starter tarif — 200 tagacha o'quvchi, 1 filial",
     },
     {
       "@type": "Offer",
-      name: "Pro",
-      price: "299000",
+      name: "Business",
+      price: "570000",
       priceCurrency: "UZS",
       billingIncrement: "P1M",
-      description: "Pro tarif — 500 tagacha o'quvchi, 3 filial",
+      description: "Business tarif — 500 tagacha o'quvchi, 3 filial",
     },
     {
       "@type": "Offer",
-      name: "Enterprise",
-      price: "699000",
+      name: "Premium",
+      price: "870000",
       priceCurrency: "UZS",
       billingIncrement: "P1M",
-      description: "Enterprise tarif — cheksiz o'quvchilar va filiallar",
+      description: "Premium tarif — 1000 tagacha o'quvchi, 8 filial",
     },
   ],
   provider: {
@@ -270,6 +265,7 @@ export default function LandingPage() {
           <HeroSection />
           <StatsSection />
           <FeaturesSection />
+          <SolutionsSection />
           <HowItWorksSection />
           <PricingSection />
           <TestimonialsSection />

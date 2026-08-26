@@ -43,7 +43,7 @@ export function HeroSection() {
           <div className="mb-5 flex justify-start sm:justify-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-semibold text-blue-700 sm:px-3.5 sm:text-xs">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-500 shrink-0" />
-              O'quv markazlar uchun zamonaviy LMS va CRM
+              O'quv markazlari uchun CRM va boshqaruv tizimi
             </span>
           </div>
 
@@ -58,9 +58,11 @@ export function HeroSection() {
           </h1>
 
           <p className="mt-5 text-sm leading-relaxed text-slate-600 sm:text-base sm:mt-6 md:text-lg">
-            <strong className="font-semibold text-slate-800">OneRoom</strong> — o'quvchilar,
-            to'lovlar, jadval va davomatni bitta platformada boshqarish uchun zamonaviy LMS va
-            CRM tizimi. Vaqtingizni tejang, daromadingizni oshiring.
+            <strong className="font-semibold text-slate-800">
+              OneRoom — o'quv markaz uchun CRM va boshqaruv tizimi.
+            </strong>{" "}
+            O'quvchilar, to'lovlar, jadval va davomatni bitta platformada boshqaring,
+            vaqtingizni tejang va daromadingizni oshiring.
           </p>
 
           {/* Bullet points */}
