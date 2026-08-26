@@ -293,3 +293,56 @@ tbody tr + tr {
 .rail-label-in {
   animation: rail-label-in 180ms ease 140ms both;
 }
+
+/* ─── Native boshqaruvlar: select ochilmasi, sana tanlagich, scrollbar ──────
+ *
+ * MUAMMO: qorong'i rejimda filtr ochilmasidagi variantlar deyarli
+ * ko'rinmasdi — oq fon ustida och kulrang matn.
+ *
+ * SABAB: `<option>` ro'yxatini BRAUZER o'zi chizadi, sahifa CSS'i unga
+ * to'liq yetmaydi. Chrome popup foni uchun `<select>` ning HISOBLANGAN
+ * fonini oladi; bizniki esa `glass-soft` — qorong'i rejimda atigi 4%
+ * oq, ya'ni amalda shaffof. Brauzer uni oq deb chizar, matn esa
+ * `text-neutral-300` bo'lgani uchun o'qib bo'lmasdi.
+ *
+ * YECHIM ikki qatlamli:
+ *  1) `color-scheme` — brauzerga sahifa qaysi palitrada ekanini AYTADI.
+ *     Shundan keyin u select ochilmasini, sana/oy tanlagichini,
+ *     scrollbar va checkboxni ham qorong'i qilib chizadi.
+ *  2) `option`/`optgroup` uchun aniq rang — `color-scheme` ni to'liq
+ *     qo'llab-quvvatlamaydigan brauzerlar uchun zaxira.
+ *
+ * Bu qoidalar BARCHA select'larga birdan ta'sir qiladi — har bir sahifada
+ * alohida klass qo'shish shart emas va yangi qo'shilgan filtr ham
+ * o'z-o'zidan to'g'ri ko'rinadi.
+ */
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: #ffffff;
+  color: #171717;
+}
+.dark select option,
+.dark select optgroup {
+  background-color: #262626; /* neutral-800 — sahifa fonidan bir pog'ona ochiq */
+  color: #f5f5f5;            /* neutral-100 */
+}
+
+/* Tanlangan variant ajralib tursin (Firefox/Chrome). */
+.dark select option:checked,
+.dark select option:hover {
+  background-color: #4f46e5; /* indigo-600 */
+  color: #ffffff;
+}
+
+/* Yopiq holatdagi select ham o'qilarli bo'lsin: shaffof fon ustida matn
+ * kontrasti past edi. Qorong'i rejimda biroz to'yingan fon beramiz. */
+.dark select {
+  background-color: rgba(255, 255, 255, 0.06);
+}
