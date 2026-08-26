@@ -391,28 +391,54 @@ select optgroup {
   box-shadow: none;
 }
 
-/* Pulsatsiyalovchi halqa — alohida element (teshikning o'zi emas). */
-@keyframes onb-ring {
-  0% { transform: scale(1); opacity: 0.95; }
-  70% { transform: scale(1.13); opacity: 0; }
-  100% { transform: scale(1.13); opacity: 0; }
-}
+/* Nishon ramkasi — DOIMIY ko'rinadi.
+ *
+ * Ilgari ramka ham, pulsatsiya ham bitta elementda edi va animatsiya
+ * `opacity: 0` gacha tushardi: ya'ni siklning katta qismida nishon umuman
+ * ajralib turmasdi. Endi ikki qatlam: doimiy ramka + ustidan tarqaladigan
+ * to'lqin. */
 .onb-ring {
   position: fixed;
   pointer-events: none;
   border-radius: 18px;
   box-shadow:
-    0 0 0 3px rgba(var(--onb-ring), 0.95),
-    0 0 28px 6px rgba(var(--onb-ring), 0.45);
-  animation: onb-ring 1.6s cubic-bezier(0.25, 0.6, 0.35, 1) infinite;
+    0 0 0 3px rgba(var(--onb-ring), 1),
+    0 0 0 6px rgba(var(--onb-ring), 0.28),
+    0 0 34px 10px rgba(var(--onb-ring), 0.42);
 }
 
-/* Sakrab turgan strelka — pufakchadan nishonga qaraydi. */
+/* Tarqaladigan to'lqin — diqqatni tortadi, ramkani almashtirmaydi. */
+@keyframes onb-pulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  75% { transform: scale(1.16); opacity: 0; }
+  100% { transform: scale(1.16); opacity: 0; }
+}
+.onb-pulse {
+  position: fixed;
+  pointer-events: none;
+  border-radius: 18px;
+  box-shadow: 0 0 0 4px rgba(var(--onb-ring), 0.85);
+  animation: onb-pulse 1.7s cubic-bezier(0.25, 0.6, 0.35, 1) infinite;
+}
+
+/* Sakrab turgan strelka — nishonga qaraydi.
+ * Yumaloq indigo chip ichida: kichkina ikonka fonda yo'qolib ketmasin. */
 @keyframes onb-arrow {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
+  50% { transform: translateY(-6px); }
 }
-.onb-arrow { animation: onb-arrow 1.1s ease-in-out infinite; }
+.onb-arrow {
+  animation: onb-arrow 1.1s ease-in-out infinite;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgb(var(--onb-ring));
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(var(--onb-ring), 0.55);
+}
+.dark .onb-arrow { color: #1e1b3a; }
 
 /* Bosish ishorasi — tarqalayotgan barmoq halqasi. */
 @keyframes onb-tap {
@@ -460,10 +486,10 @@ main[data-tour-active="1"] { padding-bottom: 210px; }
 
 @media (prefers-reduced-motion: reduce) {
   .onb-hole { transition: none; }
-  .onb-ring, .onb-arrow, .onb-tap, .onb-fill, .onb-pop, .onb-check, .onb-spark {
+  .onb-pulse, .onb-arrow, .onb-tap, .onb-fill, .onb-pop, .onb-check, .onb-spark {
     animation: none;
   }
-  /* Halqa QOLADI — faqat harakat yo'qoladi, ko'rsatkich yo'qolmasin. */
-  .onb-ring { box-shadow: 0 0 0 3px rgba(var(--onb-ring), 1); }
+  /* Ramka QOLADI — faqat harakat yo'qoladi, ko'rsatkich yo'qolmasin. */
+  .onb-pulse { display: none; }
   .onb-fill { width: var(--onb-to); }
 }

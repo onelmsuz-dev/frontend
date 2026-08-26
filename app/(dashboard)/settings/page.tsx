@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,19 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-lg", className)} />;
 }
 
+/**
+ * `useSearchParams` Suspense chegarasini talab qiladi (aks holda butun
+ * sahifa oldindan chizilmaydi) — shuning uchun asosiy komponent ichkarida.
+ */
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={null}>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+function SettingsContent() {
   const [activeSection, setActiveSection] = useState("xodimlar");
 
   // Yo'l ko'rsatuvchi bayroq ortida — o'chiq bo'lsa tab umuman chizilmaydi.
@@ -58,15 +71,18 @@ export default function SettingsPage() {
   );
 
   // Boshqa sahifadan aniq bo'limga o'tish: /settings?tab=xonalar (masalan
-  // guruh kartochkasidagi "Xona biriktirilmagan" ogohlantirishi).
+  // guruh kartochkasidagi ogohlantirish yoki yo'l ko'rsatuvchining turi).
   //
-  // URL render PAYTIDA o'qilmaydi: sahifa serverda ham chiziladi va server
-  // "xodimlar", mijoz esa "xonalar" bersa gidratsiya nomuvofiqligi bo'lardi
-  // (React butun daraxtni qayta chizadi, foydalanuvchi miltillashni ko'radi).
+  // `useSearchParams` — `window.location` EMAS: ikkinchisi faqat mount'da
+  // bir marta o'qilardi va foydalanuvchi ALLAQACHON /settings da turganda
+  // `?tab=xonalar` ga o'tish hech qanday ta'sir qilmasdi (tur aynan shu
+  // yerda tiqilib qolardi). Bu hook har o'zgarishda qayta ishlaydi va
+  // gidratsiya nomuvofiqligi ham bo'lmaydi.
+  const searchParams = useSearchParams();
   useEffect(() => {
-    const tab = new URLSearchParams(window.location.search).get("tab");
+    const tab = searchParams.get("tab");
     if (tab) setActiveSection(tab);
-  }, []);
+  }, [searchParams]);
   const { me } = useMe();
 
   // Tarif bloklangan bo'lsa — to'lov bo'limiga to'g'ridan-to'g'ri yo'naltiramiz

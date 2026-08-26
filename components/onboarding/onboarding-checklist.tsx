@@ -22,8 +22,8 @@ const COLLAPSE_LS = "oneroom.onb.collapsed";
 export function OnboardingChecklist() {
   const {
     enabled, visible, loading, steps, doneMap, skipped,
-    requiredTotal, requiredDone, nextStep, tour, startTour, resumeTour,
-    hide, toggleSkip,
+    requiredTotal, requiredDone, nextStep, tour, startTour, startWalkthrough,
+    resumeTour, hide, toggleSkip,
   } = useOnboardingCtx();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -94,14 +94,14 @@ export function OnboardingChecklist() {
             Davom etish
           </Button>
         ) : (
-          collapsed && nextStep && (
+          collapsed && (
             <Button
               size="sm"
               className="h-8 text-[12px] hidden sm:flex"
-              onClick={() => startTour(nextStep.key)}
+              onClick={() => (nextStep ? startTour(nextStep.key) : startWalkthrough())}
             >
               <Play className="w-3 h-3 mr-1" />
-              Boshlash
+              {nextStep ? "Boshlash" : "Ko'rish"}
             </Button>
           )
         )}
@@ -236,6 +236,18 @@ export function OnboardingChecklist() {
               </div>
             );
           })}
+
+          {/* Hammasi bajarilgan — endi CTA yo'q. Foydalanuvchi baribir
+              yo'lni qaytadan ko'rmoqchi bo'lishi mumkin. */}
+          {allDone && (
+            <div className="pt-2">
+              <Button size="sm" variant="outline" className="h-8 text-[12px] gap-1.5"
+                onClick={startWalkthrough}>
+                <Play className="w-3 h-3" />
+                Boshidan ko&apos;rsating
+              </Button>
+            </div>
+          )}
 
           <div className="flex items-center justify-between pt-2">
             <button

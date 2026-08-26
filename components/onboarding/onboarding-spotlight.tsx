@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowDown, ArrowUp, ChevronLeft, MousePointerClick, X } from "lucide-react";
+import {
+  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronLeft, MousePointerClick, X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { TourStop } from "@/lib/onboarding/steps";
@@ -11,10 +13,14 @@ import { useIsDesktop, useTourTarget } from "./use-tour-target";
 /** Teshik nishondan shuncha piksel kengroq — ramka nafas olsin. */
 const PAD = 6;
 const BUBBLE_W = 300;
+/** Taxminiy balandlik — joylashuvni tanlashda ishlatiladi. */
+const BUBBLE_H = 175;
 const GAP = 14;
 
 interface Props {
   stop: TourStop;
+  /** To'liq yurish rejimida — nechanchi qadamdaligi. */
+  walk?: { index: number; total: number } | null;
   stepKey: string;
   stopIdx: number;
   stopCount: number;
@@ -25,7 +31,7 @@ interface Props {
 }
 
 export function OnboardingSpotlight(props: Props) {
-  const { stop, stopIdx, stopCount, manualHint, onNext, onBack, onClose } = props;
+  const { stop, walk, stopIdx, stopCount, manualHint, onNext, onBack, onClose } = props;
   const { rect, notFound } = useTourTarget(stop.target);
   const isDesktop = useIsDesktop();
   const [mounted, setMounted] = useState(false);
@@ -63,9 +69,20 @@ export function OnboardingSpotlight(props: Props) {
           <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-1">
             Qadamni qo&apos;lda bajaring: <b>{manualHint}</b>
           </p>
-          <Button size="sm" className="mt-3 h-8 text-[12px] w-full" onClick={onClose}>
-            Tushunarli
-          </Button>
+          {/* Chiqish yo'li BIR EMAS: "Keyingi" ni erta bosgan foydalanuvchi
+              nishoni yo'q to'xtashga tushib qolib, faqat turni yopish
+              imkoniyati bilan qolardi. */}
+          <div className="flex gap-2 mt-3">
+            {stopIdx > 0 && (
+              <Button size="sm" variant="outline" className="h-8 text-[12px] flex-1" onClick={onBack}>
+                <ChevronLeft className="w-3 h-3 mr-0.5" />
+                Ortga
+              </Button>
+            )}
+            <Button size="sm" className="h-8 text-[12px] flex-1" onClick={onClose}>
+              Yopish
+            </Button>
+          </div>
         </div>
       </div>,
       document.body,
@@ -86,13 +103,51 @@ export function OnboardingSpotlight(props: Props) {
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  /** Pufakcha pastdami yoki tepada — qayerda joy ko'proq bo'lsa. */
-  const below = rect.top + rect.height + GAP + 190 < vh;
-  const bubbleTop = below ? hole.top + hole.height + GAP : Math.max(12, hole.top - 190 - GAP);
-  const bubbleLeft = Math.min(
-    Math.max(12, rect.left + rect.width / 2 - BUBBLE_W / 2),
-    vw - BUBBLE_W - 12,
-  );
+
+  /**
+   * PUFAKCHA JOYLASHUVI.
+   *
+   * Ilgari u doim nishonning tagida (yoki tepasida) turardi va shu sabab
+   * formaning KEYINGI maydonini — ko'pincha aynan "Saqlash" tugmasini —
+   * to'sib qo'yardi. Endi avval YON tomon tekshiriladi: o'ngda joy bo'lsa
+   * o'ngga, bo'lmasa chapga, faqat ikkalasi ham sig'masa past/tepa.
+   */
+  const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+  const side = (() => {
+    const rightSpace = vw - (hole.left + hole.width) - GAP;
+    const leftSpace = hole.left - GAP;
+    const belowSpace = vh - (hole.top + hole.height) - GAP;
+    const aboveSpace = hole.top - GAP;
+
+    if (rightSpace >= BUBBLE_W + 42) return "right";
+    if (leftSpace >= BUBBLE_W + 42) return "left";
+    if (belowSpace >= BUBBLE_H + 12) return "below";
+    if (aboveSpace >= BUBBLE_H + 12) return "above";
+    // Hech qayerga sig'masa — kengroq tomonni tanlaymiz.
+    return belowSpace >= aboveSpace ? "below" : "above";
+  })();
+
+  // Yon tomonda strelka uchun kengroq bo'shliq — aks holda chip pufakcha
+  // ostida qolib ko'rinmasdi.
+  const SIDE_GAP = 42;
+  const bubbleLeft =
+    side === "right" ? hole.left + hole.width + SIDE_GAP
+    : side === "left" ? hole.left - SIDE_GAP - BUBBLE_W
+    : clamp(rect.left + rect.width / 2 - BUBBLE_W / 2, 12, vw - BUBBLE_W - 12);
+
+  const bubbleTop =
+    side === "right" || side === "left"
+      ? clamp(rect.top - 10, 12, vh - BUBBLE_H - 12)
+      : side === "below"
+        ? hole.top + hole.height + GAP
+        : clamp(hole.top - GAP - BUBBLE_H, 12, vh - BUBBLE_H - 12);
+
+  /** Strelka nishonga qaratiladi — joylashuvga qarab yo'nalishi o'zgaradi. */
+  const arrow =
+    side === "right" ? { icon: "left" as const, left: hole.left + hole.width + 8, top: rect.top + rect.height / 2 - 13 }
+    : side === "left" ? { icon: "right" as const, left: hole.left - 34, top: rect.top + rect.height / 2 - 13 }
+    : side === "below" ? { icon: "up" as const, left: clamp(rect.left + rect.width / 2 - 13, 16, vw - 42), top: hole.top + hole.height + 6 }
+    : { icon: "down" as const, left: clamp(rect.left + rect.width / 2 - 13, 16, vw - 42), top: hole.top - 32 };
 
   const bubble = (
     <div
@@ -112,6 +167,11 @@ export function OnboardingSpotlight(props: Props) {
     >
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
+          {walk && (
+            <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-400 mb-0.5">
+              {walk.index}/{walk.total} qadam
+            </p>
+          )}
           <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">
             {nudge > 0 ? "Shu tugmani bosing" : stop.title}
           </p>
@@ -179,8 +239,9 @@ export function OnboardingSpotlight(props: Props) {
         data-scrim={rect.inModal ? "off" : "on"}
         style={{ ...hole, zIndex: z }}
       />
-      {/* Pulsatsiyalovchi halqa */}
-      <div key={`ring-${nudge}`} className="onb-ring" style={{ ...hole, zIndex: z + 1 }} />
+      {/* Doimiy ramka + ustidan tarqaladigan to'lqin */}
+      <div className="onb-ring" style={{ ...hole, zIndex: z + 1 }} />
+      <div key={`pulse-${nudge}`} className="onb-pulse" style={{ ...hole, zIndex: z + 1 }} />
       {/* Bosish ishorasi — nishon markazida */}
       <span
         className="onb-tap fixed rounded-full border-2 pointer-events-none"
@@ -196,14 +257,13 @@ export function OnboardingSpotlight(props: Props) {
       {/* Strelka — pufakchadan nishonga qaraydi (faqat desktopda o'rinli) */}
       {isDesktop && (
         <span
-          className="onb-arrow fixed pointer-events-none text-indigo-600 dark:text-indigo-300"
-          style={{
-            zIndex: z + 2,
-            left: Math.min(Math.max(16, rect.left + rect.width / 2 - 10), vw - 36),
-            top: below ? hole.top + hole.height + 2 : hole.top - 26,
-          }}
+          className="onb-arrow fixed pointer-events-none"
+          style={{ zIndex: z + 2, left: arrow.left, top: arrow.top }}
         >
-          {below ? <ArrowUp className="w-5 h-5" /> : <ArrowDown className="w-5 h-5" />}
+          {arrow.icon === "up" ? <ArrowUp className="w-4 h-4" />
+            : arrow.icon === "down" ? <ArrowDown className="w-4 h-4" />
+            : arrow.icon === "left" ? <ArrowLeft className="w-4 h-4" />
+            : <ArrowRight className="w-4 h-4" />}
         </span>
       )}
       {/* DIQQAT: teshikdan tashqarini BLOKLAYDIGAN to'siqlar YO'Q.

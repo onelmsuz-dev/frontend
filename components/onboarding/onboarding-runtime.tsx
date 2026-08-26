@@ -54,6 +54,22 @@ function writeTour(v: StoredTour | null) {
  * yuqoriga uzatadi va faqat qoplamalarni (spotlight, tabrik) chizadi.
  * Sabab: `OnboardingMount` dagi izohga qarang (daraxt qayta qurilmasin).
  */
+/**
+ * Joriy URL qadamning manziliga MOS kelyaptimi.
+ * `href` dagi har bir query parametri joriy URL'da ham xuddi shunday
+ * bo'lishi shart — aks holda o'tish kerak.
+ */
+function needsNavigation(href: string): boolean {
+  const [path, query] = href.split("?");
+  if (window.location.pathname !== path) return true;
+  if (!query) return false;
+  const cur = new URLSearchParams(window.location.search);
+  for (const [k, v] of new URLSearchParams(query)) {
+    if (cur.get(k) !== v) return true;
+  }
+  return false;
+}
+
 export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue) => void }) {
   const { me } = useMe();
   const router = useRouter();
@@ -69,7 +85,8 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
   // holatdan chizsin (gidratsiya nomuvofiqligi bo'lmasin).
   useEffect(() => {
     const v = readTour();
-    if (v) setTour({ stepKey: v.stepKey, stopIdx: v.stopIdx, paused: v.paused, replay: !!v.replay });
+    if (v) setTour({ stepKey: v.stepKey, stopIdx: v.stopIdx, paused: v.paused,
+                     replay: !!v.replay, walkthrough: !!v.walkthrough });
   }, []);
 
   // ── Rol bo'yicha filtrlangan qadamlar ───────────────────────────────────
@@ -132,39 +149,64 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
    * kelishi noto'g'ri bo'lardi — u faqat qadam KO'Z OLDIDA bajarilganda
    * ko'rsatiladi.
    */
-  const completeAtLoad = useRef<boolean | null>(null);
+  const [completeAtLoad, setCompleteAtLoad] = useState<boolean | null>(null);
   useEffect(() => {
     if (!data) return;
-    if (completeAtLoad.current === null) completeAtLoad.current = allRequiredDone;
+    setCompleteAtLoad((cur) => (cur === null ? allRequiredDone : cur));
   }, [data, allRequiredDone]);
 
   const celebrating =
-    visible && allRequiredDone && !data?.celebratedAt && completeAtLoad.current === false;
+    visible && allRequiredDone && !data?.celebratedAt && completeAtLoad === false;
 
   // ── Tur boshqaruvi ──────────────────────────────────────────────────────
+  const beginStep = useCallback((stepKey: string, walkthrough: boolean) => {
+    const step = STEP_BY_KEY[stepKey];
+    if (!step || step.stops.length === 0) {
+      setTour(null);
+      writeTour(null);
+      return false;
+    }
+    const next: TourState = {
+      stepKey,
+      stopIdx: 0,
+      paused: false,
+      // Bajarilgan qadamni ko'rsatayotgan bo'lsak — tur o'zi to'xtamasin.
+      replay: !!doneMapRef.current[stepKey] || walkthrough,
+      walkthrough,
+    };
+    setTour(next);
+    writeTour({ ...next, startedAt: Date.now() });
+    return true;
+  }, []);
+
   const startTour = useCallback(
     (stepKey: string) => {
       const step = STEP_BY_KEY[stepKey];
       if (!step) return;
-      const next: TourState = {
-        stepKey,
-        stopIdx: 0,
-        paused: false,
-        // Bajarilgan qadamni qayta ko'rsatayotgan bo'lsak — tur o'zi
-        // to'xtamasin (pastdagi effektga qarang).
-        replay: !!doneMapRef.current[stepKey],
-      };
-      setTour(step.stops.length > 0 ? next : null);
-      if (step.stops.length > 0) {
-        writeTour({ ...next, startedAt: Date.now() });
+      // Qadamning turi bo'lmasa (to'lov, davomat) — shunchaki sahifasiga.
+      if (step.stops.length === 0) {
+        router.push(step.href);
+        return;
       }
-      // Sahifa boshqa bo'lsa — o'tkazamiz. Modalni O'ZIMIZ ochmaymiz:
-      // tugmani foydalanuvchi bosishi kerak, o'rgatishning mohiyati shu.
-      const target = step.href.split("?")[0];
-      if (pathname !== target) router.push(step.href);
+      beginStep(stepKey, false);
     },
-    [pathname, router],
+    [beginStep, router],
   );
+
+  /** Ruxsati bor va turi bo'lgan qadamlar — to'liq yurish tartibi. */
+  const walkOrder = useMemo(
+    () => steps.filter((s) => s.stops.length > 0).map((s) => s.key),
+    [steps],
+  );
+  const walkOrderRef = useRef<string[]>([]);
+  useEffect(() => {
+    walkOrderRef.current = walkOrder;
+  }, [walkOrder]);
+
+  const startWalkthrough = useCallback(() => {
+    const first = walkOrderRef.current[0];
+    if (first) beginStep(first, true);
+  }, [beginStep]);
 
   const stopTour = useCallback(() => {
     setTour(null);
@@ -186,10 +228,25 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
       if (!cur) return cur;
       const step = STEP_BY_KEY[cur.stepKey];
       const nextIdx = cur.stopIdx + 1;
+
       if (!step || nextIdx >= step.stops.length) {
+        // TO'LIQ YURISH: qadam tugadi — to'xtamaymiz, keyingisiga o'tamiz.
+        if (cur.walkthrough) {
+          const order = walkOrderRef.current;
+          const nextKey = order[order.indexOf(cur.stepKey) + 1];
+          if (nextKey) {
+            const n: TourState = {
+              stepKey: nextKey, stopIdx: 0, paused: false,
+              replay: true, walkthrough: true,
+            };
+            writeTour({ ...n, startedAt: Date.now() });
+            return n;
+          }
+        }
         writeTour(null);
         return null;
       }
+
       const next = { ...cur, stopIdx: nextIdx, paused: false };
       writeTour({ ...next, startedAt: Date.now() });
       return next;
@@ -206,61 +263,105 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
   }, []);
 
   const currentStop = tour ? STEP_BY_KEY[tour.stepKey]?.stops[tour.stopIdx] ?? null : null;
-  const currentTarget = currentStop?.target ?? null;
 
-  // ── Nishon bosilsa — keyingi nishonga ───────────────────────────────────
+  // ── Nishon bosilsa — turni surib boramiz ────────────────────────────────
   // Capture fazasida: sahifaning o'z `onClick` i modalni ochishidan OLDIN
   // biz ham eshitamiz. Shu tufayli 13 ta sahifa kodiga tegilmaydi.
-  const advanceRef = useRef(advance);
-  // Render paytida ref yozish React qoidalariga zid — effektda yangilaymiz.
-  useEffect(() => {
-    advanceRef.current = advance;
-  }, [advance]);
-  const isLastStop =
-    !!tour && tour.stopIdx + 1 >= (STEP_BY_KEY[tour.stepKey]?.stops.length ?? 0);
+  /**
+   * Aniq to'xtashga o'tish. `idx` oxiridan oshsa — qadam tugadi
+   * (to'liq yurishda keyingi qadamga o'tiladi).
+   */
+  const jump = useCallback((idx: number) => {
+    setTour((cur) => {
+      if (!cur) return cur;
+      const step = STEP_BY_KEY[cur.stepKey];
+      if (!step) return cur;
 
+      if (idx < step.stops.length) {
+        if (idx === cur.stopIdx) return cur;
+        const next = { ...cur, stopIdx: idx, paused: false };
+        writeTour({ ...next, startedAt: Date.now() });
+        return next;
+      }
+
+      // Qadam tugadi
+      if (cur.walkthrough) {
+        const order = walkOrderRef.current;
+        const nextKey = order[order.indexOf(cur.stepKey) + 1];
+        if (nextKey) {
+          const n: TourState = {
+            stepKey: nextKey, stopIdx: 0, paused: false,
+            replay: true, walkthrough: true,
+          };
+          writeTour({ ...n, startedAt: Date.now() });
+          return n;
+        }
+      }
+      writeTour(null);
+      return null;
+    });
+  }, []);
+
+  const jumpRef = useRef(jump);
   useEffect(() => {
-    if (!currentTarget) return;
+    jumpRef.current = jump;
+  }, [jump]);
+  useEffect(() => {
+    if (!tour || tour.paused) return;
+    const step = STEP_BY_KEY[tour.stepKey];
+    if (!step) return;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
-    const bump = () => {
-      // Bir nishon ikki marta bosilsa ikkita taymer qo'yilib, tur bitta
-      // to'xtashni sakrab o'tardi.
+    /**
+     * TUR FOYDALANUVCHIGA ERGASHADI, teskarisi emas.
+     *
+     * Ilgari faqat JORIY to'xtash nishoni kuzatilardi. Amalda odam qat'iy
+     * ketma-ketlikda yurmaydi: xona nomini yozib, to'g'ridan-to'g'ri
+     * "Saqlash" ni bosadi. O'shanda tur "Nom bering" to'xtashida qolib,
+     * forma yopilgach nishonini yo'qotib osilib qolardi.
+     *
+     * Endi bosilgan element SHU QADAMNING istalgan to'xtashiga tegishli
+     * bo'lsa, tur o'sha joydan davom etadi.
+     */
+    const stopIndexOf = (el: HTMLElement | null): number => {
+      if (!el) return -1;
+      const holder = el.closest("[data-tour]") as HTMLElement | null;
+      const id = holder?.getAttribute("data-tour");
+      if (!id) return -1;
+      return step.stops.findIndex((st) => st.target === id);
+    };
+
+    const goTo = (idx: number) => {
       if (timer) clearTimeout(timer);
       // Modal ochilishi/DOM almashishi uchun bir kadr kutamiz.
-      timer = setTimeout(() => advanceRef.current(), 60);
+      timer = setTimeout(() => jumpRef.current(idx), 60);
     };
 
     const onClick = (e: MouseEvent) => {
       const el = e.target as HTMLElement | null;
-      const hit = el?.closest?.(`[data-tour="${currentTarget}"]`);
-      if (!hit) return;
+      const idx = stopIndexOf(el);
+      if (idx < 0 || idx < tour.stopIdx) return; // orqadagi nishon — e'tiborsiz
 
       // MATN MAYDONI — bosish "bajardim" degani emas, yozish uchun fokus.
-      // Aks holda "Kurs nomi" ni yozmoqchi bo'lgan foydalanuvchi inputga
-      // bosishi bilan tur keyingi to'xtashga sakrab ketardi.
-      if (el?.closest("input, textarea, [contenteditable='true']")) return;
-
-      // NATIVE <select> — bosish ro'yxatni OCHADI, tanlash keyin bo'ladi.
-      // Oldinga o'tish `change` da (quyida).
-      if (el?.closest("select")) return;
-
-      // OXIRGI to'xtashda klik bilan tugatmaymiz: "Saqlash" bosilib, forma
-      // xato bersa (masalan telefon to'ldirilmagan) tur o'lib qolardi.
-      // Yakunni server hal qiladi — `doneMap` effekti.
-      if (isLastStop) return;
-
-      bump();
+      if (el?.closest("input, textarea, [contenteditable='true']")) {
+        if (idx > tour.stopIdx) goTo(idx); // faqat shu maydonga suriladi
+        return;
+      }
+      // NATIVE <select> — bosish ro'yxatni ochadi; tanlov `change` da.
+      if (el?.closest("select")) {
+        if (idx > tour.stopIdx) goTo(idx);
+        return;
+      }
+      goTo(idx + 1);
     };
 
-    // Select uchun: haqiqiy tanlov qilinganda oldinga o'tamiz.
     const onChange = (e: Event) => {
       const el = e.target as HTMLElement | null;
-      if (!el?.closest?.(`[data-tour="${currentTarget}"]`)) return;
-      if (!el.closest("select")) return;
-      if ((el as HTMLSelectElement).value === "") return; // "Tanlang..." — hali tanlanmagan
-      if (isLastStop) return;
-      bump();
+      const idx = stopIndexOf(el);
+      if (idx < 0 || idx < tour.stopIdx) return;
+      if (!el?.closest("select")) return;
+      if ((el as HTMLSelectElement).value === "") return; // hali tanlanmagan
+      goTo(idx + 1);
     };
 
     document.addEventListener("click", onClick, true);
@@ -270,7 +371,7 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("change", onChange, true);
     };
-  }, [currentTarget, isLastStop]);
+  }, [tour]);
 
   // ── Klaviatura ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -303,6 +404,20 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [tour, advance, back]);
+
+  // ── Qadam boshlanganda kerakli sahifaga o'tish ─────────────────────────
+  //
+  // `stopIdx === 0` sharti muhim: o'tish har qadam uchun BIR MARTA bo'ladi.
+  // Aks holda foydalanuvchi tur davomida boshqa sahifaga o'tmoqchi bo'lsa,
+  // effekt uni doim orqaga tortib turardi.
+  const tourStepKey = tour?.stepKey;
+  const tourStopIdx = tour?.stopIdx;
+  const tourPaused = tour?.paused;
+  useEffect(() => {
+    if (!tourStepKey || tourPaused || tourStopIdx !== 0) return;
+    const step = STEP_BY_KEY[tourStepKey];
+    if (step && needsNavigation(step.href)) router.push(step.href);
+  }, [tourStepKey, tourStopIdx, tourPaused, router]);
 
   // ── Marshrut o'zgarsa — holatni yangilaymiz (polling YO'Q) ──────────────
   useEffect(() => {
@@ -358,6 +473,7 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
       celebrating,
       tour,
       startTour,
+      startWalkthrough,
       stopTour,
       resumeTour,
       hide: () => {
@@ -375,7 +491,7 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
         // Sessiya boshidagi "allaqachon tugagan" belgisini tozalaymiz —
         // shundan keyin qadamlarni haqiqatan qaytadan bajarsa, tabrik
         // yana ko'rsatiladi.
-        completeAtLoad.current = null;
+        setCompleteAtLoad(null);
         void run("restart");
       },
       toggleSkip: (key, on) => void run(on ? "skip" : "unskip", { key }),
@@ -387,7 +503,8 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
     }),
     [
       isLoading, visible, steps, doneMap, skipped, required.length, requiredDone,
-      nextStep, celebrating, status, tour, startTour, stopTour, resumeTour, run, mutate, doneMap,
+      nextStep, celebrating, status, tour, startTour, startWalkthrough, stopTour,
+      resumeTour, run, mutate, doneMap,
     ],
   );
 
@@ -404,6 +521,11 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
         {tour && !tour.paused && currentStop && (
           <OnboardingSpotlight
             stop={currentStop}
+            walk={
+              tour.walkthrough
+                ? { index: walkOrder.indexOf(tour.stepKey) + 1, total: walkOrder.length }
+                : null
+            }
             stepKey={tour.stepKey}
             stopIdx={tour.stopIdx}
             stopCount={STEP_BY_KEY[tour.stepKey]?.stops.length ?? 0}

@@ -26,7 +26,7 @@ import { STEP_BY_KEY } from "@/lib/onboarding/steps";
 export function OnboardingSettingsPanel() {
   const {
     enabled, status, steps, doneMap, requiredDone, requiredTotal,
-    startTour, restart, resume,
+    startTour, startWalkthrough, restart, resume,
   } = useOnboardingCtx();
   const router = useRouter();
   const [confirmRestart, setConfirmRestart] = useState(false);
@@ -83,6 +83,11 @@ export function OnboardingSettingsPanel() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 mt-4">
+          {/* ASOSIY amal: butun yo'lni boshidan oxirigacha ko'rsatadi. */}
+          <Button size="sm" className="h-9 text-[12px] gap-1.5" onClick={startWalkthrough}>
+            <Play className="w-3.5 h-3.5" />
+            Boshidan ko&apos;rsating
+          </Button>
           {status !== "ACTIVE" && (
             <Button size="sm" variant="outline" className="h-9 text-[12px] gap-1.5"
               onClick={() => { resume(); setDone(true); }}>
@@ -103,7 +108,7 @@ export function OnboardingSettingsPanel() {
         </div>
 
         <p className="text-[11px] text-neutral-400 mt-3">
-          Ikkalasi ham ma&apos;lumotga tegmaydi — xona, kurs, guruh va
+          Hech biri ma&apos;lumotga tegmaydi — xona, kurs, guruh va
           o&apos;quvchilar joyida qoladi.
         </p>
       </div>

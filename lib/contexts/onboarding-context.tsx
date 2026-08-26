@@ -15,6 +15,11 @@ export interface TourState {
    * qadamni qaytadan ko'rsatayotganda esa u darhol to'xtab qolardi.
    */
   replay: boolean;
+  /**
+   * TO'LIQ YURISH: qadam tugagach tur to'xtamaydi, KEYINGI qadamga o'tadi.
+   * "Boshidan ko'rsating" shu rejimda ishlaydi.
+   */
+  walkthrough: boolean;
 }
 
 export interface OnboardingCtxValue {
@@ -38,6 +43,8 @@ export interface OnboardingCtxValue {
 
   tour: TourState | null;
   startTour: (stepKey: string) => void;
+  /** Birinchi qadamdan oxirigacha ketma-ket ko'rsatadi. */
+  startWalkthrough: () => void;
   stopTour: () => void;
   /** `Esc` bilan pauza qilingan turni davom ettiradi. */
   resumeTour: () => void;
@@ -71,6 +78,7 @@ export const INERT_ONBOARDING: OnboardingCtxValue = {
   celebrating: false,
   tour: null,
   startTour: () => {},
+  startWalkthrough: () => {},
   stopTour: () => {},
   resumeTour: () => {},
   hide: () => {},
