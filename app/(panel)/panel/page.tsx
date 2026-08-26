@@ -18,6 +18,7 @@ import { PointsBanner } from "@/components/gamification/points-banner";
 import { PanelShop } from "@/components/gamification/panel-shop";
 import { PasswordCard } from "@/components/gamification/panel-password";
 import { payStatusFromBalance, PAY_STATUS_CFG } from "@/lib/payment-status";
+import { fmtDayMonth, fmtShortDate, fmtWeekday, UZ_MONTHS_SHORT, UZ_WEEKDAYS_SHORT } from "@/lib/date-uz";
 
 function fmtMoney(v: number) {
   return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
@@ -53,13 +54,9 @@ function dayLabels(days?: string[]): string[] {
   return (days ?? []).map(d => DAY_SHORT[String(d).trim().toLowerCase()] ?? String(d));
 }
 
-function fmtDate(iso: string) {
-  const d = new Date(iso + "T12:00:00");
-  return d.toLocaleDateString("uz-UZ", { day: "numeric", month: "long" });
-}
-function dayName(iso: string) {
-  return new Date(iso + "T12:00:00").toLocaleDateString("uz-UZ", { weekday: "long" });
-}
+// Sana nomlari brauzer lokalidan EMAS — Chrome uz-UZ uchun "M08" qaytaradi.
+const fmtDate = fmtDayMonth;
+const dayName = fmtWeekday;
 function todayIso() {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
@@ -188,7 +185,7 @@ export default function StudentPanelPage() {
               {new Date(nextLesson.date + "T12:00:00").getDate()}
             </span>
             <span className="text-[9px] text-indigo-500 dark:text-indigo-400 uppercase mt-0.5">
-              {new Date(nextLesson.date + "T12:00:00").toLocaleDateString("uz-UZ", { month: "short" })}
+              {UZ_MONTHS_SHORT[new Date(nextLesson.date + "T12:00:00").getMonth()]}
             </span>
           </div>
           <div className="flex-1 min-w-0">
@@ -373,7 +370,127 @@ export default function StudentPanelPage() {
 
 // ─── Jadval ───────────────────────────────────────────────────────────────────
 
+/**
+ * JADVAL — ikki ko'rinish.
+ *
+ * "Ro'yxat" — kelayotgan darslar ketma-ket. "Jadval" — hafta bo'yicha
+ * setka: talaba haftasi qanday taqsimlanganini bir qarashda ko'radi
+ * (dars yo'q kunlar ham ko'rinadi, ro'yxatda ular umuman chiqmaydi).
+ */
 function ScheduleTab({ items }: { items: ScheduleItem[] }) {
+  const [view, setView] = useState<"royxat" | "jadval">("jadval");
+
+  if (items.length === 0) {
+    return (
+      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl">
+        <Empty icon={CalendarDays} text="Yaqin 2 haftada dars yo'q" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-1 p-1 glass-soft rounded-xl w-fit">
+        {([["jadval", "Jadval"], ["royxat", "Ro'yxat"]] as const).map(([id, label]) => (
+          <button key={id} onClick={() => setView(id)}
+            className={cn("px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all",
+              view === id
+                ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
+                : "text-neutral-500 dark:text-neutral-400")}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {view === "jadval" ? <ScheduleGrid items={items} /> : <ScheduleList items={items} />}
+    </div>
+  );
+}
+
+/** Hafta setkasi: har bir kun — bitta qator, darslari yonida. */
+function ScheduleGrid({ items }: { items: ScheduleItem[] }) {
+  const today = todayIso();
+
+  const weeks = useMemo(() => {
+    const byDate = new Map<string, ScheduleItem[]>();
+    for (const it of items) {
+      const arr = byDate.get(it.date) ?? [];
+      arr.push(it);
+      byDate.set(it.date, arr);
+    }
+
+    // Birinchi darsdan boshlab dushanbaga tekislaymiz va to'liq haftalar
+    // qilib chiqamiz — bo'sh kunlar ham ko'rinsin.
+    const dates = [...byDate.keys()].sort();
+    if (dates.length === 0) return [];
+    const first = new Date(dates[0] + "T12:00:00");
+    const shift = (first.getDay() + 6) % 7; // dushanba = 0
+    first.setDate(first.getDate() - shift);
+    const last = new Date(dates[dates.length - 1] + "T12:00:00");
+
+    const out: { iso: string; lessons: ScheduleItem[] }[][] = [];
+    const cur = new Date(first);
+    while (cur <= last) {
+      const week: { iso: string; lessons: ScheduleItem[] }[] = [];
+      for (let i = 0; i < 7; i++) {
+        const iso = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}-${String(cur.getDate()).padStart(2, "0")}`;
+        week.push({ iso, lessons: byDate.get(iso) ?? [] });
+        cur.setDate(cur.getDate() + 1);
+      }
+      out.push(week);
+    }
+    return out;
+  }, [items]);
+
+  return (
+    <div className="space-y-3">
+      {weeks.map((week, wi) => (
+        <div key={wi} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
+          <div className="px-4 py-2 border-b border-white/50 dark:border-white/10">
+            <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+              {fmtDayMonth(week[0].iso)} — {fmtDayMonth(week[6].iso)}
+            </p>
+          </div>
+          {week.map(({ iso, lessons }) => {
+            const isToday = iso === today;
+            return (
+              <div key={iso}
+                className={cn(
+                  "flex gap-3 px-4 py-2.5 border-b border-white/50 dark:border-white/10 last:border-0",
+                  isToday && "bg-indigo-50/70 dark:bg-indigo-400/10",
+                  lessons.length === 0 && "opacity-50",
+                )}>
+                <div className="w-16 shrink-0">
+                  <p className={cn("text-[12px] font-bold leading-tight",
+                    isToday ? "text-indigo-700 dark:text-indigo-300" : "text-neutral-900 dark:text-neutral-100")}>
+                    {UZ_WEEKDAYS_SHORT[new Date(iso + "T12:00:00").getDay()]}
+                  </p>
+                  <p className="text-[10px] text-neutral-400">{fmtShortDate(iso)}</p>
+                </div>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  {lessons.length === 0 ? (
+                    <p className="text-[12px] text-neutral-400">Dars yo&apos;q</p>
+                  ) : lessons.map((l, i) => (
+                    <div key={`${l.groupId}-${i}`} className="flex items-baseline gap-2">
+                      <span className="text-[12px] font-bold tabular-nums text-neutral-900 dark:text-neutral-100 shrink-0">
+                        {l.startTime}–{l.endTime}
+                      </span>
+                      <span className="text-[12px] text-neutral-600 dark:text-neutral-300 truncate">
+                        {l.groupName}
+                        {l.roomName ? <span className="text-neutral-400"> · {l.roomName}</span> : null}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ScheduleList({ items }: { items: ScheduleItem[] }) {
   const byDate = useMemo(() => {
     const map = new Map<string, ScheduleItem[]>();
     for (const it of items) {
@@ -383,14 +500,6 @@ function ScheduleTab({ items }: { items: ScheduleItem[] }) {
     }
     return [...map.entries()];
   }, [items]);
-
-  if (items.length === 0) {
-    return (
-      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl">
-        <Empty icon={CalendarDays} text="Yaqin 2 haftada dars yo'q" />
-      </div>
-    );
-  }
 
   const today = todayIso();
 

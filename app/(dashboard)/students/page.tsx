@@ -74,6 +74,10 @@ export default function StudentsPage() {
   const canUpdate = hasPerm(me?.permissions, "students.update");
   const canDelete = hasPerm(me?.permissions, "students.delete");
   const canSendSms = hasPerm(me?.permissions, "sms.send");
+  // Qarz — moliyaviy ma'lumot. "To'lov qabul qilmaydi" deb belgilangan
+  // o'qituvchida `payments.view` bo'lmaydi va u qarzni umuman ko'rmaydi
+  // (server ham javobda balansni bermaydi).
+  const canSeeMoney = hasPerm(me?.permissions, "payments.view");
 
   const [search,       setSearch]       = useState("");
   const [filterEnroll, setFilterEnroll] = useState("barchasi");
@@ -176,7 +180,9 @@ export default function StudentsPage() {
         gs.map((g: any) => g.group?.name).filter(Boolean).join(" | "),
         gs.map((g: any) => g.group?.teacher?.user?.name).filter(Boolean).join(" | "),
         ENROLL_CFG[enrollOf(s)]?.label ?? "",
-        Math.round(s.balance),
+        // Qarz ustuni faqat moliya huquqi bo'lganda — aks holda javobda
+        // balans yo'q va eksportda chalg'ituvchi "0" chiqardi.
+        ...(canSeeMoney ? [Math.round(s.balance ?? 0)] : []),
         s.createdAt ? new Date(s.createdAt).toLocaleDateString("uz-UZ") : "",
       ];
     });
@@ -184,7 +190,8 @@ export default function StudentsPage() {
       `oquvchilar-${new Date().toISOString().slice(0, 10)}.csv`,
       toCsv(
         ["Ism", "Telefon", "Ota-ona telefoni", "Ota-ona ismi", "Maktab", "Jinsi",
-         "Guruh", "O'qituvchi", "Holat", "Balans", "Qo'shilgan"],
+         "Guruh", "O'qituvchi", "Holat",
+         ...(canSeeMoney ? ["Balans"] : []), "Qo'shilgan"],
         rows,
       ),
     );
@@ -235,7 +242,9 @@ export default function StudentsPage() {
             { label: "Jami",      value: stats.jami,       icon: GraduationCap, bg: "bg-blue-50 dark:bg-blue-950/40",   text: "text-blue-600 dark:text-blue-400" },
             { label: "Faol",      value: stats.faol,       icon: CheckCircle,   bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-600 dark:text-green-400" },
             { label: "Sinov",     value: stats.sinov,      icon: Clock,         bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-600 dark:text-amber-400" },
-            { label: "Jami qarz", value: fmt(stats.qarz),  icon: DollarSign,    bg: "bg-red-50 dark:bg-red-950/40",     text: "text-red-600 dark:text-red-400" },
+            ...(canSeeMoney
+              ? [{ label: "Jami qarz", value: fmt(stats.qarz), icon: DollarSign, bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-600 dark:text-red-400" }]
+              : []),
           ].map(s => {
             const Icon = s.icon;
             return (
@@ -285,11 +294,13 @@ export default function StudentsPage() {
             {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.user?.name}</option>)}
           </select>
 
-          <select value={filterDebt} onChange={e => setFilterDebt(e.target.value)} className={selectCls}>
-            <option value="barchasi">To&apos;lov: barchasi</option>
-            <option value="qarzdor">Faqat qarzdorlar</option>
-            <option value="tolangan">Qarzi yo&apos;qlar</option>
-          </select>
+          {canSeeMoney && (
+            <select value={filterDebt} onChange={e => setFilterDebt(e.target.value)} className={selectCls}>
+              <option value="barchasi">To&apos;lov: barchasi</option>
+              <option value="qarzdor">Faqat qarzdorlar</option>
+              <option value="tolangan">Qarzi yo&apos;qlar</option>
+            </select>
+          )}
 
           {filtersOn && (
             <button onClick={clearFilters}
@@ -328,7 +339,8 @@ export default function StudentsPage() {
                       className="accent-indigo-600 w-3.5 h-3.5 align-middle cursor-pointer disabled:opacity-40" />
                   </TableHead>
                 )}
-                {["O'quvchi", "Telefon", "Guruhlar", "O'qituvchi", "Holat", "To'lov", ""].map(h => (
+                {["O'quvchi", "Telefon", "Guruhlar", "O'qituvchi", "Holat",
+                  ...(canSeeMoney ? ["To'lov"] : []), ""].map(h => (
                   <TableHead key={h} className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{h}</TableHead>
                 ))}
               </TableRow>
@@ -337,7 +349,7 @@ export default function StudentsPage() {
               {isLoading
                 ? Array.from({length: 5}).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({length: canUpdate ? 8 : 7}).map((_, j) => (
+                      {Array.from({length: 6 + (canSeeMoney ? 1 : 0) + (canUpdate ? 1 : 0)}).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-3 w-full" /></TableCell>
                       ))}
                     </TableRow>
@@ -418,11 +430,13 @@ export default function StudentsPage() {
                             {enroll?.label ?? "—"}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold", pay?.cls)}>
-                            {pay?.label}
-                          </span>
-                        </TableCell>
+                        {canSeeMoney && (
+                          <TableCell>
+                            <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold", pay?.cls)}>
+                              {pay?.label}
+                            </span>
+                          </TableCell>
+                        )}
                         <TableCell>
                           {/* Amal tugmalari qator bosilishini ishga tushirmasligi kerak */}
                           <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>

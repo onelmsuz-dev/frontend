@@ -24,6 +24,7 @@ import { useGroups } from "@/lib/hooks/useGroups";
 import { useStudents } from "@/lib/hooks/useStudents";
 import useSWR, { mutate } from "swr";
 import { useBranch, useBranchQueryString } from "@/lib/contexts/branch-context";
+import { fmtMonthYear } from "@/lib/date-uz";
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -223,7 +224,7 @@ export default function FinancePage() {
     <div>
       <TopHeader
         title="Moliya"
-        subtitle={`${new Date().toLocaleString("uz-UZ", { month: "long", year: "numeric" })} — moliyaviy hisobot`}
+        subtitle={`${fmtMonthYear(new Date())} — moliyaviy hisobot`}
         action={{ label: "To'lov qabul qilish", onClick: () => setShowPayModal(true) }}
       />
 

@@ -15,6 +15,7 @@ import {
   REASON_LABELS, REASON_COLORS,
 } from "@/lib/hooks/useGamification";
 import { levelFromXp } from "@/lib/levels";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { mutate } from "swr";
 import {
   Phone, Calendar, DollarSign, ArrowLeft, AlertCircle,
@@ -109,6 +110,15 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   }
 
   // ── Payment ──────────────────────────────────────────────────────────────────
+  const { me } = useMe();
+  // Moliya (qarz va to'lov) — faqat to'lov huquqi borlarga. "To'lov qabul
+  // qilmaydi" deb belgilangan o'qituvchida bu huquq yo'q, server ham
+  // balansni bermaydi.
+  const canSeeMoney = hasPerm(me?.permissions, "payments.view");
+  // Guruhni almashtirish/chiqarish — o'quvchini tahrirlash huquqi bilan.
+  // O'qituvchida bu huquq yo'q: tugma bosilsa server 403 berardi.
+  const canManageGroups = hasPerm(me?.permissions, "students.update");
+
   // To'lov uchun mos a'zoliklar (guruhni tashlab ketganlar chiqarib tashlanadi)
   const payableGroups: Membership[] = (student?.groups ?? []).filter(
     (sg: Membership) => sg.enrollmentStatus !== "CHIQIB_KETGAN",
@@ -281,7 +291,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             O'quvchilar
           </Link>
         }
-        action={{ label: "To'lov qo'shish", onClick: () => { setPayErr(""); setShowPayModal(true); } }}
+        action={canSeeMoney
+          ? { label: "To'lov qo'shish", onClick: () => { setPayErr(""); setShowPayModal(true); } }
+          : undefined}
       />
 
       {/* Payment modal */}
@@ -477,22 +489,28 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           {/* Finance */}
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Moliya</h3>
-              <button onClick={() => { setPayErr(""); setShowPayModal(true); }}
-                className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                <Plus className="w-3 h-3" /> To'lov
-              </button>
+              <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                {canSeeMoney ? "Moliya" : "Davomat"}
+              </h3>
+              {canSeeMoney && (
+                <button onClick={() => { setPayErr(""); setShowPayModal(true); }}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                  <Plus className="w-3 h-3" /> To'lov
+                </button>
+              )}
             </div>
             <div className="space-y-3">
-              <div>
-                <p className="text-[11px] text-neutral-400 mb-0.5">Balans</p>
-                <p className={cn("text-[22px] font-black leading-none",
-                  student.balance >= 0
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-red-600 dark:text-red-400")}>
-                  {fmt(student.balance)}
-                </p>
-              </div>
+              {canSeeMoney && (
+                <div>
+                  <p className="text-[11px] text-neutral-400 mb-0.5">Balans</p>
+                  <p className={cn("text-[22px] font-black leading-none",
+                    (student.balance ?? 0) >= 0
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-600 dark:text-red-400")}>
+                    {fmt(student.balance ?? 0)}
+                  </p>
+                </div>
+              )}
               <div>
                 <p className="text-[11px] text-neutral-400 mb-0.5">Davomiylik</p>
                 <div className="flex items-center gap-2">
@@ -517,7 +535,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                 {activeSgs.length > 1 ? `Guruhlari (${activeSgs.length})` : "Guruh"}
               </h3>
-              {availableGroups.length > 0 && (
+              {canManageGroups && availableGroups.length > 0 && (
                 <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg: null }); }}
                   className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
                   <Plus className="w-3 h-3" /> Guruhga qo&apos;shish
@@ -528,10 +546,12 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             {activeSgs.length === 0 ? (
               <div className="space-y-2.5 py-2">
                 <p className="text-[13px] text-neutral-400">Guruhga biriktirilmagan</p>
-                <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg: null }); }}
-                  className="flex items-center gap-1.5 text-[12px] px-3 py-2 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Guruhga qo&apos;shish
-                </button>
+                {canManageGroups && (
+                  <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg: null }); }}
+                    className="flex items-center gap-1.5 text-[12px] px-3 py-2 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                    <Plus className="w-3.5 h-3.5" /> Guruhga qo&apos;shish
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 gap-2.5">
@@ -582,16 +602,18 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                         </button>
                       )}
 
-                      <div className="flex gap-1.5 pt-0.5">
-                        <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg }); }}
-                          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
-                          <Shuffle className="w-3 h-3" /> Almashtirish
-                        </button>
-                        <button onClick={() => setExitTarget(sg)}
-                          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                          <LogOut className="w-3 h-3" /> Chiqarish
-                        </button>
-                      </div>
+                      {canManageGroups && (
+                        <div className="flex gap-1.5 pt-0.5">
+                          <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg }); }}
+                            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                            <Shuffle className="w-3 h-3" /> Almashtirish
+                          </button>
+                          <button onClick={() => setExitTarget(sg)}
+                            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                            <LogOut className="w-3 h-3" /> Chiqarish
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -609,8 +631,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         {/* Gamifikatsiya — API allaqachon qaytarardi, lekin sahifa ko'rsatmasdi */}
         <StudentPointsCard student={student} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Payments */}
+        <div className={cn("grid gap-5", canSeeMoney ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
+          {/* Payments — faqat to'lov huquqi bo'lganda */}
+          {canSeeMoney && (
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
             <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -639,6 +662,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               ))}
             </div>
           </div>
+
+          )}
 
           {/* Attendance */}
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">

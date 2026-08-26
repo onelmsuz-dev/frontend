@@ -24,6 +24,7 @@ import {
 import { useMe } from "@/lib/hooks/useMe";
 import { ShopTab } from "@/components/gamification/shop-tab";
 import { RedemptionsTab } from "@/components/gamification/redemptions-tab";
+import { fmtMonthYear } from "@/lib/date-uz";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -56,7 +57,7 @@ function monthOptions() {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     out.push({
       value: monthKey(d),
-      label: d.toLocaleDateString("uz-UZ", { month: "long", year: "numeric" }),
+      label: fmtMonthYear(d),
     });
   }
   return out;
@@ -241,6 +242,10 @@ function StudentsTab({ settingsActive, coinIcon }: { settingsActive: boolean; co
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [awardOpen, setAwardOpen] = useState(false);
+  // Qatordagi "+" tugmasi: ptichka qo'yishni bilmagan foydalanuvchi ham
+  // bitta o'quvchiga darhol ball bera oladi (tanlov shu bitta bilan
+  // almashtiriladi, oyna esa xuddi ommaviy holatdagidek ochiladi).
+  const awardOne = (id: string) => { setSelected(new Set([id])); setAwardOpen(true); };
   const [historyOf, setHistoryOf] = useState<GamificationStudent | null>(null);
 
   const { data, isLoading } = useGamificationStudents(search);
@@ -270,12 +275,18 @@ function StudentsTab({ settingsActive, coinIcon }: { settingsActive: boolean; co
           <Input placeholder="Ism, telefon..." className="pl-9 h-9 text-sm w-56"
             value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        {selected.size > 0 && (
+        {selected.size > 0 ? (
           <button onClick={() => setAwardOpen(true)} disabled={!settingsActive}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors">
             <Plus className="w-3.5 h-3.5" />
             {selected.size} ta o&apos;quvchiga ball berish
           </button>
+        ) : (
+          // Ptichka qo'yish kerakligini bilmaslik mumkin — buni aytib turamiz.
+          <span className="text-xs text-neutral-400">
+            Qatordagi <b className="text-indigo-500">Ball</b> tugmasi — bittasiga;
+            bir nechtasiga ball berish uchun ptichka qo&apos;ying
+          </span>
         )}
         <span className="ml-auto text-xs text-neutral-400">{students.length} ta</span>
       </div>
@@ -346,8 +357,23 @@ function StudentsTab({ settingsActive, coinIcon }: { settingsActive: boolean; co
                           <span className="text-[11px] text-neutral-400">panelga kirmagan</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <TrendingUp className="w-3.5 h-3.5 text-neutral-300 dark:text-neutral-600 inline" />
+                      <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => awardOne(s.id)} disabled={!settingsActive}
+                            title="Shu o'quvchiga ball berish"
+                            className="flex items-center gap-1 h-7 px-2 rounded-lg text-[11px] font-semibold
+                              bg-indigo-50 text-indigo-600 hover:bg-indigo-100
+                              dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50
+                              disabled:opacity-40 transition-colors">
+                            <Plus className="w-3 h-3" /> Ball
+                          </button>
+                          <button onClick={() => setHistoryOf(s)} title="Ballar tarixi"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400
+                              hover:text-neutral-700 dark:hover:text-neutral-200
+                              hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
+                            <TrendingUp className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
