@@ -13,10 +13,12 @@ import { useGroups } from "@/lib/hooks/useGroups";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { useTeachers } from "@/lib/hooks/useTeachers";
+import { useRooms } from "@/lib/hooks/useRooms";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranch } from "@/lib/contexts/branch-context";
 import { SOURCE_OPTIONS, WEEKDAYS, SCHEDULE_PRESETS, todayStr, type Gender } from "@/lib/form-constants";
 import { cn } from "@/lib/utils";
+import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 
 const selectCls =
   "w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 " +
@@ -71,10 +73,15 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
   const { data: groupsRaw } = useGroups({ status: "ACTIVE,UPCOMING" });
   const { data: coursesRaw } = useCourses();
   const { data: teachersRaw } = useTeachers();
+  const { data: roomsRaw } = useRooms();
   const { data: branchesRaw } = useBranches();
   const groups: any[] = Array.isArray(groupsRaw) ? groupsRaw : [];
   const courses: any[] = Array.isArray(coursesRaw) ? coursesRaw : [];
   const teachers: any[] = Array.isArray(teachersRaw) ? teachersRaw : [];
+  // Guruh yaratishda faqat joriy filial xonalari — boshqa filial xonasini
+  // tanlash serverda baribir rad etiladi.
+  const allRooms: any[] = Array.isArray(roomsRaw) ? roomsRaw : [];
+  const rooms = activeBranchId ? allRooms.filter(r => r.branchId === activeBranchId) : allRooms;
   const branches: any[] = Array.isArray(branchesRaw) ? branchesRaw : [];
 
   // Reset when opened
@@ -150,6 +157,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [ng, setNg] = useState({
     name: "", courseId: "", teacherId: "",
+    roomId: "",
     scheduleDays: [] as string[], startTime: "18:00", endTime: "19:30",
     startDate: todayStr(),
   });
@@ -162,13 +170,21 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
 
   async function createGroup() {
     if (!ng.name.trim() || !ng.courseId || !ng.teacherId) { setNgErr("Nom, kurs va o'qituvchi majburiy"); return; }
+    // Server `roomId` ni MAJBURIY qiladi (groups.service.ts). Bu yerda u
+    // yuborilmagani uchun inline guruh yaratish har doim 400 bilan tugardi.
+    if (!ng.roomId) {
+      setNgErr(rooms.length === 0
+        ? "Avval xona qo'shing — Sozlamalar → Xonalar"
+        : "Xonani tanlang — bir xonada ikkita dars bo'lib qolmasligi uchun");
+      return;
+    }
     if (ng.scheduleDays.length === 0) { setNgErr("Kamida 1 ta kun tanlang"); return; }
     setNgSaving(true); setNgErr("");
     try {
       const res = await fetch("/api/groups", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: ng.name, courseId: ng.courseId, teacherId: ng.teacherId,
+          name: ng.name, courseId: ng.courseId, teacherId: ng.teacherId, roomId: ng.roomId,
           scheduleDays: ng.scheduleDays, startTime: ng.startTime, endTime: ng.endTime,
           startDate: ng.startDate, status: "ACTIVE",
           ...(activeBranchId ? { branchId: activeBranchId } : {}),
@@ -179,7 +195,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       revalidateGroups();
       setForm(p => ({ ...p, groupId: data.id }));
       setShowNewGroup(false);
-      setNg({ name: "", courseId: "", teacherId: "", scheduleDays: [], startTime: "18:00", endTime: "19:30", startDate: todayStr() });
+      setNg({ name: "", courseId: "", teacherId: "", roomId: "", scheduleDays: [], startTime: "18:00", endTime: "19:30", startDate: todayStr() });
     } catch { setNgErr("Serverga ulanib bo'lmadi"); }
     finally { setNgSaving(false); }
   }
@@ -236,7 +252,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       size="lg"
       footer={
         <>
-          <Button onClick={submit} disabled={saving}
+          <Button onClick={submit} disabled={saving} data-tour={TOUR_TARGETS.studentSubmit}
             className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-semibold">
             {saving ? "Saqlanmoqda..." : isEdit ? "Saqlash" : "Saqlash"}
           </Button>
@@ -244,7 +260,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
         </>
       }
     >
-      <FormField label="Ism familiya" required error={fErr.name}>
+      <FormField label="Ism familiya" required error={fErr.name} dataTour={TOUR_TARGETS.studentNameInput}>
         <Input placeholder="Alisher Navoiy" value={form.name}
           onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setFErr(p => ({ ...p, name: undefined })); }}
           className="h-10" />
@@ -384,6 +400,11 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
                   {teachers.map(t => <option key={t.id} value={t.id}>{t.user?.name}</option>)}
                 </select>
               </div>
+              <select value={ng.roomId} onChange={e => setNg(p => ({ ...p, roomId: e.target.value }))}
+                className={cn(selectCls, "h-9 text-[12px] px-2 w-full")}>
+                <option value="">{rooms.length === 0 ? "Xona yo'q — Sozlamalar → Xonalar" : "Xona..."}</option>
+                {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
               <div className="flex flex-wrap gap-1">
                 {WEEKDAYS.map(d => (
                   <button key={d.value} type="button" onClick={() => toggleNgDay(d.value)}

@@ -53,7 +53,9 @@ export function ModalOverlay({
   if (!mounted || !shown) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[100]" role="presentation">
+    // `data-onb-modal` — yo'l ko'rsatuvchi turi nishon modal ichida ekanini
+    // shundan biladi va spotlight'ni `z-[100]` ustiga ko'taradi.
+    <div className="fixed inset-0 z-[100]" role="presentation" data-onb-modal="">
       <div
         className={cn(
           "absolute inset-0 bg-black/50 backdrop-blur-[2px] transition-opacity duration-300 ease-out",

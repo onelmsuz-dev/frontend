@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDeleteModal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
+import { TOUR_TARGETS } from "@/lib/onboarding/steps";
+import { OnboardingRestoreCard } from "@/components/onboarding/onboarding-restore-card";
 import type { Branch, Room } from "@/types";
 import {
   Plus, Trash2, Users, Building, Bell,
@@ -220,6 +222,7 @@ export default function SettingsPage() {
               const Icon = s.icon;
               return (
                 <button key={s.id} onClick={() => setActiveSection(s.id)}
+                  data-tour={`settings-tab-${s.id}`}
                   className={cn(
                     "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                     activeSection === s.id
@@ -244,6 +247,8 @@ export default function SettingsPage() {
 
           {/* ── O'quv markaz ── */}
           {activeSection === "markaz" && (
+            <>
+            <OnboardingRestoreCard />
             <Card className="border border-white/60 dark:border-white/10 shadow-none">
               <CardHeader className="pb-3">
                 <CardTitle className="text-[15px]">O'quv markaz ma'lumotlari</CardTitle>
@@ -329,6 +334,7 @@ export default function SettingsPage() {
                 )}
               </CardContent>
             </Card>
+            </>
           )}
 
           {/* ── Filliallar ── */}
@@ -417,14 +423,14 @@ export default function SettingsPage() {
                 <p className="text-sm text-neutral-500">
                   {roomsLoading ? "Yuklanmoqda..." : `${rooms.length} ta xona`}
                 </p>
- <Button size="sm" onClick={() => { setShowRoomForm(v => !v); setRoomErr(""); }} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-xs h-8"><Plus className="w-3.5 h-3.5" /> Xona qo'shish</Button>
+ <Button size="sm" data-tour={TOUR_TARGETS.roomAddBtn} onClick={() => { setShowRoomForm(true); setRoomErr(""); }} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-xs h-8"><Plus className="w-3.5 h-3.5" /> Xona qo'shish</Button>
               </div>
               {showRoomForm && (
                 <Card className="border border-white/60 dark:border-white/10 shadow-none">
                   <CardContent className="p-4 space-y-3">
                     <p className="text-sm font-semibold">Yangi xona</p>
                     <div className="grid grid-cols-2 gap-3">
-                      <div><Label className="text-xs text-neutral-500 mb-1 block">Xona nomi *</Label><Input placeholder="4-xona" value={newRoom.name} onChange={e => setNewRoom(p => ({...p, name: e.target.value}))} className="h-8 text-sm" /></div>
+                      <div data-tour={TOUR_TARGETS.roomNameInput}><Label className="text-xs text-neutral-500 mb-1 block">Xona nomi *</Label><Input placeholder="4-xona" value={newRoom.name} onChange={e => setNewRoom(p => ({...p, name: e.target.value}))} className="h-8 text-sm" /></div>
                       <div><Label className="text-xs text-neutral-500 mb-1 block">Sig'imi</Label><Input type="number" placeholder="15" value={newRoom.capacity} onChange={e => setNewRoom(p => ({...p, capacity: e.target.value}))} className="h-8 text-sm" /></div>
                       <div className="col-span-2"><Label className="text-xs text-neutral-500 mb-1 block">Filial</Label>
                         <select value={newRoom.branchId || branches[0]?.id || ""} onChange={e => setNewRoom(p => ({...p, branchId: e.target.value}))} className="w-full h-8 px-2 text-sm rounded-md border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 outline-none">
@@ -434,7 +440,7 @@ export default function SettingsPage() {
                     </div>
                     {roomErr && <p className="text-[12px] text-red-600 dark:text-red-400">{roomErr}</p>}
                     <div className="flex gap-2">
- <Button size="sm" onClick={addRoom} disabled={roomSaving} className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 h-8 text-xs">
+ <Button size="sm" data-tour={TOUR_TARGETS.roomSaveBtn} onClick={addRoom} disabled={roomSaving} className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 h-8 text-xs">
                         {roomSaving ? "Saqlanmoqda..." : "Saqlash"}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => setShowRoomForm(false)} className="h-8 text-xs">Bekor</Button>

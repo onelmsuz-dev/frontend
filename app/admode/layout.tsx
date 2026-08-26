@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { FullscreenToggle } from "@/components/fullscreen-toggle";
 import {
   LayoutDashboard, Building2, CreditCard, LogOut, ShieldCheck,
-  Settings, Users, BarChart3, MessageSquare,
+  Settings, Users, BarChart3, MessageSquare, Rocket,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -31,6 +31,7 @@ const SECTIONS = [
   {
     label: "Tizim",
     items: [
+      { href: "/admode/features", label: "Yangilanishlar", icon: Rocket },
       { href: "/admode/settings", label: "Sozlamalar", icon: Settings },
     ],
   },

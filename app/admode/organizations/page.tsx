@@ -5,7 +5,7 @@ import useSWR from "swr";
 import { cn } from "@/lib/utils";
 import {
   Plus, X, Search, AlertCircle, CheckCircle, XCircle,
-  Building2, Users, GraduationCap, TrendingUp, ExternalLink, Trash2, KeyRound,
+  Building2, Users, GraduationCap, TrendingUp, ExternalLink, Trash2, KeyRound, RotateCcw,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
@@ -65,6 +65,8 @@ export default function OrganizationsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteErr,  setDeleteErr]  = useState("");
   const [gamiId,     setGamiId]     = useState<string | null>(null);
+  const [demoId,     setDemoId]     = useState<string | null>(null);
+  const [resetId,    setResetId]    = useState<string | null>(null);
 
   // Password reset state
   const [resetOrg,  setResetOrg]   = useState<any>(null);
@@ -123,6 +125,38 @@ export default function OrganizationsPage() {
       });
       mutate();
     } finally { setTogglingId(null); }
+  }
+
+  /** Demo/sinov markazi bayrog'i — yangi funksiyalar avval shu yerda sinaladi. */
+  async function toggleDemo(id: string, cur: boolean) {
+    setDemoId(id);
+    try {
+      const res = await fetch(`/api/admode/organizations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDemo: !cur }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setDeleteErr(d.error ?? "Demo bayrog'ini o'zgartirib bo'lmadi");
+        return;
+      }
+      mutate();
+    } catch { setDeleteErr("Serverga ulanib bo'lmadi"); }
+    finally { setDemoId(null); }
+  }
+
+  /** Yo'l ko'rsatuvchini qayta boshlash — busiz tur bir marta sinaladi. */
+  async function resetOnboarding(id: string) {
+    setResetId(id);
+    try {
+      const res = await fetch(`/api/admode/onboarding/reset/${id}`, { method: "POST" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setDeleteErr(d.error ?? "Onboardingni qayta boshlab bo'lmadi");
+      }
+    } catch { setDeleteErr("Serverga ulanib bo'lmadi"); }
+    finally { setResetId(null); }
   }
 
   /** Markazga gamifikatsiya ruxsatini berish/olish (2-daraja kalit).
@@ -395,7 +429,7 @@ export default function OrganizationsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80">
-                {["Tashkilot", "Tarif", "O'quvchi", "O'qituvchi", "Guruh", "Daromad", "Holat", "Gamifikatsiya", "Qo'shilgan", "Amallar"].map(h => (
+                {["Tashkilot", "Tarif", "O'quvchi", "O'qituvchi", "Guruh", "Xona", "Kurs", "Daromad", "Holat", "Demo", "Gamifikatsiya", "Qo'shilgan", "Amallar"].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-[10px] font-bold text-neutral-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -406,7 +440,7 @@ export default function OrganizationsPage() {
               {isLoading
                 ? Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i} className="border-b border-neutral-200 dark:border-neutral-800/50">
-                      {Array.from({ length: 10 }).map((_, j) => (
+                      {Array.from({ length: 13 }).map((_, j) => (
                         <td key={j} className="px-4 py-3.5"><Skeleton className="h-3.5 w-full" /></td>
                       ))}
                     </tr>
@@ -458,6 +492,20 @@ export default function OrganizationsPage() {
                         <td className="px-4 py-3.5">
                           <span className="text-[13px] font-semibold text-neutral-300 dark:text-neutral-700 dark:text-neutral-300">{org._count.groups}</span>
                         </td>
+                        {/* Xona va Kurs — markaz sozlashda qayerda qotib qolganini
+                            ko'rsatadi (yo'l ko'rsatuvchi foydasini o'lchash uchun). */}
+                        <td className="px-4 py-3.5">
+                          <span className={cn("text-[13px] font-semibold",
+                            org._count.rooms === 0 ? "text-amber-600 dark:text-amber-400" : "text-neutral-500")}>
+                            {org._count.rooms}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className={cn("text-[13px] font-semibold",
+                            org._count.courses === 0 ? "text-amber-600 dark:text-amber-400" : "text-neutral-500")}>
+                            {org._count.courses}
+                          </span>
+                        </td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-1">
                             <TrendingUp className="w-3 h-3 text-emerald-500" />
@@ -470,6 +518,24 @@ export default function OrganizationsPage() {
                             ? <div className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /><span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Faol</span></div>
                             : <div className="flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /><span className="text-[11px] text-red-600 dark:text-red-400 font-medium">Blok</span></div>
                           }
+                        </td>
+                        {/* Demo markaz — bosqichi "DEMO" bo'lgan funksiyalar shu yerda yoqiladi */}
+                        <td className="px-4 py-3.5">
+                          <button
+                            onClick={() => toggleDemo(org.id, !!org.isDemo)}
+                            disabled={demoId === org.id}
+                            title={org.isDemo
+                              ? "Demo markaz — yangi funksiyalar shu yerda sinaladi"
+                              : "Demo markaz qilish"}
+                            className={cn(
+                              "relative w-9 h-5 rounded-full transition-colors disabled:opacity-40",
+                              org.isDemo ? "bg-amber-500" : "bg-neutral-300 dark:bg-neutral-600",
+                            )}>
+                            <span className={cn(
+                              "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                              org.isDemo && "translate-x-4",
+                            )} />
+                          </button>
                         </td>
                         {/* Gamifikatsiya — MARKAZ kaliti (global kalitdan pastda turadi) */}
                         <td className="px-4 py-3.5">
@@ -500,6 +566,16 @@ export default function OrganizationsPage() {
                         {/* Actions */}
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-1.5">
+                            {/* Yo'l ko'rsatuvchini qayta boshlash — sinov uchun.
+                                Busiz tur bir marta ko'riladi va boshqa hech qachon. */}
+                            <button
+                              onClick={() => resetOnboarding(org.id)}
+                              disabled={resetId === org.id}
+                              title="Yo'l ko'rsatuvchini qayta boshlash (sinov uchun)"
+                              className="w-7 h-7 grid place-items-center rounded-lg text-neutral-400
+                                hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-40">
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               onClick={() => { setResetOrg(org); setResetPass(""); setResetErr(""); setResetOk(false); }}
                               title="Admin parolini tiklash"

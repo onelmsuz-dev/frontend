@@ -12,8 +12,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, Phone, Users, BookOpen, Wallet, LayoutGrid, List, Plus, Pencil, Trash2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { useBranch } from "@/lib/contexts/branch-context";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { mutate } from "swr";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -42,6 +44,11 @@ const EMPTY = {
 export default function TeachersPage() {
   const router = useRouter();
   const { activeBranchId } = useBranch();
+  // Boshqa sahifalarda tugma huquqqa bog'langan (courses/page.tsx naqshi),
+  // bu yerda esa tushib qolgan edi: `teachers.view` bor, `teachers.create`
+  // yo'q xodim tugmani ko'rib, bosgach 403 olardi.
+  const { me } = useMe();
+  const canCreate = hasPerm(me?.permissions, "teachers.create");
   const [search,      setSearch]      = useState("");
   const [viewMode,    setViewMode]    = useState<ViewMode>("grid");
   const [showModal,   setShowModal]   = useState(false);
@@ -153,7 +160,7 @@ export default function TeachersPage() {
       <TopHeader
         title="O'qituvchilar"
         subtitle={isLoading ? "Yuklanmoqda..." : `Jami ${stats.jami} ta o'qituvchi`}
-        action={{ label: "O'qituvchi qo'shish", onClick: openCreate }}
+        action={canCreate ? { label: "O'qituvchi qo'shish", onClick: openCreate } : undefined}
       />
 
       <Modal
@@ -164,7 +171,7 @@ export default function TeachersPage() {
         size="lg"
         footer={
           <>
-            <Button onClick={submit} disabled={saving}
+            <Button onClick={submit} disabled={saving} data-tour={TOUR_TARGETS.teacherSubmit}
  className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {saving ? "Saqlanmoqda..." : editTarget ? "Saqlash" : "Qo'shish"}
             </Button>
@@ -172,7 +179,7 @@ export default function TeachersPage() {
           </>
         }
       >
-        <FormField label="Ism familiya" required={!editTarget}>
+        <FormField label="Ism familiya" required={!editTarget} dataTour={TOUR_TARGETS.teacherNameInput}>
           <Input
             noAutofill
             name="teacher-name"

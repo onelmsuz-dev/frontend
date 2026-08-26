@@ -9,6 +9,7 @@ import { FormField } from "@/components/ui/form-field";
 import Link from "next/link";
 import { Search, BookOpen, Users, Wallet, Clock, Edit, Trash2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { mutate } from "swr";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
@@ -123,7 +124,7 @@ export default function CoursesPage() {
         size="md"
         footer={
           <>
-            <Button onClick={submit} disabled={saving}
+            <Button onClick={submit} disabled={saving} data-tour={TOUR_TARGETS.courseSubmit}
               className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-semibold">
               {saving ? "Saqlanmoqda..." : editId ? "Saqlash" : "Qo'shish"}
             </Button>
@@ -131,7 +132,7 @@ export default function CoursesPage() {
           </>
         }
       >
-        <FormField label="Kurs nomi" required>
+        <FormField label="Kurs nomi" required dataTour={TOUR_TARGETS.courseNameInput}>
           <Input placeholder="Matematika, Ingliz tili..." value={form.name}
             onChange={e => setForm(p => ({...p, name: e.target.value}))} className="h-10" />
         </FormField>

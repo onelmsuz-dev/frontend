@@ -8,11 +8,17 @@ interface FormFieldProps {
   hint?: string;
   children: React.ReactNode;
   className?: string;
+  /**
+   * Yo'l ko'rsatuvchi turi shu maydonni nishonga olishi uchun.
+   * `data-*` atributini to'g'ridan-to'g'ri uzatib bo'lmaydi (props tipida yo'q),
+   * shuning uchun aniq nomlangan prop.
+   */
+  dataTour?: string;
 }
 
-export function FormField({ label, required, error, hint, children, className }: FormFieldProps) {
+export function FormField({ label, required, error, hint, children, className, dataTour }: FormFieldProps) {
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className={cn("space-y-1.5", className)} data-tour={dataTour}>
       <div className="flex items-center gap-1">
         <label className="text-[12px] font-semibold text-neutral-600 dark:text-neutral-400 tracking-wide uppercase">
           {label}

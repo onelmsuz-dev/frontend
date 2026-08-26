@@ -9,6 +9,7 @@ import { FormField } from "@/components/ui/form-field";
 import Link from "next/link";
 import { Search, Users, Clock, CalendarDays, BookOpen, TrendingUp, Edit, Trash2, ChevronRight, MapPin, Plus, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { useTeachers } from "@/lib/hooks/useTeachers";
@@ -251,7 +252,7 @@ export default function GroupsPage() {
         size="lg"
         footer={
           <>
-            <Button onClick={submit} disabled={saving}
+            <Button onClick={submit} disabled={saving} data-tour={TOUR_TARGETS.groupSubmit}
               className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-semibold">
               {saving ? "Saqlanmoqda..." : editId ? "Saqlash" : "Yaratish"}
             </Button>
@@ -261,13 +262,15 @@ export default function GroupsPage() {
       >
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Kurs" required>
-            <select value={form.courseId} onChange={e => onCourseChange(e.target.value)} className={selectCls}>
+            <select value={form.courseId} onChange={e => onCourseChange(e.target.value)} className={selectCls}
+              data-tour={TOUR_TARGETS.groupCourseSelect}>
               <option value="">Tanlang...</option>
               {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </FormField>
           <FormField label="O'qituvchi" required>
-            <select value={form.teacherId} onChange={e => setForm(p => ({...p, teacherId: e.target.value}))} className={selectCls}>
+            <select value={form.teacherId} onChange={e => setForm(p => ({...p, teacherId: e.target.value}))} className={selectCls}
+              data-tour={TOUR_TARGETS.groupTeacherSelect}>
               <option value="">Tanlang...</option>
               {teachers.map((t: any) => <option key={t.id} value={t.id}>{t.user?.name}</option>)}
             </select>
@@ -325,8 +328,9 @@ export default function GroupsPage() {
 
         <div className="grid grid-cols-3 gap-3">
           <FormField label="Xona" required hint="Sig'imiga qarab filtrlangan">
-            <select value={form.roomId} onChange={e => setForm(p => ({...p, roomId: e.target.value}))} className={selectCls}>
-              <option value="">Tanlang…</option>
+            <select value={form.roomId} onChange={e => setForm(p => ({...p, roomId: e.target.value}))} className={selectCls}
+              data-tour={TOUR_TARGETS.groupRoomSelect}>
+              <option value="">Tanlang...</option>
               {eligibleRooms.map((r: any) => (
                 <option key={r.id} value={r.id}>{r.name}{r.capacity ? ` (${r.capacity} joy)` : ""}</option>
               ))}

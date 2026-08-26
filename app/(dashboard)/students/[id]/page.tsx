@@ -10,6 +10,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import {
   useGamificationSettings, useStudentPointHistory,
   REASON_LABELS, REASON_COLORS,
@@ -459,6 +460,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         footer={
           <>
             <Button onClick={submitGroupModal} disabled={transferring || availableGroups.length === 0}
+              data-tour={TOUR_TARGETS.studentEnrollSubmit}
               className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {transferring ? "Saqlanmoqda..." : groupModal?.sg ? "O'tkazish" : "Qo'shish"}
             </Button>
@@ -475,6 +477,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             <FormField label={groupModal?.sg ? "Yangi guruh" : "Guruh"} required
               error={transferErr.includes("guruh") || transferErr.includes("Guruh") ? transferErr : ""}>
               <select value={transferGroupId} onChange={e => { setTransferGroupId(e.target.value); setTransferErr(""); }}
+                data-tour={TOUR_TARGETS.studentEnrollSelect}
                 className="w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
                 <option value="">Guruhni tanlang...</option>
                 {availableGroups.map((g: any) => (
@@ -616,7 +619,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 {activeSgs.length > 1 ? `Guruhlari (${activeSgs.length})` : "Guruh"}
               </h3>
               {canManageGroups && availableGroups.length > 0 && (
-                <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg: null }); }}
+                <button data-tour={TOUR_TARGETS.studentEnrollBtn}
+                  onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg: null }); }}
                   className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
                   <Plus className="w-3 h-3" /> Guruhga qo&apos;shish
                 </button>
@@ -627,7 +631,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               <div className="space-y-2.5 py-2">
                 <p className="text-[13px] text-neutral-400">Guruhga biriktirilmagan</p>
                 {canManageGroups && (
-                  <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg: null }); }}
+                  <button data-tour={TOUR_TARGETS.studentEnrollBtn}
+                    onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg: null }); }}
                     className="flex items-center gap-1.5 text-[12px] px-3 py-2 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
                     <Plus className="w-3.5 h-3.5" /> Guruhga qo&apos;shish
                   </button>

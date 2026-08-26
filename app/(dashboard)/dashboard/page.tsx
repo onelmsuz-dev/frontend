@@ -17,6 +17,7 @@ import { usePayments } from "@/lib/hooks/usePayments";
 import { useLeads } from "@/lib/hooks/useLeads";
 import { useBranchQueryString, useBranch } from "@/lib/contexts/branch-context";
 import useSWR from "swr";
+import { OnboardingChecklist } from "@/components/onboarding/onboarding-checklist";
 
 const _fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -123,6 +124,10 @@ function OwnerDashboardPage() {
       />
 
       <div className="p-5 space-y-5">
+
+        {/* Yangi markaz uchun sozlash qadamlari. Markaz to'liq sozlangach
+            (yoki bayroq o'chiq bo'lsa) o'zi hech narsa chizmaydi. */}
+        <OnboardingChecklist />
 
         {/* KPI Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">

@@ -17,6 +17,7 @@ import {
   UserCheck, Clock, Upload, Download, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useTeachers } from "@/lib/hooks/useTeachers";
@@ -380,7 +381,7 @@ export default function StudentsPage() {
                       ))}
                     </TableRow>
                   ))
-                : students.map((s: any) => {
+                : students.map((s: any, sIdx: number) => {
                     const gs      = activeGroupsOf(s);
                     const enrollK = enrollOf(s);
                     const enroll  = ENROLL_CFG[enrollK];
@@ -392,6 +393,9 @@ export default function StudentsPage() {
                     const hasTrial = gs.some((g: any) => g.enrollmentStatus === "SINOV");
                     return (
                       <TableRow key={s.id}
+                        // Yo'l ko'rsatuvchi "o'quvchini guruhga biriktiring"
+                        // qadamida birinchi qatorni ko'rsatadi.
+                        data-tour={sIdx === 0 ? TOUR_TARGETS.studentRowFirst : undefined}
                         onClick={() => router.push(`/students/${s.id}`)}
                         className={cn("cursor-pointer transition-colors",
                           isSel ? "bg-indigo-50/70 dark:bg-indigo-900/20" : "hover:bg-white/60 dark:hover:bg-white/10")}>

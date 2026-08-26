@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useNotifications, type Notification } from "@/lib/hooks/useNotifications";
 import { cn } from "@/lib/utils";
+import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { BranchHeaderControls } from "@/components/layout/branch-header-controls";
 import { FullscreenToggle } from "@/components/fullscreen-toggle";
 
@@ -356,12 +357,14 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
             {/* Mobile: icon only */}
             <button
               onClick={action.onClick}
+              data-tour={TOUR_TARGETS.headerAction}
               className="lg:hidden w-9 h-9 flex items-center justify-center rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
             </button>
             {/* Desktop: label + icon */}
             <Button size="sm" onClick={action.onClick}
+              data-tour={TOUR_TARGETS.headerAction}
               className="hidden lg:flex gap-1.5 h-9 px-4 text-[13px] bg-indigo-600 hover:bg-indigo-700
                 text-white rounded-2xl shadow-sm">
               <Plus className="w-3.5 h-3.5" />
