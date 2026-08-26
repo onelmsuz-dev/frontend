@@ -15,6 +15,7 @@ import { useCourses } from "@/lib/hooks/useCourses";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { mutate } from "swr";
 import { businessToday } from "@/lib/time";
+import { useOrganization } from "@/lib/hooks/useOrganization";
 import {
   ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, List, ChevronDown, Plus,
 } from "lucide-react";
@@ -27,12 +28,11 @@ const UZ_MONTHS = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust"
 const UZ_MONTHS_S = ["Yan","Fev","Mar","Apr","May","Iyn","Iyl","Avg","Sen","Okt","Noy","Dek"];
 const JS_TO_IDX: Record<number, number> = { 1:0, 2:1, 3:2, 4:3, 5:4, 6:5 };
 
-const DAY_START = 8;
-const DAY_END   = 20;
-const HOUR_H    = 64;
-const TOTAL_H   = (DAY_END - DAY_START) * HOUR_H;
-const HOURS     = Array.from({ length: DAY_END - DAY_START + 1 }, (_, i) => i + DAY_START);
-const TIME_W    = 52;
+// Standart oyna — markazda dars bo'lmasa ham setka bo'sh ko'rinmasin.
+const DEFAULT_START = 8;
+const DEFAULT_END   = 20;
+const HOUR_H        = 64;
+const TIME_W        = 52;
 
 const DAY_MAP: Record<string, string> = {
   DUSHANBA: "Dushanba", SESHANBA: "Seshanba", CHORSHANBA: "Chorshanba",
@@ -47,6 +47,34 @@ const DAYS_OPTS = [
 const DAYS_SHORT: Record<string,string> = {
   DUSHANBA:"Du", SESHANBA:"Se", CHORSHANBA:"Ch", PAYSHANBA:"Pa", JUMA:"Ju", SHANBA:"Sh", YAKSHANBA:"Yak",
 };
+/**
+ * KURS RANGI → jadval blokining uslubi.
+ *
+ * Kurs sozlamalarida rang `bg-yellow-500` ko'rinishida saqlanadi (bitta
+ * to'liq rang), jadval bloki uchun esa fon + chegara + matn kerak.
+ *
+ * Ilgari jadval `Group.color` ni olardi, uning bazadagi STANDART qiymati
+ * esa ko'k — shuning uchun kurs rangi sariq qilib qo'yilsa ham hamma blok
+ * bir xil ko'k chiqardi.
+ */
+const COURSE_BLOCK_COLORS: Record<string, string> = {
+  blue:    "bg-blue-100 border-blue-400 text-blue-800 dark:bg-blue-900/40 dark:border-blue-500 dark:text-blue-200",
+  green:   "bg-green-100 border-green-400 text-green-800 dark:bg-green-900/40 dark:border-green-500 dark:text-green-200",
+  amber:   "bg-amber-100 border-amber-400 text-amber-900 dark:bg-amber-900/40 dark:border-amber-500 dark:text-amber-200",
+  yellow:  "bg-yellow-100 border-yellow-400 text-yellow-900 dark:bg-yellow-900/40 dark:border-yellow-500 dark:text-yellow-200",
+  purple:  "bg-purple-100 border-purple-400 text-purple-800 dark:bg-purple-900/40 dark:border-purple-500 dark:text-purple-200",
+  red:     "bg-red-100 border-red-400 text-red-800 dark:bg-red-900/40 dark:border-red-500 dark:text-red-200",
+  cyan:    "bg-cyan-100 border-cyan-400 text-cyan-900 dark:bg-cyan-900/40 dark:border-cyan-500 dark:text-cyan-200",
+  pink:    "bg-pink-100 border-pink-400 text-pink-800 dark:bg-pink-900/40 dark:border-pink-500 dark:text-pink-200",
+  emerald: "bg-emerald-100 border-emerald-400 text-emerald-900 dark:bg-emerald-900/40 dark:border-emerald-500 dark:text-emerald-200",
+};
+
+/** "bg-yellow-500" → blok uslubi; noma'lum bo'lsa null. */
+function courseBlockColor(courseColor?: string | null): string | null {
+  const hue = /^bg-([a-z]+)-\d{3}$/.exec(String(courseColor ?? ""))?.[1];
+  return hue ? (COURSE_BLOCK_COLORS[hue] ?? null) : null;
+}
+
 const GROUP_COLORS = [
   "bg-blue-100 border-blue-400 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
   "bg-green-100 border-green-400 text-green-800 dark:bg-green-900/40 dark:text-green-300",
@@ -67,8 +95,55 @@ type ViewMode = "kun" | "hafta" | "oy";
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function toMin(t: string) { const [h,m]=t.split(":").map(Number); return h*60+(m||0); }
-function blockTop(t: string)              { return ((toMin(t)-DAY_START*60)/60)*HOUR_H; }
-function blockH(s: string, e: string)     { return ((toMin(e)-toMin(s))/60)*HOUR_H; }
+function blockTop(t: string, dayStart: number) { return ((toMin(t)-dayStart*60)/60)*HOUR_H; }
+function blockH(s: string, e: string)         { return ((toMin(e)-toMin(s))/60)*HOUR_H; }
+
+/**
+ * BIR VAQTDA BIR NECHTA DARS — yonma-yon joylashtiriladi.
+ *
+ * Ilgari har bir blok butun ustun kengligini egallardi (`inset-x-3`) va
+ * bir vaqtdagi darslar ustma-ust tushib, matni o'qib bo'lmas holga kelardi.
+ * Bu yerda kesishuvchi darslar guruhlarga bo'linadi va har biriga o'z
+ * ustuni beriladi (kalendar dasturlaridagi kabi).
+ */
+function layoutOverlaps<T extends { time: string; endTime: string }>(
+  items: T[],
+): { item: T; col: number; cols: number }[] {
+  const sorted = [...items].sort(
+    (a, b) => toMin(a.time) - toMin(b.time) || toMin(a.endTime) - toMin(b.endTime),
+  );
+  const out: { item: T; col: number; cols: number }[] = [];
+
+  let cluster: { item: T; col: number }[] = [];
+  let clusterEnd = -1;
+
+  const flush = () => {
+    if (cluster.length === 0) return;
+    const cols = Math.max(...cluster.map((c) => c.col)) + 1;
+    for (const c of cluster) out.push({ item: c.item, col: c.col, cols });
+    cluster = [];
+    clusterEnd = -1;
+  };
+
+  for (const item of sorted) {
+    const start = toMin(item.time);
+    const end = Math.max(toMin(item.endTime), start + 1);
+    // Kesishmasa — oldingi to'plam yakunlanadi.
+    if (start >= clusterEnd) flush();
+
+    // Bo'sh ustunni topamiz: shu ustundagi oxirgi dars tugagan bo'lsa bo'ladi.
+    const busy = new Set(
+      cluster.filter((c) => toMin(c.item.endTime) > start).map((c) => c.col),
+    );
+    let col = 0;
+    while (busy.has(col)) col++;
+
+    cluster.push({ item, col });
+    clusterEnd = Math.max(clusterEnd, end);
+  }
+  flush();
+  return out;
+}
 
 function getMondayOf(date: Date): Date {
   const d=new Date(date), day=d.getDay();
@@ -170,6 +245,7 @@ function MiniCal({ pickerMonth, onChangeMonth, today, selDay, weekStart, view, o
 export default function SchedulePage() {
   // "Bugun" — Toshkent bo'yicha (qurilma soati boshqa mintaqada bo'lsa ham).
   const router = useRouter();
+  const { data: org } = useOrganization();
   const today = useMemo(() => businessToday(), []);
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "SUPER_ADMIN";
@@ -224,7 +300,10 @@ export default function SchedulePage() {
       startDate: string; endDate: string | null; upcoming: boolean;
     }> = [];
     groups.forEach((g, gi) => {
-      const color = g.color || GROUP_COLORS[gi % GROUP_COLORS.length];
+      // Rang KURSDAN olinadi (foydalanuvchi aynan o'sha yerda tanlaydi).
+      // Kurs rangi yo'q bo'lsa — guruhning o'z rangi, u ham bo'lmasa palitra.
+      const color =
+        courseBlockColor(g.course?.color) ?? g.color ?? GROUP_COLORS[gi % GROUP_COLORS.length];
       (g.scheduleDays ?? []).forEach((d: string) => {
         const dayName = DAY_MAP[d] ?? d;
         entries.push({
@@ -246,6 +325,29 @@ export default function SchedulePage() {
     });
     return entries;
   }, [groups]);
+
+  // SOAT OYNASI: markazning ish vaqti (Sozlamalar → O'quv markaz) asos
+  // bo'ladi, dars undan tashqarida bo'lsa oyna KENGAYADI. Ilgari 08:00–20:00
+  // qat'iy edi va 21:00 dagi dars setkadan tashqarida, pastda osilib qolardi.
+  const { dayStart, dayEnd } = useMemo(() => {
+    const parseHour = (v: unknown, fallback: number) => {
+      const m = /^(\d{1,2}):/.exec(String(v ?? ""));
+      return m ? Math.min(23, Math.max(0, Number(m[1]))) : fallback;
+    };
+    let min = parseHour(org?.workStart, DEFAULT_START);
+    let max = parseHour(org?.workEnd, DEFAULT_END);
+    for (const e of schedule) {
+      min = Math.min(min, Math.floor(toMin(e.time) / 60));
+      max = Math.max(max, Math.ceil(toMin(e.endTime) / 60));
+    }
+    return { dayStart: Math.max(0, min), dayEnd: Math.min(24, Math.max(max, min + 1)) };
+  }, [schedule, org?.workStart, org?.workEnd]);
+
+  const HOURS = useMemo(
+    () => Array.from({ length: dayEnd - dayStart + 1 }, (_, i) => i + dayStart),
+    [dayStart, dayEnd],
+  );
+  const TOTAL_H = (dayEnd - dayStart) * HOUR_H;
 
   /**
    * Aynan SHU kundagi darslar. Hafta kuni mos kelishi yetarli emas — guruh
@@ -807,9 +909,11 @@ export default function SchedulePage() {
                       )}
                     </div>
                   </div>
-                ) : kunEntries.map(entry => {
-                  const top    = blockTop(entry.time);
+                ) : layoutOverlaps(kunEntries).map(({ item: entry, col, cols }) => {
+                  const top    = blockTop(entry.time, dayStart);
                   const height = blockH(entry.time, entry.endTime);
+                  // Bir vaqtda bir nechta dars bo'lsa — ustunlarga bo'linadi.
+                  const w = 100 / cols;
                   return (
                     <div key={entry.id}
                       role="link"
@@ -817,9 +921,13 @@ export default function SchedulePage() {
                       title={`${entry.groupName} — guruhni ochish`}
                       onClick={() => router.push(`/groups/${entry.groupId}`)}
                       onKeyDown={(e) => { if (e.key === "Enter") router.push(`/groups/${entry.groupId}`); }}
-                      className={cn("absolute inset-x-3 rounded-xl overflow-hidden cursor-pointer border border-l-[4px] shadow-sm transition-all hover:brightness-95 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500",
+                      className={cn("absolute rounded-xl overflow-hidden cursor-pointer border border-l-[4px] shadow-sm transition-all hover:brightness-95 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500",
                         entry.color, entry.upcoming && "border-dashed opacity-80")}
-                      style={{ top: top+2, height: Math.max(height-4,24) }}>
+                      style={{
+                        top: top+2, height: Math.max(height-4,24),
+                        left: `calc(${col * w}% + 12px)`,
+                        width: `calc(${w}% - ${cols > 1 ? 16 : 24}px)`,
+                      }}>
                       <div className="px-3 py-2 h-full flex flex-col overflow-hidden">
                         <div className="flex items-start justify-between gap-2">
                           <p className="font-bold text-[13px] leading-tight">
@@ -895,20 +1003,26 @@ export default function SchedulePage() {
                   style={{ height: TOTAL_H }}>
                   {HOURS.map((_,i) => <div key={i} className="absolute inset-x-0 border-t border-white/50 dark:border-white/10" style={{ top: i*HOUR_H }} />)}
                   {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-white/50 dark:border-white/10" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
-                  {entries.map(entry => {
-                    const top     = blockTop(entry.time);
+                  {layoutOverlaps(entries).map(({ item: entry, col, cols }) => {
+                    const top     = blockTop(entry.time, dayStart);
                     const height  = blockH(entry.time, entry.endTime);
-                    const compact = height < 52;
+                    // Ustunlarga bo'lingach blok torayadi — matn ham qisqaradi.
+                    const compact = height < 52 || cols > 1;
+                    const w = 100 / cols;
                     return (
                       <div key={entry.id}
                         role="link"
                         tabIndex={0}
-                        title={`${entry.groupName} — guruhni ochish`}
+                        title={`${entry.groupName} · ${entry.time}–${entry.endTime} — guruhni ochish`}
                         onClick={() => router.push(`/groups/${entry.groupId}`)}
                         onKeyDown={(e) => { if (e.key === "Enter") router.push(`/groups/${entry.groupId}`); }}
-                        className={cn("absolute inset-x-1 rounded-lg overflow-hidden cursor-pointer border border-l-[3px] shadow-sm transition-all hover:brightness-95 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500",
+                        className={cn("absolute rounded-lg overflow-hidden cursor-pointer border border-l-[3px] shadow-sm transition-all hover:brightness-95 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500",
                           entry.color, entry.upcoming && "border-dashed opacity-80")}
-                        style={{ top: top+2, height: Math.max(height-4,20) }}>
+                        style={{
+                          top: top+2, height: Math.max(height-4,20),
+                          left: `calc(${col * w}% + 4px)`,
+                          width: `calc(${w}% - ${cols > 1 ? 6 : 8}px)`,
+                        }}>
                         <div className="px-2 py-1.5 h-full flex flex-col overflow-hidden">
                           <p className={cn("font-bold truncate leading-tight", compact?"text-[10px]":"text-[12px]")}>
                             {entry.groupName}

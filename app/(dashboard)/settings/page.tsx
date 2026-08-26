@@ -22,6 +22,13 @@ import { StaffSection } from "@/components/settings/staff-section";
 import { useMe } from "@/lib/hooks/useMe";
 import { mutate } from "swr";
 
+/** Markaz ish kunlari — guruh jadvalidagi kalitlar bilan bir xil. */
+const WORK_DAYS = [
+  { v: "DUSHANBA", l: "Du" }, { v: "SESHANBA", l: "Se" }, { v: "CHORSHANBA", l: "Cho" },
+  { v: "PAYSHANBA", l: "Pay" }, { v: "JUMA", l: "Ju" }, { v: "SHANBA", l: "Sha" },
+  { v: "YAKSHANBA", l: "Yak" },
+];
+
 const sections = [
   { id: "markaz",        label: "O'quv markaz",    icon: Building },
   { id: "tarif",         label: "Tarif",           icon: CreditCard },
@@ -64,7 +71,18 @@ export default function SettingsPage() {
   const [roomSaving, setRoomSaving] = useState(false);
   const [roomErr, setRoomErr] = useState("");
 
-  const [orgForm, setOrgForm] = useState({ name: "" });
+  const [orgForm, setOrgForm] = useState<{
+    name: string; workDays: string[] | null; workStart: string; workEnd: string;
+  }>({ name: "", workDays: null, workStart: "", workEnd: "" });
+
+  // Ish kunlari — belgilanmagan bo'lsa markazning hozirgi sozlamasi.
+  const workDays = orgForm.workDays ?? orgData?.workDays ?? [];
+  const toggleWorkDay = (v: string) =>
+    setOrgForm(p => {
+      const cur = p.workDays ?? orgData?.workDays ?? [];
+      const list = cur as string[];
+      return { ...p, workDays: list.includes(v) ? list.filter((d: string) => d !== v) : [...list, v] };
+    });
   const [orgSaving, setOrgSaving] = useState(false);
   const [orgErr, setOrgErr] = useState("");
 
@@ -141,7 +159,15 @@ export default function SettingsPage() {
   async function saveOrg() {
     setOrgSaving(true); setOrgErr("");
     try {
-      const res = await fetch("/api/organization", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: orgForm.name || orgData?.name }) });
+      const res = await fetch("/api/organization", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: orgForm.name || orgData?.name,
+          ...(orgForm.workDays ? { workDays: orgForm.workDays } : {}),
+          ...(orgForm.workStart ? { workStart: orgForm.workStart } : {}),
+          ...(orgForm.workEnd ? { workEnd: orgForm.workEnd } : {}),
+        }),
+      });
       const data = await res.json();
       if (!res.ok) { setOrgErr(data.error ?? "Xatolik"); return; }
       mutate("/api/organization");
@@ -236,6 +262,48 @@ export default function SettingsPage() {
                         Subdomen — markazning asosiy filiali. Qolgan filiallar shunga qo'shiladi.
                       </p>
                     </div>
+                    <div>
+                      <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Ish kunlari</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {WORK_DAYS.map(d => {
+                          const on = workDays.includes(d.v);
+                          return (
+                            <button key={d.v} type="button" onClick={() => toggleWorkDay(d.v)}
+                              className={cn("px-2.5 h-8 rounded-lg text-[12px] font-semibold border transition-colors",
+                                on
+                                  ? "bg-indigo-600 border-indigo-600 text-white"
+                                  : "glass-soft border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:border-indigo-400")}>
+                              {d.l}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[11px] text-neutral-400 mt-1.5">
+                        Markaz ishlaydigan kunlar — jadval shu kunlarni asos qilib oladi.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Ish boshlanishi</Label>
+                        <Input type="time"
+                          defaultValue={orgData?.workStart ?? "08:00"}
+                          onChange={e => setOrgForm(p => ({ ...p, workStart: e.target.value }))}
+                          className="h-9 text-sm" />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Ish tugashi</Label>
+                        <Input type="time"
+                          defaultValue={orgData?.workEnd ?? "20:00"}
+                          onChange={e => setOrgForm(p => ({ ...p, workEnd: e.target.value }))}
+                          className="h-9 text-sm" />
+                      </div>
+                      <p className="col-span-2 text-[11px] text-neutral-400 -mt-1">
+                        Jadval setkasi shu oraliqda chiziladi. Bu oraliqdan tashqarida dars
+                        bo'lsa, jadval o'zi kengayadi — dars yashirinib qolmaydi.
+                      </p>
+                    </div>
+
                     <div>
                       <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Tarif rejasi</Label>
                       <Input defaultValue={orgData?.plan ?? ""} disabled className="h-9 text-sm glass-soft" />
