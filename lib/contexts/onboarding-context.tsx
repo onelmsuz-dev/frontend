@@ -8,6 +8,13 @@ export interface TourState {
   stopIdx: number;
   /** `Esc` bosilganda tur o'chmaydi — pauza qiladi. */
   paused: boolean;
+  /**
+   * Qadam BOSHLANGANDA allaqachon bajarilganmi (takroriy o'rganish).
+   *
+   * Kerak, chunki tur odatda qadam bajarilishi bilan o'zi to'xtaydi. Bajarilgan
+   * qadamni qaytadan ko'rsatayotganda esa u darhol to'xtab qolardi.
+   */
+  replay: boolean;
 }
 
 export interface OnboardingCtxValue {
@@ -37,6 +44,8 @@ export interface OnboardingCtxValue {
 
   hide: () => void;
   resume: () => void;
+  /** Sozlashni noldan boshlash (Sozlamalar → Yo'l ko'rsatuvchi). */
+  restart: () => void;
   toggleSkip: (key: string, on: boolean) => void;
   celebrate: () => void;
   refresh: () => void;
@@ -66,6 +75,7 @@ export const INERT_ONBOARDING: OnboardingCtxValue = {
   resumeTour: () => {},
   hide: () => {},
   resume: () => {},
+  restart: () => {},
   toggleSkip: () => {},
   celebrate: () => {},
   refresh: () => {},

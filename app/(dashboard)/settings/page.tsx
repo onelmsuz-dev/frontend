@@ -10,10 +10,12 @@ import { ConfirmDeleteModal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { OnboardingRestoreCard } from "@/components/onboarding/onboarding-restore-card";
+import { OnboardingSettingsPanel } from "@/components/onboarding/onboarding-settings-panel";
+import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
 import type { Branch, Room } from "@/types";
 import {
   Plus, Trash2, Users, Building, Bell,
-  MapPin, DoorOpen, Phone, CreditCard, MessageSquare,
+  MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useRooms } from "@/lib/hooks/useRooms";
@@ -38,6 +40,9 @@ const sections = [
   { id: "xonalar",       label: "Xonalar",         icon: DoorOpen },
   { id: "xodimlar",      label: "Xodimlar",        icon: Users },
   { id: "bildirishnoma", label: "Bildirishnomalar", icon: Bell },
+  // Yo'l ko'rsatuvchi bayrog'i o'chiq markazda bu tab ko'rsatilmaydi
+  // (quyida `visibleSections` da filtrlanadi).
+  { id: "organish",      label: "Yo'l ko'rsatuvchi", icon: Rocket, feature: "onboarding" },
 ];
 
 function Skeleton({ className }: { className?: string }) {
@@ -46,6 +51,12 @@ function Skeleton({ className }: { className?: string }) {
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState("xodimlar");
+
+  // Yo'l ko'rsatuvchi bayroq ortida — o'chiq bo'lsa tab umuman chizilmaydi.
+  const { enabled: onboardingEnabled } = useOnboardingCtx();
+  const visibleSections = sections.filter(
+    s => !("feature" in s) || onboardingEnabled,
+  );
 
   // Boshqa sahifadan aniq bo'limga o'tish: /settings?tab=xonalar (masalan
   // guruh kartochkasidagi "Xona biriktirilmagan" ogohlantirishi).
@@ -218,7 +229,7 @@ export default function SettingsPage() {
         {/* Sidebar */}
         <div className="w-52 shrink-0">
           <nav className="space-y-0.5">
-            {sections.map(s => {
+            {visibleSections.map(s => {
               const Icon = s.icon;
               return (
                 <button key={s.id} onClick={() => setActiveSection(s.id)}
@@ -336,6 +347,9 @@ export default function SettingsPage() {
             </Card>
             </>
           )}
+
+          {/* ── Yo'l ko'rsatuvchi ── */}
+          {activeSection === "organish" && <OnboardingSettingsPanel />}
 
           {/* ── Filliallar ── */}
           {activeSection === "filliallar" && (

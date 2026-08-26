@@ -25,7 +25,7 @@ export function useOnboarding(enabled: boolean) {
 
 /** Panel holatini o'zgartirish. Xato bo'lsa `false` qaytadi (jim yutilmaydi). */
 export async function onboardingAction(
-  action: "hide" | "resume" | "skip" | "unskip" | "celebrated",
+  action: "hide" | "resume" | "restart" | "skip" | "unskip" | "celebrated",
   body?: { key: string },
 ): Promise<boolean> {
   try {

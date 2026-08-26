@@ -69,7 +69,7 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
   // holatdan chizsin (gidratsiya nomuvofiqligi bo'lmasin).
   useEffect(() => {
     const v = readTour();
-    if (v) setTour({ stepKey: v.stepKey, stopIdx: v.stopIdx, paused: v.paused });
+    if (v) setTour({ stepKey: v.stepKey, stopIdx: v.stopIdx, paused: v.paused, replay: !!v.replay });
   }, []);
 
   // ── Rol bo'yicha filtrlangan qadamlar ───────────────────────────────────
@@ -83,6 +83,10 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
   const doneMap = useMemo(() => data?.steps ?? {}, [data?.steps]);
   const skipped = useMemo(() => data?.skipped ?? [], [data?.skipped]);
 
+  // `startTour` `doneMap` ga bog'lanib qolmasin (u har javobda yangilanadi va
+  // butun kontekst qiymatini qayta yaratardi).
+  const doneMapRef = useRef<Record<string, boolean>>({});
+
   const serverStatus = data?.status ?? "ACTIVE";
   const status: "ACTIVE" | "DISMISSED" | "DONE" =
     (localStatus as "ACTIVE" | "DISMISSED" | "DONE" | null) ?? serverStatus;
@@ -92,6 +96,10 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
   useEffect(() => {
     if (localStatus && serverStatus === localStatus) setLocalStatus(null);
   }, [localStatus, serverStatus]);
+
+  useEffect(() => {
+    doneMapRef.current = doneMap;
+  }, [doneMap]);
 
   const required = useMemo(() => steps.filter((s) => s.required), [steps]);
   const requiredDone = required.filter((s) => doneMap[s.key]).length;
@@ -115,14 +123,37 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
   }, [steps, required, allRequiredDone, doneMap, skipped, isBlocked]);
 
   const visible = status === "ACTIVE" && steps.length > 0;
-  const celebrating = visible && allRequiredDone && !data?.celebratedAt;
+
+  /**
+   * Ma'lumot BIRINCHI kelganda hammasi allaqachon bajarilgan bo'lganmi.
+   *
+   * Tabrik "siz hozir tugatdingiz" degani. Sozlangan markazda panel qaytarilsa
+   * (yoki "qaytadan o'rganish" tanlansa) darhol to'liq ekranli tabrik chiqib
+   * kelishi noto'g'ri bo'lardi — u faqat qadam KO'Z OLDIDA bajarilganda
+   * ko'rsatiladi.
+   */
+  const completeAtLoad = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!data) return;
+    if (completeAtLoad.current === null) completeAtLoad.current = allRequiredDone;
+  }, [data, allRequiredDone]);
+
+  const celebrating =
+    visible && allRequiredDone && !data?.celebratedAt && completeAtLoad.current === false;
 
   // ── Tur boshqaruvi ──────────────────────────────────────────────────────
   const startTour = useCallback(
     (stepKey: string) => {
       const step = STEP_BY_KEY[stepKey];
       if (!step) return;
-      const next: TourState = { stepKey, stopIdx: 0, paused: false };
+      const next: TourState = {
+        stepKey,
+        stopIdx: 0,
+        paused: false,
+        // Bajarilgan qadamni qayta ko'rsatayotgan bo'lsak — tur o'zi
+        // to'xtamasin (pastdagi effektga qarang).
+        replay: !!doneMapRef.current[stepKey],
+      };
       setTour(step.stops.length > 0 ? next : null);
       if (step.stops.length > 0) {
         writeTour({ ...next, startedAt: Date.now() });
@@ -290,13 +321,15 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
   // ── Qadam bajarilgach turni o'zi to'xtatish ─────────────────────────────
   // Server "bajarildi" deganda to'xtaydi — tugma bosilganiga emas.
   useEffect(() => {
-    if (tour && doneMap[tour.stepKey]) stopTour();
+    // Takroriy o'rganishda (`replay`) to'xtatmaymiz — foydalanuvchi ataylab
+    // allaqachon bajarilgan qadamni qayta ko'rmoqchi.
+    if (tour && !tour.replay && doneMap[tour.stepKey]) stopTour();
   }, [tour, doneMap, stopTour]);
 
   // ── Server amallari ─────────────────────────────────────────────────────
   const run = useCallback(
     async (
-      action: "hide" | "resume" | "skip" | "unskip" | "celebrated",
+      action: "hide" | "resume" | "restart" | "skip" | "unskip" | "celebrated",
       body?: { key: string },
     ) => {
       const ok = await onboardingAction(action, body);
@@ -336,6 +369,15 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
         setLocalStatus("ACTIVE");
         void run("resume");
       },
+      restart: () => {
+        setLocalStatus("ACTIVE");
+        stopTour();
+        // Sessiya boshidagi "allaqachon tugagan" belgisini tozalaymiz —
+        // shundan keyin qadamlarni haqiqatan qaytadan bajarsa, tabrik
+        // yana ko'rsatiladi.
+        completeAtLoad.current = null;
+        void run("restart");
+      },
       toggleSkip: (key, on) => void run(on ? "skip" : "unskip", { key }),
       celebrate: () => {
         setLocalStatus("DONE");
@@ -345,7 +387,7 @@ export function OnboardingRuntime({ onValue }: { onValue: (v: OnboardingCtxValue
     }),
     [
       isLoading, visible, steps, doneMap, skipped, required.length, requiredDone,
-      nextStep, celebrating, status, tour, startTour, stopTour, resumeTour, run, mutate,
+      nextStep, celebrating, status, tour, startTour, stopTour, resumeTour, run, mutate, doneMap,
     ],
   );
 
