@@ -81,7 +81,9 @@ function SettingsContent() {
   const searchParams = useSearchParams();
   useEffect(() => {
     const tab = searchParams.get("tab");
-    if (tab) setActiveSection(tab);
+    // Noma'lum qiymat berilsa hech bir bo'lim chizilmay, sahifa bo'sh
+    // ko'rinardi — faqat mavjud bo'limlar qabul qilinadi.
+    if (tab && sections.some(sec => sec.id === tab)) setActiveSection(tab);
   }, [searchParams]);
   const { me } = useMe();
 
@@ -327,14 +329,14 @@ function SettingsContent() {
                       <div>
                         <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Ish boshlanishi</Label>
                         <Input type="time"
-                          defaultValue={orgData?.workStart ?? "08:00"}
+                          value={orgForm.workStart || orgData?.workStart || "08:00"}
                           onChange={e => setOrgForm(p => ({ ...p, workStart: e.target.value }))}
                           className="h-9 text-sm" />
                       </div>
                       <div>
                         <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Ish tugashi</Label>
                         <Input type="time"
-                          defaultValue={orgData?.workEnd ?? "20:00"}
+                          value={orgForm.workEnd || orgData?.workEnd || "20:00"}
                           onChange={e => setOrgForm(p => ({ ...p, workEnd: e.target.value }))}
                           className="h-9 text-sm" />
                       </div>

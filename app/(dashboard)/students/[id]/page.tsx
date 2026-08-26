@@ -447,6 +447,12 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         <p className="text-[12px] text-neutral-400 mt-2">
           To&apos;lovlar va davomat tarixi saqlanadi.
         </p>
+        {/* Xato AYNAN shu yerda: modal ochiq qolgani uchun profil
+            kartochkasidagi xabar ko'rinmasdi va tugma ishlamayotgandek
+            tuyulardi. */}
+        {archiveErr && (
+          <p className="text-[12px] text-red-600 dark:text-red-400 mt-3">{archiveErr}</p>
+        )}
       </Modal>
 
       {/* Guruhga qo'shish / almashtirish — bitta oyna, ikki rejim */}

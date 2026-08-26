@@ -42,13 +42,13 @@ export function BottomNav() {
     <>
       {showMore && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-[60] lg:hidden"
           onClick={() => setShowMore(false)}
         />
       )}
 
       {showMore && (
-        <div className="glass-strong fixed bottom-[88px] left-3 right-3 z-50 lg:hidden rounded-3xl border border-white/60 dark:border-white/10 px-4 pt-3 pb-4 shadow-2xl">
+        <div className="glass-strong fixed bottom-[88px] left-3 right-3 z-[70] lg:hidden rounded-3xl border border-white/60 dark:border-white/10 px-4 pt-3 pb-4 shadow-2xl">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
               Boshqa sahifalar
@@ -97,7 +97,7 @@ export function BottomNav() {
         </div>
       )}
 
-      <nav className="glass-strong fixed bottom-3 left-3 right-3 z-40 lg:hidden rounded-3xl border border-white/60 dark:border-white/10 shadow-xl flex items-stretch overflow-hidden">
+      <nav className="glass-strong fixed bottom-3 left-3 right-3 z-[60] lg:hidden rounded-3xl border border-white/60 dark:border-white/10 shadow-xl flex items-stretch overflow-hidden">
         {BOTTOM_ITEMS.map(item => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");

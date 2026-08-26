@@ -23,11 +23,14 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const UZ_DAYS   = ["Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba"];
+// Yakshanba ham bor: ba'zi markazlar yakshanba ishlaydi va guruh ochishda
+// bu kunni tanlash MUMKIN edi — lekin jadval uni umuman chizmasdi, dars
+// hech qanday ogohlantirishsiz yo'qolib qolardi.
+const UZ_DAYS   = ["Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba","Yakshanba"];
 const UZ_DAYS_S = ["Du","Se","Cho","Pay","Ju","Sha","Yak"];
 const UZ_MONTHS = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
 const UZ_MONTHS_S = ["Yan","Fev","Mar","Apr","May","Iyn","Iyl","Avg","Sen","Okt","Noy","Dek"];
-const JS_TO_IDX: Record<number, number> = { 1:0, 2:1, 3:2, 4:3, 5:4, 6:5 };
+const JS_TO_IDX: Record<number, number> = { 1:0, 2:1, 3:2, 4:3, 5:4, 6:5, 0:6 };
 
 // Standart oyna — markazda dars bo'lmasa ham setka bo'sh ko'rinmasin.
 const DEFAULT_START = 8;
@@ -68,11 +71,18 @@ const COURSE_BLOCK_COLORS: Record<string, string> = {
   cyan:    "bg-cyan-100 border-cyan-400 text-cyan-900 dark:bg-cyan-900/40 dark:border-cyan-500 dark:text-cyan-200",
   pink:    "bg-pink-100 border-pink-400 text-pink-800 dark:bg-pink-900/40 dark:border-pink-500 dark:text-pink-200",
   emerald: "bg-emerald-100 border-emerald-400 text-emerald-900 dark:bg-emerald-900/40 dark:border-emerald-500 dark:text-emerald-200",
+  orange:  "bg-orange-100 border-orange-400 text-orange-900 dark:bg-orange-900/40 dark:border-orange-500 dark:text-orange-200",
+  indigo:  "bg-indigo-100 border-indigo-400 text-indigo-800 dark:bg-indigo-900/40 dark:border-indigo-500 dark:text-indigo-200",
+  sky:     "bg-sky-100 border-sky-400 text-sky-800 dark:bg-sky-900/40 dark:border-sky-500 dark:text-sky-200",
+  teal:    "bg-teal-100 border-teal-400 text-teal-800 dark:bg-teal-900/40 dark:border-teal-500 dark:text-teal-200",
+  rose:    "bg-rose-100 border-rose-400 text-rose-800 dark:bg-rose-900/40 dark:border-rose-500 dark:text-rose-200",
+  violet:  "bg-violet-100 border-violet-400 text-violet-800 dark:bg-violet-900/40 dark:border-violet-500 dark:text-violet-200",
+  lime:    "bg-lime-100 border-lime-400 text-lime-900 dark:bg-lime-900/40 dark:border-lime-500 dark:text-lime-200",
 };
 
 /** "bg-yellow-500" → blok uslubi; noma'lum bo'lsa null. */
 function courseBlockColor(courseColor?: string | null): string | null {
-  const hue = /^bg-([a-z]+)-\d{3}$/.exec(String(courseColor ?? ""))?.[1];
+  const hue = /^bg-([a-z]+)-\d{2,3}$/.exec(String(courseColor ?? ""))?.[1];
   return hue ? (COURSE_BLOCK_COLORS[hue] ?? null) : null;
 }
 
@@ -334,12 +344,18 @@ export default function SchedulePage() {
   // bo'ladi, dars undan tashqarida bo'lsa oyna KENGAYADI. Ilgari 08:00–20:00
   // qat'iy edi va 21:00 dagi dars setkadan tashqarida, pastda osilib qolardi.
   const { dayStart, dayEnd } = useMemo(() => {
-    const parseHour = (v: unknown, fallback: number) => {
-      const m = /^(\d{1,2}):/.exec(String(v ?? ""));
-      return m ? Math.min(23, Math.max(0, Number(m[1]))) : fallback;
+    // Boshlanish — pastga, tugash — YUQORIGA yaxlitlanadi. Aks holda
+    // "20:30" da tugaydigan markazda oyna 20:00 da kesilib, oxirgi
+    // yarim soatdagi dars ko'rinmay qolardi.
+    const parseHour = (v: unknown, fallback: number, up = false) => {
+      const m = /^(\d{1,2}):(\d{2})/.exec(String(v ?? ""));
+      if (!m) return fallback;
+      const h = Number(m[1]);
+      const extra = up && Number(m[2]) > 0 ? 1 : 0;
+      return Math.min(24, Math.max(0, h + extra));
     };
     let min = parseHour(org?.workStart, DEFAULT_START);
-    let max = parseHour(org?.workEnd, DEFAULT_END);
+    let max = parseHour(org?.workEnd, DEFAULT_END, true);
     for (const e of schedule) {
       min = Math.min(min, Math.floor(toMin(e.time) / 60));
       max = Math.max(max, Math.ceil(toMin(e.endTime) / 60));
@@ -390,6 +406,12 @@ export default function SchedulePage() {
   async function submitGroup() {
     if (!groupForm.name.trim()) { setGroupError("Guruh nomi majburiy"); return; }
     if (!groupForm.scheduleDays.length || !groupForm.startTime || !groupForm.endTime) { setGroupError("Dars kunlari, boshlanish va tugash vaqti majburiy"); return; }
+    // Busiz nol yoki manfiy davomiylikdagi dars yaratilardi va u jadvalda
+    // boshqa darslar bilan bir ustunga tushib, ustma-ust chizilardi.
+    if (toMin(groupForm.endTime) <= toMin(groupForm.startTime)) {
+      setGroupError("Tugash vaqti boshlanish vaqtidan keyin bo'lishi kerak");
+      return;
+    }
     // Xona majburiy — bir xonada ikkita dars qo'yilib qolmasligi uchun.
     if (!groupForm.roomId) {
       setGroupError(rooms.length === 0
@@ -425,6 +447,10 @@ export default function SchedulePage() {
       setDarsError(rooms.length === 0
         ? "Avval xona qo'shing — Sozlamalar → Xonalar"
         : "Xonani tanlang");
+      return;
+    }
+    if (toMin(darsForm.endTime) <= toMin(darsForm.startTime)) {
+      setDarsError("Tugash vaqti boshlanish vaqtidan keyin bo'lishi kerak");
       return;
     }
     setDarsSaving(true); setDarsError("");
@@ -493,7 +519,34 @@ export default function SchedulePage() {
     finally { setQCourseSaving(false); }
   }
 
-  const weekDays = useMemo(() => Array.from({length:6},(_,i)=>addDays(weekStart,i)), [weekStart]);
+  /**
+   * Yakshanba ustuni faqat kerak bo'lganda ochiladi: markaz yakshanba
+   * ishlasa YOKI o'sha kunga dars qo'yilgan bo'lsa. Aks holda bo'sh ustun
+   * jadvalni keraksiz siqib qo'yardi.
+   */
+  /**
+   * Markazning ish kunlari (Sozlamalar → O'quv markaz).
+   *
+   * Sozlama saqlanardi, lekin HECH QAYERDA o'qilmasdi — "jadval shu kunlarni
+   * asos qilib oladi" degan va'da bajarilmasdi. Endi kun tanlagichda ish
+   * kuni bo'lmaganlar so'nib turadi va tanlansa ogohlantirish chiqadi.
+   * Taqiqlamaydi: bir martalik qo'shimcha dars ham bo'lishi mumkin.
+   */
+  const workDaySet = useMemo(() => new Set<string>(org?.workDays ?? []), [org?.workDays]);
+  const isWorkDay = useCallback(
+    (v: string) => workDaySet.size === 0 || workDaySet.has(v),
+    [workDaySet],
+  );
+
+  const showSunday = useMemo(
+    () => (org?.workDays ?? []).includes("YAKSHANBA")
+       || schedule.some(s => s.day === "Yakshanba"),
+    [org?.workDays, schedule],
+  );
+  const weekDays = useMemo(
+    () => Array.from({ length: showSunday ? 7 : 6 }, (_, i) => addDays(weekStart, i)),
+    [weekStart, showSunday],
+  );
   const calCells = useMemo(() => {
     const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
     return Array.from({length:42},(_,i)=>addDays(getMondayOf(first),i));
@@ -540,11 +593,11 @@ export default function SchedulePage() {
     return `${UZ_MONTHS[monthDate.getMonth()]} ${monthDate.getFullYear()}`;
   }, [view, selDay, weekStart, monthDate]);
 
+  // `getUzIdx` endi yakshanbani ham qaytaradi (JS_TO_IDX da 0:6), shuning
+  // uchun "kun jadvalda yo'q" degan holat qolmadi.
   const kunUzIdx   = getUzIdx(selDay);
-  const kunDayName = kunUzIdx!==null ? UZ_DAYS[kunUzIdx] : "Yakshanba";
-  const kunEntries = kunUzIdx!==null
-    ? entriesOn(selDay)
-    : [];
+  const kunDayName = kunUzIdx !== null ? UZ_DAYS[kunUzIdx] : "Yakshanba";
+  const kunEntries = kunUzIdx !== null ? entriesOn(selDay) : [];
   const kunIsToday = sameDay(selDay, today);
 
   const SELECT_CLS = "w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-neutral-900 dark:focus:border-neutral-400 transition-colors";
@@ -688,14 +741,24 @@ export default function SchedulePage() {
           <div className="flex gap-2 flex-wrap">
             {DAYS_OPTS.map(d => (
               <button key={d.v} type="button" onClick={() => toggleGroupDay(d.v)}
+                title={isWorkDay(d.v) ? undefined : "Markazning ish kuni emas"}
                 className={cn("px-3 py-1.5 rounded-lg text-[12px] font-semibold border-2 transition-all",
                   groupForm.scheduleDays.includes(d.v)
                     ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900 dark:border-neutral-100"
-                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
+                    : cn("border-white/60 dark:border-white/10 hover:border-neutral-400",
+                         isWorkDay(d.v)
+                           ? "text-neutral-600 dark:text-neutral-400"
+                           : "text-neutral-300 dark:text-neutral-600"))}>
                 {DAYS_SHORT[d.v]}
               </button>
             ))}
           </div>
+          {groupForm.scheduleDays.some(d => !isWorkDay(d)) && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5">
+              Belgilangan kunlarning ba&apos;zisi markazning ish kuni emas —
+              Sozlamalar → O&apos;quv markaz
+            </p>
+          )}
         </FormField>
         <div className="grid grid-cols-3 gap-3">
           <FormField label="Boshlanish" required>
@@ -768,14 +831,24 @@ export default function SchedulePage() {
           <div className="flex gap-2 flex-wrap">
             {DAYS_OPTS.map(d => (
               <button key={d.v} type="button" onClick={() => toggleDarsDay(d.v)}
+                title={isWorkDay(d.v) ? undefined : "Markazning ish kuni emas"}
                 className={cn("px-3 py-1.5 rounded-lg text-[12px] font-semibold border-2 transition-all",
                   darsForm.scheduleDays.includes(d.v)
                     ? "bg-blue-600 text-white border-blue-600"
-                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-blue-400 hover:text-blue-600")}>
+                    : cn("border-white/60 dark:border-white/10 hover:border-blue-400 hover:text-blue-600",
+                         isWorkDay(d.v)
+                           ? "text-neutral-600 dark:text-neutral-400"
+                           : "text-neutral-300 dark:text-neutral-600"))}>
                 {DAYS_SHORT[d.v]}
               </button>
             ))}
           </div>
+          {darsForm.scheduleDays.some(d => !isWorkDay(d)) && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5">
+              Belgilangan kunlarning ba&apos;zisi markazning ish kuni emas —
+              Sozlamalar → O&apos;quv markaz
+            </p>
+          )}
         </FormField>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Boshlanish" required>
@@ -917,18 +990,14 @@ export default function SchedulePage() {
               <div className="shrink-0 border-r border-white/50 dark:border-white/10 relative" style={{ width: TIME_W, height: TOTAL_H }}>
                 {HOURS.map((h,i) => (
                   <span key={h} className="absolute right-2 text-[10px] font-medium text-neutral-400 dark:text-neutral-600 tabular-nums select-none" style={{ top: i*HOUR_H+3 }}>
-                    {String(h).padStart(2,"0")}:00
+                    {String(h === 24 ? 0 : h).padStart(2,"0")}:00
                   </span>
                 ))}
               </div>
               <div className="flex-1 relative" style={{ height: TOTAL_H }}>
                 {HOURS.map((_,i) => <div key={i} className="absolute inset-x-0 border-t border-white/50 dark:border-white/10" style={{ top: i*HOUR_H }} />)}
                 {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-white/50 dark:border-white/10" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
-                {kunUzIdx === null ? (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <p className="text-sm font-semibold text-neutral-400 dark:text-neutral-600">Dam olish kuni</p>
-                  </div>
-                ) : isLoading ? (
+                {isLoading ? (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-6 h-6 border-2 border-neutral-300 border-t-neutral-700 rounded-full animate-spin" />
                   </div>
@@ -1029,7 +1098,7 @@ export default function SchedulePage() {
             <div className="shrink-0 border-r border-white/50 dark:border-white/10 relative" style={{ width: TIME_W, height: TOTAL_H }}>
               {HOURS.map((h,i) => (
                 <span key={h} className="absolute right-2 text-[10px] font-medium text-neutral-400 dark:text-neutral-600 tabular-nums select-none" style={{ top: i*HOUR_H+3 }}>
-                  {String(h).padStart(2,"0")}:00
+                  {String(h === 24 ? 0 : h).padStart(2,"0")}:00
                 </span>
               ))}
             </div>

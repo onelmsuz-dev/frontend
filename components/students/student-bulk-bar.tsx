@@ -28,6 +28,12 @@ interface Props {
    */
   smsOpen?: boolean;
   onSmsOpenChange?: (open: boolean) => void;
+  /**
+   * Tashqaridan ommaviy amal oynasini ochish (jadvaldagi "+ Guruh" tugmasi
+   * bitta o'quvchini tanlab, "Guruhga qo'shish" oynasini ochadi).
+   */
+  actionOpen?: string | null;
+  onActionOpenChange?: (a: string | null) => void;
 }
 
 const selectCls =
@@ -48,8 +54,15 @@ const selectCls =
 export function StudentBulkBar({
   selected, groups, onClear, onDone, canUpdate, canSendSms,
   smsOpen: smsOpenProp, onSmsOpenChange,
+  actionOpen, onActionOpenChange,
 }: Props) {
-  const [action,       setAction]       = useState<BulkAction | null>(null);
+  const [actionLocal,  setActionLocal]  = useState<BulkAction | null>(null);
+  // SMS bilan bir xil naqsh: tashqaridan berilsa u ustun, aks holda ichki.
+  const action = (actionOpen as BulkAction | null | undefined) ?? actionLocal;
+  const setAction = (a: BulkAction | null) => {
+    setActionLocal(a);
+    onActionOpenChange?.(a);
+  };
   const [smsOpenLocal, setSmsOpenLocal] = useState(false);
   const smsOpen = smsOpenProp ?? smsOpenLocal;
   const setSmsOpen = (v: boolean) => {

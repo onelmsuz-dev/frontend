@@ -86,7 +86,13 @@ export default function GroupsPage() {
   const allRooms:  any[] = Array.isArray(roomsRaw)    ? roomsRaw    : [];
   // "Yaratish" formasida faqat aktiv filial xonalari — boshqa filial xonasini
   // tasodifan tanlab qo'yish (va backendda rad etilishi) oldini olamiz.
-  const rooms = activeBranchId ? allRooms.filter(r => r.branchId === activeBranchId) : allRooms;
+  // Filialga biriktirilmagan (`branchId === null`) xonalar HAMMA filialga
+  // tegishli — ilgari ular filtrdan tushib qolib, "Avval xona qo'shing"
+  // chiqardi, holbuki xona bor edi. Tahrirlashda tanlangan xona ham
+  // ro'yxatdan tushmasligi kerak.
+  const rooms = activeBranchId
+    ? allRooms.filter(r => !r.branchId || r.branchId === activeBranchId || r.id === form.roomId)
+    : allRooms;
   // Guruh o'quvchi soniga sig'maydigan xonani ko'rsatmaymiz — joriy tanlangan
   // xona (tahrirlashda) va sig'imi belgilanmagan xonalar har doim ko'rinadi.
   const parsedMaxStudents = parseInt(form.maxStudents) || 15;

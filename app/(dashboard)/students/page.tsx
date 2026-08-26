@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TopHeader } from "@/components/layout/top-header";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import {
   Search, Phone, MessageSquare, Edit, GraduationCap, CheckCircle, DollarSign, Trash2, UserMinus, UserPlus,
+  UserRoundX, Plus,
   UserCheck, Clock, Upload, Download, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -39,13 +40,19 @@ function Skeleton({ className }: { className?: string }) {
  * Ilgari "Ketgan" faol guruh a'zoligi yo'qligidan chiqarilardi — endigina
  * qo'shilgan, hali guruhga biriktirilmagan o'quvchi ham "Ketgan" bo'lib
  * ko'rinardi va "Jami" hisobidan tushib qolardi. Endi:
- *   YANGI  — qo'shilgan, lekin hali guruhga biriktirilmagan;
- *   SINOV  — guruhda, sinov darsida;
- *   FAOL   — guruhda, faol o'qiyapti;
- *   KETGAN — ATAYLAB shunday belgilangan (o'quvchi kartochkasidagi tugma).
+ *   YANGI    — qo'shilgan, lekin HECH QACHON guruhga biriktirilmagan;
+ *   SINOV    — guruhda, sinov darsida;
+ *   FAOL     — guruhda, faol o'qiyapti;
+ *   GURUHSIZ — guruhda BO'LGAN, lekin hozir hech qaysisida yo'q;
+ *   KETGAN   — ATAYLAB shunday belgilangan (o'quvchi kartochkasidagi tugma).
+ *
+ * GURUHSIZ ni "Yangi" ga qo'shib yubormaymiz: yarim yil o'qib, keyin
+ * guruhdan chiqarilgan o'quvchini "endigina keldi" deb ko'rsatish yolg'on
+ * bo'lardi va u endigina kelganlar orasida yo'qolib ketardi.
  */
 const ENROLL_CFG: Record<string, { label: string; cls: string }> = {
   YANGI:          { label: "Yangi",  cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  GURUHSIZ:       { label: "Guruhsiz", cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
   SINOV:          { label: "Sinov",  cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
   FAOL:           { label: "Faol",   cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
   CHIQIB_KETGAN:  { label: "Ketgan", cls: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-500" },
@@ -76,8 +83,11 @@ function enrollOf(s: any): string {
   // "Ketgan" — faqat ataylab belgilangan bo'lsa.
   if (s.archivedAt) return "CHIQIB_KETGAN";
   const active = activeGroupsOf(s);
-  if (active.length === 0) return "YANGI";
-  return active.some((g: any) => g.enrollmentStatus === "FAOL") ? "FAOL" : "SINOV";
+  if (active.length > 0) {
+    return active.some((g: any) => g.enrollmentStatus === "FAOL") ? "FAOL" : "SINOV";
+  }
+  // Guruhi yo'q. Umuman bo'lmaganmi yoki chiqarilganmi — farqlaymiz.
+  return (s.groups ?? []).length === 0 ? "YANGI" : "GURUHSIZ";
 }
 
 export default function StudentsPage() {
@@ -109,6 +119,10 @@ export default function StudentsPage() {
   // Qatordagi SMS tugmasi: shu o'quvchini tanlab, ommaviy paneldagi SMS
   // oynasini ochadi — yuborish mantiqi bitta joyda qoladi.
   const [smsOpen,      setSmsOpen]      = useState(false);
+  /** Tashqaridan ochiladigan ommaviy amal (jadvaldagi "+ Guruh" tugmasi). */
+  const [bulkAction,   setBulkAction]   = useState<string | null>(null);
+  /** "+ Guruh" orqali ochilganini eslab qolamiz (tanlovni tozalash uchun). */
+  const singleAssign = useRef(false);
   const smsToOne = (id: string) => { setSelectedIds(new Set([id])); setSmsOpen(true); };
 
   // Filtrlar SERVERGA yuboriladi — javob 1000 ta bilan cheklangani uchun
@@ -138,6 +152,7 @@ export default function StudentsPage() {
     // guruhi borlar sanalar va yangi qo'shilganlar hisobga kirmasdi.
     jami:  students.length,
     yangi: students.filter(s => enrollOf(s) === "YANGI").length,
+    guruhsiz: students.filter(s => enrollOf(s) === "GURUHSIZ").length,
     sinov: students.filter(s => enrollOf(s) === "SINOV").length,
     faol:  students.filter(s => enrollOf(s) === "FAOL").length,
     ketgan: students.filter(s => enrollOf(s) === "CHIQIB_KETGAN").length,
@@ -216,6 +231,31 @@ export default function StudentsPage() {
     );
   }
 
+  /**
+   * Bitta o'quvchini guruhga biriktirish.
+   *
+   * Alohida oyna yozmaymiz — mavjud ommaviy "Guruhga qo'shish" oynasi
+   * ishlatiladi: u sinovga qo'shish, filial doirasi va xatolarni allaqachon
+   * to'g'ri hal qiladi. Shu o'quvchini tanlab, o'sha oynani ochamiz.
+   */
+  function assignToGroup(id: string) {
+    singleAssign.current = true;
+    setSelectedIds(new Set([id]));
+    setBulkAction("add-to-group");
+  }
+
+  /**
+   * Oyna yopilganda tanlovni ham tozalaymiz — aks holda bitta qatordan
+   * biriktirgandan keyin ekranda "1 ta tanlandi" paneli osilib qolardi.
+   */
+  function handleBulkActionChange(a: string | null) {
+    setBulkAction(a);
+    if (a === null && singleAssign.current) {
+      singleAssign.current = false;
+      setSelectedIds(new Set());
+    }
+  }
+
   const filtersOn =
     filterEnroll !== "barchasi" || filterGroup !== "barchasi" ||
     filterTeacher !== "barchasi" || filterDebt !== "barchasi" || !!search;
@@ -260,12 +300,21 @@ export default function StudentsPage() {
           pastdan joy ajratamiz. */}
       <div className={cn("p-5 space-y-5", selected.length > 0 && "pb-28 lg:pb-24")}>
         {/* Stats */}
-        <div className={cn("grid grid-cols-2 gap-3", canSeeMoney ? "md:grid-cols-3 xl:grid-cols-6" : "md:grid-cols-3 xl:grid-cols-5")}>
+        {filtersOn && (
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 -mb-2">
+            Ko&apos;rsatkichlar tanlangan filtr bo&apos;yicha hisoblangan
+          </p>
+        )}
+        <div className={cn("grid grid-cols-2 gap-3", canSeeMoney ? "md:grid-cols-3 xl:grid-cols-7" : "md:grid-cols-3 xl:grid-cols-6")}>
           {[
-            { label: "Jami",      value: stats.jami,       icon: GraduationCap, bg: "bg-blue-50 dark:bg-blue-950/40",   text: "text-blue-600 dark:text-blue-400" },
+            // "Jami" ro'yxatdagi qatorlardan sanaladi, ro'yxat esa serverda
+            // 1000 ta bilan cheklangan — chegaraga yetilsa raqam yolg'on
+            // bo'lib qolmasligi uchun "1000+" deb yoziladi.
+            { label: "Jami",      value: stats.jami >= 1000 ? "1000+" : stats.jami, icon: GraduationCap, bg: "bg-blue-50 dark:bg-blue-950/40",   text: "text-blue-600 dark:text-blue-400" },
             { label: "Yangi",     value: stats.yangi,      icon: UserPlus,      bg: "bg-indigo-50 dark:bg-indigo-950/40", text: "text-indigo-600 dark:text-indigo-400" },
             { label: "Faol",      value: stats.faol,       icon: CheckCircle,   bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-600 dark:text-green-400" },
             { label: "Sinov",     value: stats.sinov,      icon: Clock,         bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-600 dark:text-amber-400" },
+            { label: "Guruhsiz",  value: stats.guruhsiz,   icon: UserRoundX,    bg: "bg-orange-50 dark:bg-orange-950/40", text: "text-orange-600 dark:text-orange-400" },
             { label: "Ketgan",    value: stats.ketgan,     icon: UserMinus,     bg: "bg-neutral-100 dark:bg-neutral-800/60", text: "text-neutral-500 dark:text-neutral-400" },
             ...(canSeeMoney
               ? [{ label: "Jami qarz", value: fmt(stats.qarz), icon: DollarSign, bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-600 dark:text-red-400" }]
@@ -299,6 +348,7 @@ export default function StudentsPage() {
               { v: "YANGI",    l: "Yangi" },
               { v: "SINOV",    l: "Sinov" },
               { v: "FAOL",     l: "Faol" },
+              { v: "GURUHSIZ", l: "Guruhsiz" },
               { v: "KETGAN",   l: "Ketgan" },
             ].map(f => (
               <button key={f.v} onClick={() => setFilterEnroll(f.v)}
@@ -436,7 +486,21 @@ export default function StudentsPage() {
                           {/* BARCHA guruhlar. Bitta o'quvchi bir nechta fanga
                               qatnashishi mumkin — ilgari faqat bittasi ko'rinardi. */}
                           {gs.length === 0
-                            ? <span className="text-[13px] text-neutral-400">—</span>
+                            ? (canUpdate ? (
+                                // Bo'sh yacheykada o'lik chiziq turardi va
+                                // biriktirish uchun o'quvchini ochish kerak
+                                // edi. Endi shu yerdan bir bosishda.
+                                <button
+                                  onClick={e => { e.stopPropagation(); assignToGroup(s.id); }}
+                                  title="Guruhga biriktirish"
+                                  className="inline-flex items-center gap-1 h-6 px-2 rounded-lg text-[12px] font-semibold
+                                    text-indigo-600 dark:text-indigo-400 border border-dashed
+                                    border-indigo-300/70 dark:border-indigo-400/30
+                                    hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+                                  <Plus className="w-3 h-3" />
+                                  Guruh
+                                </button>
+                              ) : <span className="text-[13px] text-neutral-400">—</span>)
                             : (
                               <div className="flex flex-wrap gap-1 max-w-[220px]">
                                 {gs.map((g: any) => (
@@ -452,7 +516,15 @@ export default function StudentsPage() {
                             )}
                         </TableCell>
                         <TableCell>
-                          <span className="text-[13px] text-neutral-500 dark:text-neutral-400">
+                          <span className="text-[13px] text-neutral-500 dark:text-neutral-400"
+                            // O'qituvchi ALOHIDA biriktirilmaydi — u guruh
+                            // orqali keladi. Shuning uchun bu yerda "+" yo'q,
+                            // faqat sababi tushuntiriladi.
+                            title={teacherNames.length === 0
+                              ? (gs.length === 0
+                                  ? "O'qituvchi guruh orqali biriktiriladi"
+                                  : "Guruhga o'qituvchi biriktirilmagan")
+                              : undefined}>
                             {teacherNames.length === 0 ? "—"
                               : teacherNames.length === 1 ? teacherNames[0]
                               : `${teacherNames[0]} +${teacherNames.length - 1}`}
@@ -536,6 +608,8 @@ export default function StudentsPage() {
           canSendSms={canSendSms}
           smsOpen={smsOpen}
           onSmsOpenChange={setSmsOpen}
+          actionOpen={bulkAction}
+          onActionOpenChange={handleBulkActionChange}
         />
       </div>
     </div>
