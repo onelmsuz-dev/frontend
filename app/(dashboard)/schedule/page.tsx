@@ -16,6 +16,7 @@ import { useTeachers } from "@/lib/hooks/useTeachers";
 import { mutate } from "swr";
 import { businessToday } from "@/lib/time";
 import { useOrganization } from "@/lib/hooks/useOrganization";
+import { useRooms } from "@/lib/hooks/useRooms";
 import {
   ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, List, ChevronDown, Plus,
 } from "lucide-react";
@@ -85,7 +86,7 @@ const GROUP_COLORS = [
 ];
 
 const EMPTY_FORM = {
-  name: "", courseId: "", teacherId: "", maxStudents: "15",
+  name: "", courseId: "", teacherId: "", roomId: "", maxStudents: "15",
   scheduleDays: [] as string[], startTime: "09:00", endTime: "11:00",
   startDate: todayStr(), status: "ACTIVE",
 };
@@ -246,6 +247,9 @@ export default function SchedulePage() {
   // "Bugun" — Toshkent bo'yicha (qurilma soati boshqa mintaqada bo'lsa ham).
   const router = useRouter();
   const { data: org } = useOrganization();
+  const { data: roomsRaw } = useRooms();
+  const rooms: { id: string; name: string; branchId?: string }[] =
+    Array.isArray(roomsRaw) ? roomsRaw : [];
   const today = useMemo(() => businessToday(), []);
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "SUPER_ADMIN";
@@ -277,7 +281,7 @@ export default function SchedulePage() {
 
   // Quick "Dars qo'shish" modal (minimal: teacher + days + time)
   const [showDarsModal, setShowDarsModal] = useState(false);
-  const [darsForm,      setDarsForm]      = useState({ teacherId: "", courseId: "", scheduleDays: [] as string[], startTime: "09:00", endTime: "10:30" });
+  const [darsForm,      setDarsForm]      = useState({ teacherId: "", courseId: "", roomId: "", scheduleDays: [] as string[], startTime: "09:00", endTime: "10:30" });
   const [darsSaving,    setDarsSaving]    = useState(false);
   const [darsError,     setDarsError]     = useState("");
 
@@ -379,13 +383,20 @@ export default function SchedulePage() {
     setGroupForm(EMPTY_FORM); setGroupError(""); setShowGroupModal(true);
   }
   function openDarsModal() {
-    setDarsForm({ teacherId: "", courseId: "", scheduleDays: [], startTime: "09:00", endTime: "10:30" });
+    setDarsForm({ teacherId: "", courseId: "", roomId: "", scheduleDays: [], startTime: "09:00", endTime: "10:30" });
     setDarsError(""); setShowDarsModal(true);
   }
 
   async function submitGroup() {
     if (!groupForm.name.trim()) { setGroupError("Guruh nomi majburiy"); return; }
     if (!groupForm.scheduleDays.length || !groupForm.startTime || !groupForm.endTime) { setGroupError("Dars kunlari, boshlanish va tugash vaqti majburiy"); return; }
+    // Xona majburiy — bir xonada ikkita dars qo'yilib qolmasligi uchun.
+    if (!groupForm.roomId) {
+      setGroupError(rooms.length === 0
+        ? "Avval xona qo'shing — Sozlamalar → Xonalar"
+        : "Xonani tanlang");
+      return;
+    }
     setGroupSaving(true); setGroupError("");
     try {
       const res = await fetch("/api/groups", {
@@ -393,6 +404,7 @@ export default function SchedulePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: groupForm.name, courseId: groupForm.courseId, teacherId: groupForm.teacherId,
+          roomId: groupForm.roomId,
           maxStudents: parseInt(groupForm.maxStudents) || 15,
           scheduleDays: groupForm.scheduleDays, startTime: groupForm.startTime, endTime: groupForm.endTime,
           startDate: groupForm.startDate, status: groupForm.status,
@@ -409,6 +421,12 @@ export default function SchedulePage() {
   async function submitDars() {
     if (!darsForm.courseId || !darsForm.teacherId) { setDarsError("Kurs va o'qituvchini tanlang"); return; }
     if (darsForm.scheduleDays.length === 0) { setDarsError("Kamida 1 ta kun tanlang"); return; }
+    if (!darsForm.roomId) {
+      setDarsError(rooms.length === 0
+        ? "Avval xona qo'shing — Sozlamalar → Xonalar"
+        : "Xonani tanlang");
+      return;
+    }
     setDarsSaving(true); setDarsError("");
     try {
       // Auto-name: "Kurs nomi — O'qituvchi"
@@ -420,6 +438,7 @@ export default function SchedulePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: autoName, courseId: darsForm.courseId, teacherId: darsForm.teacherId,
+          roomId: darsForm.roomId,
           maxStudents: 20,
           scheduleDays: darsForm.scheduleDays, startTime: darsForm.startTime, endTime: darsForm.endTime,
           startDate: todayStr(), status: "ACTIVE",
@@ -596,6 +615,17 @@ export default function SchedulePage() {
               </div>
             )}
           </FormField>
+          <FormField label="Xona" required>
+            <select value={groupForm.roomId} onChange={e => setGroupForm(p => ({...p, roomId: e.target.value}))} className={SELECT_CLS}>
+              <option value="">Xona tanlang...</option>
+              {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            {rooms.length === 0 && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5">
+                Xona yo&apos;q — Sozlamalar → Xonalar bo&apos;limidan qo&apos;shing.
+              </p>
+            )}
+          </FormField>
           <FormField label="O'qituvchi">
             <select value={groupForm.teacherId} onChange={e => setGroupForm(p => ({...p, teacherId: e.target.value}))} className={SELECT_CLS}>
               <option value="">O'qituvchi tanlang...</option>
@@ -723,6 +753,17 @@ export default function SchedulePage() {
             </select>
           </FormField>
         </div>
+        <FormField label="Xona" required>
+            <select value={darsForm.roomId} onChange={e => setDarsForm(p => ({...p, roomId: e.target.value}))} className={SELECT_CLS}>
+              <option value="">Xona tanlang...</option>
+              {rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            {rooms.length === 0 && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5">
+                Xona yo&apos;q — Sozlamalar → Xonalar bo&apos;limidan qo&apos;shing.
+              </p>
+            )}
+        </FormField>
         <FormField label="Dars kunlari" required>
           <div className="flex gap-2 flex-wrap">
             {DAYS_OPTS.map(d => (

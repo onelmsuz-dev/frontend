@@ -13,7 +13,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Search, Phone, MessageSquare, Edit, GraduationCap, CheckCircle, DollarSign, Trash2,
+  Search, Phone, MessageSquare, Edit, GraduationCap, CheckCircle, DollarSign, Trash2, UserMinus, UserPlus,
   UserCheck, Clock, Upload, Download, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,19 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
 
+/**
+ * O'QUVCHI HOLATI.
+ *
+ * Ilgari "Ketgan" faol guruh a'zoligi yo'qligidan chiqarilardi — endigina
+ * qo'shilgan, hali guruhga biriktirilmagan o'quvchi ham "Ketgan" bo'lib
+ * ko'rinardi va "Jami" hisobidan tushib qolardi. Endi:
+ *   YANGI  — qo'shilgan, lekin hali guruhga biriktirilmagan;
+ *   SINOV  — guruhda, sinov darsida;
+ *   FAOL   — guruhda, faol o'qiyapti;
+ *   KETGAN — ATAYLAB shunday belgilangan (o'quvchi kartochkasidagi tugma).
+ */
 const ENROLL_CFG: Record<string, { label: string; cls: string }> = {
+  YANGI:          { label: "Yangi",  cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
   SINOV:          { label: "Sinov",  cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
   FAOL:           { label: "Faol",   cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
   CHIQIB_KETGAN:  { label: "Ketgan", cls: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-500" },
@@ -60,8 +72,10 @@ function activeGroupsOf(s: any): any[] {
 
 /** Ro'yxatda ko'rsatiladigan yagona a'zolik holati (eng "kuchlisi"). */
 function enrollOf(s: any): string {
+  // "Ketgan" — faqat ataylab belgilangan bo'lsa.
+  if (s.archivedAt) return "CHIQIB_KETGAN";
   const active = activeGroupsOf(s);
-  if (active.length === 0) return "CHIQIB_KETGAN";
+  if (active.length === 0) return "YANGI";
   return active.some((g: any) => g.enrollmentStatus === "FAOL") ? "FAOL" : "SINOV";
 }
 
@@ -119,9 +133,13 @@ export default function StudentsPage() {
     () => (Array.isArray(teachersRaw) ? teachersRaw : []), [teachersRaw]);
 
   const stats = useMemo(() => ({
-    jami:  students.filter(s => enrollOf(s) !== "CHIQIB_KETGAN").length,
+    // "Jami" — ro'yxatdagi HAMMA o'quvchi (ketganlar ham). Ilgari faqat
+    // guruhi borlar sanalar va yangi qo'shilganlar hisobga kirmasdi.
+    jami:  students.length,
+    yangi: students.filter(s => enrollOf(s) === "YANGI").length,
     sinov: students.filter(s => enrollOf(s) === "SINOV").length,
     faol:  students.filter(s => enrollOf(s) === "FAOL").length,
+    ketgan: students.filter(s => enrollOf(s) === "CHIQIB_KETGAN").length,
     qarz:  students.filter(s => s.balance < 0).reduce((sum, s) => sum + Math.abs(s.balance), 0),
   }), [students]);
 
@@ -210,7 +228,9 @@ export default function StudentsPage() {
     <div>
       <TopHeader
         title="O'quvchilar"
-        subtitle={isLoading ? "Yuklanmoqda..." : `Jami ${stats.jami} ta o'quvchi`}
+        subtitle={isLoading ? "Yuklanmoqda..." : filtersOn
+          ? `${stats.jami} ta o'quvchi (filtr bo'yicha)`
+          : `Jami ${stats.jami} ta o'quvchi`}
         action={canCreate ? { label: "Yangi o'quvchi", onClick: openCreate } : undefined}
       />
 
@@ -235,13 +255,17 @@ export default function StudentsPage() {
         groups={groups}
       />
 
-      <div className="p-5 space-y-5">
+      {/* Tanlov faol bo'lganda suzuvchi panel oxirgi qatorni yopmasligi uchun
+          pastdan joy ajratamiz. */}
+      <div className={cn("p-5 space-y-5", selected.length > 0 && "pb-28 lg:pb-24")}>
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className={cn("grid grid-cols-2 gap-3", canSeeMoney ? "md:grid-cols-3 xl:grid-cols-6" : "md:grid-cols-3 xl:grid-cols-5")}>
           {[
             { label: "Jami",      value: stats.jami,       icon: GraduationCap, bg: "bg-blue-50 dark:bg-blue-950/40",   text: "text-blue-600 dark:text-blue-400" },
+            { label: "Yangi",     value: stats.yangi,      icon: UserPlus,      bg: "bg-indigo-50 dark:bg-indigo-950/40", text: "text-indigo-600 dark:text-indigo-400" },
             { label: "Faol",      value: stats.faol,       icon: CheckCircle,   bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-600 dark:text-green-400" },
             { label: "Sinov",     value: stats.sinov,      icon: Clock,         bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-600 dark:text-amber-400" },
+            { label: "Ketgan",    value: stats.ketgan,     icon: UserMinus,     bg: "bg-neutral-100 dark:bg-neutral-800/60", text: "text-neutral-500 dark:text-neutral-400" },
             ...(canSeeMoney
               ? [{ label: "Jami qarz", value: fmt(stats.qarz), icon: DollarSign, bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-600 dark:text-red-400" }]
               : []),
@@ -271,8 +295,10 @@ export default function StudentsPage() {
           <div className="flex gap-1.5">
             {[
               { v: "barchasi", l: "Barchasi" },
+              { v: "YANGI",    l: "Yangi" },
               { v: "SINOV",    l: "Sinov" },
               { v: "FAOL",     l: "Faol" },
+              { v: "KETGAN",   l: "Ketgan" },
             ].map(f => (
               <button key={f.v} onClick={() => setFilterEnroll(f.v)}
                 className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
@@ -383,7 +409,10 @@ export default function StudentsPage() {
                             className="flex items-center gap-3 group/name">
                             <div className={cn(
                               "w-8 h-8 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0",
-                              s.isActive
+                              // Rang HOLAT bilan bir xil bo'lsin: ilgari
+                              // `isActive` ga qarardi va "Yangi" o'quvchi
+                              // nishoni ko'k, avatari sariq bo'lib chiqardi.
+                              enrollK !== "CHIQIB_KETGAN"
                                 ? "bg-gradient-to-br from-blue-400 to-indigo-500"
                                 : "bg-gradient-to-br from-amber-400 to-orange-400"
                             )}>

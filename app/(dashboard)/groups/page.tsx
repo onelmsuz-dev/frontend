@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import Link from "next/link";
-import { Search, Users, Clock, CalendarDays, BookOpen, TrendingUp, Edit, Trash2, ChevronRight, MapPin, Plus } from "lucide-react";
+import { Search, Users, Clock, CalendarDays, BookOpen, TrendingUp, Edit, Trash2, ChevronRight, MapPin, Plus, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useCourses } from "@/lib/hooks/useCourses";
@@ -55,6 +55,8 @@ export default function GroupsPage() {
   const canCreate = hasPerm(me?.permissions, "groups.create");
   const canUpdate = hasPerm(me?.permissions, "groups.update");
   const canDelete = hasPerm(me?.permissions, "groups.delete");
+  // Xona qo'shish Sozlamalar bo'limida — huquqi yo'qni u yerga yubormaymiz.
+  const canManageRooms = hasPerm(me?.permissions, "rooms.create");
   const { activeBranchId } = useBranch();
   const [search,    setSearch]    = useState("");
   const [statusTab, setStatusTab] = useState("barchasi");
@@ -184,6 +186,14 @@ export default function GroupsPage() {
 
   async function submit() {
     if (!form.name.trim() || !form.courseId || !form.teacherId) { setError("Nom, kurs va o'qituvchi majburiy"); return; }
+    // Xona majburiy: bitta xonada bir vaqtda ikkita dars qo'yilib qolmasligi
+    // uchun jadval xonaga bog'langan bo'lishi kerak. Server ham tekshiradi.
+    if (!form.roomId) {
+      setError(rooms.length === 0
+        ? "Avval xona qo'shing — Sozlamalar → Xonalar"
+        : "Xonani tanlang — bir xonada ikkita dars bo'lib qolmasligi uchun");
+      return;
+    }
     if (form.scheduleDays.length === 0) { setError("Kamida 1 ta dars kuni tanlang"); return; }
     if (form.endTime <= form.startTime) { setError("Tugash vaqti boshlanish vaqtidan keyin bo'lsin"); return; }
     setSaving(true); setError("");
@@ -194,7 +204,7 @@ export default function GroupsPage() {
         scheduleDays: form.scheduleDays, startTime: form.startTime, endTime: form.endTime,
         startDate: form.startDate, status: form.status,
       };
-      if (form.roomId) body.roomId = form.roomId;
+      body.roomId = form.roomId;
       // Tahrirda bo'sh qiymat ham yuboriladi — aks holda tugash sanasini
       // olib tashlab bo'lmasdi (server "yuborilmadi" ni "o'zgarmadi" deb
       // tushunardi va guruh o'z-o'zidan "Tugagan" bo'lib qolaverardi).
@@ -314,9 +324,9 @@ export default function GroupsPage() {
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <FormField label="Xona" hint="Ixtiyoriy — sig'imiga qarab filtrlangan">
+          <FormField label="Xona" required hint="Sig'imiga qarab filtrlangan">
             <select value={form.roomId} onChange={e => setForm(p => ({...p, roomId: e.target.value}))} className={selectCls}>
-              <option value="">—</option>
+              <option value="">Tanlang…</option>
               {eligibleRooms.map((r: any) => (
                 <option key={r.id} value={r.id}>{r.name}{r.capacity ? ` (${r.capacity} joy)` : ""}</option>
               ))}
@@ -459,8 +469,30 @@ export default function GroupsPage() {
                       </div>
                       <div className="flex items-center gap-2 text-[12px] text-neutral-600 dark:text-neutral-400">
                         <Clock className="w-3.5 h-3.5 shrink-0 text-neutral-400" />{g.startTime} – {g.endTime}
-                        {g.room?.name && <><MapPin className="w-3.5 h-3.5 shrink-0 text-neutral-400 ml-2" />{g.room.name}</>}
+                        {g.room?.name
+                          ? <><MapPin className="w-3.5 h-3.5 shrink-0 text-neutral-400 ml-2" />{g.room.name}</>
+                          : null}
                       </div>
+                      {/* Xonasiz guruh — jadvalda to'qnashuvni tekshirib
+                          bo'lmaydi. Bosilganda xonalar sozlamasiga o'tadi. */}
+                      {!g.roomId && (canManageRooms ? (
+                        <Link href="/settings?tab=xonalar"
+                          onClick={e => e.stopPropagation()}
+                          className="flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg w-fit
+                            bg-amber-50 text-amber-700 hover:bg-amber-100
+                            dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50 transition-colors">
+                          <AlertTriangle className="w-3 h-3" />
+                          Xona biriktirilmagan — xona qo&apos;shish
+                        </Link>
+                      ) : (
+                        // Sozlamalarga kira olmaydigan xodimga havola
+                        // berilmaydi — u yerda baribir 403 oladi.
+                        <span className="flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg w-fit
+                          bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                          <AlertTriangle className="w-3 h-3" />
+                          Xona biriktirilmagan
+                        </span>
+                      ))}
                     </div>
                     <div className="border-t border-white/50 dark:border-white/10 pt-3">
                       <div className="flex items-center justify-between text-[11px] mb-1.5">

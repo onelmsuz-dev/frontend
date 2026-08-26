@@ -44,6 +44,17 @@ function Skeleton({ className }: { className?: string }) {
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState("xodimlar");
+
+  // Boshqa sahifadan aniq bo'limga o'tish: /settings?tab=xonalar (masalan
+  // guruh kartochkasidagi "Xona biriktirilmagan" ogohlantirishi).
+  //
+  // URL render PAYTIDA o'qilmaydi: sahifa serverda ham chiziladi va server
+  // "xodimlar", mijoz esa "xonalar" bersa gidratsiya nomuvofiqligi bo'lardi
+  // (React butun daraxtni qayta chizadi, foydalanuvchi miltillashni ko'radi).
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab) setActiveSection(tab);
+  }, []);
   const { me } = useMe();
 
   // Tarif bloklangan bo'lsa — to'lov bo'limiga to'g'ridan-to'g'ri yo'naltiramiz

@@ -37,6 +37,7 @@ const ATTEND_CFG: Record<string, { label: string; cls: string; dot: string }> = 
   SINOV_DARSI:{ label: "Sinov",      cls: "bg-amber-100 text-amber-700",   dot: "bg-amber-500" },
 };
 const ENROLL_CFG: Record<string, { label: string; cls: string }> = {
+  YANGI:         { label: "Yangi",       cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
   SINOV:         { label: "Sinov darsi", cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
   FAOL:          { label: "Faol",        cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
   CHIQIB_KETGAN: { label: "Ketgan",      cls: "bg-neutral-100 text-neutral-500" },
@@ -111,6 +112,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
   // ── Payment ──────────────────────────────────────────────────────────────────
   const { me } = useMe();
+  const [archiving, setArchiving] = useState(false);
+  const [archiveErr, setArchiveErr] = useState("");
+  const [confirmArchive, setConfirmArchive] = useState(false);
   // Moliya (qarz va to'lov) — faqat to'lov huquqi borlarga. "To'lov qabul
   // qilmaydi" deb belgilangan o'qituvchida bu huquq yo'q, server ham
   // balansni bermaydi.
@@ -129,6 +133,21 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       : payableGroups.length === 1
         ? payableGroups[0].groupId
         : "";
+
+  async function setArchived(archived: boolean) {
+    setArchiving(true); setArchiveErr("");
+    try {
+      const res = await fetch(`/api/students/${id}/${archived ? "archive" : "unarchive"}`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      // Javob tekshirilmasa (filial doirasi, obuna, tarmoq) amal bajarilmagani
+      // bilinmas va tugma ishlamayotgandek tuyulardi.
+      if (!res.ok) { setArchiveErr(data?.error ?? "Xatolik"); return; }
+      revalidateAll();
+      setConfirmArchive(false);
+    } catch { setArchiveErr("Serverga ulanib bo'lmadi"); }
+    finally { setArchiving(false); }
+  }
+  const unarchiveStudent = () => setArchived(false);
 
   async function submitPayment() {
     const amount = parseFloat(payForm.amount.replace(/\s/g, ""));
@@ -265,8 +284,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     (g: any) => g.enrollmentStatus !== "CHIQIB_KETGAN",
   );
   // Umumiy holat: kamida bitta FAOL a'zolik bo'lsa — faol, aks holda sinov.
+  // "Ketgan" — faqat ATAYLAB belgilangan bo'lsa. Guruhga hali biriktirilmagan
+  // yangi o'quvchi "Yangi" bo'ladi (ilgari u ham "Ketgan" ko'rinardi).
   const overallEnroll =
-    activeSgs.length === 0 ? (student.isActive ? "FAOL" : "CHIQIB_KETGAN")
+    student.archivedAt ? "CHIQIB_KETGAN"
+    : activeSgs.length === 0 ? "YANGI"
     : activeSgs.some((g: any) => g.enrollmentStatus === "FAOL") ? "FAOL"
     : "SINOV";
   const enroll    = ENROLL_CFG[overallEnroll];
@@ -393,6 +415,39 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </Modal>
 
+      {/* "Ketgan" — qaytarib bo'lmaydigan amal: o'quvchi BARCHA guruhlaridan
+          chiqariladi va belgini olib tashlash ularni QAYTARMAYDI. Shuning
+          uchun tasdiq oynasi va aniq ogohlantirish. */}
+      <Modal
+        open={confirmArchive}
+        onClose={() => setConfirmArchive(false)}
+        title="Ketgan deb belgilansinmi?"
+        subtitle={student.name}
+        footer={
+          <>
+            <Button onClick={() => setArchived(true)} disabled={archiving}
+              className="flex-1 h-9 bg-red-600 hover:bg-red-700 text-white text-[13px]">
+              {archiving ? "Belgilanmoqda..." : "Ha, ketgan"}
+            </Button>
+            <Button variant="outline" className="h-9 px-4 text-[13px]"
+              onClick={() => setConfirmArchive(false)}>Bekor</Button>
+          </>
+        }>
+        <p className="text-[13px] text-neutral-600 dark:text-neutral-300">
+          O&apos;quvchi ro&apos;yxatda &quot;Ketgan&quot; bo&apos;lib qoladi
+          {activeSgs.length > 0 && (
+            <> va <b>{activeSgs.length} ta guruhdan</b> chiqariladi</>
+          )}.
+        </p>
+        <p className="text-[12px] text-amber-600 dark:text-amber-400 mt-2">
+          Diqqat: keyinroq belgini olib tashlasangiz, guruhlar avtomatik
+          qaytmaydi — ularni qayta biriktirish kerak bo&apos;ladi.
+        </p>
+        <p className="text-[12px] text-neutral-400 mt-2">
+          To&apos;lovlar va davomat tarixi saqlanadi.
+        </p>
+      </Modal>
+
       {/* Guruhga qo'shish / almashtirish — bitta oyna, ikki rejim */}
       <Modal open={!!groupModal} onClose={() => { setGroupModal(null); setTransferGroupId(""); setTransferErr(""); }}
         title={groupModal?.sg ? "Guruh almashtirish" : "Guruhga qo'shish"}
@@ -483,6 +538,31 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 <Calendar className="w-3.5 h-3.5 text-neutral-400" />
                 {new Date(student.createdAt).toLocaleDateString("uz-UZ")} dan beri
               </div>
+
+              {/* "Ketgan" holati ATAYLAB belgilanadi — avval u guruhi
+                  yo'qligidan chiqarilar va yangi o'quvchi ham ketgan
+                  bo'lib ko'rinardi. */}
+              {canManageGroups && (
+                student.archivedAt ? (
+                  <button onClick={unarchiveStudent} disabled={archiving}
+                    className="mt-1 flex items-center gap-1.5 w-fit text-[12px] px-3 h-8 rounded-lg font-semibold
+                      bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-60">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    {archiving ? "..." : "Ketgan belgisini olib tashlash"}
+                  </button>
+                ) : (
+                  <button onClick={() => { setArchiveErr(""); setConfirmArchive(true); }} disabled={archiving}
+                    className="mt-1 flex items-center gap-1.5 w-fit text-[12px] px-3 h-8 rounded-lg font-semibold
+                      text-neutral-500 dark:text-neutral-400 border border-white/60 dark:border-white/10
+                      hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 transition-colors disabled:opacity-60">
+                    <LogOut className="w-3.5 h-3.5" />
+                    {archiving ? "..." : "Ketgan deb belgilash"}
+                  </button>
+                )
+              )}
+              {archiveErr && (
+                <p className="text-[12px] text-red-600 dark:text-red-400">{archiveErr}</p>
+              )}
             </div>
           </div>
 

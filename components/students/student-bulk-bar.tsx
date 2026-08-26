@@ -153,7 +153,13 @@ export function StudentBulkBar({
   return (
     <>
       {/* Suzuvchi panel */}
-      <div className="sticky bottom-4 z-30 mx-auto w-fit max-w-full">
+      {/* `sticky` sahifa oxirigacha aylantirilgandagina ko'rinardi — ptichka
+          qo'ygan foydalanuvchi pastga tushishi kerak edi. `fixed` bilan panel
+          ekranda doim turadi. Mobilda pastki menyu (bottom-nav, `bottom-3
+          z-40`) bilan ustma-ust tushmasligi uchun `bottom-24`, kompyuterda
+          esa menyu yo'q — `lg:bottom-4`. */}
+      <div className="fixed inset-x-0 bottom-24 lg:bottom-4 z-50 flex justify-center px-3 pointer-events-none">
+        <div className="pointer-events-auto w-fit max-w-full">
         <div className="glass-strong border border-white/60 dark:border-white/10 rounded-2xl shadow-2xl
                         flex items-center gap-2 px-3 py-2.5 flex-wrap justify-center">
           <span className="flex items-center gap-2 pr-2 mr-1 border-r border-white/60 dark:border-white/10">
@@ -183,6 +189,7 @@ export function StudentBulkBar({
                        hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
             <X className="w-3.5 h-3.5" />
           </button>
+        </div>
         </div>
       </div>
 
