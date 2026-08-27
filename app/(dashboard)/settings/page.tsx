@@ -12,11 +12,12 @@ import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { OnboardingSettingsPanel } from "@/components/onboarding/onboarding-settings-panel";
 import { BillingSettings } from "@/components/settings/billing-settings";
+import { ActivitySection } from "@/components/settings/activity-section";
 import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
 import type { Branch, Room } from "@/types";
 import {
   Plus, Trash2, Users, Building, Bell,
-  MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket, Wallet,
+  MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket, Wallet, History,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useRooms } from "@/lib/hooks/useRooms";
@@ -24,7 +25,8 @@ import { useOrganization } from "@/lib/hooks/useOrganization";
 import { useSms, useSmsAutomation, useUpdateSmsAutomation } from "@/lib/hooks/useSms";
 import { TarifSection } from "@/components/settings/tarif-section";
 import { StaffSection } from "@/components/settings/staff-section";
-import { useMe } from "@/lib/hooks/useMe";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { useFeatures } from "@/lib/hooks/useFeatures";
 import { mutate } from "swr";
 
 /** Markaz ish kunlari — guruh jadvalidagi kalitlar bilan bir xil. */
@@ -45,6 +47,12 @@ const sections = [
   // Yo'l ko'rsatuvchi bayrog'i o'chiq markazda bu tab ko'rsatilmaydi
   // (quyida `visibleSections` da filtrlanadi).
   { id: "organish",      label: "Yo'l ko'rsatuvchi", icon: Rocket, feature: "onboarding" },
+  // Harakatlar tarixi ham bayroq ortida chiqariladi va qo'shimcha ravishda
+  // `activity.view` ruxsatini talab qiladi — jurnalda kim qachon nima
+  // qilgani turadi, uni har bir xodimga ochib qo'yish markaz ichidagi
+  // munosabatga aralashish bo'lardi.
+  { id: "harakatlar",    label: "So'nggi harakatlar", icon: History,
+    feature: "activity", perm: "activity.view" },
 ];
 
 function Skeleton({ className }: { className?: string }) {
@@ -66,11 +74,27 @@ export default function SettingsPage() {
 function SettingsContent() {
   const [activeSection, setActiveSection] = useState("xodimlar");
 
-  // Yo'l ko'rsatuvchi bayroq ortida — o'chiq bo'lsa tab umuman chizilmaydi.
+  // Bayroq va ruxsat ortidagi bo'limlar.
+  //
+  // Ilgari bu filtr FAQAT onboarding'ni bilardi (`|| onboardingEnabled`) —
+  // ya'ni bayroq ortidagi ikkinchi bo'lim qo'shilgan zahoti u ham
+  // onboarding bayrog'iga bog'lanib qolardi. Endi har bo'lim o'z kalitini
+  // ko'rsatadi va tekshiruv umumiy.
   const { enabled: onboardingEnabled } = useOnboardingCtx();
-  const visibleSections = sections.filter(
-    s => !("feature" in s) || onboardingEnabled,
-  );
+  const features = useFeatures().data;
+  const { me } = useMe();
+
+  const visibleSections = sections.filter((s) => {
+    const key = "feature" in s ? (s.feature as string) : null;
+    if (key) {
+      const on = key === "onboarding" ? onboardingEnabled : features?.[key];
+      // `undefined` = bayroqlar hali yuklanmagan — tab ko'rsatilmaydi.
+      // Ko'rsatib keyin yo'qotish sakrashga olib kelardi.
+      if (!on) return false;
+    }
+    if ("perm" in s && !hasPerm(me?.permissions, s.perm as string)) return false;
+    return true;
+  });
 
   // Boshqa sahifadan aniq bo'limga o'tish: /settings?tab=xonalar (masalan
   // guruh kartochkasidagi ogohlantirish yoki yo'l ko'rsatuvchining turi).
@@ -85,9 +109,11 @@ function SettingsContent() {
     const tab = searchParams.get("tab");
     // Noma'lum qiymat berilsa hech bir bo'lim chizilmay, sahifa bo'sh
     // ko'rinardi — faqat mavjud bo'limlar qabul qilinadi.
-    if (tab && sections.some(sec => sec.id === tab)) setActiveSection(tab);
-  }, [searchParams]);
-  const { me } = useMe();
+    // `visibleSections` — `sections` emas: aks holda bayroq o'chiq yoki
+    // ruxsati yo'q foydalanuvchi `?tab=harakatlar` havolasi bilan bo'limni
+    // ochib olardi (chap ro'yxatda tugma ko'rinmasa ham).
+    if (tab && visibleSections.some(sec => sec.id === tab)) setActiveSection(tab);
+  }, [searchParams, visibleSections]);
 
   // Tarif bloklangan bo'lsa — to'lov bo'limiga to'g'ridan-to'g'ri yo'naltiramiz
   useEffect(() => {
@@ -376,6 +402,8 @@ function SettingsContent() {
 
           {/* ── Yo'l ko'rsatuvchi ── */}
           {activeSection === "organish" && <OnboardingSettingsPanel />}
+
+          {activeSection === "harakatlar" && <ActivitySection />}
 
           {/* ── Filliallar ── */}
           {activeSection === "filliallar" && (

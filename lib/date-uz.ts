@@ -91,3 +91,88 @@ export function formatUzDate(v: string | Date | null | undefined): string {
     return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
   }
 }
+
+/**
+ * "5 daqiqa oldin", "2 soat oldin", "Kecha 14:30", "26.08.2026 09:15".
+ *
+ * Jurnal ro'yxati uchun: yaqin hodisa nisbiy vaqtda tezroq o'qiladi
+ * ("hozirgina" bilan "3 kun oldin" ni bir qarashda ajratish mumkin), eski
+ * hodisa esa aniq sana talab qiladi — "247 kun oldin" hech kimga hech narsa
+ * demaydi.
+ *
+ * MARKAZ MINTAQASIDA hisoblanadi: brauzer boshqa mintaqada bo'lsa ham
+ * markaz xodimi va egasi bir xil vaqtni ko'radi.
+ */
+export function fmtRelative(v: string | Date | null | undefined): string {
+  if (!v) return "—";
+  const d = toDate(v);
+  if (isNaN(d.getTime())) return "—";
+
+  const diff = Date.now() - d.getTime();
+
+  // Kichik MANFIY farq — server va brauzer soatlari orasidagi bir necha
+  // soniyalik nomuvofiqlik. Uni "kelajak" deb hisoblab to'liq sanaga
+  // o'tkazsak, hozirgina yozilgan yozuv jurnalda "27.08.2026 14:03" bo'lib
+  // ko'rinardi, ustidagi qatorlar esa "hozirgina" — ro'yxat buzilgandek
+  // tuyulardi. Ikki daqiqagacha bardosh qilamiz.
+  if (diff < -120_000)     return fmtDateTime(d);
+  if (diff < 60_000)       return "hozirgina";
+  if (diff < 3_600_000)    return `${Math.floor(diff / 60_000)} daqiqa oldin`;
+
+  const today = businessDayKey(new Date());
+  const then  = businessDayKey(d);
+  if (then === today) {
+    return diff < 86_400_000 && diff >= 3_600_000
+      ? `${Math.floor(diff / 3_600_000)} soat oldin`
+      : `Bugun ${fmtTime(d)}`;
+  }
+
+  // Kun soni KALENDAR kunlari bo'yicha, xom millisekunddan emas: 23 soat
+  // oldingi hodisa boshqa kunga tushsa ham "0 kun oldin" bo'lib qolardi va
+  // ustiga olib borilganda ko'rinadigan aniq sana bilan ziddiyatga tushardi.
+  const days = calendarDaysBetween(then, today);
+  if (days === 1)  return `Kecha ${fmtTime(d)}`;
+  if (days < 7)    return `${days} kun oldin`;
+
+  return fmtDateTime(d);
+}
+
+/** "26.08.2026 09:15" — markaz mintaqasida. */
+export function fmtDateTime(v: string | Date | null | undefined): string {
+  if (!v) return "—";
+  const d = toDate(v);
+  if (isNaN(d.getTime())) return "—";
+  return `${formatUzDate(d)} ${fmtTime(d)}`;
+}
+
+/** "09:15" — markaz mintaqasida. */
+export function fmtTime(v: string | Date): string {
+  const d = toDate(v);
+  if (isNaN(d.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: BUSINESS_TZ, hour: "2-digit", minute: "2-digit", hour12: false,
+    }).format(d);
+  } catch {
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+}
+
+/** Markaz mintaqasidagi kun kaliti ("2026-08-26") — kunlarni solishtirish uchun. */
+function businessDayKey(d: Date): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: BUSINESS_TZ, year: "numeric", month: "2-digit", day: "2-digit",
+    }).format(d);
+  } catch {
+    return d.toISOString().slice(0, 10);
+  }
+}
+
+/** Ikki "YYYY-MM-DD" kalitini kalendar kunlarida ayiradi. */
+function calendarDaysBetween(from: string, to: string): number {
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86_400_000);
+}

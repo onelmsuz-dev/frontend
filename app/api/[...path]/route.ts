@@ -39,6 +39,12 @@ async function handler(
   // butun platforma bitta hisoblagichni bo'lishardi.
   const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   if (clientIp) headers["x-real-client-ip"] = clientIp;
+  // Qurilma ma'lumoti — harakatlar tarixida "qaysi brauzerdan qilingan" ni
+  // ko'rsatish uchun. `fetch` o'zining User-Agent'ini qo'yadi, ya'ni bu
+  // sarlavhani ATAYLAB uzatmasak, backendga Node'ning o'z nomi borardi va
+  // tarixdagi har qator bir xil qurilmani ko'rsatib turardi.
+  const ua = req.headers.get("user-agent");
+  if (ua) headers["x-real-user-agent"] = ua.slice(0, 400);
 
   const method = req.method.toUpperCase();
   const hasBody = method !== "GET" && method !== "HEAD";
