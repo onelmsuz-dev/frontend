@@ -10,6 +10,9 @@ import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { todayStr } from "@/lib/form-constants";
+import { DatePicker } from "@/components/ui/date-picker";
+import { formatUzDate } from "@/lib/date-uz";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import {
   useGamificationSettings, useStudentPointHistory,
@@ -20,7 +23,7 @@ import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { mutate } from "swr";
 import {
   Phone, Calendar, DollarSign, ArrowLeft, AlertCircle,
-  Plus, LogOut, Shuffle, UserCheck, Trophy,
+  Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays,
 } from "lucide-react";
 
 function fmt(v: number) {
@@ -79,6 +82,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const [transferErr,     setTransferErr]     = useState("");
   /** Guruhga qanday holatda qo'shilsin — xodim ataylab tanlaydi. */
   const [enrollAs,        setEnrollAs]        = useState<"SINOV" | "FAOL">("SINOV");
+  /** Guruhga qo'shilgan sana — standarti bugun, lekin o'zgartirsa bo'ladi. */
+  const [enrollDate,      setEnrollDate]      = useState(todayStr());
   const [transferring,    setTransferring]    = useState(false);
 
   const [activating,      setActivating]      = useState<string | null>(null);
@@ -228,7 +233,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       //    o'zgarishsiz qoladi, ya'ni guruhsiz osilib qolmaydi.
       const res = await fetch("/api/student-groups", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId: id, groupId: transferGroupId }),
+        body: JSON.stringify({
+          studentId: id, groupId: transferGroupId,
+          enrollmentStatus: enrollAs,
+          ...(enrollDate ? { joinedAt: enrollDate } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setTransferErr(data.error ?? "Xatolik"); return; }
@@ -493,11 +502,49 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 ))}
               </select>
             </FormField>
+            {/* HOLAT TANLOVI — ro'yxatdagi ommaviy oyna bilan bir xil.
+                Ilgari bu yerda tanlov yo'q edi va o'quvchi HAR DOIM darhol
+                "Faol" bo'lib, kurs to'lovi yechilardi. */}
+            <FormField label="Qaysi holatda qo'shilsin" required>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { v: "SINOV" as const, l: "Sinov darsi", d: "Pul yechilmaydi" },
+                  { v: "FAOL"  as const, l: "Faol",        d: "Kurs to'lovi yechiladi" },
+                ]).map(o => (
+                  <button key={o.v} type="button" onClick={() => setEnrollAs(o.v)}
+                    className={cn(
+                      "px-3 py-2.5 rounded-xl border-2 text-left transition-all",
+                      enrollAs === o.v
+                        ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-400"
+                        : "border-white/60 dark:border-white/10 hover:border-neutral-400",
+                    )}>
+                    <p className={cn("text-[13px] font-semibold",
+                      enrollAs === o.v
+                        ? "text-indigo-700 dark:text-indigo-300"
+                        : "text-neutral-700 dark:text-neutral-300")}>
+                      {o.l}
+                    </p>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{o.d}</p>
+                  </button>
+                ))}
+              </div>
+            </FormField>
+
+            {/* QO'SHILGAN SANA — ilgari doim "bugun" edi va o'zgartirib
+                bo'lmasdi. Markazlar ma'lumotni ko'pincha keyin kiritadi. */}
+            <FormField label="Guruhga qo'shilgan sana"
+              hint="Haqiqiy sanani kiriting — hisob shundan yuritiladi">
+              <DatePicker value={enrollDate} max={todayStr()} onChange={setEnrollDate} />
+            </FormField>
+
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-4 py-3">
               <p className="text-[12px] text-amber-700 dark:text-amber-400">
                 {groupModal?.sg
-                  ? <><strong>{groupModal.sg.group?.name}</strong> dan chiqarilib, tanlangan guruhga <strong>faol</strong> sifatida qo&apos;shiladi va kurs to&apos;lovi balansdan yechiladi.</>
-                  : <>Mavjud guruhlariga <strong>qo&apos;shimcha</strong> qilib biriktiriladi (hech qaysisidan chiqarilmaydi) va shu kursning to&apos;lovi balansdan yechiladi.</>}
+                  ? <><strong>{groupModal.sg.group?.name}</strong> dan chiqarilib, tanlangan guruhga qo&apos;shiladi.</>
+                  : <>Mavjud guruhlariga <strong>qo&apos;shimcha</strong> qilib biriktiriladi (hech qaysisidan chiqarilmaydi).</>}
+                {enrollAs === "FAOL"
+                  ? " Kurs to'lovi shu oy uchun balansdan yechiladi."
+                  : " Sinov darsida pul yechilmaydi — keyin faollashtirasiz."}
               </p>
             </div>
           </>
@@ -547,7 +594,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               )}
               <div className="flex items-center gap-2 text-[13px] text-neutral-500 dark:text-neutral-400">
                 <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-                {new Date(student.createdAt).toLocaleDateString("uz-UZ")} dan beri
+                {formatUzDate(student.joinedAt ?? student.createdAt)} dan beri
               </div>
 
               {/* "Ketgan" holati ATAYLAB belgilanadi — avval u guruhi
@@ -670,6 +717,17 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                       </div>
 
                       <p className="text-[12px] text-neutral-500">{g.course?.name}</p>
+
+                      {/* QO'SHILGAN SANA — foydalanuvchi kiritgan sana shu
+                          yerda ko'rinadi. Ilgari u hech qayerda
+                          ko'rsatilmasdi va to'g'ri saqlanganini bilib
+                          bo'lmasdi. */}
+                      {sg.joinedAt && (
+                        <p className="text-[11px] text-neutral-400 flex items-center gap-1.5">
+                          <CalendarDays className="w-3 h-3 shrink-0" />
+                          {formatUzDate(sg.joinedAt)} dan
+                        </p>
+                      )}
 
                       {t && (
                         <div className="flex items-center gap-2">

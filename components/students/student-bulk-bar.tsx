@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { DatePicker } from "@/components/ui/date-picker";
+import { todayStr } from "@/lib/form-constants";
 import {
-  X, Users, Shuffle, LogOut, UserCheck, UserX, MessageSquare, AlertCircle, Check,
+  X, Users, Shuffle, LogOut, UserCheck, UserX, MessageSquare, AlertCircle, Check, CalendarDays,
 } from "lucide-react";
 
-type BulkAction = "add-to-group" | "transfer-group" | "exit-group" | "activate" | "deactivate";
+type BulkAction = "add-to-group" | "transfer-group" | "exit-group" | "activate" | "deactivate" | "joined-at";
 
 interface BulkError { studentId: string; name?: string; message: string }
 
@@ -70,6 +72,10 @@ export function StudentBulkBar({
     onSmsOpenChange?.(v);
   };
   const [groupId,  setGroupId]  = useState("");
+  /** Ommaviy sana tuzatish uchun. */
+  const [joinedAt, setJoinedAt] = useState(todayStr());
+  /** Guruhga qo'shishda — a'zolik sanasi. */
+  const [enrollDate, setEnrollDate] = useState(todayStr());
   // Standart SINOV: "pul yechilmaydi" xavfsizroq tanlov — xodim ataylab
   // "Faol" ni bosishi kerak. Ilgari standart FAOL edi va bir bosishda
   // o'nlab o'quvchiga qarz yozilib ketishi mumkin edi.
@@ -96,6 +102,24 @@ export function StudentBulkBar({
   async function runBulk() {
     if (!action) return;
     if (needsGroup && !groupId) { setErr("Guruhni tanlang"); return; }
+
+    // Sana tuzatish — alohida endpoint, guruh mantig'iga aloqasi yo'q.
+    if (action === "joined-at") {
+      if (!joinedAt) { setErr("Sanani tanlang"); return; }
+      setBusy(true); setErr(""); setErrors([]);
+      try {
+        const res = await fetch("/api/students/bulk/joined-at", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentIds: selected.map(s => s.id), joinedAt }),
+        });
+        const data = await res.json();
+        if (!res.ok) { setErr(data.error ?? "Xatolik"); return; }
+        setOkCount(data.ok ?? 0);
+        closeAll(); onDone(); onClear();
+      } catch { setErr("Serverga ulanib bo'lmadi"); }
+      finally { setBusy(false); }
+      return;
+    }
     setBusy(true); setErr(""); setErrors([]);
     try {
       const res = await fetch("/api/students/bulk", {
@@ -104,7 +128,7 @@ export function StudentBulkBar({
           action,
           studentIds: selected.map(s => s.id),
           ...(needsGroup ? { groupId } : {}),
-          ...(action === "add-to-group" ? { asTrial } : {}),
+          ...(action === "add-to-group" ? { asTrial, joinedAt: enrollDate } : {}),
         }),
       });
       const data = await res.json();
@@ -143,6 +167,10 @@ export function StudentBulkBar({
   }
 
   const ACTION_META: Record<BulkAction, { title: string; verb: string; danger?: boolean; note: string }> = {
+    "joined-at": {
+      title: "Qabul sanasini o'zgartirish", verb: "Saqlash",
+      note: "Tanlangan o'quvchilarning markazga qabul sanasi shu sanaga o'zgaradi. Boshqa ma'lumotga tegilmaydi.",
+    },
     "add-to-group": {
       title: "Guruhga qo'shish", verb: "Qo'shish",
       note: "Mavjud guruhlari saqlanadi — o'quvchi bir necha fanga qatnashishi mumkin.",
@@ -193,6 +221,7 @@ export function StudentBulkBar({
               <BarBtn icon={Shuffle}  label="Guruh almashtirish" onClick={() => open("transfer-group")} />
               <BarBtn icon={UserCheck} label="Faollashtirish"  onClick={() => open("activate")} />
               <BarBtn icon={LogOut}   label="Guruhdan chiqarish" danger onClick={() => open("exit-group")} />
+              <BarBtn icon={CalendarDays} label="Qabul sanasi" onClick={() => open("joined-at")} />
               <BarBtn icon={UserX}    label="Nofaol qilish"    danger onClick={() => open("deactivate")} />
             </>
           )}
@@ -237,6 +266,12 @@ export function StudentBulkBar({
           </FormField>
         )}
 
+        {action === "joined-at" && (
+          <FormField label="Yangi qabul sanasi" required>
+            <DatePicker value={joinedAt} max={todayStr()} onChange={setJoinedAt} />
+          </FormField>
+        )}
+
         {action === "add-to-group" && (
           // Ilgari bu belgilash oynachasi (checkbox) edi va standart holati
           // "belgilanmagan" — ya'ni pul DARHOL yechilardi, xodim buni
@@ -267,6 +302,15 @@ export function StudentBulkBar({
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{o.d}</p>
                 </button>
               ))}
+            </div>
+
+            {/* QO'SHILGAN SANA — ilgari doim "bugun" bo'lib ketardi va
+                o'zgartirib bo'lmasdi. */}
+            <div className="mt-3">
+              <p className="text-[12px] font-semibold text-neutral-600 dark:text-neutral-400 mb-2">
+                Guruhga qo&apos;shilgan sana
+              </p>
+              <DatePicker value={enrollDate} max={todayStr()} onChange={setEnrollDate} />
             </div>
           </div>
         )}

@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
+import { DatePicker } from "@/components/ui/date-picker";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GenderPicker } from "@/components/ui/segmented";
 import { useGroups } from "@/lib/hooks/useGroups";
@@ -35,7 +36,7 @@ interface Props {
 
 function emptyForm() {
   return {
-    name: "", phone: "", birthDate: "", password: "",
+    name: "", phone: "", birthDate: "", joinedAt: todayStr(), password: "",
     source: "", gender: "MALE" as Gender,
     parentPhone: "", parentName: "",
     groupId: "", joinDate: todayStr(),
@@ -91,6 +92,8 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       setForm({
         name: initial.name ?? "", phone: initial.phone ?? "",
         birthDate: initial.birthDate ? String(initial.birthDate).slice(0, 10) : "",
+        // Eski yozuvlarda `joinedAt` bo'lmasligi mumkin — `createdAt` ga tushamiz.
+        joinedAt: String(initial.joinedAt ?? initial.createdAt ?? "").slice(0, 10),
         password: "", source: initial.source ?? "",
         gender: initial.gender ?? "MALE",
         parentPhone: initial.parentPhone ?? "", parentName: initial.parentName ?? "",
@@ -213,6 +216,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
         name: form.name.trim(), phone: form.phone, gender: form.gender,
       };
       if (form.birthDate) body.birthDate = form.birthDate;
+      if (form.joinedAt) body.joinedAt = form.joinedAt;
       if (form.password.trim()) body.password = form.password;
       if (form.source) body.source = form.source;
       if (form.parentPhone.replace(/\D/g, "").length === 12) body.parentPhone = form.parentPhone;
@@ -274,8 +278,16 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
 
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Tug'ilgan sana">
-          <Input type="date" value={form.birthDate} max={todayStr()}
-            onChange={e => setForm(p => ({ ...p, birthDate: e.target.value }))} className="h-10" />
+          {/* Native `type="date"` emas: kalendar brauzer tilida ochilardi
+              va tug'ilgan yilga yetish uchun strelkani o'nlab marta bosish
+              kerak edi. Yangi tanlagichda yil alohida ro'yxatda. */}
+          <DatePicker value={form.birthDate} max={todayStr()} clearable
+            onChange={v => setForm(p => ({ ...p, birthDate: v }))} />
+        </FormField>
+        <FormField label="Markazga qabul sanasi"
+          hint="Ro'yxatda shu sana ko'rinadi">
+          <DatePicker value={form.joinedAt} max={todayStr()}
+            onChange={v => setForm(p => ({ ...p, joinedAt: v }))} />
         </FormField>
         <FormField label="Manba" hint="Qayerdan bildi">
           <select value={form.source} onChange={e => setForm(p => ({ ...p, source: e.target.value }))} className={selectCls}>
@@ -432,8 +444,8 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
           {form.groupId && (
             <div className="mt-3">
               <FormField label="Guruhga qo'shilish sanasi">
-                <Input type="date" value={form.joinDate}
-                  onChange={e => setForm(p => ({ ...p, joinDate: e.target.value }))} className="h-10" />
+                <DatePicker value={form.joinDate}
+                  onChange={v => setForm(p => ({ ...p, joinDate: v }))} />
               </FormField>
               <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-3 py-2 mt-2">
                 <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />

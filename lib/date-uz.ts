@@ -8,6 +8,9 @@
  * brauzer bo'lishidan qat'i nazar bir xil ko'rinadi.
  */
 
+/** Markaz mintaqasi — sanalar shu bo'yicha ko'rsatiladi. */
+export const BUSINESS_TZ = "Asia/Tashkent";
+
 export const UZ_MONTHS = [
   "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
   "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
@@ -59,4 +62,32 @@ export function fmtWeekday(v: string | Date): string {
 export function fmtShortDate(v: string | Date): string {
   const d = toDate(v);
   return `${d.getDate()} ${UZ_MONTHS_SHORT[d.getMonth()].toLowerCase()}`;
+}
+
+/**
+ * "27.08.2026" — jadval va ro'yxatlar uchun.
+ *
+ * `toLocaleDateString("uz-UZ")` brauzerga qarab turlicha ishlaydi; bu yerda
+ * natija hamma joyda bir xil. Bo'sh qiymatda tire qaytadi.
+ */
+export function formatUzDate(v: string | Date | null | undefined): string {
+  if (!v) return "—";
+  const d = toDate(v);
+  if (isNaN(d.getTime())) return "—";
+  // MARKAZ MINTAQASIDA ko'rsatiladi, brauzernikida emas.
+  //
+  // Kalendar sanasida vaqt yo'q, lekin bazada u aniq lahza sifatida yotadi.
+  // Brauzerning mintaqasiga qarab chizilsa, boshqa mintaqadagi noutbukda
+  // o'sha sana bir kun oldin/keyin bo'lib ko'rinardi — markaz xodimi va
+  // egasi bir xil ma'lumotni turlicha ko'rardi.
+  const p = (n: number) => String(n).padStart(2, "0");
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: BUSINESS_TZ, year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(d);
+    const get = (t: string) => parts.find(x => x.type === t)?.value ?? "";
+    return `${get("day")}.${get("month")}.${get("year")}`;
+  } catch {
+    return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
+  }
 }

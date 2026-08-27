@@ -18,6 +18,7 @@ import {
   UserCheck, Clock, Upload, Download, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatUzDate } from "@/lib/date-uz";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useGroups } from "@/lib/hooks/useGroups";
@@ -221,7 +222,7 @@ export default function StudentsPage() {
         // Qarz ustuni faqat moliya huquqi bo'lganda — aks holda javobda
         // balans yo'q va eksportda chalg'ituvchi "0" chiqardi.
         ...(canSeeMoney ? [Math.round(s.balance ?? 0)] : []),
-        s.createdAt ? new Date(s.createdAt).toLocaleDateString("uz-UZ") : "",
+        formatUzDate(s.joinedAt ?? s.createdAt),
       ];
     });
     downloadFile(
@@ -501,7 +502,12 @@ export default function StudentsPage() {
                             </div>
                             <div>
                               <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 group-hover/name:text-indigo-600 dark:group-hover/name:text-indigo-400 transition-colors">{s.name}</p>
-                              <p className="text-[11px] text-neutral-400">{new Date(s.createdAt).toLocaleDateString("uz-UZ")}</p>
+                              {/* Qabul sanasi — tahrirlanadigan biznes sanasi.
+                                  Eski yozuvlarda bo'sh bo'lishi mumkin, o'shanda
+                                  yozuv yaratilgan sana ko'rsatiladi. */}
+                              <p className="text-[11px] text-neutral-400">
+                                {formatUzDate(s.joinedAt ?? s.createdAt)}
+                              </p>
                             </div>
                           </Link>
                         </TableCell>
