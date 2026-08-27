@@ -202,6 +202,10 @@ export default function FinancePage() {
    * Tizim buni har kuni birinchi dashboard yuklanganda avtomatik ham qiladi —
    * bu tugma faqat darhol/qo'lda tekshirish uchun (qayta bosish xavfsiz).
    */
+  const { data: dues, mutate: mutateDues } =
+    useSWR<{ month: string; pending: number; amount: number }>(
+      "/api/student-groups/dues-status", fetcher);
+
   async function chargeMonthlyDues() {
     setChargingDues(true); setChargeMsg("");
     try {
@@ -216,6 +220,7 @@ export default function FinancePage() {
             : "Barcha o'quvchilar allaqachon shu oy uchun hisoblangan",
       );
       mutate((k: string) => typeof k === "string" && k.startsWith("/api/students"), undefined, { revalidate: true });
+      mutateDues();
     } catch { setChargeMsg("Serverga ulanib bo'lmadi"); }
     finally { setChargingDues(false); }
   }
@@ -703,6 +708,22 @@ export default function FinancePage() {
             <p className="text-[11px] text-neutral-400 -mt-2">
               Tizim buni har oy avtomatik ham bajaradi (birinchi kirishda) — bu tugma darhol tekshirish uchun.
             </p>
+
+            {/* HALI HISOBLANMAGAN a'zoliklar.
+                Foydalanuvchi "nega bu o'quvchi qarzdor emas?" deb hayron
+                bo'lmasligi uchun: bugun qo'shilgan o'quvchi kunlik hisoblash
+                ishlagunicha qarzsiz turadi va buni hech qayerda ko'rsatilmasdi. */}
+            {dues && dues.pending > 0 && (
+              <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl
+                bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 -mt-1">
+                <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <p className="text-[12px] text-amber-700 dark:text-amber-400">
+                  <b>{dues.pending} ta o&apos;quvchidan</b> bu oy uchun hali
+                  hisoblanmagan (taxminan {formatCurrency(dues.amount)}). Yuqoridagi
+                  &quot;Oylik to&apos;lovni hisoblash&quot; tugmasini bosing.
+                </p>
+              </div>
+            )}
 
             <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">

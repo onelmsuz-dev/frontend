@@ -231,27 +231,29 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     const replacing = groupModal?.sg ?? null;
     setTransferring(true); setTransferErr("");
     try {
-      // 1) Yangi guruhga qo'shamiz. AVVAL shu — muvaffaqiyatsiz bo'lsa
-      //    (guruh to'lgan, boshqa markazniki) o'quvchi eski guruhida
-      //    o'zgarishsiz qoladi, ya'ni guruhsiz osilib qolmaydi.
-      const res = await fetch("/api/student-groups", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentId: id, groupId: transferGroupId,
-          enrollmentStatus: enrollAs,
-          ...(enrollDate ? { joinedAt: enrollDate } : {}),
-        }),
-      });
+      // ALMASHTIRISH — bitta amal (server tomonda).
+      //
+      // Ilgari bu yerda "yangisiga qo'shish" + "eskisidan chiqarish" ikki
+      // chaqiruv edi va o'quvchidan BIR OYDA IKKI MARTA pul yechilardi:
+      // `lastChargedMonth` a'zolikka bog'langan, yangi a'zolikda esa bo'sh.
+      const res = replacing
+        ? await fetch("/api/student-groups/transfer", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fromId: replacing.id, groupId: transferGroupId,
+              ...(enrollDate ? { joinedAt: enrollDate } : {}),
+            }),
+          })
+        : await fetch("/api/student-groups", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              studentId: id, groupId: transferGroupId,
+              enrollmentStatus: enrollAs,
+              ...(enrollDate ? { joinedAt: enrollDate } : {}),
+            }),
+          });
       const data = await res.json();
       if (!res.ok) { setTransferErr(data.error ?? "Xatolik"); return; }
-
-      // 2) Almashtirish bo'lsa — eskisini yopamiz.
-      if (replacing) {
-        await fetch(`/api/student-groups/${replacing.id}`, {
-          method: "PATCH", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ enrollmentStatus: "CHIQIB_KETGAN" }),
-        });
-      }
       revalidateAll();
       setGroupModal(null);
       setTransferGroupId("");
@@ -516,6 +518,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             {/* HOLAT TANLOVI — ro'yxatdagi ommaviy oyna bilan bir xil.
                 Ilgari bu yerda tanlov yo'q edi va o'quvchi HAR DOIM darhol
                 "Faol" bo'lib, kurs to'lovi yechilardi. */}
+            {/* Almashtirishda holat tanlanmaydi: o'quvchi allaqachon
+                o'qiyapti, u FAOL bo'lib ko'chadi. */}
+            {!groupModal?.sg && (
             <FormField label="Qaysi holatda qo'shilsin" required>
               <div className="grid grid-cols-2 gap-2">
                 {([
@@ -540,6 +545,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 ))}
               </div>
             </FormField>
+            )}
 
             {/* QO'SHILGAN SANA — ilgari doim "bugun" edi va o'zgartirib
                 bo'lmasdi. Markazlar ma'lumotni ko'pincha keyin kiritadi. */}
@@ -553,9 +559,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 {groupModal?.sg
                   ? <><strong>{groupModal.sg.group?.name}</strong> dan chiqarilib, tanlangan guruhga qo&apos;shiladi.</>
                   : <>Mavjud guruhlariga <strong>qo&apos;shimcha</strong> qilib biriktiriladi (hech qaysisidan chiqarilmaydi).</>}
-                {enrollAs === "FAOL"
-                  ? " Kurs to'lovi shu oy uchun balansdan yechiladi."
-                  : " Sinov darsida pul yechilmaydi — keyin faollashtirasiz."}
+                {groupModal?.sg
+                  ? " Shu oy uchun allaqachon hisoblangan bo'lsa qayta yechilmaydi — yangi kurs qimmatroq bo'lsa faqat farqi yoziladi."
+                  : enrollAs === "FAOL"
+                    ? " Kurs to'lovi shu oy uchun balansdan yechiladi."
+                    : " Sinov darsida pul yechilmaydi — keyin faollashtirasiz."}
               </p>
             </div>
           </>
