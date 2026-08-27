@@ -11,11 +11,12 @@ import { ConfirmDeleteModal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { OnboardingSettingsPanel } from "@/components/onboarding/onboarding-settings-panel";
+import { BillingSettings } from "@/components/settings/billing-settings";
 import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
 import type { Branch, Room } from "@/types";
 import {
   Plus, Trash2, Users, Building, Bell,
-  MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket,
+  MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket, Wallet,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useRooms } from "@/lib/hooks/useRooms";
@@ -35,6 +36,7 @@ const WORK_DAYS = [
 
 const sections = [
   { id: "markaz",        label: "O'quv markaz",    icon: Building },
+  { id: "tolov",         label: "To'lov qoidalari", icon: Wallet },
   { id: "tarif",         label: "Tarif",           icon: CreditCard },
   { id: "filliallar",    label: "Filliallar",      icon: MapPin },
   { id: "xonalar",       label: "Xonalar",         icon: DoorOpen },
@@ -242,20 +244,25 @@ function SettingsContent() {
         </>}
       />
 
-      <div className="p-6 flex gap-6">
-        {/* Sidebar */}
-        <div className="w-52 shrink-0">
-          <nav className="space-y-0.5">
+      {/* Mobilda ustma-ust, kattaroq ekranda yonma-yon.
+          Ilgari `flex` doimiy edi va 208px lik yon menyu telefonda ekranning
+          yarmini egallab, kontent qolgan tor joyga siqilib chiqib ketardi. */}
+      <div className="p-4 lg:p-6 flex flex-col lg:flex-row gap-4 lg:gap-6">
+        {/* Bo'limlar — mobilda gorizontal lenta, desktopda yon menyu */}
+        <div className="lg:w-52 lg:shrink-0 -mx-1 px-1 lg:mx-0 lg:px-0">
+          <nav className="flex lg:flex-col gap-1.5 lg:gap-0.5 overflow-x-auto pb-1 lg:pb-0
+            [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {visibleSections.map(s => {
               const Icon = s.icon;
               return (
                 <button key={s.id} onClick={() => setActiveSection(s.id)}
                   data-tour={`settings-tab-${s.id}`}
                   className={cn(
-                    "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    "flex items-center gap-2.5 rounded-lg text-sm font-medium transition-colors",
+                    "shrink-0 whitespace-nowrap px-3 py-2.5 lg:w-full",
                     activeSection === s.id
                       ? "bg-indigo-600 text-white dark:bg-indigo-500"
-                      : "text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10"
+                      : "glass-soft lg:bg-transparent text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10"
                   )}>
                   <Icon className="w-4 h-4 shrink-0" />
                   {s.label}
@@ -265,7 +272,7 @@ function SettingsContent() {
           </nav>
         </div>
 
-        <div className="flex-1 max-w-3xl space-y-4">
+        <div className="flex-1 min-w-0 max-w-3xl space-y-4">
 
           {/* ── Xodimlar va rollar ── */}
           {activeSection === "xodimlar" && <StaffSection branches={branches} />}
@@ -360,6 +367,11 @@ function SettingsContent() {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* ── To'lov qoidalari ── */}
+          {activeSection === "tolov" && (
+            <BillingSettings org={orgData} onSaved={() => mutate("/api/organization")} />
           )}
 
           {/* ── Yo'l ko'rsatuvchi ── */}

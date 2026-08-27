@@ -30,6 +30,10 @@ import { mutate } from "swr";
 function fmt(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
 }
+/** Kartochka uchun — valyuta prefiksisiz, yorliqda "so'm" deb yozilgan. */
+function fmtSum(v: number) {
+  return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v);
+}
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
@@ -317,7 +321,7 @@ export default function StudentsPage() {
             { label: "Guruhsiz",  value: stats.guruhsiz,   icon: UserRoundX,    bg: "bg-orange-50 dark:bg-orange-950/40", text: "text-orange-600 dark:text-orange-400" },
             { label: "Ketgan",    value: stats.ketgan,     icon: UserMinus,     bg: "bg-neutral-100 dark:bg-neutral-800/60", text: "text-neutral-500 dark:text-neutral-400" },
             ...(canSeeMoney
-              ? [{ label: "Jami qarz", value: fmt(stats.qarz), icon: DollarSign, bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-600 dark:text-red-400" }]
+              ? [{ label: "Jami qarz (so'm)", value: fmtSum(stats.qarz), icon: DollarSign, bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-600 dark:text-red-400" }]
               : []),
           ].map(s => {
             const Icon = s.icon;
@@ -327,14 +331,34 @@ export default function StudentsPage() {
                   <Icon className={cn("w-4 h-4", s.text)} />
                 </div>
                 {isLoading ? <Skeleton className="h-6 w-12 mb-1" />
-                  : <p className="text-[22px] font-black text-neutral-900 dark:text-neutral-100 leading-none">{s.value}</p>}
+                  : (
+                    // Pul summasi kartochkaga sig'may, o'ng chetidan kesilib
+                    // ketardi ("UZS 2,000,000"). Endi raqam kartochka eniga
+                    // qarab kichrayadi va "UZS" prefiksisiz yoziladi —
+                    // yorliqning o'zi "Jami qarz" deb turibdi.
+                    <p className={cn(
+                      "font-black text-neutral-900 dark:text-neutral-100 leading-none tabular-nums truncate",
+                      typeof s.value === "string" && s.value.length > 7
+                        ? "text-[16px] xl:text-[18px]"
+                        : "text-[22px]",
+                    )}>
+                      {s.value}
+                    </p>
+                  )}
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{s.label}</p>
               </div>
             );
           })}
         </div>
 
-        {/* Filtrlar */}
+        {/* FILTRLAR — ikki ATAYLAB ajratilgan qator.
+            Ilgari hammasi bitta `flex-wrap` da edi va ekran eniga qarab
+            o'zi turlicha o'ralardi: goh bir qator, goh "Eksport/Import"
+            yolg'iz pastga tushib, oraliqda katta bo'shliq qolardi.
+            Endi tartib har doim bir xil:
+              1-qator: qidiruv + holat chiplari
+              2-qator: ochiluvchi filtrlar + (o'ngda) sanoq va amallar */}
+        <div className="space-y-2.5">
         <div className="flex items-center gap-2.5 flex-wrap">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
@@ -342,7 +366,7 @@ export default function StudentsPage() {
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
 
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 flex-wrap">
             {[
               { v: "barchasi", l: "Barchasi" },
               { v: "YANGI",    l: "Yangi" },
@@ -360,7 +384,9 @@ export default function StudentsPage() {
               </button>
             ))}
           </div>
+        </div>
 
+        <div className="flex items-center gap-2.5 flex-wrap">
           <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)} className={selectCls}>
             <option value="barchasi">Barcha guruhlar</option>
             {groups.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -400,6 +426,7 @@ export default function StudentsPage() {
               </button>
             )}
           </div>
+        </div>
         </div>
 
         {/* Jadval */}

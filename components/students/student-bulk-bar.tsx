@@ -70,7 +70,10 @@ export function StudentBulkBar({
     onSmsOpenChange?.(v);
   };
   const [groupId,  setGroupId]  = useState("");
-  const [asTrial,  setAsTrial]  = useState(false);
+  // Standart SINOV: "pul yechilmaydi" xavfsizroq tanlov — xodim ataylab
+  // "Faol" ni bosishi kerak. Ilgari standart FAOL edi va bir bosishda
+  // o'nlab o'quvchiga qarz yozilib ketishi mumkin edi.
+  const [asTrial,  setAsTrial]  = useState(true);
   const [message,  setMessage]  = useState("");
   const [busy,     setBusy]     = useState(false);
   const [err,      setErr]      = useState("");
@@ -235,14 +238,37 @@ export function StudentBulkBar({
         )}
 
         {action === "add-to-group" && (
-          <label className="flex items-start gap-2.5 glass-soft rounded-xl px-3 py-2.5 cursor-pointer">
-            <input type="checkbox" checked={asTrial} onChange={e => setAsTrial(e.target.checked)}
-              className="mt-0.5 accent-indigo-600" />
-            <span className="text-[12px] text-neutral-600 dark:text-neutral-300">
-              <strong>Sinov sifatida qo&apos;shilsin</strong> — kurs to&apos;lovi balansga yozilmaydi,
-              o&apos;quvchi keyin faollashtiriladi.
-            </span>
-          </label>
+          // Ilgari bu belgilash oynachasi (checkbox) edi va standart holati
+          // "belgilanmagan" — ya'ni pul DARHOL yechilardi, xodim buni
+          // sezmasligi ham mumkin edi. Endi ikkala variant ham ko'rinib
+          // turadi va oqibati yozilgan.
+          <div>
+            <p className="text-[12px] font-semibold text-neutral-600 dark:text-neutral-400 mb-2">
+              Qaysi holatda qo&apos;shilsin
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { v: true,  l: "Sinov darsi", d: "Pul yechilmaydi" },
+                { v: false, l: "Faol",        d: "Kurs to'lovi yechiladi" },
+              ]).map(o => (
+                <button key={String(o.v)} type="button" onClick={() => setAsTrial(o.v)}
+                  className={cn(
+                    "px-3 py-2.5 rounded-xl border-2 text-left transition-all",
+                    asTrial === o.v
+                      ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-400"
+                      : "border-white/60 dark:border-white/10 hover:border-neutral-400",
+                  )}>
+                  <p className={cn("text-[13px] font-semibold",
+                    asTrial === o.v
+                      ? "text-indigo-700 dark:text-indigo-300"
+                      : "text-neutral-700 dark:text-neutral-300")}>
+                    {o.l}
+                  </p>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{o.d}</p>
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         <div className={cn("rounded-xl px-4 py-3 border",

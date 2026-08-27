@@ -77,6 +77,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const [groupModal,      setGroupModal]      = useState<{ sg: any | null } | null>(null);
   const [transferGroupId, setTransferGroupId] = useState("");
   const [transferErr,     setTransferErr]     = useState("");
+  /** Guruhga qanday holatda qo'shilsin — xodim ataylab tanlaydi. */
+  const [enrollAs,        setEnrollAs]        = useState<"SINOV" | "FAOL">("SINOV");
   const [transferring,    setTransferring]    = useState(false);
 
   const [activating,      setActivating]      = useState<string | null>(null);
