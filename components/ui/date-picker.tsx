@@ -150,7 +150,18 @@ export function DatePicker({
       return;
     }
     const d = fromIso(parsed)!;
-    if (disabledDay(d)) return;
+    if (disabledDay(d)) {
+      // Ruxsat etilmagan sana maydonda QOLIB KETMASIN: aks holda ekranda
+      // bir qiymat, saqlanadigan holatda esa boshqasi turadi va foydalanuvchi
+      // "saqladim" deb o'ylab qoladi.
+      const cur = fromIso(value);
+      setText(cur ? `${pad(cur.getDate())}.${pad(cur.getMonth() + 1)}.${cur.getFullYear()}` : "");
+      // Kalendarni chegaradagi oyga olib boramiz — nega bo'lmasligi ko'rinsin.
+      if (minD && d < minD) setView(new Date(minD.getFullYear(), minD.getMonth(), 1));
+      else if (maxD && d > maxD) setView(new Date(maxD.getFullYear(), maxD.getMonth(), 1));
+      setOpen(true);
+      return;
+    }
     onChange(parsed);
   }
 

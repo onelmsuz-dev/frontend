@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { todayStr } from "@/lib/form-constants";
 import { DatePicker } from "@/components/ui/date-picker";
+import { MembershipDateModal } from "@/components/students/membership-date-modal";
 import { formatUzDate } from "@/lib/date-uz";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import {
@@ -84,6 +85,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const [enrollAs,        setEnrollAs]        = useState<"SINOV" | "FAOL">("SINOV");
   /** Guruhga qo'shilgan sana — standarti bugun, lekin o'zgartirsa bo'ladi. */
   const [enrollDate,      setEnrollDate]      = useState(todayStr());
+  /** Qaysi a'zolikning sanasi tahrirlanmoqda. */
+  const [dateModalId,     setDateModalId]     = useState<string | null>(null);
   const [transferring,    setTransferring]    = useState(false);
 
   const [activating,      setActivating]      = useState<string | null>(null);
@@ -466,6 +469,14 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         )}
       </Modal>
 
+      {/* Guruhga qo'shilgan sanani tuzatish */}
+      <MembershipDateModal
+        membershipId={dateModalId}
+        open={!!dateModalId}
+        onClose={() => setDateModalId(null)}
+        onSaved={revalidateAll}
+      />
+
       {/* Guruhga qo'shish / almashtirish — bitta oyna, ikki rejim */}
       <Modal open={!!groupModal} onClose={() => { setGroupModal(null); setTransferGroupId(""); setTransferErr(""); }}
         title={groupModal?.sg ? "Guruh almashtirish" : "Guruhga qo'shish"}
@@ -723,10 +734,19 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                           ko'rsatilmasdi va to'g'ri saqlanganini bilib
                           bo'lmasdi. */}
                       {sg.joinedAt && (
-                        <p className="text-[11px] text-neutral-400 flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 text-[11px] text-neutral-400">
                           <CalendarDays className="w-3 h-3 shrink-0" />
-                          {formatUzDate(sg.joinedAt)} dan
-                        </p>
+                          <span>{formatUzDate(sg.joinedAt)} dan</span>
+                          {canManageGroups && (
+                            // Sanani KEYIN ham tuzatish mumkin: ma'lumot
+                            // ko'pincha kechikib kiritiladi va hamma
+                            // a'zolikda kiritilgan kun turib qoladi.
+                            <button onClick={() => setDateModalId(sg.id)}
+                              className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold">
+                              o&apos;zgartirish
+                            </button>
+                          )}
+                        </div>
                       )}
 
                       {t && (
