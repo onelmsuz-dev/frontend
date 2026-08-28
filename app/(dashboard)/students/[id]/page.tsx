@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useStudent } from "@/lib/hooks/useStudents";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { TopHeader } from "@/components/layout/top-header";
+import { GroupDebtBreakdown } from "@/components/students/group-debt-breakdown";
 import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
@@ -666,6 +667,13 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                       : "text-red-600 dark:text-red-400")}>
                     {fmt(student.balance ?? 0)}
                   </p>
+                  {/* Qaysi guruhga qancha qarz — umumiy raqam o'z-o'zicha
+                      "qayerga?" degan savolni ochiq qoldiradi. */}
+                  <GroupDebtBreakdown
+                    ledger={(student as any).groupLedger}
+                    balance={student.balance ?? 0}
+                    fmt={fmt}
+                  />
                 </div>
               )}
               <div>

@@ -13,6 +13,7 @@ import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { OnboardingSettingsPanel } from "@/components/onboarding/onboarding-settings-panel";
 import { BillingSettings } from "@/components/settings/billing-settings";
 import { ActivitySection } from "@/components/settings/activity-section";
+import { TrashSection } from "@/components/settings/trash-section";
 import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
 import type { Branch, Room } from "@/types";
 import {
@@ -53,6 +54,8 @@ const sections = [
   // munosabatga aralashish bo'lardi.
   { id: "harakatlar",    label: "So'nggi harakatlar", icon: History,
     feature: "activity", perm: "activity.view" },
+  { id: "korzinka",      label: "Korzinka", icon: Trash2,
+    feature: "trash", perm: "trash.view" },
 ];
 
 function Skeleton({ className }: { className?: string }) {
@@ -404,6 +407,8 @@ function SettingsContent() {
           {activeSection === "organish" && <OnboardingSettingsPanel />}
 
           {activeSection === "harakatlar" && <ActivitySection />}
+
+          {activeSection === "korzinka" && <TrashSection />}
 
           {/* ── Filliallar ── */}
           {activeSection === "filliallar" && (
