@@ -159,7 +159,7 @@ export function BillingModes() {
         <p className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
           Qulflangan rejim kerak bo&apos;lsa — biz bilan bog&apos;laning, ochib beramiz.
           Rejimni alohida <span className="font-medium">kurs</span> yoki{" "}
-          <span className="font-medium">guruh</span> uchun ham belgilash mumkin:
+          <span className="font-medium">guruh</span>{" "}uchun ham belgilash mumkin:
           masalan markazda hamma oylik to&apos;laydi, «IELTS intensiv» esa modul bo&apos;yicha.
           {!canManage && " Rejimni o'zgartirish uchun markaz egasidan ruxsat so'rang."}
         </p>
