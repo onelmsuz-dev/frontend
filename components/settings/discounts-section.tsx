@@ -232,7 +232,7 @@ export function DiscountsSection() {
         <div className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-400 space-y-1">
           <p>
             Chegirma <span className="font-medium text-neutral-700 dark:text-neutral-300">
-            bundan keyingi</span> hisoblarga qo&apos;llanadi — allaqachon yozilgan
+            bundan keyingi</span>{" "}hisoblarga qo&apos;llanadi — allaqachon yozilgan
             qarzlar o&apos;zgarmaydi. Mavjud qarzni kamaytirish uchun o&apos;quvchi
             sahifasidagi <span className="font-medium">«Bir martalik chegirma»</span> dan
             foydalaning.
@@ -240,7 +240,7 @@ export function DiscountsSection() {
           <p>
             Bir o&apos;quvchiga bir nechta chegirma to&apos;g&apos;ri kelsa —{" "}
             <span className="font-medium text-neutral-700 dark:text-neutral-300">
-            eng kattasi</span> qo&apos;llanadi, ular qo&apos;shilmaydi.
+            eng kattasi</span>{" "}qo&apos;llanadi, ular qo&apos;shilmaydi.
           </p>
         </div>
       </div>
