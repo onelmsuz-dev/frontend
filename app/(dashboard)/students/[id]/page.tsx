@@ -6,6 +6,7 @@ import { useStudent } from "@/lib/hooks/useStudents";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { TopHeader } from "@/components/layout/top-header";
 import { GroupDebtBreakdown } from "@/components/students/group-debt-breakdown";
+import { OneTimeDiscount } from "@/components/students/one-time-discount";
 import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
@@ -651,10 +652,22 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 {canSeeMoney ? "Moliya" : "Davomat"}
               </h3>
               {canSeeMoney && (
-                <button onClick={() => { setPayErr(""); setShowPayModal(true); }}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                  <Plus className="w-3 h-3" /> To'lov
-                </button>
+                <div className="flex items-center gap-3">
+                  {/* Bir martalik chegirma — MAVJUD qarzni kamaytiradi.
+                      Sozlamalardagi qoida esa faqat kelajakka ta'sir qiladi. */}
+                  {hasPerm(me?.permissions, "discounts.manage") && (
+                    <OneTimeDiscount
+                      studentId={student.id}
+                      studentName={student.name}
+                      balance={student.balance ?? 0}
+                      onDone={() => mutate(`/api/students/${student.id}`)}
+                    />
+                  )}
+                  <button onClick={() => { setPayErr(""); setShowPayModal(true); }}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                    <Plus className="w-3 h-3" /> To'lov
+                  </button>
+                </div>
               )}
             </div>
             <div className="space-y-3">

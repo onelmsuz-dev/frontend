@@ -13,13 +13,14 @@ import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { OnboardingSettingsPanel } from "@/components/onboarding/onboarding-settings-panel";
 import { BillingSettings } from "@/components/settings/billing-settings";
 import { BillingModes } from "@/components/settings/billing-modes";
+import { DiscountsSection } from "@/components/settings/discounts-section";
 import { ActivitySection } from "@/components/settings/activity-section";
 import { TrashSection } from "@/components/settings/trash-section";
 import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
 import type { Branch, Room } from "@/types";
 import {
   Plus, Trash2, Users, Building, Bell,
-  MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket, Wallet, History,
+  MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket, Wallet, History, Percent,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useRooms } from "@/lib/hooks/useRooms";
@@ -53,6 +54,8 @@ const sections = [
   // `activity.view` ruxsatini talab qiladi — jurnalda kim qachon nima
   // qilgani turadi, uni har bir xodimga ochib qo'yish markaz ichidagi
   // munosabatga aralashish bo'lardi.
+  { id: "chegirma",      label: "Chegirmalar", icon: Percent,
+    feature: "discounts", perm: "discounts.view" },
   { id: "harakatlar",    label: "So'nggi harakatlar", icon: History,
     feature: "activity", perm: "activity.view" },
   { id: "korzinka",      label: "Korzinka", icon: Trash2,
@@ -421,6 +424,8 @@ function SettingsContent() {
 
           {/* ── Yo'l ko'rsatuvchi ── */}
           {activeSection === "organish" && <OnboardingSettingsPanel />}
+
+          {activeSection === "chegirma" && <DiscountsSection />}
 
           {activeSection === "harakatlar" && <ActivitySection />}
 
