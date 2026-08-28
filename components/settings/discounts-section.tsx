@@ -198,8 +198,11 @@ export function DiscountsSection() {
 
                     {canManage && (
                       <div className="flex items-center gap-1 shrink-0">
+                        {/* Sarlavhalar ATAYLAB farq qiladi: ikkalasi ham
+                            "O'chirish" bo'lsa, vaqtincha to'xtatmoqchi bo'lgan
+                            odam qoidani butunlay o'chirib yuborardi. */}
                         <button onClick={() => toggle(d)} disabled={busy === d.id}
-                          title={d.isActive ? "O'chirish" : "Yoqish"}
+                          title={d.isActive ? "Vaqtincha to'xtatish" : "Yoqish"}
                           className={cn("rounded-lg p-1.5 transition-colors",
                             d.isActive
                               ? "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
@@ -209,7 +212,7 @@ export function DiscountsSection() {
                             : <Power className="h-3.5 w-3.5" />}
                         </button>
                         <button onClick={() => remove(d)} disabled={busy === d.id}
-                          title="O'chirish"
+                          title="Butunlay o'chirish"
                           className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
