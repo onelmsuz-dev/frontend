@@ -250,7 +250,9 @@ export function TrashSection() {
       <div className="flex items-start gap-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 px-4 py-3">
         <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-px" />
         <p className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
-          Tiklanganda yozuv <span className="font-medium text-neutral-700 dark:text-neutral-300">to&apos;liq</span> qaytadi —
+          Tiklanganda yozuv{" "}
+          <span className="font-medium text-neutral-700 dark:text-neutral-300">to&apos;liq</span>{" "}
+          qaytadi —
           o&apos;quvchi guruh a&apos;zoliklari, davomati va qarz jurnali bilan; guruh esa darslari va
           o&apos;qituvchi tarixi bilan. Agar tiklash uchun boshqa yozuv ham kerak bo&apos;lsa
           (masalan guruhning kursi), u avtomatik birga qaytariladi.
