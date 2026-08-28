@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { OnboardingSettingsPanel } from "@/components/onboarding/onboarding-settings-panel";
 import { BillingSettings } from "@/components/settings/billing-settings";
+import { BillingModes } from "@/components/settings/billing-modes";
 import { ActivitySection } from "@/components/settings/activity-section";
 import { TrashSection } from "@/components/settings/trash-section";
 import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
@@ -400,7 +401,22 @@ function SettingsContent() {
 
           {/* ── To'lov qoidalari ── */}
           {activeSection === "tolov" && (
-            <BillingSettings org={orgData} onSaved={() => mutate("/api/organization")} />
+            <div className="space-y-6">
+              {/* Rejim TEPADA: u qolgan sozlamalarning ma'nosini belgilaydi.
+                  Bayroq o'chiq markazda umuman chizilmaydi. */}
+              {features?.["billing-modes"] && (
+                <div>
+                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-1">
+                    Pul olish usuli
+                  </h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+                    O&apos;quvchidan qanday hisoblab pul olinadi
+                  </p>
+                  <BillingModes />
+                </div>
+              )}
+              <BillingSettings org={orgData} onSaved={() => mutate("/api/organization")} />
+            </div>
           )}
 
           {/* ── Yo'l ko'rsatuvchi ── */}
