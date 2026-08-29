@@ -153,7 +153,7 @@ export function AdsFunnel() {
       <Shell aside={<AsideIntro />}>
         <Card>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold tracking-wide text-blue-700 uppercase">
-            <Sparkles className="h-3 w-3" /> O&apos;quv markazlari uchun
+            <Sparkles className="h-3 w-3" />{" "}O&apos;quv markazlari uchun
           </span>
 
           <h1 className="mt-4 text-[26px] leading-[1.15] font-bold tracking-tight text-balance text-slate-900 sm:text-[32px]">

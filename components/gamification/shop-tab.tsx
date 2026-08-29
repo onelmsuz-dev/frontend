@@ -108,8 +108,8 @@ export function ShopTab({ canManage }: { canManage: boolean }) {
             <Metric value={`${data?.discountRate ?? 50}`} label="1 coin = so'm (chegirmada)" />
           </div>
           <p className="text-[11px] text-neutral-400 mt-3">
-            Narx belgilashda shu raqamlarga qarang: oyiga ~{perMonth} {coinIcon} yig&apos;ilsa,
-            {" "}{perMonth * 3} {coinIcon} lik sovg&apos;a ≈ 3 oylik maqsad bo&apos;ladi. Juda arzon
+            Narx belgilashda shu raqamlarga qarang: oyiga ~{perMonth} {coinIcon}{" "}yig&apos;ilsa,
+            {" "}{perMonth * 3} {coinIcon}{" "}lik sovg&apos;a ≈ 3 oylik maqsad bo&apos;ladi. Juda arzon
             sovg&apos;a qiziqishni tez o&apos;ldiradi, juda qimmati esa yetib bo&apos;lmas ko&apos;rinadi.
           </p>
         </div>
@@ -119,7 +119,7 @@ export function ShopTab({ canManage }: { canManage: boolean }) {
         {canManage && (
           <button onClick={() => setEditing("new")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
-            <Plus className="w-3.5 h-3.5" /> Yangi sovg&apos;a
+            <Plus className="w-3.5 h-3.5" />{" "}Yangi sovg&apos;a
           </button>
         )}
         <span className="ml-auto text-xs text-neutral-400">{rewards.length} ta sovg&apos;a</span>
@@ -371,7 +371,7 @@ function RewardModal({
         <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
           <Percent className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
-            Tasdiqlangach {fmtSom(effectiveDiscount)} o&apos;quvchi <strong>balansiga</strong> qo&apos;shiladi
+            Tasdiqlangach {fmtSom(effectiveDiscount)} o&apos;quvchi <strong>balansiga</strong>{" "}qo&apos;shiladi
             (qarzi kamayadi). Bu daromad hisobotiga <strong>kirmaydi</strong> — chegirma haqiqiy tushum emas.
           </p>
         </div>

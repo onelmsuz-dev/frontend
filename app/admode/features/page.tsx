@@ -205,7 +205,7 @@ function FeatureCard({
               className="h-8 text-[12px] gap-1.5 bg-red-600 hover:bg-red-700 text-white"
               onClick={() => call(`/${f.key}/rollback`, "POST", { to: "OFF" })}
             >
-              <Ban className="w-3.5 h-3.5" /> Butunlay o&apos;chirish
+              <Ban className="w-3.5 h-3.5" />{" "}Butunlay o&apos;chirish
             </Button>
           </div>
         )}

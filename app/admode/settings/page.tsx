@@ -223,7 +223,7 @@ export default function SettingsPage() {
           <h2 className="text-[13px] font-bold text-neutral-900 dark:text-white">Gamifikatsiya (global)</h2>
         </div>
         <p className="text-[11px] text-neutral-500 mb-4">
-          O&apos;chirilsa <strong>barcha markazlarda</strong> ishlamaydi — markaz o&apos;z sozlamasini
+          O&apos;chirilsa <strong>barcha markazlarda</strong>{" "}ishlamaydi — markaz o&apos;z sozlamasini
           yoqib qo&apos;ygan bo&apos;lsa ham. Yig&apos;ilgan ballar o&apos;chmaydi, faqat yangi ball berilmaydi.
           Alohida markazni cheklash uchun &quot;Markazlar&quot; sahifasidan foydalaning.
         </p>

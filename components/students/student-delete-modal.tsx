@@ -82,7 +82,7 @@ export function StudentDeleteModal({
           </h3>
           {!err && (
             <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
-              <span className="font-semibold">{student?.name}</span> o&apos;chirilsinmi?
+              <span className="font-semibold">{student?.name}</span>{" "}o&apos;chirilsinmi?
               Davomat va guruh yozuvlari ham o&apos;chadi.
             </p>
           )}

@@ -119,7 +119,7 @@ export function PaymentEdit({
               <div className="rounded-xl bg-neutral-50 dark:bg-neutral-800/50 px-3 py-2.5">
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Hozirgi to&apos;lov</p>
                 <p className="text-lg font-bold tabular-nums text-neutral-900 dark:text-neutral-100">
-                  {fmt(payment.amount)} so&apos;m
+                  {fmt(payment.amount)}{" "}so&apos;m
                 </p>
                 <p className="text-[11px] text-neutral-400">
                   {new Date(payment.date).toLocaleDateString("uz-UZ")} ·{" "}

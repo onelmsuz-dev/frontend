@@ -110,7 +110,7 @@ export default function GamificationPage() {
             <div className="text-sm">
               {settings.blockedBy === "platform" && (
                 <p className="text-red-700 dark:text-red-300">
-                  Gamifikatsiya <span className="font-bold">platforma darajasida</span> o&apos;chirilgan.
+                  Gamifikatsiya <span className="font-bold">platforma darajasida</span>{" "}o&apos;chirilgan.
                   Yoqish uchun OneRoom administratoriga murojaat qiling.
                 </p>
               )}
@@ -279,7 +279,7 @@ function StudentsTab({ settingsActive, coinIcon }: { settingsActive: boolean; co
           <button onClick={() => setAwardOpen(true)} disabled={!settingsActive}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors">
             <Plus className="w-3.5 h-3.5" />
-            {selected.size} ta o&apos;quvchiga ball berish
+            {selected.size}{" "}ta o&apos;quvchiga ball berish
           </button>
         ) : (
           // Ptichka qo'yish kerakligini bilmaslik mumkin — buni aytib turamiz.
@@ -629,7 +629,7 @@ function SettingsTab() {
         </div>
         <p className="text-[11px] text-neutral-400">
           Faqat &quot;To&apos;lovga chegirma&quot; turidagi sovg&apos;a narxini avtomatik hisoblashda ishlatiladi.
-          Masalan {s.discountRate} bo&apos;lsa, 1000 coin = {(1000 * s.discountRate).toLocaleString("uz-UZ")} so&apos;m.
+          Masalan {s.discountRate} bo&apos;lsa, 1000 coin = {(1000 * s.discountRate).toLocaleString("uz-UZ")}{" "}so&apos;m.
         </p>
       </div>
 

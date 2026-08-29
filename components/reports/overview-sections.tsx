@@ -182,7 +182,7 @@ function LeadFunnel({ leads }: { leads: OverviewReport["leads"] }) {
             </div>
           ))}
           <p className="text-[11px] text-neutral-400 pt-1">
-            Har 100 ta liddan <strong>{leads.conversionRate}</strong> tasi to&apos;lovchi o&apos;quvchiga aylangan.
+            Har 100 ta liddan <strong>{leads.conversionRate}</strong>{" "}tasi to&apos;lovchi o&apos;quvchiga aylangan.
           </p>
         </div>
       )}

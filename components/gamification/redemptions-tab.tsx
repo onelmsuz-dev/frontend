@@ -197,7 +197,7 @@ function RejectModal({ target, onClose, onConfirm }: {
     >
       <div className="px-3.5 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
         <p className="text-[12px] text-blue-700 dark:text-blue-300">
-          <strong>{target?.cost} coin</strong> o&apos;quvchiga qaytariladi
+          <strong>{target?.cost} coin</strong>{" "}o&apos;quvchiga qaytariladi
           {target?.rewardTitle && ", zaxira ham tiklanadi"}.
         </p>
       </div>

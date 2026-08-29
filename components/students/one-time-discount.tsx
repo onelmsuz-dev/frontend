@@ -106,7 +106,7 @@ export function OneTimeDiscount({
                 {n > 0 && (
                   <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
                     Yangi qarz: <span className="font-medium tabular-nums">
-                      {fmt(Math.max(0, debt - n))} so&apos;m
+                      {fmt(Math.max(0, debt - n))}{" "}so&apos;m
                     </span>
                     {n > debt && debt > 0 && " (ortiqchasi balansga qo'shiladi)"}
                   </p>
@@ -138,7 +138,7 @@ export function OneTimeDiscount({
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400 mt-px" />
                 <p className="text-[11px] leading-relaxed text-neutral-700 dark:text-neutral-300">
                   Bu amal <span className="font-medium">faqat shu o&apos;quvchining hozirgi
-                  qarziga</span> ta&apos;sir qiladi. Doimiy chegirma kerak bo&apos;lsa —
+                  qarziga</span>{" "}ta&apos;sir qiladi. Doimiy chegirma kerak bo&apos;lsa —
                   Sozlamalar → Chegirmalar.
                 </p>
               </div>

@@ -331,7 +331,7 @@ export function StudentBulkBar({
           <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-xl px-3 py-2.5">
             <Check className="w-3.5 h-3.5 text-green-600 shrink-0" />
             <p className="text-[12px] font-medium text-green-700 dark:text-green-400">
-              {okCount} ta o&apos;quvchida bajarildi
+              {okCount}{" "}ta o&apos;quvchida bajarildi
             </p>
           </div>
         )}
@@ -362,7 +362,7 @@ export function StudentBulkBar({
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-4 py-3">
           <p className="text-[12px] text-amber-700 dark:text-amber-400">
             Erkin matn Eskiz moderatsiyasidan o&apos;tmagan bo&apos;lishi mumkin.
-            Muntazam xabarlar uchun <strong>SMS xabarlar</strong> bo&apos;limidan tasdiqlangan shablon yarating.
+            Muntazam xabarlar uchun <strong>SMS xabarlar</strong>{" "}bo&apos;limidan tasdiqlangan shablon yarating.
           </p>
         </div>
         <SelectedPreview selected={selected} />
