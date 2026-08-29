@@ -60,6 +60,11 @@ export default function CoursesPage() {
       (c.description ?? "").toLowerCase().includes(search.toLowerCase())
     ), [courses, search]);
 
+  // Backend narxni `null` qilib yuboradi ("to'lov qabul qilmaydi"
+  // o'qituvchi uchun) — interfeys ham pul qatorlarini umuman chizmasligi
+  // kerak, aks holda hamma joyda "0 so'm" ko'rinardi.
+  const canSeeMoney = courses.some((c: any) => c.price != null);
+
   const stats = useMemo(() => ({
     jami:    courses.length,
     oquvchi: courses.reduce((s, c) => s + (c.studentCount ?? 0), 0),
@@ -189,11 +194,11 @@ export default function CoursesPage() {
 
       <div className="p-5 space-y-5">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className={cn("grid gap-3", canSeeMoney ? "grid-cols-3" : "grid-cols-2")}>
           {[
             { label: "Jami kurs",     value: stats.jami,                    icon: BookOpen, bg: "bg-blue-50 dark:bg-blue-950/40",    text: "text-blue-600 dark:text-blue-400" },
             { label: "Jami o'quvchi", value: stats.oquvchi,                 icon: Users,    bg: "bg-green-50 dark:bg-green-950/40",  text: "text-green-600 dark:text-green-400" },
-            { label: "Oylik daromad", value: formatCurrency(stats.daromad), icon: Wallet,   bg: "bg-purple-50 dark:bg-purple-950/40", text: "text-purple-600 dark:text-purple-400" },
+            ...(canSeeMoney ? [{ label: "Oylik daromad", value: formatCurrency(stats.daromad), icon: Wallet,   bg: "bg-purple-50 dark:bg-purple-950/40", text: "text-purple-600 dark:text-purple-400" }] : []),
           ].map(s => {
             const Icon = s.icon;
             return (
@@ -267,7 +272,9 @@ export default function CoursesPage() {
                       </div>
                       <div className="glass-soft rounded-xl p-3">
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Wallet className="w-3.5 h-3.5" /><span className="text-[11px]">Narxi</span></div>
-                        <p className="text-[13px] font-bold text-blue-700 dark:text-blue-400">{formatCurrency(course.price)}</p>
+                        <p className="text-[13px] font-bold text-blue-700 dark:text-blue-400">
+                          {course.price != null ? formatCurrency(course.price) : "—"}
+                        </p>
                       </div>
                       <div className="glass-soft rounded-xl p-3">
                         <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><BookOpen className="w-3.5 h-3.5" /><span className="text-[11px]">Guruhlar</span></div>
@@ -278,12 +285,14 @@ export default function CoursesPage() {
                         <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course.studentCount ?? 0} ta</p>
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 flex items-center justify-between">
-                      <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Oylik daromad</span>
-                      <span className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency((course.price ?? 0) * (course.studentCount ?? 0))}
-                      </span>
-                    </div>
+                    {course.price != null && (
+                      <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 flex items-center justify-between">
+                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Oylik daromad</span>
+                        <span className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(course.price * (course.studentCount ?? 0))}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))

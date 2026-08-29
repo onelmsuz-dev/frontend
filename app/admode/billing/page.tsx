@@ -26,8 +26,13 @@ interface OrgRow {
 }
 
 export default function AdmodeBillingPage() {
+  // Markaz rejimni O'Z sozlamalaridan o'zgartiradi va bu sahifa buni
+  // bilmaydi — shuning uchun oynaga qaytganda va har yarim daqiqada
+  // qayta so'raladi. Aks holda "hozir: Oylik" deb turaverib, aslida
+  // markaz allaqachon boshqa rejimga o'tgan bo'lardi.
   const { data, error, isLoading } = useSWR<{ modes: ModeInfo[]; organizations: OrgRow[] }>(
-    "/api/admode/billing", fetcher);
+    "/api/admode/billing", fetcher,
+    { revalidateOnFocus: true, refreshInterval: 30_000 });
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -138,8 +143,8 @@ export default function AdmodeBillingPage() {
                     )}
                   </p>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                    {org.subdomain} · hozir:{" "}
-                    <span className="font-medium text-neutral-600 dark:text-neutral-300">
+                    {org.subdomain} · hozirgi rejim:{" "}
+                    <span className="font-medium text-blue-600 dark:text-blue-400">
                       {data?.modes.find((m) => m.mode === org.billingMode)?.label ?? org.billingMode}
                     </span>
                   </p>
@@ -153,21 +158,34 @@ export default function AdmodeBillingPage() {
                   const key = `${org.id}:${m.mode}`;
                   return (
                     <button key={m.mode}
-                      title={inUse ? "Markaz hozir shu rejimda — yopib bo'lmaydi" : m.short}
+                      title={inUse
+                        ? "Markaz HOZIR shu rejimda ishlayapti — yopib bo'lmaydi"
+                        : on ? `Ochilgan (markaz tanlashi mumkin) — ${m.short}`
+                             : m.short}
                       onClick={() => toggle(org, m.mode, !on)}
                       disabled={busy !== null || (on && inUse)}
                       className={cn(
                         "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5",
                         "text-[11px] font-medium transition-colors disabled:opacity-60",
-                        on
-                          ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
-                          : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700",
+                        // HOZIRGI rejim ko'k, shunchaki OCHILGANI yashil.
+                        // Ilgari ikkalasi ham yashil edi va ✓ belgisi
+                        // "ochilgan" degani bo'lsa-da, "hozirgi" deb
+                        // o'qilardi — aynan shu chalkashlik bo'ldi.
+                        inUse
+                          ? "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400"
+                          : on
+                            ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+                            : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700",
                       )}>
                       {busy === key
                         ? <Loader2 className="h-3 w-3 animate-spin" />
                         : on ? <Check className="h-3 w-3" /> : null}
                       {m.label}
-                      {inUse && " ✓"}
+                      {inUse && (
+                        <span className="rounded bg-blue-600 px-1 py-px text-[9px] font-bold text-white">
+                          HOZIRGI
+                        </span>
+                      )}
                     </button>
                   );
                 })}
