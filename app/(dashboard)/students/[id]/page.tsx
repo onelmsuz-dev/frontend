@@ -7,6 +7,7 @@ import { useGroups } from "@/lib/hooks/useGroups";
 import { TopHeader } from "@/components/layout/top-header";
 import { GroupDebtBreakdown } from "@/components/students/group-debt-breakdown";
 import { OneTimeDiscount } from "@/components/students/one-time-discount";
+import { PaymentEdit } from "@/components/students/payment-edit";
 import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
@@ -850,14 +851,24 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 <p className="text-[12px] text-neutral-400 p-4 text-center">To'lovlar yo'q</p>
               )}
               {student.payments?.map((p: any) => (
-                <div key={p.id} className="flex items-center justify-between px-5 py-3">
-                  <div>
+                <div key={p.id} className="flex items-center justify-between gap-2 px-5 py-3">
+                  <div className="min-w-0">
                     <p className="text-[13px] font-semibold text-green-600 dark:text-green-400">{fmt(p.amount)}</p>
                     <p className="text-[11px] text-neutral-400">
                       {new Date(p.date).toLocaleDateString("uz-UZ")} · {METHOD_LABELS[p.method] ?? p.method}
                     </p>
                   </div>
-                  {p.note && <p className="text-[11px] text-neutral-400 max-w-[120px] text-right">{p.note}</p>}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {p.note && <p className="text-[11px] text-neutral-400 max-w-[120px] text-right truncate">{p.note}</p>}
+                    {/* Xato kiritilgan summani tuzatish — ilgari buning
+                        hech qanday yo'li yo'q edi. */}
+                    {hasPerm(me?.permissions, "payments.update") && (
+                      <PaymentEdit
+                        payment={p}
+                        onDone={() => mutate(`/api/students/${student.id}`)}
+                      />
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
