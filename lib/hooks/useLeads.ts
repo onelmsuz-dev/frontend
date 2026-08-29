@@ -47,3 +47,15 @@ export function useUpdateLead(id: string) {
 export function useDeleteLead(id: string) {
   return useSWRMutation(`/api/leads/${id}`, (url) => deleter(url));
 }
+
+/**
+ * LID MANBALARI.
+ *
+ * Ro'yxat markazga bog'liq: kimdir "Maktab tashrifi" bilan ishlaydi,
+ * kimdir "Banner" bilan. Ilgari u kodda qattiq yozilgan edi va markaz
+ * o'z manbasini qo'sha olmasdi — natijada hamma narsa "Boshqa" ga
+ * tushib, "qaysi reklama ishlayapti?" degan savol javobsiz qolardi.
+ */
+export function useLeadSources() {
+  return useSWR<{ id: string; name: string }[]>("/api/leads/sources", fetcher);
+}

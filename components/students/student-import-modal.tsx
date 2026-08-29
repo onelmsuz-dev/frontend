@@ -7,6 +7,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { parseDelimited, mapRows, toCsv, downloadFile, type MappedRow } from "@/lib/csv";
+import { readTable } from "@/lib/xlsx";
 import { Upload, FileDown, AlertCircle, CheckCircle2, CircleAlert, Copy } from "lucide-react";
 
 interface Props {
@@ -36,10 +37,10 @@ const TEMPLATE_SAMPLE = [
 /**
  * O'QUVCHILARNI OMMAVIY QO'SHISH.
  *
- * Ikki yo'l bilan: fayl tanlash (.csv) yoki Google Sheets/Excel'dan
- * to'g'ridan-to'g'ri Ctrl+V. Ikkinchisi amalda ko'proq kerak bo'ladi —
- * markazda ma'lumot odatda Sheets'da turadi va uni faylga eksport qilib
- * o'tirish qo'shimcha qadam.
+ * Ikki yo'l bilan: fayl tanlash (.xlsx yoki .csv) yoki Google
+ * Sheets/Excel'dan to'g'ridan-to'g'ri Ctrl+V. Ikkinchisi amalda ko'proq
+ * kerak bo'ladi — markazda ma'lumot odatda Sheets'da turadi va uni
+ * faylga eksport qilib o'tirish qo'shimcha qadam.
  *
  * Yuborishdan OLDIN nima o'qilgani ko'rsatiladi: 300 qatorlik jadvalni
  * ko'r-ko'rona yuborib, keyin "nega ismlar telefon ustuniga tushib qolgan"
@@ -64,21 +65,38 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
   }
   function closeAll() { reset(); onClose(); }
 
-  function ingest(text: string) {
-    setRaw(text);
+  /** Tayyor jadvalni qabul qiladi — manbasi fayl ham, Ctrl+V ham bo'lishi mumkin. */
+  function ingestTable(table: string[][]) {
     setErr(""); setResults(null); setSummary(null);
-    const parsed = mapRows(parseDelimited(text));
+    const parsed = mapRows(table);
     setRows(parsed.rows);
     setMatched(parsed.matched);
     setHeaderless(parsed.headerless);
   }
 
+  function ingest(text: string) {
+    setRaw(text);
+    ingestTable(parseDelimited(text));
+  }
+
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
-    if (!f) return;
-    ingest(await f.text());
     // Bir xil faylni qayta tanlash ham hodisa chiqarsin.
     e.target.value = "";
+    if (!f) return;
+    try {
+      // `.xlsx` — ZIP arxiv. Ilgari u `f.text()` bilan o'qilardi va
+      // natija jimgina bo'sh chiqardi: foydalanuvchi "Excel" deb
+      // yozilganini o'qib, faylni tanlab, hech narsa bo'lmasligini
+      // ko'rardi. Endi kengaytmaga qarab to'g'ri o'qigich tanlanadi.
+      const table = await readTable(f, parseDelimited);
+      // Ctrl+V maydonida ham ko'rinsin — odam nima o'qilganini
+      // tekshira olishi va tuzata olishi uchun.
+      setRaw(toCsv(table[0] ?? [], table.slice(1)));
+      ingestTable(table);
+    } catch (e) {
+      setErr((e as Error).message || "Faylni o'qib bo'lmadi");
+    }
   }
 
   function downloadTemplate() {
@@ -144,9 +162,9 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
               className="flex items-center gap-1.5 h-9 px-3 rounded-xl text-[12px] font-semibold
                          bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400
                          hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
-              <Upload className="w-3.5 h-3.5" /> CSV fayl tanlash
+              <Upload className="w-3.5 h-3.5" /> Excel yoki CSV tanlash
             </button>
-            <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" onChange={onFile} className="hidden" />
+            <input ref={fileRef} type="file" accept=".xlsx,.csv,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onFile} className="hidden" />
             <button type="button" onClick={downloadTemplate}
               className="flex items-center gap-1.5 h-9 px-3 rounded-xl text-[12px] font-semibold
                          glass-soft text-neutral-600 dark:text-neutral-300
@@ -169,11 +187,11 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
             <>
               <div className="flex flex-wrap items-center gap-2 text-[11px]">
                 <span className="px-2 py-1 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold">
-                  {valid.length} ta qator o&apos;qildi
+                  {valid.length}{" "}ta qator o&apos;qildi
                 </span>
                 {invalid > 0 && (
                   <span className="px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-semibold">
-                    {invalid} ta qator to&apos;liq emas — o&apos;tkazib yuboriladi
+                    {invalid}{" "}ta qator to&apos;liq emas — o&apos;tkazib yuboriladi
                   </span>
                 )}
                 {matched.length > 0 && (
@@ -311,7 +329,7 @@ function ImportResult({ summary, results }: {
         <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-xl px-3 py-2.5">
           <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
           <p className="text-[12px] font-medium text-green-700 dark:text-green-400">
-            {summary.created} ta o&apos;quvchi ro&apos;yxatga qo&apos;shildi
+            {summary.created}{" "}ta o&apos;quvchi ro&apos;yxatga qo&apos;shildi
           </p>
         </div>
       )}

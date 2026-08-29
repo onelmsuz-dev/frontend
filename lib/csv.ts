@@ -215,3 +215,111 @@ export function mapRows(table: string[][]): MapResult {
     headerless: !hasHeader,
   };
 }
+
+// ─── LIDLAR ────────────────────────────────────────────────────────────
+
+/** Lid importidagi bitta qator. */
+export interface MappedLead {
+  name: string;
+  phone?: string;
+  school?: string;
+  grade?: string;
+  note?: string;
+  /** Fan ballari — maktab tashrifida test o'tkazilgan bo'lsa. */
+  scores?: Record<string, number>;
+}
+
+const LEAD_ALIASES: Record<string, string[]> = {
+  name:   ["ism", "ismi", "ismfamiliya", "fio", "oquvchi", "bola", "name", "fullname", "имя", "фио"],
+  phone:  ["telefon", "telefonraqam", "raqam", "tel", "phone", "телефон"],
+  school: ["maktab", "maktabi", "school", "школа"],
+  grade:  ["sinf", "sinfi", "klass", "grade", "class", "класс"],
+  note:   ["izoh", "izohi", "eslatma", "note", "comment", "примечание"],
+};
+
+/**
+ * MAKTAB TASHRIFI RO'YXATINI O'QIYDI.
+ *
+ * O'quvchi importidan farqi ikkita va ikkalasi ham ataylab:
+ *
+ *  • TELEFON MAJBURIY EMAS. Maktabda ro'yxat yig'ilganda bolalarning
+ *    ko'pida telefon bo'lmaydi. Majburiy qilsak, 300 kishilik ro'yxatning
+ *    yarmi umuman tizimga kirmasdi — ya'ni eng qimmatli lid manbasi
+ *    yo'qolardi.
+ *
+ *  • TANILMAGAN SONLI USTUNLAR BALL deb olinadi. Maktabda test
+ *    o'tkazilsa, jadvalda "Matematika", "Ona tili" kabi ustunlar
+ *    bo'ladi. Ularni tashlab yuborsak, markaz kuchli o'quvchini
+ *    ajrata olmasdi.
+ *
+ * Sarlavha topilmasa, birinchi ikki ustun ism va telefon deb olinadi.
+ */
+export function mapLeadRows(table: string[][]): {
+  rows: MappedLead[]; matched: string[]; scoreColumns: string[]; headerless: boolean;
+} {
+  if (table.length === 0) {
+    return { rows: [], matched: [], scoreColumns: [], headerless: false };
+  }
+
+  const header = table[0].map(normalizeHeader);
+  const colOf: Record<string, number> = {};
+  for (const [field, aliases] of Object.entries(LEAD_ALIASES)) {
+    const idx = header.findIndex((h) => aliases.includes(h));
+    if (idx >= 0) colOf[field] = idx;
+  }
+
+  const hasHeader = colOf.name !== undefined || colOf.phone !== undefined;
+  const body = hasHeader ? table.slice(1) : table;
+  const used = new Set(Object.values(colOf));
+
+  // Ball ustunlari: sarlavhasi bor, tanilmagan va qiymatlari SON.
+  // "Sonmi" degan savolga bitta qatorga qarab javob bermaymiz — bo'sh
+  // bo'lmagan qiymatlarning hammasi son bo'lishi kerak, aks holda
+  // "Manzil" kabi ustun ham ballga aylanib ketardi.
+  const scoreColumns: { idx: number; label: string }[] = [];
+  if (hasHeader) {
+    for (let i = 0; i < table[0].length; i++) {
+      if (used.has(i)) continue;
+      const label = (table[0][i] ?? "").trim();
+      if (!label) continue;
+      const vals = body.map((r) => (r[i] ?? "").trim()).filter((v) => v !== "");
+      if (vals.length > 0 && vals.every((v) => /^\d+([.,]\d+)?$/.test(v))) {
+        scoreColumns.push({ idx: i, label });
+      }
+    }
+  }
+
+  const pick = (r: string[], field: string, fallback?: number) => {
+    const i = colOf[field] ?? fallback;
+    return i === undefined ? "" : (r[i] ?? "").trim();
+  };
+
+  const rows: MappedLead[] = body
+    .map((r) => {
+      const row: MappedLead = { name: pick(r, "name", hasHeader ? undefined : 0) };
+      const phone = pick(r, "phone", hasHeader ? undefined : 1);
+      if (phone) row.phone = phone;
+      const school = pick(r, "school");
+      if (school) row.school = school;
+      const grade = pick(r, "grade");
+      if (grade) row.grade = grade;
+      const note = pick(r, "note");
+      if (note) row.note = note;
+
+      const scores: Record<string, number> = {};
+      for (const c of scoreColumns) {
+        const v = (r[c.idx] ?? "").trim().replace(",", ".");
+        if (v !== "") scores[c.label] = Number(v);
+      }
+      if (Object.keys(scores).length > 0) row.scores = scores;
+      return row;
+    })
+    .filter((r) => r.name.trim() !== "");
+
+  return {
+    rows,
+    matched: Object.keys(colOf),
+    scoreColumns: scoreColumns.map((c) => c.label),
+    headerless: !hasHeader,
+  };
+}

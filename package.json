@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "verify:xlsx": "node scripts/verify-xlsx.mjs",
+    "verify:leadmap": "node scripts/verify-leadmap.mjs",
+    "verify:jsx": "node scripts/verify-jsx-space.mjs",
+    "verify": "npm run verify:xlsx && npm run verify:leadmap && npm run verify:jsx"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

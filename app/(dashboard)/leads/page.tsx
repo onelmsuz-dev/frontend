@@ -7,12 +7,31 @@ import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormField } from "@/components/ui/form-field";
-import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil } from "lucide-react";
+import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil, Upload, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLeads } from "@/lib/hooks/useLeads";
+import { useCourses } from "@/lib/hooks/useCourses";
+import { SourcePicker, sourceColor } from "@/components/leads/source-picker";
+import { LeadImportModal } from "@/components/leads/lead-import-modal";
 import { mutate } from "swr";
 
 type LeadStatus = "YANGI" | "ALOQA_QILINGAN" | "SINOV_DARSI" | "TO_LANDI" | "BEKOR";
+
+interface Lead {
+  id: string;
+  name: string;
+  phone: string;
+  source: string;
+  status: LeadStatus;
+  course?: string | null;
+  courseId?: string | null;
+  school?: string | null;
+  grade?: string | null;
+  note?: string | null;
+  assignedTo?: { name?: string } | null;
+}
+
+interface Course { id: string; name: string }
 
 const STATUS_CFG: Record<LeadStatus, { label: string; color: string; headerBg: string; dot: string }> = {
   YANGI:          { label: "Yangi",         color: "text-blue-700 dark:text-blue-300",     headerBg: "bg-blue-50 dark:bg-blue-900/20",     dot: "bg-blue-500" },
@@ -22,14 +41,6 @@ const STATUS_CFG: Record<LeadStatus, { label: string; color: string; headerBg: s
   BEKOR:          { label: "Bekor",         color: "text-red-700 dark:text-red-300",       headerBg: "bg-red-50 dark:bg-red-900/20",       dot: "bg-red-500" },
 };
 
-const SOURCE_COLORS: Record<string, string> = {
-  "Instagram":    "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300",
-  "Telegram":     "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
-  "Do'st orqali": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
-  "Website":      "glass-soft text-neutral-600 dark:text-neutral-400",
-};
-
-const SOURCES = ["Instagram", "Telegram", "Do'st orqali", "Website", "Boshqa"];
 const COLUMNS: LeadStatus[] = ["YANGI", "ALOQA_QILINGAN", "SINOV_DARSI", "TO_LANDI", "BEKOR"];
 
 const NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
@@ -38,13 +49,14 @@ const NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
   SINOV_DARSI:    "TO_LANDI",
 };
 
-const EMPTY = { name: "", phone: "", source: "Instagram", course: "", note: "" };
+const EMPTY = { name: "", phone: "", source: "Instagram", course: "",
+                school: "", grade: "", note: "" };
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
 
-function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: any; onMove: (id: string, status: LeadStatus) => void; onDelete: (lead: any) => void; onEdit: (lead: any) => void }) {
+function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: Lead; onMove: (lead: Lead, status: LeadStatus) => void; onDelete: (lead: Lead) => void; onEdit: (lead: Lead) => void }) {
   const next = NEXT_STATUS[lead.status as LeadStatus];
   return (
     <div className="glass-panel rounded-xl border border-white/60 dark:border-white/10 p-3 shadow-sm hover:shadow-md transition-shadow">
@@ -54,7 +66,9 @@ function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: any; onMove: (id: 
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 leading-tight truncate">{lead.name}</p>
-          <p className="text-[11px] text-neutral-400 dark:text-neutral-500">{lead.phone}</p>
+          <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
+            {lead.phone || [lead.school, lead.grade].filter(Boolean).join(" · ") || "—"}
+          </p>
         </div>
         <button onClick={() => onDelete(lead)}
           className="w-5 h-5 flex items-center justify-center rounded-md text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0">
@@ -80,16 +94,26 @@ function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: any; onMove: (id: 
 
       <div className="flex items-center justify-between pt-2 border-t border-white/50 dark:border-white/10">
         <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full",
-          SOURCE_COLORS[lead.source] ?? "glass-soft text-neutral-600")}>
+          sourceColor(lead.source))}>
           {lead.source}
         </span>
         <div className="flex items-center gap-0.5">
-          <a href={`tel:${lead.phone}`}
-            className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
-            <Phone className="w-3 h-3" />
-          </a>
+          {/* Maktab tashrifidan kelgan lidda telefon bo'lmasligi mumkin —
+              unda tugma bosilmaydigan holatda turadi, bosh sahifaga
+              olib ketmasligi uchun. */}
+          {lead.phone ? (
+            <a href={`tel:${lead.phone}`} title={lead.phone}
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
+              <Phone className="w-3 h-3" />
+            </a>
+          ) : (
+            <span title="Telefon kiritilmagan"
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-200 dark:text-neutral-700">
+              <Phone className="w-3 h-3" />
+            </span>
+          )}
           {next && (
-            <button onClick={() => onMove(lead.id, next)}
+            <button onClick={() => onMove(lead, next)}
               className="flex items-center gap-0.5 ml-1 px-2 py-0.5 text-[10px] font-semibold
                 bg-indigo-600 text-white dark:bg-indigo-500
                 rounded-lg hover:opacity-80 transition-opacity">
@@ -112,32 +136,81 @@ function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: any; onMove: (id: 
 export default function LeadsPage() {
   const [search,    setSearch]    = useState("");
   const [showModal,    setShowModal]    = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
   const [form,         setForm]         = useState(EMPTY);
   const [saving,       setSaving]       = useState(false);
   const [error,        setError]        = useState("");
   const [initStatus,   setInitStatus]   = useState<LeadStatus>("YANGI");
 
-  const [editTarget,   setEditTarget]   = useState<any>(null);
+  const [editTarget,   setEditTarget]   = useState<Lead | null>(null);
   const [editForm,     setEditForm]     = useState(EMPTY);
   const [editSaving,   setEditSaving]   = useState(false);
   const [editError,    setEditError]    = useState("");
+  const [showImport,   setShowImport]   = useState(false);
+  // «To'ladi» ga o'tkazishdan oldin kurs so'raladigan oyna
+  const [courseTarget, setCourseTarget] = useState<Lead | null>(null);
+  const [pickedCourse, setPickedCourse] = useState("");
+  const [courseSaving, setCourseSaving] = useState(false);
+  const [courseError,  setCourseError]  = useState("");
 
   const { data: raw, isLoading } = useLeads();
-  const leads: any[] = Array.isArray(raw) ? raw : [];
+  const leads: Lead[] = Array.isArray(raw) ? raw : [];
+  const { data: courseData } = useCourses();
+  const courses: Course[] = Array.isArray(courseData) ? courseData : (courseData?.data ?? []);
 
-  async function moveLead(id: string, status: LeadStatus) {
-    await fetch(`/api/leads/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    mutate("/api/leads");
+  /**
+   * Lidni keyingi bosqichga o'tkazadi.
+   *
+   * «TO'LADI» UCHUN KURS MAJBURIY. Usiz «qaysi kurs qancha lid berdi»
+   * degan savolga javob yo'q: pul kelgan, lekin qaysi yo'nalishga
+   * kelgani yozilmay qolgan. Server buni rad etadi, shuning uchun
+   * bu yerda oldindan kurs so'raladi.
+   *
+   * Ilgari bu funksiya javobga UMUMAN qaramasdi — server rad etsa,
+   * kartochka jimgina joyida qolardi va odam tugmani qayta-qayta
+   * bosaverardi.
+   */
+  async function moveLead(lead: Lead, status: LeadStatus, courseId?: string) {
+    if (status === "TO_LANDI" && !lead.courseId && !courseId) {
+      setCourseTarget(lead); setCourseError(""); setPickedCourse("");
+      return;
+    }
+    setError("");
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, ...(courseId ? { courseId } : {}) }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        const msg = d?.error ?? "O'zgartirib bo'lmadi";
+        if (courseTarget) setCourseError(msg); else setError(msg);
+        return false;
+      }
+      mutate("/api/leads");
+      return true;
+    } catch {
+      const msg = "Serverga ulanib bo'lmadi";
+      if (courseTarget) setCourseError(msg); else setError(msg);
+      return false;
+    }
   }
 
-  function openEdit(lead: any) {
+  async function confirmCourse() {
+    if (!courseTarget) return;
+    if (!pickedCourse) { setCourseError("Kursni tanlang"); return; }
+    setCourseSaving(true); setCourseError("");
+    const ok = await moveLead(courseTarget, "TO_LANDI", pickedCourse);
+    setCourseSaving(false);
+    if (ok) { setCourseTarget(null); setPickedCourse(""); }
+  }
+
+  function openEdit(lead: Lead) {
     setEditTarget(lead);
-    setEditForm({ name: lead.name, phone: lead.phone, source: lead.source, course: lead.course ?? "", note: lead.note ?? "" });
+    setEditForm({ name: lead.name, phone: lead.phone, source: lead.source,
+                  course: lead.course ?? "", school: lead.school ?? "",
+                  grade: lead.grade ?? "", note: lead.note ?? "" });
     setEditError("");
   }
 
@@ -153,6 +226,8 @@ export default function LeadsPage() {
           note:   editForm.note   || undefined,
           source: editForm.source || undefined,
           course: editForm.course || undefined,
+          school: editForm.school || undefined,
+          grade:  editForm.grade  || undefined,
         }),
       });
       const data = await res.json();
@@ -169,8 +244,14 @@ export default function LeadsPage() {
 
   async function submit() {
     if (!form.name.trim()) { setError("Ism majburiy"); return; }
+    // TELEFON IXTIYORIY: maktab tashrifidan kelgan lidda u ko'pincha
+    // bo'lmaydi. Lekin YARIM kiritilgan raqam — bu xato, chunki keyin
+    // qo'ng'iroq qilib bo'lmaydi va buni faqat qo'ng'iroq paytida
+    // bilib qolinardi.
     const phoneDigits = form.phone.replace(/\D/g, "");
-    if (phoneDigits.length !== 12) { setError("To'liq 9 ta raqam kiriting"); return; }
+    if (phoneDigits.length > 3 && phoneDigits.length !== 12) {
+      setError("Telefonni to'liq kiriting yoki bo'sh qoldiring"); return;
+    }
     if (!form.source) { setError("Manba tanlang"); return; }
     setSaving(true); setError("");
     try {
@@ -178,8 +259,12 @@ export default function LeadsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: form.name, phone: form.phone, source: form.source,
-          course: form.course || undefined, note: form.note || undefined,
+          name: form.name, source: form.source, status: initStatus,
+          phone:  phoneDigits.length === 12 ? form.phone : "",
+          course: form.course || undefined,
+          school: form.school || undefined,
+          grade:  form.grade  || undefined,
+          note:   form.note   || undefined,
         }),
       });
       const data = await res.json();
@@ -203,15 +288,18 @@ export default function LeadsPage() {
   }
 
   const filteredLeads = useMemo(() =>
-    leads.filter(l =>
-      l.name.toLowerCase().includes(search.toLowerCase()) ||
-      l.phone.includes(search) ||
-      l.course?.toLowerCase().includes(search.toLowerCase())
-    ), [leads, search]);
+    leads.filter(l => {
+      const q = search.toLowerCase();
+      return l.name.toLowerCase().includes(q)
+          || (l.phone ?? "").includes(search)
+          || (l.school ?? "").toLowerCase().includes(q)
+          || (l.grade  ?? "").toLowerCase().includes(q)
+          || (l.course ?? "").toLowerCase().includes(q);
+    }), [leads, search]);
 
-  const getCol = (s: LeadStatus) => filteredLeads.filter((l: any) => l.status === s);
+  const getCol = (s: LeadStatus) => filteredLeads.filter((l) => l.status === s);
   const totalByStatus = useMemo(() =>
-    COLUMNS.reduce((acc, s) => { acc[s] = leads.filter((l: any) => l.status === s).length; return acc; },
+    COLUMNS.reduce((acc, s) => { acc[s] = leads.filter((l) => l.status === s).length; return acc; },
     {} as Record<LeadStatus, number>), [leads]);
 
   return (
@@ -221,6 +309,62 @@ export default function LeadsPage() {
         subtitle={isLoading ? "Yuklanmoqda..." : `Jami ${leads.length} ta lid`}
         action={{ label: "Yangi lid", onClick: () => openCreate("YANGI") }}
       />
+
+      <LeadImportModal open={showImport}
+        onClose={() => setShowImport(false)}
+        onDone={() => mutate("/api/leads")} />
+
+      {/* «To'ladi» ga o'tishdan oldin kurs so'raladi. Server ham buni
+          talab qiladi — bu oyna shunchaki xatoni odam tiliga
+          o'giradi va darhol tuzatish imkonini beradi. */}
+      <Modal
+        open={!!courseTarget}
+        onClose={() => { setCourseTarget(null); setCourseError(""); }}
+        title="Qaysi kursga to'ladi?"
+        subtitle={courseTarget?.name}
+        footer={
+          <>
+            <Button onClick={confirmCourse} disabled={courseSaving || !pickedCourse}
+              className="flex-1 h-9 bg-green-600 hover:bg-green-700 text-white text-[13px]">
+              {courseSaving ? "Saqlanmoqda..." : "To'ladi deb belgilash"}
+            </Button>
+            <Button variant="outline" className="h-9 px-4 text-[13px]"
+              onClick={() => { setCourseTarget(null); setCourseError(""); }}>Bekor</Button>
+          </>
+        }
+      >
+        <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mb-3 leading-relaxed">
+          Kurs ko&apos;rsatilmasa, keyin &laquo;qaysi kurs qancha lid berdi&raquo;
+          degan savolga javob topib bo&apos;lmaydi.
+        </p>
+        {courses.length === 0 ? (
+          <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2.5">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-px" />
+            <p className="text-[12px] text-neutral-700 dark:text-neutral-300">
+              Hali kurs yaratilmagan. Avval &laquo;Kurslar&raquo; bo&apos;limida kurs qo&apos;shing.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-1.5 max-h-64 overflow-y-auto">
+            {courses.map((c) => (
+              <button key={c.id} onClick={() => { setPickedCourse(c.id); setCourseError(""); }}
+                className={cn("flex items-center gap-2 px-3 py-2.5 rounded-xl text-left transition-all border",
+                  pickedCourse === c.id
+                    ? "bg-green-50 dark:bg-green-900/20 border-green-500 text-green-800 dark:text-green-300"
+                    : "border-white/60 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:border-neutral-400")}>
+                <BookOpen className="w-3.5 h-3.5 shrink-0 opacity-60" />
+                <span className="text-[13px] font-medium flex-1 truncate">{c.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {courseError && (
+          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2.5 mt-3">
+            <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+            <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{courseError}</p>
+          </div>
+        )}
+      </Modal>
 
       <Modal
         open={showModal}
@@ -246,28 +390,32 @@ export default function LeadsPage() {
               className="h-10"
             />
           </FormField>
-          <FormField label="Telefon" required>
+          <FormField label="Telefon" hint="Ixtiyoriy">
             <PhoneInput
               value={form.phone}
               onChange={v => { setForm(p => ({...p, phone: v})); setError(""); }}
-              error={error.includes("raqam")}
+              error={error.includes("Telefon")}
             />
           </FormField>
         </div>
 
         <FormField label="Manba" required>
-          <div className="flex gap-1.5 flex-wrap">
-            {SOURCES.map(s => (
-              <button key={s} onClick={() => setForm(p => ({...p, source: s}))}
-                className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
-                  form.source === s
-                    ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900 dark:border-neutral-100"
-                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
-                {s}
-              </button>
-            ))}
-          </div>
+          <SourcePicker value={form.source}
+            onChange={v => { setForm(p => ({...p, source: v})); setError(""); }} />
         </FormField>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Maktab" hint="Ixtiyoriy">
+            <Input placeholder="12-maktab" value={form.school}
+              onChange={e => setForm(p => ({...p, school: e.target.value}))}
+              className="h-10" />
+          </FormField>
+          <FormField label="Sinf" hint="Ixtiyoriy">
+            <Input placeholder="9-A" value={form.grade}
+              onChange={e => setForm(p => ({...p, grade: e.target.value}))}
+              className="h-10" />
+          </FormField>
+        </div>
 
         <FormField label="Kurs" hint="Ixtiyoriy">
           <Input
@@ -311,18 +459,21 @@ export default function LeadsPage() {
         }
       >
         <FormField label="Manba">
-          <div className="flex gap-1.5 flex-wrap">
-            {SOURCES.map(s => (
-              <button key={s} onClick={() => setEditForm(p => ({...p, source: s}))}
-                className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
-                  editForm.source === s
-                    ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
-                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
-                {s}
-              </button>
-            ))}
-          </div>
+          <SourcePicker value={editForm.source}
+            onChange={v => setEditForm(p => ({...p, source: v}))} />
         </FormField>
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Maktab" hint="Ixtiyoriy">
+            <Input placeholder="12-maktab" value={editForm.school}
+              onChange={e => setEditForm(p => ({...p, school: e.target.value}))}
+              className="h-10" />
+          </FormField>
+          <FormField label="Sinf" hint="Ixtiyoriy">
+            <Input placeholder="9-A" value={editForm.grade}
+              onChange={e => setEditForm(p => ({...p, grade: e.target.value}))}
+              className="h-10" />
+          </FormField>
+        </div>
         <FormField label="Kurs" hint="Ixtiyoriy">
           <Input
             placeholder="Matematika, Ingliz tili..."
@@ -354,7 +505,7 @@ export default function LeadsPage() {
         loading={saving}
         title="Lidni o'chirish"
         description={<>
-          <span className="font-semibold text-neutral-700 dark:text-neutral-300">{deleteTarget?.name}</span> o'chirilsinmi?
+          <span className="font-semibold text-neutral-700 dark:text-neutral-300">{deleteTarget?.name}</span>{" "}o&apos;chirilsinmi?
         </>}
       />
 
@@ -376,11 +527,19 @@ export default function LeadsPage() {
           })}
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-xs mb-5">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-          <Input placeholder="Ism, telefon, kurs..." className="pl-9 h-9 text-sm"
-            value={search} onChange={e => setSearch(e.target.value)} />
+        {/* Search + import */}
+        <div className="flex items-center gap-2 mb-5 flex-wrap">
+          <div className="relative max-w-xs flex-1 min-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <Input placeholder="Ism, telefon, maktab, kurs..." className="pl-9 h-9 text-sm"
+              value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <button onClick={() => setShowImport(true)}
+            className="flex items-center gap-1.5 h-9 px-3 rounded-xl text-[12px] font-semibold
+                       glass-soft text-neutral-600 dark:text-neutral-300
+                       hover:bg-white/70 dark:hover:bg-white/10 transition-colors shrink-0">
+            <Upload className="w-3.5 h-3.5" />{" "}Excel&apos;dan import
+          </button>
         </div>
 
         {/* Kanban */}
@@ -412,14 +571,14 @@ export default function LeadsPage() {
                           <Skeleton className="h-7 w-full rounded-lg" />
                         </div>
                       ))
-                    : colLeads.map((lead: any) => (
+                    : colLeads.map((lead) => (
                         <LeadCard key={lead.id} lead={lead} onMove={moveLead} onDelete={l => { setError(""); setDeleteTarget(l); }} onEdit={openEdit} />
                       ))
                   }
                   {!isLoading && colLeads.length === 0 && (
                     <div className="border-2 border-dashed border-white/60 dark:border-white/10 rounded-xl p-6 text-center text-neutral-400 dark:text-neutral-600 text-xs cursor-pointer hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors"
                       onClick={() => openCreate(status)}>
-                      + Lid qo'shish
+                      + Lid qo&apos;shish
                     </div>
                   )}
                 </div>
