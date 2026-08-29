@@ -38,7 +38,7 @@ const EMPTY = {
   gender: "MALE" as "MALE" | "FEMALE",
   subjects: [] as string[], salary: "",
   salaryType: "FIXED" as SalaryType,
-  acceptsPayments: true,
+  acceptsPayments: false,
 };
 
 export default function TeachersPage() {
@@ -90,7 +90,7 @@ export default function TeachersPage() {
       gender: t.gender ?? "MALE",
       subjects: t.subjects ?? [], salary: String(t.salary ?? ""),
       salaryType: t.salaryType ?? "FIXED",
-      acceptsPayments: t.acceptsPayments ?? true,
+      acceptsPayments: t.acceptsPayments ?? false,
     });
     setSubInput(""); setError(""); setPhoneErr(""); setShowModal(true);
   }
@@ -251,9 +251,15 @@ export default function TeachersPage() {
           onClick={() => setForm(p => ({ ...p, acceptsPayments: !p.acceptsPayments }))}
           className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/60 dark:border-white/10 px-3.5 py-3 text-left hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors">
           <div>
-            <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Guruh o'quvchilaridan to'lov qabul qiladimi?</p>
-            <p className="text-[11px] text-neutral-400 mt-0.5">
-              Ha bo'lsa — o'qituvchi panelida "TO'LOV" tugmasi ko'rinadi
+            <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">Guruh o&apos;quvchilaridan to&apos;lov qabul qiladimi?</p>
+            {/* Izoh ATAYLAB to'liq: bu tugma faqat "TO'LOV" tugmasini
+                emas, butun moliya ko'rinishini ochadi. Ilgari shu
+                yozilmagani uchun markaz egasi nima yoqayotganini
+                bilmasdi. */}
+            <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
+              {form.acceptsPayments
+                ? "Yoqilgan — o'qituvchi o'quvchilarning balansi va qarzini ko'radi"
+                : "O'chiq — o'qituvchi pulga oid hech narsani ko'rmaydi"}
             </p>
           </div>
           <span className={cn(
