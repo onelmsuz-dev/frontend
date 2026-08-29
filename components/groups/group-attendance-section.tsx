@@ -259,7 +259,21 @@ export function GroupAttendanceSection({
             const s = sg.student;
             const status = localStatus[sg.studentId];
             const isTrial = sg.enrollmentStatus === "SINOV";
-            const debt = (s?.balance ?? 0) < 0;
+            // SHU GURUHDAGI holat — umumiy balans EMAS.
+            //
+            // Ilgari bu yerda `s.balance` turardi va chalg'itardi: kursi
+            // 350 000 bo'lgan guruhda «Qarz 400 000» ko'rinardi, chunki
+            // 400 000 boshqa (tashlab ketilgan) guruhdan qolgan edi.
+            // Markaz egasi buni "narx noto'g'ri" deb tushunardi.
+            //
+            // Boshqa guruhning qarzi yashirilmaydi — alohida ko'rsatiladi,
+            // aks holda o'qituvchi "qarzdor emas" deb o'ylab, pul
+            // yig'ilmay qolardi.
+            const groupNet = sg.groupNet ?? s?.balance ?? 0;
+            const otherNet = sg.otherNet ?? 0;
+            const debt      = groupNet < 0;
+            const advance   = groupNet > 0;
+            const otherDebt = otherNet < 0;
             return (
               <div key={sg.id}
                 className={cn("flex items-center justify-between gap-3 px-5 py-2.5 flex-wrap transition-colors",
@@ -286,7 +300,19 @@ export function GroupAttendanceSection({
                       )}
                       {debt && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
-                          Qarz {fmtMoney(s.balance)}
+                          Qarz {fmtMoney(groupNet)}
+                        </span>
+                      )}
+                      {advance && (
+                        <span title="Shu guruhga oldindan to'langan"
+                          className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                          Avans {fmtMoney(groupNet)}
+                        </span>
+                      )}
+                      {otherDebt && (
+                        <span title="Boshqa guruhdagi qarz — bu guruhning narxiga aloqasi yo'q"
+                          className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                          Boshqa guruhdan {fmtMoney(otherNet)}
                         </span>
                       )}
                     </div>
