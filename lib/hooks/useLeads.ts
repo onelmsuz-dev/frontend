@@ -59,3 +59,32 @@ export function useDeleteLead(id: string) {
 export function useLeadSources() {
   return useSWR<{ id: string; name: string }[]>("/api/leads/sources", fetcher);
 }
+
+export interface FeedItem {
+  kind: "event" | "comment";
+  id: string;
+  at: string;
+  actorName: string;
+  text: string;
+  changes: string[];
+  editedAt?: string | null;
+  canEdit: boolean;
+  canDelete: boolean;
+}
+
+export interface LeadFeed {
+  lead: { id: string; name: string; createdAt: string };
+  items: FeedItem[];
+  truncated: boolean;
+  commentCount: number;
+}
+
+/**
+ * BITTA LIDNING TASMASI — tizim tarixi va odam izohlari birga.
+ *
+ * `leadId` bo'sh bo'lsa so'rov YUBORILMAYDI (SWR kaliti `null`): oyna
+ * yopiq turganda ham har renderda so'rov ketmasin.
+ */
+export function useLeadFeed(leadId: string | null) {
+  return useSWR<LeadFeed>(leadId ? `/api/leads/${leadId}/feed` : null, fetcher);
+}

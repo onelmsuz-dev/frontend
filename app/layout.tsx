@@ -29,7 +29,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="uz" className={`${jakarta.variable} h-full antialiased`}>
+    // `suppressHydrationWarning` — mavzu (light/dark) uchun.
+    // `next-themes` sahifa chizilishidan OLDIN `<html>` ga sinf va
+    // `color-scheme` qo'shadi, ya'ni server chizgan HTML mijoznikidan
+    // ataylab farq qiladi. Busiz brauzer konsoli har sahifada hidratsiya
+    // ogohlantirishi bilan to'lib, HAQIQIY xatolar ko'rinmay qolardi.
+    <html lang="uz" suppressHydrationWarning
+          className={`${jakarta.variable} h-full antialiased`}>
       <body className="min-h-full font-[var(--font-jakarta)]">
           <Providers>{children}</Providers>
         </body>

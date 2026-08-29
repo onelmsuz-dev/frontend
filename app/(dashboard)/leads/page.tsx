@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormField } from "@/components/ui/form-field";
-import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil, Upload, BookOpen } from "lucide-react";
+import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil, Upload, BookOpen, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLeads } from "@/lib/hooks/useLeads";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { SourcePicker, sourceColor } from "@/components/leads/source-picker";
 import { LeadImportModal } from "@/components/leads/lead-import-modal";
+import { LeadFeedPanel } from "@/components/leads/lead-feed";
 import { mutate } from "swr";
 
 type LeadStatus = "YANGI" | "ALOQA_QILINGAN" | "SINOV_DARSI" | "TO_LANDI" | "BEKOR";
@@ -56,7 +57,7 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
 
-function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: Lead; onMove: (lead: Lead, status: LeadStatus) => void; onDelete: (lead: Lead) => void; onEdit: (lead: Lead) => void }) {
+function LeadCard({ lead, onMove, onDelete, onEdit, onOpen }: { lead: Lead; onMove: (lead: Lead, status: LeadStatus) => void; onDelete: (lead: Lead) => void; onEdit: (lead: Lead) => void; onOpen: (lead: Lead) => void }) {
   const next = NEXT_STATUS[lead.status as LeadStatus];
   return (
     <div className="glass-panel rounded-xl border border-white/60 dark:border-white/10 p-3 shadow-sm hover:shadow-md transition-shadow">
@@ -65,7 +66,11 @@ function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: Lead; onMove: (lea
           {lead.name[0]}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 leading-tight truncate">{lead.name}</p>
+          <button onClick={() => onOpen(lead)} title="Tarix va izohlar"
+            className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100
+                       leading-tight truncate hover:text-indigo-600 transition-colors text-left w-full">
+            {lead.name}
+          </button>
           <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
             {lead.phone || [lead.school, lead.grade].filter(Boolean).join(" · ") || "—"}
           </p>
@@ -112,6 +117,11 @@ function LeadCard({ lead, onMove, onDelete, onEdit }: { lead: Lead; onMove: (lea
               <Phone className="w-3 h-3" />
             </span>
           )}
+          <button onClick={() => onOpen(lead)} title="Tarix va izohlar"
+            className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-400
+                       hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+            <MessageSquare className="w-3 h-3" />
+          </button>
           {next && (
             <button onClick={() => onMove(lead, next)}
               className="flex items-center gap-0.5 ml-1 px-2 py-0.5 text-[10px] font-semibold
@@ -147,6 +157,8 @@ export default function LeadsPage() {
   const [editSaving,   setEditSaving]   = useState(false);
   const [editError,    setEditError]    = useState("");
   const [showImport,   setShowImport]   = useState(false);
+  /** Tasma oynasi — qaysi lidning tarixi ochilgan. */
+  const [feedTarget,   setFeedTarget]   = useState<Lead | null>(null);
   // «To'ladi» ga o'tkazishdan oldin kurs so'raladigan oyna
   const [courseTarget, setCourseTarget] = useState<Lead | null>(null);
   const [pickedCourse, setPickedCourse] = useState("");
@@ -313,6 +325,25 @@ export default function LeadsPage() {
       <LeadImportModal open={showImport}
         onClose={() => setShowImport(false)}
         onDone={() => mutate("/api/leads")} />
+
+      {/* Lid tarixi va izohlari. Kanban holatini yo'qotmaslik uchun
+          alohida sahifa emas, oyna — xodim taxtaga qaytganda o'sha
+          joyida turadi. */}
+      <Modal
+        open={!!feedTarget}
+        onClose={() => { setFeedTarget(null); mutate("/api/leads"); }}
+        size="lg"
+        title={feedTarget?.name ?? ""}
+        subtitle="Tarix va izohlar"
+        footer={
+          <Button variant="outline" className="h-9 px-4 text-[13px]"
+            onClick={() => { setFeedTarget(null); mutate("/api/leads"); }}>
+            Yopish
+          </Button>
+        }
+      >
+        {feedTarget && <LeadFeedPanel leadId={feedTarget.id} />}
+      </Modal>
 
       {/* «To'ladi» ga o'tishdan oldin kurs so'raladi. Server ham buni
           talab qiladi — bu oyna shunchaki xatoni odam tiliga
@@ -572,7 +603,7 @@ export default function LeadsPage() {
                         </div>
                       ))
                     : colLeads.map((lead) => (
-                        <LeadCard key={lead.id} lead={lead} onMove={moveLead} onDelete={l => { setError(""); setDeleteTarget(l); }} onEdit={openEdit} />
+                        <LeadCard key={lead.id} lead={lead} onMove={moveLead} onDelete={l => { setError(""); setDeleteTarget(l); }} onEdit={openEdit} onOpen={setFeedTarget} />
                       ))
                   }
                   {!isLoading && colLeads.length === 0 && (
