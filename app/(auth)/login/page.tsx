@@ -2,6 +2,7 @@
 
 import { useState, useTransition, Suspense } from "react";
 import { signIn } from "next-auth/react";
+import { navSections, itemVisible } from "@/components/layout/nav-config";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -17,6 +18,28 @@ function getSubdomain(): string {
   // markaz.oneroom.uz → parts = ["markaz","oneroom","uz"] → parts[0]
   // oneroom.uz → parts = ["oneroom","uz"] → no subdomain
   return parts.length >= 3 ? parts[0] : "";
+}
+
+/**
+ * Foydalanuvchi ochа oladigan BIRINCHI sahifa.
+ *
+ * Menyu tartibi bo'yicha yuriladi, ya'ni natija yon paneldagi birinchi
+ * yozuv bilan bir xil bo'ladi — odam kirgach o'zi ko'rib turgan
+ * joyga tushadi.
+ */
+async function landingFor(): Promise<string> {
+  try {
+    const me = await fetch("/api/me").then((r) => r.json());
+    const perms: string[] = me?.permissions ?? [];
+    if (perms.includes("*") || perms.includes("dashboard.view")) return "/dashboard";
+    for (const section of navSections) {
+      for (const item of section.items) {
+        if (item.teacherOnly) continue;
+        if (itemVisible(item.perm, perms)) return item.href;
+      }
+    }
+  } catch { /* pastdagi zaxira */ }
+  return "/dashboard";
 }
 
 function LoginForm() {
@@ -46,12 +69,19 @@ function LoginForm() {
       if (res?.error) {
         setError("Telefon raqam yoki parol noto'g'ri");
       } else {
-        // Rolga qarab yo'naltirish: o'quvchi → /panel, boshqalar → callbackUrl
+        // Foydalanuvchi HAQIQATAN ochа oladigan sahifaga yuboramiz.
+        //
+        // Ilgari hamma `/dashboard` ga tushardi. Faqat lidlar bilan
+        // ishlaydigan xodim uchun bu O'LIK sahifa edi: unda
+        // `dashboard.view` yo'q, API 403 qaytarardi va ekranda
+        // "0 o'quvchi, 0 guruh, UZS 0 daromad" turardi — ya'ni tizim
+        // bo'sh yoki buzuq ko'rinardi.
         let dest = callbackUrl;
         try {
           const s = await fetch("/api/auth/session").then(r => r.json());
           if (s?.user?.role === "STUDENT") dest = "/panel";
-        } catch { /* ignore */ }
+          else if (callbackUrl === "/dashboard") dest = await landingFor();
+        } catch { /* ignore — eng yomoni eski xulq */ }
         window.location.href = dest;
       }
     });
