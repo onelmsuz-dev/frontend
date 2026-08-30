@@ -65,7 +65,10 @@ export function OverviewSections({ months }: { months: number }) {
         <AttendancePanel data={data} chart={chart} />
       </div>
 
-      <LeadFunnel leads={data.leads} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <RetentionPanel data={data} />
+        <LeadFunnel leads={data.leads} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <CoursePanel data={data} />
@@ -110,6 +113,89 @@ function StudentFlowPanel({ data, chart }: { data: OverviewReport; chart: Return
           yaqinda qo&apos;shilgani uchun eski chiqishlar ko&apos;rinmaydi.
         </p>
       )}
+    </Panel>
+  );
+}
+
+
+// ─── Ushlab qolish ────────────────────────────────────────────────────────────
+
+/**
+ * Sabab matnlari — JS KONSTANTASI sifatida, ko'p qatorli JSX matni emas.
+ * Bu kod bazasida `&apos;` bo'lgan ko'p qatorli JSX matndan bo'shliq
+ * yo'qoladi (`npm run verify:jsx` shuni qidiradi).
+ */
+const RETENTION_REASON: Record<string, string> = {
+  TARIX_YOQ:    "oy boshida hali o'quvchi yo'q edi",
+  HAMMA_KETGAN: "oy boshida faol o'quvchi qolmagan",
+  OY_TUGAMAGAN: "oy tugagach hisoblanadi",
+  KAM_ODAM:     "o'quvchi kam — foiz chalg'itardi",
+};
+
+const RETENTION_HINT =
+  "Oy boshida bo'lgan o'quvchilarning nechtasi oy oxirida ham qolgani. "
+  + "O'sha oyda qo'shilganlar hisobga kirmaydi.";
+
+const RETENTION_EMPTY =
+  "Ushlab qolish darajasi hali hisoblanmaydi — buning uchun kamida bitta "
+  + "to'liq tugagan oy va oy boshida bo'lgan o'quvchilar kerak.";
+
+function RetentionPanel({ data }: { data: OverviewReport }) {
+  const rows = data.retention ?? [];
+  const withRate = rows.filter((r) => r.rate !== null);
+  const latest = withRate[withRate.length - 1];
+
+  return (
+    <Panel icon={UserPlus} title="Ushlab qolish" color="text-indigo-500"
+      hint={RETENTION_HINT}>
+      {rows.length === 0 || withRate.length === 0 ? (
+        <p className="text-[12px] leading-relaxed text-neutral-500 dark:text-neutral-400 py-2">
+          {RETENTION_EMPTY}
+        </p>
+      ) : (
+        <div className="flex items-center gap-4 mb-3">
+          <Metric value={`${latest.rate}%`} label={`${latest.label} oyi`}
+            cls="text-indigo-600 dark:text-indigo-400" />
+          <Metric value={`${latest.retained}/${latest.base}`} label="Qolgan"
+            cls="text-neutral-700 dark:text-neutral-200" />
+        </div>
+      )}
+
+      <ul className="space-y-1.5">
+        {rows.map((r) => (
+          <li key={r.key} className="flex items-center gap-2.5">
+            <span className="w-12 shrink-0 text-[11px] text-neutral-500 dark:text-neutral-400">
+              {r.label}
+            </span>
+
+            {r.rate !== null ? (
+              <>
+                <div className="h-2 flex-1 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden">
+                  <div className="h-full rounded-full bg-indigo-500"
+                    style={{ width: `${r.rate}%` }} />
+                </div>
+                <span className="w-9 shrink-0 text-right text-[12px] font-semibold tabular-nums
+                                 text-neutral-900 dark:text-neutral-100">
+                  {r.rate}%
+                </span>
+              </>
+            ) : (
+              <span className="flex-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+                {RETENTION_REASON[r.status] ?? "hisoblanmadi"}
+              </span>
+            )}
+
+            {/* Xom sonlar HAR DOIM ko'rinadi — foizni yashirish
+                faktni yashirish degani emas. */}
+            <span className="w-16 shrink-0 text-right text-[11px] tabular-nums
+                             text-neutral-400 dark:text-neutral-500">
+              {r.base === 0 ? "—"
+                : r.left === 0 ? `${r.base} ta`
+                : `${r.base} ta · −${r.left}`}
+            </span>
+          </li>
+        ))}
+      </ul>
     </Panel>
   );
 }

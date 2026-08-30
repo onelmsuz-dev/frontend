@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { AcceptPaymentModal } from "@/components/finance/accept-payment-modal";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ import {
   AlertTriangle, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  PAYMENT_METHODS, SELECTABLE_METHODS, methodShort, methodCls,
+} from "@/lib/payment-methods";
 import { FinanceInsights } from "@/components/finance/finance-insights";
 import Link from "next/link";
 import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
@@ -34,13 +37,6 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
 
-const METHOD_LABELS: Record<string, string> = { NAQD: "Naqd", KARTA: "Karta", CLICK: "Click", PAYME: "Payme" };
-const METHOD_COLORS: Record<string, string> = {
-  NAQD:  "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  KARTA: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  CLICK: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-  PAYME: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-};
 
 type Tab = "kirim" | "chiqim" | "oylik" | "qarzdorlar";
 
@@ -114,6 +110,13 @@ export default function FinancePage() {
     useSWR(`/api/teacher-salaries${salaryQs}`, fetcher);
 
   const payments: any[] = Array.isArray(paymentsRaw) ? paymentsRaw : [];
+
+  // Filtr variantlari: hamma tanlanadigan usul + shu markazda haqiqatan
+  // ishlatilgan eski usullar.
+  const filterMethods = useMemo(() => {
+    const used = new Set(payments.map((p) => p.method));
+    return PAYMENT_METHODS.filter((m) => !m.legacy || used.has(m.value));
+  }, [payments]);
   const teachers: any[] = Array.isArray(teachersRaw) ? teachersRaw : [];
   const expenses: any[] = Array.isArray(expensesRaw) ? expensesRaw : [];
   const salaries: any[] = Array.isArray(salariesRaw) ? salariesRaw : [];
@@ -378,8 +381,13 @@ export default function FinancePage() {
               className={FILTER_CLS}
             >
               <option value="">Barcha usullar</option>
-              {Object.entries(METHOD_LABELS).map(([m, label]) => (
-                <option key={m} value={m}>{label}</option>
+              {/* Eski usul (Click/Payme) faqat SHU markazda haqiqatan
+                  shunday to'lov bo'lsa ko'rinadi. Doim ko'rsatsak, hech
+                  qachon ishlatmagan markazlarga ikkita o'lik variant
+                  bo'lardi; umuman yashirsak, eskisi bor markaz o'z
+                  to'lovini topa olmasdi. */}
+              {filterMethods.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
               ))}
             </select>
 
@@ -407,8 +415,15 @@ export default function FinancePage() {
                 To'lovlar tarixi ({payments.length} ta)
               </p>
               <div className="flex gap-1.5">
-                {Object.entries(METHOD_COLORS).map(([m, cls]) => (
-                  <span key={m} className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", cls)}>{METHOD_LABELS[m]}</span>
+                {/* Afsona faqat TANLANADIGAN usullarni ko'rsatadi —
+                    ilgari u rang jadvalining kalitlaridan qurilardi va
+                    bazada birorta yozuv bo'lmasa ham "Click"/"Payme"
+                    nishonchalari turaverardi. */}
+                {SELECTABLE_METHODS.map((m) => (
+                  <span key={m.value}
+                    className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", m.cls)}>
+                    {m.short}
+                  </span>
                 ))}
               </div>
             </div>
@@ -449,8 +464,8 @@ export default function FinancePage() {
                           {new Date(p.date).toLocaleDateString("uz-UZ")}
                         </TableCell>
                         <TableCell>
-                          <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium", METHOD_COLORS[p.method] ?? "bg-neutral-100 text-neutral-600")}>
-                            {METHOD_LABELS[p.method] ?? p.method}
+                          <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium", methodCls(p.method))}>
+                            {methodShort(p.method)}
                           </span>
                         </TableCell>
                         <TableCell className="text-right">

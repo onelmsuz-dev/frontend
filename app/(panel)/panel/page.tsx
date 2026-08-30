@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { methodShort } from "@/lib/payment-methods";
 import {
   useStudentProfile, useStudentGroups, useStudentPayments,
   useStudentAttendance, useStudentSchedule,
@@ -290,7 +291,12 @@ export default function StudentPanelPage() {
                     {new Date(p.date).toLocaleDateString("uz-UZ")}{p.group?.name ? ` · ${p.group.name}` : ""}
                   </p>
                 </div>
-                <span className="text-[11px] px-2 py-0.5 rounded-full glass-soft text-neutral-500">{p.method}</span>
+                {/* Ota-onaga XOM qiymat ko'rsatilmaydi. Ilgari bu yerda
+                    "KARTA" deb turardi va yangi usul qo'shilganda
+                    "BANK" deb turardi. */}
+                <span className="text-[11px] px-2 py-0.5 rounded-full glass-soft text-neutral-500">
+                  {methodShort(p.method)}
+                </span>
               </div>
             ))}
           </div>

@@ -1,6 +1,7 @@
 import useSWR from "swr";
 import { useBranch } from "@/lib/contexts/branch-context";
 import { fetcher } from "@/lib/fetcher";
+import { PAYMENT_METHODS } from "@/lib/payment-methods";
 
 // ─── Moliya tahlili ───────────────────────────────────────────────────────────
 
@@ -41,6 +42,16 @@ export function useFinanceReport() {
 export interface OverviewReport {
   months: string[];
   studentFlow: { label: string; joined: number; left: number; net: number }[];
+  /** Ushlab qolish — oylik kogorta. `rate: null` bo'lsa son ko'rsatilmaydi. */
+  retention: {
+    key: string;
+    label: string;
+    status: "OK" | "TARIX_YOQ" | "HAMMA_KETGAN" | "OY_TUGAMAGAN" | "KAM_ODAM";
+    base: number;
+    retained: number | null;
+    left: number;
+    rate: number | null;
+  }[];
   attendance: { label: string; rate: number; total: number }[];
   courses: { id: string; name: string; price: number; students: number; groups: number; revenue: number }[];
   teachers: { id: string; name: string; groups: number; students: number; revenue: number }[];
@@ -59,13 +70,13 @@ export function useOverviewReport(months = 6) {
 
 // ─── Yordamchilar ─────────────────────────────────────────────────────────────
 
-export const METHOD_LABELS: Record<string, string> = {
-  NAQD: "Naqd", KARTA: "Karta", CLICK: "Click", PAYME: "Payme",
-};
+// YAGONA MANBADAN hosil qilinadi — bu yerda alohida ro'yxat
+// yozilmaydi. Ilgari shunday edi va u boshqa fayllardagi ro'yxatlardan
+// ajralib ketgandi.
+export const METHOD_LABELS: Record<string, string> = Object.fromEntries(
+  PAYMENT_METHODS.map((m) => [m.value, m.short]),
+);
 
-export const METHOD_COLORS: Record<string, string> = {
-  NAQD:  "#10b981",
-  KARTA: "#6366f1",
-  CLICK: "#f59e0b",
-  PAYME: "#06b6d4",
-};
+export const METHOD_COLORS: Record<string, string> = Object.fromEntries(
+  PAYMENT_METHODS.map((m) => [m.value, m.hex]),
+);

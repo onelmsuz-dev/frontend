@@ -13,6 +13,9 @@ import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import {
+  SELECTABLE_METHODS, methodGridCls, methodLabel,
+} from "@/lib/payment-methods";
 import { todayStr } from "@/lib/form-constants";
 import { DatePicker } from "@/components/ui/date-picker";
 import { MembershipDateModal } from "@/components/students/membership-date-modal";
@@ -50,8 +53,6 @@ const ENROLL_CFG: Record<string, { label: string; cls: string }> = {
   FAOL:          { label: "Faol",        cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
   CHIQIB_KETGAN: { label: "Ketgan",      cls: "bg-neutral-100 text-neutral-500" },
 };
-const METHODS = ["NAQD", "KARTA", "CLICK", "PAYME"] as const;
-const METHOD_LABELS: Record<string, string> = { NAQD: "Naqd pul", KARTA: "Karta", CLICK: "Click", PAYME: "Payme" };
 
 /** O'quvchining guruhdagi a'zoligi. */
 type Membership = {
@@ -372,14 +373,14 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             className="h-10 text-[14px] font-semibold" />
         </FormField>
         <FormField label="To'lov usuli">
-          <div className="grid grid-cols-2 gap-2">
-            {METHODS.map(m => (
+          <div className={cn("grid gap-2", methodGridCls(SELECTABLE_METHODS.length))}>
+            {SELECTABLE_METHODS.map(({ value: m, label }) => (
               <button key={m} type="button" onClick={() => setPayForm(p => ({...p, method: m}))}
                 className={cn("h-10 rounded-xl border text-[13px] font-semibold transition-all",
                   payForm.method === m
                     ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
                     : "glass-panel text-neutral-600 dark:text-neutral-300 border-white/60 dark:border-white/10 hover:border-neutral-400")}>
-                {METHOD_LABELS[m]}
+                {label}
               </button>
             ))}
           </div>
@@ -855,7 +856,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                   <div className="min-w-0">
                     <p className="text-[13px] font-semibold text-green-600 dark:text-green-400">{fmt(p.amount)}</p>
                     <p className="text-[11px] text-neutral-400">
-                      {new Date(p.date).toLocaleDateString("uz-UZ")} · {METHOD_LABELS[p.method] ?? p.method}
+                      {new Date(p.date).toLocaleDateString("uz-UZ")} · {methodLabel(p.method)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">

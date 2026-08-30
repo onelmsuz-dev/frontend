@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Pencil, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
+import {
+  SELECTABLE_METHODS, methodGridCls, methodShort,
+} from "@/lib/payment-methods";
 
 /**
  * TO'LOVNI TUZATISH VA O'CHIRISH.
@@ -16,13 +19,6 @@ import { Pencil, Trash2, X, Loader2, AlertTriangle } from "lucide-react";
  * kerak: keyin "bu summa nega o'zgardi?" degan savol albatta so'raladi
  * va javob jurnaldan topilishi kerak.
  */
-
-const METHODS = [
-  { v: "NAQD",  l: "Naqd" },
-  { v: "KARTA", l: "Karta" },
-  { v: "CLICK", l: "Click" },
-  { v: "PAYME", l: "Payme" },
-] as const;
 
 const fmt = (v: number) => new Intl.NumberFormat("uz-UZ").format(v);
 
@@ -123,7 +119,7 @@ export function PaymentEdit({
                 </p>
                 <p className="text-[11px] text-neutral-400">
                   {new Date(payment.date).toLocaleDateString("uz-UZ")} ·{" "}
-                  {METHODS.find((m) => m.v === payment.method)?.l ?? payment.method}
+                  {methodShort(payment.method)}
                 </p>
               </div>
 
@@ -157,14 +153,17 @@ export function PaymentEdit({
                                       mb-1.5 uppercase tracking-wide">
                       To&apos;lov usuli
                     </label>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {METHODS.map((m) => (
-                        <button key={m.v} onClick={() => setMethod(m.v)}
+                    {/* Ustunlar soni ro'yxatdan — `grid-cols-4` qattiq
+                        yozilgan bo'lsa, usullar soni o'zgarganda
+                        joylashuv buzilardi. */}
+                    <div className={cn("grid gap-1.5", methodGridCls(SELECTABLE_METHODS.length))}>
+                      {SELECTABLE_METHODS.map((m) => (
+                        <button key={m.value} onClick={() => setMethod(m.value)}
                           className={cn("rounded-lg px-2 py-1.5 text-[11px] font-medium transition-colors",
-                            method === m.v
+                            method === m.value
                               ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                               : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300")}>
-                          {m.l}
+                          {m.short}
                         </button>
                       ))}
                     </div>

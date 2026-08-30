@@ -10,6 +10,7 @@ import {
 import { useChartColors } from "@/hooks/use-chart-colors";
 import { TopHeader } from "@/components/layout/top-header";
 import { cn } from "@/lib/utils";
+import { methodShort } from "@/lib/payment-methods";
 import { useSession } from "next-auth/react";
 import { useDashboard } from "@/lib/hooks/useDashboard";
 import { TeacherDashboard, type TeacherDashboardData } from "@/components/dashboard/teacher-dashboard";
@@ -34,9 +35,6 @@ const LEAD_COLORS: Record<string, string> = {
 };
 const LEAD_LABELS: Record<string, string> = {
   YANGI: "Yangi", ALOQA_QILINGAN: "Aloqa", SINOV_DARSI: "Sinov", TO_LANDI: "To'ladi", BEKOR: "Bekor",
-};
-const PAY_LABELS: Record<string, string> = {
-  NAQD: "Naqd", KARTA: "Karta", CLICK: "Click", PAYME: "Payme",
 };
 
 function Skeleton({ className }: { className?: string }) {
@@ -282,7 +280,7 @@ function OwnerDashboardPage() {
                         </div>
                         <div>
                           <p className="text-[12px] font-semibold text-neutral-900 dark:text-neutral-100">{p.student?.name}</p>
-                          <p className="text-[10px] text-neutral-400">{PAY_LABELS[p.method] ?? p.method} · {new Date(p.date).toLocaleDateString("uz-UZ")}</p>
+                          <p className="text-[10px] text-neutral-400">{methodShort(p.method)} · {new Date(p.date).toLocaleDateString("uz-UZ")}</p>
                         </div>
                       </div>
                       <p className="text-[13px] font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(p.amount)}</p>

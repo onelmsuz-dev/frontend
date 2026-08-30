@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { cn } from "@/lib/utils";
+import { SELECTABLE_METHODS, methodGridCls } from "@/lib/payment-methods";
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("uz-UZ", {
@@ -18,12 +19,7 @@ function formatCurrency(v: number) {
   }).format(v);
 }
 
-const METHOD_LABELS: Record<string, string> = {
-  NAQD: "Naqd",
-  KARTA: "Karta",
-  CLICK: "Click",
-  PAYME: "Payme",
-};
+
 
 type Membership = {
   groupId: string;
@@ -233,8 +229,11 @@ export function AcceptPaymentModal({
 
           <div>
             <Label className="text-xs font-medium text-neutral-500 mb-2 block">To&apos;lov usuli</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(["NAQD", "KARTA", "CLICK", "PAYME"] as const).map(m => (
+            {/* Ustunlar soni ro'yxat uzunligidan hisoblanadi — ilgari
+                `grid-cols-4` qattiq yozilgan va aynan to'rtta usulga
+                moslangandi. */}
+            <div className={cn("grid gap-2", methodGridCls(SELECTABLE_METHODS.length))}>
+              {SELECTABLE_METHODS.map(({ value: m, label }) => (
                 <button
                   key={m}
                   type="button"
@@ -246,7 +245,7 @@ export function AcceptPaymentModal({
                       : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10",
                   )}
                 >
-                  {METHOD_LABELS[m]}
+                  {label}
                 </button>
               ))}
             </div>
