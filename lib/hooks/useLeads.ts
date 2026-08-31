@@ -88,3 +88,36 @@ export interface LeadFeed {
 export function useLeadFeed(leadId: string | null) {
   return useSWR<LeadFeed>(leadId ? `/api/leads/${leadId}/feed` : null, fetcher);
 }
+
+/** Qo'ng'iroq natijalari — backend bilan bir xil ro'yxat. */
+export const CALL_OUTCOMES = [
+  { v: "GAPLASHDIM",    l: "Gaplashdim",    hint: "Keyingi bosqichga o'tadi" },
+  { v: "JAVOB_BERMADI", l: "Javob bermadi", hint: "Bosqich o'zgarmaydi, urinish sanaladi" },
+  { v: "QIZIQMADI",     l: "Qiziqmadi",     hint: "«Bekor» ga o'tadi" },
+] as const;
+
+export const LOST_REASONS = [
+  { v: "NARX_QIMMAT",         l: "Narx qimmat" },
+  { v: "VAQTI_TOGRI_KELMADI", l: "Vaqti to'g'ri kelmadi" },
+  { v: "BOSHQA_MARKAZ",       l: "Boshqa markazga bordi" },
+  { v: "JAVOB_BERMADI",       l: "Javob bermadi" },
+  { v: "BOSHQA",              l: "Boshqa sabab" },
+] as const;
+
+export const LOST_REASON_UZ: Record<string, string> =
+  Object.fromEntries(LOST_REASONS.map((r) => [r.v, r.l]));
+
+export interface DueLead {
+  id: string; name: string; phone: string; status: string;
+  nextContactAt: string; contactAttempts: number; course?: string | null;
+}
+
+/**
+ * BUGUN QO'NG'IROQ QILINADIGANLAR.
+ *
+ * Muddati o'tganlar ham shu ro'yxatda — ular yo'qolib ketmasligi
+ * kerak, aks holda bir kun o'tkazib yuborilgan lid abadiy unutilardi.
+ */
+export function useDueLeads() {
+  return useSWR<{ items: DueLead[]; overdue: number }>("/api/leads/due", fetcher);
+}

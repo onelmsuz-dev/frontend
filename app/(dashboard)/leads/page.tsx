@@ -7,13 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormField } from "@/components/ui/form-field";
-import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil, Upload, BookOpen, MessageSquare } from "lucide-react";
+import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil, Upload, BookOpen, MessageSquare, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLeads } from "@/lib/hooks/useLeads";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { SourcePicker, sourceColor } from "@/components/leads/source-picker";
 import { LeadImportModal } from "@/components/leads/lead-import-modal";
 import { LeadFeedPanel } from "@/components/leads/lead-feed";
+import { CallOutcome, StepBack } from "@/components/leads/call-outcome";
+import { DueStrip } from "@/components/leads/due-strip";
+import { ConvertModal } from "@/components/leads/convert-modal";
+import { LOST_REASON_UZ } from "@/lib/hooks/useLeads";
+import { fmtRelative } from "@/lib/date-uz";
 import { mutate } from "swr";
 
 type LeadStatus = "YANGI" | "ALOQA_QILINGAN" | "SINOV_DARSI" | "TO_LANDI" | "BEKOR";
@@ -30,6 +35,13 @@ interface Lead {
   grade?: string | null;
   note?: string | null;
   assignedTo?: { name?: string } | null;
+  createdAt?: string;
+  lastContactAt?: string | null;
+  contactAttempts?: number;
+  lostReason?: string | null;
+  nextContactAt?: string | null;
+  convertedStudentId?: string | null;
+  _count?: { comments: number };
 }
 
 interface Course { id: string; name: string }
@@ -57,8 +69,19 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
 
-function LeadCard({ lead, onMove, onDelete, onEdit, onOpen }: { lead: Lead; onMove: (lead: Lead, status: LeadStatus) => void; onDelete: (lead: Lead) => void; onEdit: (lead: Lead) => void; onOpen: (lead: Lead) => void }) {
-  const next = NEXT_STATUS[lead.status as LeadStatus];
+function LeadCard({ lead, onDelete, onEdit, onOpen, onConvert, onRefresh }: {
+  lead: Lead;
+  onDelete: (lead: Lead) => void;
+  onEdit: (lead: Lead) => void;
+  onOpen: (lead: Lead) => void;
+  onConvert: (lead: Lead) => void;
+  onRefresh: () => void;
+}) {
+  const st = lead.status as LeadStatus;
+  /** Oxirgi bosqichlarda oldinga siljish yo'q. */
+  const canAdvance = st === "YANGI" || st === "ALOQA_QILINGAN" || st === "SINOV_DARSI";
+  const canBack = st !== "YANGI";
+  const yopiq = st === "TO_LANDI" || st === "BEKOR";
   return (
     <div className="glass-panel rounded-xl border border-white/60 dark:border-white/10 p-3 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start gap-2.5 mb-2.5">
@@ -73,6 +96,16 @@ function LeadCard({ lead, onMove, onDelete, onEdit, onOpen }: { lead: Lead; onMo
           </button>
           <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
             {lead.phone || [lead.school, lead.grade].filter(Boolean).join(" · ") || "—"}
+          </p>
+          {/* YOSHI VA SOVUQLIGI. Ilgari o'nta kartochka bir xil ko'rinardi —
+              bugun kelgani ham, besh hafta turgani ham. Endi bir qarashda
+              ko'rinadi va ro'yxatni saralab o'tirish shart emas. */}
+          <p className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate">
+            {lead.lastContactAt
+              ? `oxirgi aloqa ${fmtRelative(lead.lastContactAt)}`
+              : lead.createdAt ? `${fmtRelative(lead.createdAt)} qo'shilgan` : ""}
+            {lead.contactAttempts ? ` · ${lead.contactAttempts}-urinish` : ""}
+            {lead._count?.comments ? ` · 💬 ${lead._count.comments}` : ""}
           </p>
         </div>
         <button onClick={() => onDelete(lead)}
@@ -122,17 +155,48 @@ function LeadCard({ lead, onMove, onDelete, onEdit, onOpen }: { lead: Lead; onMo
                        hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
             <MessageSquare className="w-3 h-3" />
           </button>
-          {next && (
-            <button onClick={() => onMove(lead, next)}
+          {/* Orqaga qaytish — noto'g'ri bosilgan tugmani tuzatish uchun.
+              Ilgari bir mis-klik lidni abadiy noto'g'ri ustunda
+              qoldirardi. */}
+          {canBack && <StepBack leadId={lead.id} onDone={onRefresh} />}
+
+          {/* «To'ladi» bosqichida asosiy amal — o'quvchiga aylantirish. */}
+          {st === "TO_LANDI" && !lead.convertedStudentId && (
+            <button onClick={() => onConvert(lead)}
               className="flex items-center gap-0.5 ml-1 px-2 py-0.5 text-[10px] font-semibold
-                bg-indigo-600 text-white dark:bg-indigo-500
-                rounded-lg hover:opacity-80 transition-opacity">
-              {STATUS_CFG[next].label}
-              <ChevronRight className="w-2.5 h-2.5" />
+                         bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
+              <UserPlus className="w-2.5 h-2.5" />{" "}O&apos;quvchiga
             </button>
+          )}
+          {lead.convertedStudentId && (
+            <span title="O'quvchiga aylantirilgan"
+              className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold
+                         bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+              ✓ o&apos;quvchi
+            </span>
           )}
         </div>
       </div>
+
+      {/* QO'NG'IROQ NATIJASI — yopilmagan lidlarda. Uch tugma, chunki
+          qo'ng'iroqning natijasi ham uch xil bo'ladi. */}
+      {!yopiq && (
+        <CallOutcome leadId={lead.id} canAdvance={canAdvance} onDone={onRefresh} />
+      )}
+
+      {/* Nega yo'qotdik — «Bekor» ustunida ko'rinib tursin. */}
+      {st === "BEKOR" && lead.lostReason && (
+        <p className="mt-1.5 text-[10px] text-neutral-500 dark:text-neutral-400">
+          Sabab: {LOST_REASON_UZ[lead.lostReason] ?? lead.lostReason}
+        </p>
+      )}
+
+      {/* Keyingi aloqa sanasi. */}
+      {!yopiq && lead.nextContactAt && (
+        <p className="mt-1.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400">
+          Keyingi aloqa: {fmtRelative(lead.nextContactAt)}
+        </p>
+      )}
 
       {lead.assignedTo?.name && (
         <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-2 truncate">
@@ -159,6 +223,18 @@ export default function LeadsPage() {
   const [showImport,   setShowImport]   = useState(false);
   /** Tasma oynasi — qaysi lidning tarixi ochilgan. */
   const [feedTarget,   setFeedTarget]   = useState<Lead | null>(null);
+  /** O'quvchiga aylantirish oynasi. */
+  const [convertTarget, setConvertTarget] = useState<Lead | null>(null);
+
+  /**
+   * Taxta VA «bugun qo'ng'iroq» chizig'ini birga yangilaydi.
+   * Ikkalasi bir xil ma'lumotdan oziqlanadi — biri yangilanib
+   * ikkinchisi eskirib qolsa, ekranda ziddiyat ko'rinardi.
+   */
+  const refreshAll = () => {
+    mutate("/api/leads");
+    mutate("/api/leads/due");
+  };
   // «To'ladi» ga o'tkazishdan oldin kurs so'raladigan oyna
   const [courseTarget, setCourseTarget] = useState<Lead | null>(null);
   const [pickedCourse, setPickedCourse] = useState("");
@@ -229,12 +305,20 @@ export default function LeadsPage() {
   async function submitEdit() {
     if (!editTarget) return;
     if (!editForm.name.trim()) { setEditError("Ism majburiy"); return; }
+    const phoneDigits = editForm.phone.replace(/\D/g, "");
+    if (phoneDigits.length > 3 && phoneDigits.length !== 12) {
+      setEditError("Telefonni to'liq kiriting yoki bo'sh qoldiring"); return;
+    }
     setEditSaving(true); setEditError("");
     try {
       const res = await fetch(`/api/leads/${editTarget.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          name:   editForm.name.trim(),
+          // Yarim kiritilgan raqam yuborilmaydi — bo'sh qoldirilgani
+          // ma'qul, chunki unga qo'ng'iroq qilib bo'lmaydi.
+          phone:  phoneDigits.length === 12 ? editForm.phone : "",
           note:   editForm.note   || undefined,
           source: editForm.source || undefined,
           course: editForm.course || undefined,
@@ -321,6 +405,10 @@ export default function LeadsPage() {
         subtitle={isLoading ? "Yuklanmoqda..." : `Jami ${leads.length} ta lid`}
         action={{ label: "Yangi lid", onClick: () => openCreate("YANGI") }}
       />
+
+      <ConvertModal lead={convertTarget}
+        onClose={() => setConvertTarget(null)}
+        onDone={refreshAll} />
 
       <LeadImportModal open={showImport}
         onClose={() => setShowImport(false)}
@@ -489,6 +577,26 @@ export default function LeadsPage() {
           </>
         }
       >
+        {/* ISM VA TELEFON — ilgari bu yerda YO'Q edi.
+            Noto'g'ri yozilgan telefon raqamli lid har kuni chetlab
+            o'tiladigan o'lik kartochka bo'lardi va uni tuzatishning
+            yagona yo'li o'chirib, qaytadan yozish edi. Import
+            telefonsiz qatorlarni ataylab qabul qiladi (maktab
+            tashrifi), ya'ni raqamni KEYIN qo'shish imkoni bo'lishi
+            shart. */}
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Ism" required>
+            <Input value={editForm.name}
+              onChange={e => { setEditForm(p => ({...p, name: e.target.value})); setEditError(""); }}
+              className="h-10" />
+          </FormField>
+          <FormField label="Telefon" hint="Ixtiyoriy">
+            <PhoneInput value={editForm.phone}
+              onChange={v => { setEditForm(p => ({...p, phone: v})); setEditError(""); }}
+              error={editError.includes("Telefon")} />
+          </FormField>
+        </div>
+
         <FormField label="Manba">
           <SourcePicker value={editForm.source}
             onChange={v => setEditForm(p => ({...p, source: v}))} />
@@ -558,6 +666,12 @@ export default function LeadsPage() {
           })}
         </div>
 
+        {/* Bugun qo'ng'iroq qilinadiganlar — taxtadan YUQORIDA. */}
+        <DueStrip onOpen={(id) => {
+          const l = leads.find((x) => x.id === id);
+          if (l) setFeedTarget(l);
+        }} />
+
         {/* Search + import */}
         <div className="flex items-center gap-2 mb-5 flex-wrap">
           <div className="relative max-w-xs flex-1 min-w-[180px]">
@@ -603,7 +717,10 @@ export default function LeadsPage() {
                         </div>
                       ))
                     : colLeads.map((lead) => (
-                        <LeadCard key={lead.id} lead={lead} onMove={moveLead} onDelete={l => { setError(""); setDeleteTarget(l); }} onEdit={openEdit} onOpen={setFeedTarget} />
+                        <LeadCard key={lead.id} lead={lead}
+                          onDelete={l => { setError(""); setDeleteTarget(l); }}
+                          onEdit={openEdit} onOpen={setFeedTarget}
+                          onConvert={setConvertTarget} onRefresh={refreshAll} />
                       ))
                   }
                   {!isLoading && colLeads.length === 0 && (
