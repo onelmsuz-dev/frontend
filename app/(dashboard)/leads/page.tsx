@@ -33,6 +33,8 @@ interface Lead {
   status: LeadStatus;
   course?: string | null;
   courseId?: string | null;
+  /** TO'LIQ ro'yxat — bir nechta fanga bir vaqtda yozilgan bo'lishi mumkin. */
+  courses?: { courseId: string }[];
   school?: string | null;
   grade?: string | null;
   note?: string | null;
@@ -59,6 +61,11 @@ const STATUS_CFG: Record<LeadStatus, { label: string; color: string; headerBg: s
 const COLUMNS: LeadStatus[] = ["YANGI", "ALOQA_QILINGAN", "SINOV_DARSI", "TO_LANDI", "BEKOR"];
 
 const EMPTY = { name: "", phone: "", source: "Instagram", course: "", courseId: "",
+                // Bitta odam bir nechta fanga (masalan Matematika +
+                // Ingliz tili) BIR VAQTDA yozilishi mumkin (Bahtiyor,
+                // 2026-09-01) — shuning uchun massiv. `courseId` faqat
+                // BIRINCHISI bilan to'ldiriladi (submit paytida).
+                courseIds: [] as string[],
                 school: "", grade: "", note: "" };
 
 function Skeleton({ className }: { className?: string }) {
@@ -177,7 +184,7 @@ function LeadCard({ lead, onDelete, onEdit, onOpen, onConvert, onRefresh }: {
       {/* QO'NG'IROQ NATIJASI — yopilmagan lidlarda. Uch tugma, chunki
           qo'ng'iroqning natijasi ham uch xil bo'ladi. */}
       {!yopiq && (
-        <CallOutcome leadId={lead.id} canAdvance={canAdvance}
+        <CallOutcome leadId={lead.id} canAdvance={canAdvance} status={st}
           hasCourse={!!lead.courseId} onDone={onRefresh} />
       )}
 
@@ -263,8 +270,15 @@ export default function LeadsPage() {
 
   function openEdit(lead: Lead) {
     setEditTarget(lead);
+    // `lead.courses` — TO'LIQ ro'yxat. Bo'lmasa (masalan eski, hali
+    // yangilanmagan lid) `courseId`ning o'ziga tushamiz — bitta kurs
+    // ham bo'lsa "ro'yxat"ning bir elementi.
+    const courseIds = lead.courses?.length
+      ? lead.courses.map((c) => c.courseId)
+      : lead.courseId ? [lead.courseId] : [];
     setEditForm({ name: lead.name, phone: lead.phone, source: lead.source,
                   course: lead.course ?? "", courseId: lead.courseId ?? "",
+                  courseIds,
                   school: lead.school ?? "",
                   grade: lead.grade ?? "", note: lead.note ?? "" });
     setEditError("");
@@ -289,8 +303,11 @@ export default function LeadsPage() {
           phone:  phoneDigits.length === 12 ? editForm.phone : "",
           note:   editForm.note   || undefined,
           source: editForm.source || undefined,
-          course: editForm.course || undefined,
-          courseId: editForm.courseId || undefined,
+          // HAR DOIM to'liq ro'yxat sifatida yuboriladi (bo'sh bo'lsa
+          // ham) — backend buni "ro'yxatni SHU bilan almashtir" deb
+          // o'qiydi. Hech narsa o'zgartirilmagan bo'lsa ham natija bir
+          // xil qoladi.
+          courseIds: editForm.courseIds,
           school: editForm.school || undefined,
           grade:  editForm.grade  || undefined,
         }),
@@ -318,7 +335,7 @@ export default function LeadsPage() {
       setError("Telefonni to'liq kiriting yoki bo'sh qoldiring"); return;
     }
     if (!form.source) { setError("Manba tanlang"); return; }
-    if (initStatus === "TO_LANDI" && !form.courseId) {
+    if (initStatus === "TO_LANDI" && form.courseIds.length === 0) {
       setError("«To'ladi» bosqichi uchun kursni tanlang"); return;
     }
     setSaving(true); setError("");
@@ -329,8 +346,9 @@ export default function LeadsPage() {
         body: JSON.stringify({
           name: form.name, source: form.source, status: initStatus,
           phone:  phoneDigits.length === 12 ? form.phone : "",
-          course: form.course || undefined,
-          courseId: form.courseId || undefined,
+          // Bir nechta kurs tanlangan bo'lsa `courseIds` USTUN turadi
+          // (backend birinchisini `courseId`/`course`ga yozadi).
+          courseIds: form.courseIds.length > 0 ? form.courseIds : undefined,
           school: form.school || undefined,
           grade:  form.grade  || undefined,
           note:   form.note   || undefined,
@@ -480,11 +498,15 @@ export default function LeadsPage() {
         </div>
 
         <FormField label="Kurs"
-          hint={initStatus === "TO_LANDI" ? "«To'ladi» uchun majburiy" : "Ixtiyoriy"}>
+          hint={initStatus === "TO_LANDI" ? "«To'ladi» uchun majburiy — bir nechtasini tanlash mumkin" : "Ixtiyoriy, bir nechtasini tanlash mumkin"}>
           {/* TANLASH, ERKIN MATN EMAS — `courseId` saqlanishi kerak,
               aks holda «To'ladi» qoidasi UI orqali hech qachon
               qondirilmasdi (yozilgan "Matematika" so'zi bazadagi
-              kursga bog'lanmaydi). */}
+              kursga bog'lanmaydi).
+              KO'P TANLASH: bitta odam bir nechta fanga (masalan
+              Matematika + Ingliz tili) BIR VAQTDA yozilishi mumkin —
+              ilgari faqat bittasi tanlanardi va ikkinchi fanga to'lov
+              olib bo'lmasdi (Bahtiyor, 2026-09-01). */}
           {courses.length === 0 ? (
             <p className="text-[12px] text-neutral-400">Hali kurs yaratilmagan</p>
           ) : (
@@ -492,10 +514,11 @@ export default function LeadsPage() {
               {courses.map((c) => (
                 <button key={c.id} type="button"
                   onClick={() => setForm(p => ({...p,
-                    courseId: p.courseId === c.id ? "" : c.id,
-                    course: p.courseId === c.id ? "" : c.name}))}
+                    courseIds: p.courseIds.includes(c.id)
+                      ? p.courseIds.filter(id => id !== c.id)
+                      : [...p.courseIds, c.id]}))}
                   className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
-                    form.courseId === c.id
+                    form.courseIds.includes(c.id)
                       ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900 dark:border-neutral-100"
                       : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
                   {c.name}
@@ -574,7 +597,9 @@ export default function LeadsPage() {
           </FormField>
         </div>
         <FormField label="Kurs"
-          hint={editTarget?.status === "TO_LANDI" ? "«To'ladi» uchun majburiy" : "Ixtiyoriy"}>
+          hint={editTarget?.status === "TO_LANDI" ? "«To'ladi» uchun majburiy — bir nechtasini tanlash mumkin" : "Ixtiyoriy, bir nechtasini tanlash mumkin"}>
+          {/* KO'P TANLASH — bitta odam bir nechta fanga (masalan
+              Matematika + Ingliz tili) BIR VAQTDA yozilishi mumkin. */}
           {courses.length === 0 ? (
             <p className="text-[12px] text-neutral-400">Hali kurs yaratilmagan</p>
           ) : (
@@ -582,10 +607,11 @@ export default function LeadsPage() {
               {courses.map((c) => (
                 <button key={c.id} type="button"
                   onClick={() => setEditForm(p => ({...p,
-                    courseId: p.courseId === c.id ? "" : c.id,
-                    course: p.courseId === c.id ? "" : c.name}))}
+                    courseIds: p.courseIds.includes(c.id)
+                      ? p.courseIds.filter(id => id !== c.id)
+                      : [...p.courseIds, c.id]}))}
                   className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
-                    editForm.courseId === c.id
+                    editForm.courseIds.includes(c.id)
                       ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
                       : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
                   {c.name}

@@ -32,14 +32,21 @@ function plusDays(n: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** Backend bilan bir xil — "Gaplashdim" qaysi bosqichga olib boradi. */
+const NEXT_LABEL: Record<string, string> = {
+  YANGI: "Aloqa qilindi", ALOQA_QILINGAN: "Sinov darsi", SINOV_DARSI: "To'ladi",
+};
+
 export function CallOutcome({
-  leadId, canAdvance, hasCourse, onDone,
+  leadId, canAdvance, hasCourse, status, onDone,
 }: {
   leadId: string;
   /** Oldinga siljish mumkinmi (oxirgi bosqichda emasmi). */
   canAdvance: boolean;
   /** Lidda kurs allaqachon belgilanganmi. */
   hasCourse: boolean;
+  /** Joriy bosqich — "Rozi" tugmasida qaysi bosqichga o'tishini ko'rsatish uchun. */
+  status: string;
   onDone: () => void;
 }) {
   const { data: coursesRaw } = useCourses();
@@ -52,6 +59,13 @@ export function CallOutcome({
   const [pending, setPending] = useState<"JAVOB_BERMADI" | "GAPLASHDIM" | null>(null);
   /** Kurs so'ralganda — qaysi ekstra maydonlar bilan qayta yuborish kerak. */
   const [pendingExtra, setPendingExtra] = useState<Record<string, unknown>>({});
+  /**
+   * TANLANGAN KURSLAR — bitta odam bir nechta fanga (masalan
+   * Matematika + Ingliz tili) BIR VAQTDA yozilishi mumkin (Bahtiyor,
+   * 2026-09-01). Shuning uchun bitta bosishda yuborish emas, TANLAB
+   * KEYIN TASDIQLASH kerak.
+   */
+  const [pickedCourses, setPickedCourses] = useState<string[]>([]);
 
   async function send(outcome: string, extra: Record<string, unknown> = {}) {
     setBusy(outcome); setErr("");
@@ -77,7 +91,7 @@ export function CallOutcome({
         }
         throw new Error(j?.error ?? "Saqlab bo'lmadi");
       }
-      setOpen(null); setPending(null); setPendingExtra({});
+      setOpen(null); setPending(null); setPendingExtra({}); setPickedCourses([]);
       onDone();
     } catch (e) {
       setErr((e as Error).message);
@@ -116,37 +130,80 @@ export function CallOutcome({
     return (
       <div className="w-full space-y-1.5 pt-1.5">
         <p className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">
-          Qaysi kursga yozildi?
+          Qaysi kurs(lar)ga yozildi?
         </p>
         {courses.length === 0 ? (
           <p className="text-[10px] text-neutral-400">Hali kurs yaratilmagan</p>
         ) : (
           <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+            {/* TANLAB, KEYIN TASDIQLASH — bir necha fanga (masalan
+                Matematika + Ingliz tili) BIR VAQTDA yozilgan bo'lishi
+                mumkin, shuning uchun bitta bosishda yuborilmaydi. */}
             {courses.map((c) => (
-              <button key={c.id} disabled={!!busy}
-                onClick={() => send(pending!, { ...pendingExtra, courseId: c.id })}
-                className={cn(btn, "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300")}>
-                {busy === pending ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <BookOpen className="w-2.5 h-2.5" />}
+              <button key={c.id} type="button" disabled={!!busy}
+                onClick={() => setPickedCourses(p => p.includes(c.id)
+                  ? p.filter(id => id !== c.id) : [...p, c.id])}
+                className={cn(btn,
+                  pickedCourses.includes(c.id)
+                    ? "bg-emerald-600 text-white"
+                    : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300")}>
+                <BookOpen className="w-2.5 h-2.5" />
                 {c.name}
               </button>
             ))}
           </div>
         )}
-        <button onClick={() => { setOpen(null); setPending(null); setErr(""); }}
-          className={cn(btn, "text-neutral-400")}>
-          <X className="w-2.5 h-2.5" /> Bekor
-        </button>
+        <div className="flex gap-1">
+          <button disabled={!!busy || pickedCourses.length === 0}
+            onClick={() => send(pending!, { ...pendingExtra, courseIds: pickedCourses })}
+            className={cn(btn, "bg-green-600 text-white hover:bg-green-700")}>
+            {busy === pending
+              ? <Loader2 className="w-2.5 h-2.5 animate-spin" />
+              : `Tasdiqlash${pickedCourses.length > 1 ? ` (${pickedCourses.length})` : ""}`}
+          </button>
+          <button onClick={() => { setOpen(null); setPending(null); setPickedCourses([]); setErr(""); }}
+            className={cn(btn, "text-neutral-400")}>
+            <X className="w-2.5 h-2.5" /> Bekor
+          </button>
+        </div>
         {err && <p className="text-[10px] text-red-600">{err}</p>}
       </div>
     );
   }
 
   if (open === "date") {
+    const nextLabel = NEXT_LABEL[status];
     return (
       <div className="w-full space-y-1.5 pt-1.5">
-        <p className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">
-          Qachon qayta bog&apos;lanamiz?
-        </p>
+        {/*
+         * SANA VA BOSQICH KO'CHISHI — IKKI ALOHIDA QAROR, ARALASHTIRIB
+         * BO'LMAYDI. Bahtiyor buni aniq topdi: "gaplashdimni bosib
+         * sanani belgilasa keyingi etapga o'tib ketyapti" — ya'ni odam
+         * "3 kundan qayta bog'lanamiz" desa ham, lid baribir keyingi
+         * ustunga sirg'anib ketardi. Endi ikkisi ANIQ ajratilgan:
+         * "Rozi" — bosqich hozir ko'chadi, sana yo'q. Sana tugmalari —
+         * bosqich SAQLANADI, DueStrip "Bugun qo'ng'iroq qilish" orqali
+         * eslatib turadi.
+         */}
+        {pending === "GAPLASHDIM" && nextLabel && (
+          <>
+            <button disabled={!!busy} onClick={() => send(pending!)}
+              className={cn(btn, "w-full justify-center py-1.5",
+                            "bg-green-600 text-white hover:bg-green-700")}>
+              {busy === pending
+                ? <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                : `✅ Rozi — ${nextLabel}ga o'tkazish`}
+            </button>
+            <p className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400 pt-0.5">
+              Yoki hali o&apos;ylayapti — qachon qayta bog&apos;lanamiz?
+            </p>
+          </>
+        )}
+        {pending === "JAVOB_BERMADI" && (
+          <p className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">
+            Qachon qayta urinamiz?
+          </p>
+        )}
         <div className="flex flex-wrap gap-1">
           {[["Ertaga", 1], ["3 kundan", 3], ["Bir haftadan", 7]].map(([l, n]) => (
             <button key={String(l)} disabled={!!busy}
@@ -155,13 +212,19 @@ export function CallOutcome({
               {l}
             </button>
           ))}
-          {/* Sanani belgilamasdan ham yopish mumkin — majburiy qilsak,
-              odam tugmani umuman bosmay qo'yardi. */}
-          <button disabled={!!busy} onClick={() => send(pending!)}
-            className={cn(btn, "text-neutral-500 dark:text-neutral-400")}>
-            Sanasiz
-          </button>
+          {/* Faqat "Javob bermadi" uchun — "Gaplashdim"da bu vazifani
+              yuqoridagi "Rozi" tugmasi bosadi (nomi aniqroq). */}
+          {pending === "JAVOB_BERMADI" && (
+            <button disabled={!!busy} onClick={() => send(pending!)}
+              className={cn(btn, "text-neutral-500 dark:text-neutral-400")}>
+              Sanasiz
+            </button>
+          )}
         </div>
+        <button onClick={() => { setOpen(null); setPending(null); setErr(""); }}
+          className={cn(btn, "text-neutral-400")}>
+          <X className="w-2.5 h-2.5" /> Bekor
+        </button>
         {err && <p className="text-[10px] text-red-600">{err}</p>}
       </div>
     );
