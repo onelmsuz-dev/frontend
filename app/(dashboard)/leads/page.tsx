@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormField } from "@/components/ui/form-field";
-import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil, Upload, MessageSquare, UserPlus } from "lucide-react";
+import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil, Upload, MessageSquare, UserPlus, LayoutGrid, Radio } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLeads } from "@/lib/hooks/useLeads";
 import { useCourses } from "@/lib/hooks/useCourses";
@@ -17,6 +17,8 @@ import { LeadFeedPanel } from "@/components/leads/lead-feed";
 import { CallOutcome, StepBack } from "@/components/leads/call-outcome";
 import { DueStrip } from "@/components/leads/due-strip";
 import { ConvertModal } from "@/components/leads/convert-modal";
+import { MetaIntegrationPanel } from "@/components/leads/meta-integration";
+import { useFeature } from "@/lib/hooks/useFeatures";
 import { LOST_REASON_UZ } from "@/lib/hooks/useLeads";
 import { fmtRelative } from "@/lib/date-uz";
 import { mutate } from "swr";
@@ -203,6 +205,22 @@ function LeadCard({ lead, onDelete, onEdit, onOpen, onConvert, onRefresh }: {
 }
 
 export default function LeadsPage() {
+  /**
+   * ALOHIDA TAB — "Facebook/Instagram" integratsiyasi taxtadan ajratilgan.
+   * Bir sahifada ikkalasi aralashsa, kanban holatini yo'qotmasdan
+   * integratsiya sozlamalariga kirib-chiqish qulay bo'lmasdi.
+   */
+  const [tab, setTab] = useState<"board" | "meta">("board");
+  // Bosqichma-bosqich chiqarish (/admode/features): standart OFF, avval
+  // demo markazda, App Review yakunlangach hammaga. `undefined` = hali
+  // yuklanmoqda — shu payt HAM tab yashirin turadi, keyin miltillamasin.
+  const metaEnabled = useFeature("meta-lead-ads");
+  // Bayroq ochiq tabda turgan paytda o'chirilsa — sahifa bo'sh qolmasin,
+  // taxtaga qaytaramiz.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (metaEnabled === false) setTab("board");
+  }, [metaEnabled]);
   const [search,    setSearch]    = useState("");
   const [showModal,    setShowModal]    = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
@@ -358,8 +376,29 @@ export default function LeadsPage() {
       <TopHeader
         title="Lidlar (CRM)"
         subtitle={isLoading ? "Yuklanmoqda..." : `Jami ${leads.length} ta lid`}
-        action={{ label: "Yangi lid", onClick: () => openCreate("YANGI") }}
+        action={tab === "board" ? { label: "Yangi lid", onClick: () => openCreate("YANGI") } : undefined}
       />
+
+      {/* Bayroq o'chiq bo'lsa tab qatori umuman ko'rsatilmaydi — hozircha
+          ILGARIGIDEK bitta taxta sahifasi, boshqa markazlarga TEGMAYDI. */}
+      {metaEnabled && (
+        <div className="px-5 pt-4 flex gap-1 border-b border-white/60 dark:border-white/10">
+          <button onClick={() => setTab("board")}
+            className={cn("flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
+              tab === "board"
+                ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
+                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+            <LayoutGrid className="w-3.5 h-3.5" /> Taxta
+          </button>
+          <button onClick={() => setTab("meta")}
+            className={cn("flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
+              tab === "meta"
+                ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
+                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+            <Radio className="w-3.5 h-3.5" /> Facebook/Instagram
+          </button>
+        </div>
+      )}
 
       <ConvertModal lead={convertTarget}
         onClose={() => setConvertTarget(null)}
@@ -582,6 +621,13 @@ export default function LeadsPage() {
         </>}
       />
 
+      {metaEnabled && tab === "meta" && (
+        <div className="p-5">
+          <MetaIntegrationPanel />
+        </div>
+      )}
+
+      {tab === "board" && (
       <div className="p-5">
         {/* Pipeline summary */}
         <div className="flex items-center gap-2 mb-5 flex-wrap">
@@ -669,6 +715,7 @@ export default function LeadsPage() {
           })}
         </div>
       </div>
+      )}
     </div>
   );
 }
