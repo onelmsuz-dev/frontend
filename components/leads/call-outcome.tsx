@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { LOST_REASONS } from "@/lib/hooks/useLeads";
-import { Phone, PhoneOff, X, Undo2, Loader2 } from "lucide-react";
+import { useCourses } from "@/lib/hooks/useCourses";
+import { Phone, PhoneOff, X, Undo2, Loader2, BookOpen } from "lucide-react";
 
 /**
  * QO'NG'IROQ NATIJASI.
@@ -32,17 +33,25 @@ function plusDays(n: number): string {
 }
 
 export function CallOutcome({
-  leadId, canAdvance, onDone,
+  leadId, canAdvance, hasCourse, onDone,
 }: {
   leadId: string;
   /** Oldinga siljish mumkinmi (oxirgi bosqichda emasmi). */
   canAdvance: boolean;
+  /** Lidda kurs allaqachon belgilanganmi. */
+  hasCourse: boolean;
   onDone: () => void;
 }) {
-  const [open, setOpen] = useState<null | "reason" | "date">(null);
+  const { data: coursesRaw } = useCourses();
+  const courses: { id: string; name: string }[] =
+    Array.isArray(coursesRaw) ? coursesRaw : (coursesRaw?.data ?? []);
+
+  const [open, setOpen] = useState<null | "reason" | "date" | "course">(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [pending, setPending] = useState<"JAVOB_BERMADI" | "GAPLASHDIM" | null>(null);
+  /** Kurs so'ralganda — qaysi ekstra maydonlar bilan qayta yuborish kerak. */
+  const [pendingExtra, setPendingExtra] = useState<Record<string, unknown>>({});
 
   async function send(outcome: string, extra: Record<string, unknown> = {}) {
     setBusy(outcome); setErr("");
@@ -53,8 +62,22 @@ export function CallOutcome({
         body: JSON.stringify({ outcome, ...extra }),
       });
       const j = await r.json();
-      if (!r.ok) throw new Error(j?.error ?? "Saqlab bo'lmadi");
-      setOpen(null); setPending(null);
+      if (!r.ok) {
+        // Server AYNAN shu sababdan rad etsa — kurs tanlash bosqichini
+        // ochamiz. Boshqa xatolar oddiy xabar bo'lib qoladi.
+        //
+        // ILGARI BU YERDA HECH NARSA YO'Q EDI: kurs so'raladigan oyna
+        // faqat eski (endi ishlatilmaydigan) tugmadan ochilardi. «Gaplashdim»
+        // bosilganda odam qizil xato matnini ko'rardi-yu, kurs tanlaydigan
+        // joy topa olmasdi — o'lik uch.
+        if (String(j?.error ?? "").includes("kursni tanlang")) {
+          setPending(outcome as never); setPendingExtra(extra);
+          setOpen("course"); setBusy(null);
+          return;
+        }
+        throw new Error(j?.error ?? "Saqlab bo'lmadi");
+      }
+      setOpen(null); setPending(null); setPendingExtra({});
       onDone();
     } catch (e) {
       setErr((e as Error).message);
@@ -84,6 +107,35 @@ export function CallOutcome({
             <X className="w-2.5 h-2.5" /> Bekor
           </button>
         </div>
+        {err && <p className="text-[10px] text-red-600">{err}</p>}
+      </div>
+    );
+  }
+
+  if (open === "course") {
+    return (
+      <div className="w-full space-y-1.5 pt-1.5">
+        <p className="text-[10px] font-semibold text-neutral-500 dark:text-neutral-400">
+          Qaysi kursga yozildi?
+        </p>
+        {courses.length === 0 ? (
+          <p className="text-[10px] text-neutral-400">Hali kurs yaratilmagan</p>
+        ) : (
+          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+            {courses.map((c) => (
+              <button key={c.id} disabled={!!busy}
+                onClick={() => send(pending!, { ...pendingExtra, courseId: c.id })}
+                className={cn(btn, "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300")}>
+                {busy === pending ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <BookOpen className="w-2.5 h-2.5" />}
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+        <button onClick={() => { setOpen(null); setPending(null); setErr(""); }}
+          className={cn(btn, "text-neutral-400")}>
+          <X className="w-2.5 h-2.5" /> Bekor
+        </button>
         {err && <p className="text-[10px] text-red-600">{err}</p>}
       </div>
     );
@@ -121,9 +173,18 @@ export function CallOutcome({
         {canAdvance && (
           <button disabled={!!busy}
             onClick={() => { setPending("GAPLASHDIM"); setOpen("date"); }}
-            title="Gaplashdim — keyingi bosqichga o'tadi"
+            title={hasCourse ? "Gaplashdim — keyingi bosqichga o'tadi"
+                              : "Gaplashdim — «To'ladi» bosqichida kurs so'raladi"}
             className={cn(btn, "bg-indigo-600 text-white hover:bg-indigo-700")}>
-            <Phone className="w-2.5 h-2.5" /> Gaplashdim
+            <Phone className="w-2.5 h-2.5" />
+            Gaplashdim
+            {/* Kurs hali yo'q — oxirgi qadamda so'raladi (tooltipda
+                aytilgan). Ilgari bu aynan shu tugma bosilganda XATO
+                chiqib, kurs tanlaydigan joy bo'lmasdi; endi
+                CallOutcome server rad etganda o'zi so'raydi. Tor
+                kartochkada matn belgisi joy yemasin deb faqat
+                tooltipda qoldirilgan. */}
+            {!hasCourse && <span className="w-1 h-1 rounded-full bg-white/70" />}
           </button>
         )}
         <button disabled={!!busy}

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { mutate } from "swr";
 import { cn } from "@/lib/utils";
 import { useLeadSources } from "@/lib/hooks/useLeads";
-import { Plus, Check, X, Loader2 } from "lucide-react";
+import { Plus, Check, X, Loader2, Trash2 } from "lucide-react";
 
 /**
  * LID MANBASINI TANLASH.
@@ -61,17 +61,49 @@ export function SourcePicker({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
   const list = sources ?? [];
   // Lid eski manba bilan yozilgan va u ro'yxatdan olib tashlangan
-  // bo'lishi mumkin — shunda ham tanlangani ko'rinib tursin.
+  // bo'lishi mumkin — shunda ham tanlangani ko'rinib tursin. Bunday
+  // yozuvda `id` yo'q, shuning uchun o'chirish tugmasi chiqmaydi.
   const names = list.map((s) => s.name);
-  const all = value && !names.includes(value) ? [...names, value] : names;
+  const all: { name: string; id: string | null }[] = [
+    ...list.map((s) => ({ name: s.name, id: s.id })),
+    ...(value && !names.includes(value) ? [{ name: value, id: null }] : []),
+  ];
+
+  /**
+   * MANBANI RO'YXATDAN OLISH.
+   *
+   * Ilgari bu tugma HECH QAYERDA yo'q edi: `DELETE /leads/sources/:id`
+   * backendda ishlagan va sinalgan, lekin uni chaqiradigan yagona joy
+   * frontendda umuman bo'lmagan. Ya'ni markaz xato yozgan yoki endi
+   * kerak bo'lmagan manbani (masalan bekor qilingan aksiya nomi)
+   * ro'yxatdan CHIQARIB TASHLAY OLMASDI — faqat qo'shishi mumkin edi.
+   *
+   * Standart manba (`default:` psevdo-id) o'chirilmaydi — u bazada
+   * umuman yo'q, o'chirish so'rovi 404 qaytarardi.
+   */
+  async function remove(id: string) {
+    setRemovingId(id); setErr("");
+    try {
+      const r = await fetch(`/api/leads/sources/${id}`, { method: "DELETE" });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(j?.error ?? "O'chirib bo'lmadi");
+      }
+      await mutate("/api/leads/sources");
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally { setRemovingId(null); }
+  }
 
   async function add() {
     const name = draft.trim();
     if (!name) return;
     // Allaqachon bor bo'lsa — yangi so'rov yubormaymiz, shunchaki tanlaymiz.
-    const exists = all.find((n) => n.toLowerCase() === name.toLowerCase());
+    const exists = names.find((n) => n.toLowerCase() === name.toLowerCase());
     if (exists) { onChange(exists); setAdding(false); setDraft(""); return; }
 
     setBusy(true); setErr("");
@@ -104,17 +136,32 @@ export function SourcePicker({
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5">
-        {all.map((name) => (
-          <button key={name} type="button" disabled={disabled}
-            onClick={() => onChange(name)}
+        {all.map(({ name, id }) => (
+          <div key={name}
             className={cn(
-              "h-8 px-3 rounded-xl text-[12px] font-semibold transition-all disabled:opacity-50",
+              "group flex items-center h-8 rounded-xl text-[12px] font-semibold transition-all",
               value === name
                 ? cn(sourceColor(name), "ring-2 ring-offset-1 ring-neutral-900/20 dark:ring-white/30 dark:ring-offset-neutral-900")
                 : "glass-soft text-neutral-600 dark:text-neutral-300 hover:bg-white/70 dark:hover:bg-white/10",
             )}>
-            {name}
-          </button>
+            <button type="button" disabled={disabled} onClick={() => onChange(name)}
+              className="h-full pl-3 pr-1.5 disabled:opacity-50">
+              {name}
+            </button>
+            {/* Standart manba (id yo'q yoki "default:" bilan boshlanadi)
+                va lidning eski manbasi (id umuman yo'q) o'chirilmaydi. */}
+            {id && !id.startsWith("default:") && !disabled && (
+              <button type="button" title={`"${name}" manbasini ro'yxatdan olish`}
+                disabled={removingId === id}
+                onClick={(e) => { e.stopPropagation(); remove(id); }}
+                className="h-full px-1.5 rounded-r-xl opacity-0 group-hover:opacity-60
+                           hover:!opacity-100 hover:text-red-600 transition-opacity">
+                {removingId === id
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <Trash2 className="w-3 h-3" />}
+              </button>
+            )}
+          </div>
         ))}
 
         {!adding && (

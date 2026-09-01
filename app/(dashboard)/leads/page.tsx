@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormField } from "@/components/ui/form-field";
-import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil, Upload, BookOpen, MessageSquare, UserPlus } from "lucide-react";
+import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil, Upload, MessageSquare, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLeads } from "@/lib/hooks/useLeads";
 import { useCourses } from "@/lib/hooks/useCourses";
@@ -56,13 +56,7 @@ const STATUS_CFG: Record<LeadStatus, { label: string; color: string; headerBg: s
 
 const COLUMNS: LeadStatus[] = ["YANGI", "ALOQA_QILINGAN", "SINOV_DARSI", "TO_LANDI", "BEKOR"];
 
-const NEXT_STATUS: Partial<Record<LeadStatus, LeadStatus>> = {
-  YANGI:          "ALOQA_QILINGAN",
-  ALOQA_QILINGAN: "SINOV_DARSI",
-  SINOV_DARSI:    "TO_LANDI",
-};
-
-const EMPTY = { name: "", phone: "", source: "Instagram", course: "",
+const EMPTY = { name: "", phone: "", source: "Instagram", course: "", courseId: "",
                 school: "", grade: "", note: "" };
 
 function Skeleton({ className }: { className?: string }) {
@@ -181,7 +175,8 @@ function LeadCard({ lead, onDelete, onEdit, onOpen, onConvert, onRefresh }: {
       {/* QO'NG'IROQ NATIJASI — yopilmagan lidlarda. Uch tugma, chunki
           qo'ng'iroqning natijasi ham uch xil bo'ladi. */}
       {!yopiq && (
-        <CallOutcome leadId={lead.id} canAdvance={canAdvance} onDone={onRefresh} />
+        <CallOutcome leadId={lead.id} canAdvance={canAdvance}
+          hasCourse={!!lead.courseId} onDone={onRefresh} />
       )}
 
       {/* Nega yo'qotdik — «Bekor» ustunida ko'rinib tursin. */}
@@ -225,6 +220,12 @@ export default function LeadsPage() {
   const [feedTarget,   setFeedTarget]   = useState<Lead | null>(null);
   /** O'quvchiga aylantirish oynasi. */
   const [convertTarget, setConvertTarget] = useState<Lead | null>(null);
+  // ESLATMA: kurs so'raladigan alohida oyna (`courseTarget`) endi YO'Q.
+  // Kurs talabi ikki joyda hal qilinadi: yaratish/tahrirlash formasida
+  // (haqiqiy kurs tanlagich) va `CallOutcome` ichida (server rad
+  // etganda o'zi so'raydi). Ilgari uchinchi, alohida mexanizm ham bor
+  // edi — u faqat o'z-o'zidan chaqirilardi va CallOutcome joriy
+  // qilinganda hech kim uni ishga tushirmay qoldi (jim regressiya).
 
   /**
    * Taxta VA «bugun qo'ng'iroq» chizig'ini birga yangilaydi.
@@ -236,68 +237,17 @@ export default function LeadsPage() {
     mutate("/api/leads/due");
   };
   // «To'ladi» ga o'tkazishdan oldin kurs so'raladigan oyna
-  const [courseTarget, setCourseTarget] = useState<Lead | null>(null);
-  const [pickedCourse, setPickedCourse] = useState("");
-  const [courseSaving, setCourseSaving] = useState(false);
-  const [courseError,  setCourseError]  = useState("");
 
   const { data: raw, isLoading } = useLeads();
   const leads: Lead[] = Array.isArray(raw) ? raw : [];
   const { data: courseData } = useCourses();
   const courses: Course[] = Array.isArray(courseData) ? courseData : (courseData?.data ?? []);
 
-  /**
-   * Lidni keyingi bosqichga o'tkazadi.
-   *
-   * «TO'LADI» UCHUN KURS MAJBURIY. Usiz «qaysi kurs qancha lid berdi»
-   * degan savolga javob yo'q: pul kelgan, lekin qaysi yo'nalishga
-   * kelgani yozilmay qolgan. Server buni rad etadi, shuning uchun
-   * bu yerda oldindan kurs so'raladi.
-   *
-   * Ilgari bu funksiya javobga UMUMAN qaramasdi — server rad etsa,
-   * kartochka jimgina joyida qolardi va odam tugmani qayta-qayta
-   * bosaverardi.
-   */
-  async function moveLead(lead: Lead, status: LeadStatus, courseId?: string) {
-    if (status === "TO_LANDI" && !lead.courseId && !courseId) {
-      setCourseTarget(lead); setCourseError(""); setPickedCourse("");
-      return;
-    }
-    setError("");
-    try {
-      const res = await fetch(`/api/leads/${lead.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, ...(courseId ? { courseId } : {}) }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        const msg = d?.error ?? "O'zgartirib bo'lmadi";
-        if (courseTarget) setCourseError(msg); else setError(msg);
-        return false;
-      }
-      mutate("/api/leads");
-      return true;
-    } catch {
-      const msg = "Serverga ulanib bo'lmadi";
-      if (courseTarget) setCourseError(msg); else setError(msg);
-      return false;
-    }
-  }
-
-  async function confirmCourse() {
-    if (!courseTarget) return;
-    if (!pickedCourse) { setCourseError("Kursni tanlang"); return; }
-    setCourseSaving(true); setCourseError("");
-    const ok = await moveLead(courseTarget, "TO_LANDI", pickedCourse);
-    setCourseSaving(false);
-    if (ok) { setCourseTarget(null); setPickedCourse(""); }
-  }
-
   function openEdit(lead: Lead) {
     setEditTarget(lead);
     setEditForm({ name: lead.name, phone: lead.phone, source: lead.source,
-                  course: lead.course ?? "", school: lead.school ?? "",
+                  course: lead.course ?? "", courseId: lead.courseId ?? "",
+                  school: lead.school ?? "",
                   grade: lead.grade ?? "", note: lead.note ?? "" });
     setEditError("");
   }
@@ -322,6 +272,7 @@ export default function LeadsPage() {
           note:   editForm.note   || undefined,
           source: editForm.source || undefined,
           course: editForm.course || undefined,
+          courseId: editForm.courseId || undefined,
           school: editForm.school || undefined,
           grade:  editForm.grade  || undefined,
         }),
@@ -349,6 +300,9 @@ export default function LeadsPage() {
       setError("Telefonni to'liq kiriting yoki bo'sh qoldiring"); return;
     }
     if (!form.source) { setError("Manba tanlang"); return; }
+    if (initStatus === "TO_LANDI" && !form.courseId) {
+      setError("«To'ladi» bosqichi uchun kursni tanlang"); return;
+    }
     setSaving(true); setError("");
     try {
       const res = await fetch("/api/leads", {
@@ -358,6 +312,7 @@ export default function LeadsPage() {
           name: form.name, source: form.source, status: initStatus,
           phone:  phoneDigits.length === 12 ? form.phone : "",
           course: form.course || undefined,
+          courseId: form.courseId || undefined,
           school: form.school || undefined,
           grade:  form.grade  || undefined,
           note:   form.note   || undefined,
@@ -433,57 +388,6 @@ export default function LeadsPage() {
         {feedTarget && <LeadFeedPanel leadId={feedTarget.id} />}
       </Modal>
 
-      {/* «To'ladi» ga o'tishdan oldin kurs so'raladi. Server ham buni
-          talab qiladi — bu oyna shunchaki xatoni odam tiliga
-          o'giradi va darhol tuzatish imkonini beradi. */}
-      <Modal
-        open={!!courseTarget}
-        onClose={() => { setCourseTarget(null); setCourseError(""); }}
-        title="Qaysi kursga to'ladi?"
-        subtitle={courseTarget?.name}
-        footer={
-          <>
-            <Button onClick={confirmCourse} disabled={courseSaving || !pickedCourse}
-              className="flex-1 h-9 bg-green-600 hover:bg-green-700 text-white text-[13px]">
-              {courseSaving ? "Saqlanmoqda..." : "To'ladi deb belgilash"}
-            </Button>
-            <Button variant="outline" className="h-9 px-4 text-[13px]"
-              onClick={() => { setCourseTarget(null); setCourseError(""); }}>Bekor</Button>
-          </>
-        }
-      >
-        <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mb-3 leading-relaxed">
-          Kurs ko&apos;rsatilmasa, keyin &laquo;qaysi kurs qancha lid berdi&raquo;
-          degan savolga javob topib bo&apos;lmaydi.
-        </p>
-        {courses.length === 0 ? (
-          <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl px-3 py-2.5">
-            <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-px" />
-            <p className="text-[12px] text-neutral-700 dark:text-neutral-300">
-              Hali kurs yaratilmagan. Avval &laquo;Kurslar&raquo; bo&apos;limida kurs qo&apos;shing.
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-1.5 max-h-64 overflow-y-auto">
-            {courses.map((c) => (
-              <button key={c.id} onClick={() => { setPickedCourse(c.id); setCourseError(""); }}
-                className={cn("flex items-center gap-2 px-3 py-2.5 rounded-xl text-left transition-all border",
-                  pickedCourse === c.id
-                    ? "bg-green-50 dark:bg-green-900/20 border-green-500 text-green-800 dark:text-green-300"
-                    : "border-white/60 dark:border-white/10 text-neutral-700 dark:text-neutral-300 hover:border-neutral-400")}>
-                <BookOpen className="w-3.5 h-3.5 shrink-0 opacity-60" />
-                <span className="text-[13px] font-medium flex-1 truncate">{c.name}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {courseError && (
-          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2.5 mt-3">
-            <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-            <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{courseError}</p>
-          </div>
-        )}
-      </Modal>
 
       <Modal
         open={showModal}
@@ -536,13 +440,30 @@ export default function LeadsPage() {
           </FormField>
         </div>
 
-        <FormField label="Kurs" hint="Ixtiyoriy">
-          <Input
-            placeholder="Matematika, Ingliz tili..."
-            value={form.course}
-            onChange={e => setForm(p => ({...p, course: e.target.value}))}
-            className="h-10"
-          />
+        <FormField label="Kurs"
+          hint={initStatus === "TO_LANDI" ? "«To'ladi» uchun majburiy" : "Ixtiyoriy"}>
+          {/* TANLASH, ERKIN MATN EMAS — `courseId` saqlanishi kerak,
+              aks holda «To'ladi» qoidasi UI orqali hech qachon
+              qondirilmasdi (yozilgan "Matematika" so'zi bazadagi
+              kursga bog'lanmaydi). */}
+          {courses.length === 0 ? (
+            <p className="text-[12px] text-neutral-400">Hali kurs yaratilmagan</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {courses.map((c) => (
+                <button key={c.id} type="button"
+                  onClick={() => setForm(p => ({...p,
+                    courseId: p.courseId === c.id ? "" : c.id,
+                    course: p.courseId === c.id ? "" : c.name}))}
+                  className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
+                    form.courseId === c.id
+                      ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900 dark:border-neutral-100"
+                      : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          )}
         </FormField>
 
         <FormField label="Izoh" hint="Ixtiyoriy">
@@ -613,13 +534,26 @@ export default function LeadsPage() {
               className="h-10" />
           </FormField>
         </div>
-        <FormField label="Kurs" hint="Ixtiyoriy">
-          <Input
-            placeholder="Matematika, Ingliz tili..."
-            value={editForm.course}
-            onChange={e => setEditForm(p => ({...p, course: e.target.value}))}
-            className="h-10"
-          />
+        <FormField label="Kurs"
+          hint={editTarget?.status === "TO_LANDI" ? "«To'ladi» uchun majburiy" : "Ixtiyoriy"}>
+          {courses.length === 0 ? (
+            <p className="text-[12px] text-neutral-400">Hali kurs yaratilmagan</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {courses.map((c) => (
+                <button key={c.id} type="button"
+                  onClick={() => setEditForm(p => ({...p,
+                    courseId: p.courseId === c.id ? "" : c.id,
+                    course: p.courseId === c.id ? "" : c.name}))}
+                  className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
+                    editForm.courseId === c.id
+                      ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
+                      : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          )}
         </FormField>
         <FormField label="Izoh" hint="Ixtiyoriy">
           <Input
