@@ -324,6 +324,19 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const memberGroupIds = new Set(activeSgs.map((sg: any) => sg.groupId));
   const availableGroups = allGroups.filter(g => !memberGroupIds.has(g.id));
 
+  // CHEGIRMALAR TARIXI. Ilgari chegirma balansni jimgina kamaytirardi —
+  // xodim ekranga qarab bu to'lovmi, chegirmami yoki tuzatishmi farqlay
+  // olmasdi ("hisob-kitob tushunarsiz" degan taassurotning bir qismi
+  // aynan shundan edi). `charges` backend'dan ALLAQACHON to'liq kelardi
+  // (`reason`, `discountAmount`, `discountLabel`) — faqat sahifa buni
+  // hech qachon o'qimasdi.
+  const groupNameById = new Map<string, string>(
+    (student.groups ?? []).map((sg: any) => [sg.groupId, sg.group?.name]),
+  );
+  const recentDiscounts: any[] = (student.charges ?? [])
+    .filter((c: any) => c.reason === "DISCOUNT")
+    .slice(0, 5);
+
   return (
     <div>
       <TopHeader
@@ -689,6 +702,24 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     balance={student.balance ?? 0}
                     fmt={fmt}
                   />
+                  {/* Balans nega shu raqamgacha kamaygani — to'lovdan
+                      ANIQ ajratib, alohida ko'rsatiladi. */}
+                  {recentDiscounts.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 space-y-1.5">
+                      <p className="text-[11px] text-neutral-400">So'nggi chegirmalar</p>
+                      {recentDiscounts.map((c: any) => (
+                        <div key={c.id} className="flex items-start justify-between gap-2">
+                          <span className="flex items-center gap-1 text-[12px] font-semibold text-pink-600 dark:text-pink-400 shrink-0">
+                            🎁 −{fmt(Math.abs(c.amount))}
+                          </span>
+                          <span className="text-[11px] text-neutral-400 text-right truncate">
+                            {c.groupId ? (groupNameById.get(c.groupId) ?? "O'chirilgan guruh") : "Umumiy"}
+                            {c.discountLabel || c.note ? ` · ${c.discountLabel || c.note}` : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               <div>
