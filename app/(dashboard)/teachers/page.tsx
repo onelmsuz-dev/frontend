@@ -136,7 +136,12 @@ export default function TeachersPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Xatolik"); return; }
-      mutate("/api/teachers");
+      // Oddiy "/api/teachers" kaliti YETARLI EMAS — `useTeachers()` faol
+      // filial bo'lsa `?branchId=...` bilan so'raydi, va aynan o'sha
+      // kalit keshda turadi (courses/page.tsx da xuddi shu xato topilgan
+      // va tuzatilgan, 2026-09-03).
+      mutate((key: string) => typeof key === "string" && key.startsWith("/api/teachers"),
+             undefined, { revalidate: true });
       setShowModal(false);
     } catch { setError("Serverga ulanib bo'lmadi"); }
     finally { setSaving(false); }
@@ -149,7 +154,12 @@ export default function TeachersPage() {
       const res = await fetch(`/api/teachers/${deleteTarget.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "O'chirib bo'lmadi"); setSaving(false); return; }
-      mutate("/api/teachers");
+      // Oddiy "/api/teachers" kaliti YETARLI EMAS — `useTeachers()` faol
+      // filial bo'lsa `?branchId=...` bilan so'raydi, va aynan o'sha
+      // kalit keshda turadi (courses/page.tsx da xuddi shu xato topilgan
+      // va tuzatilgan, 2026-09-03).
+      mutate((key: string) => typeof key === "string" && key.startsWith("/api/teachers"),
+             undefined, { revalidate: true });
       setDeleteTarget(null);
     } catch { setError("Xatolik"); }
     finally { setSaving(false); }

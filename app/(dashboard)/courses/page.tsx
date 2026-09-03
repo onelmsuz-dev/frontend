@@ -96,7 +96,12 @@ export default function CoursesPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Xatolik"); return; }
-      mutate("/api/courses");
+      // Oddiy "/api/courses" kaliti YETARLI EMAS — `useCourses()` faol
+      // filial bo'lsa `?branchId=...` bilan so'raydi, va aynan o'sha
+      // kalit keshda turadi. Qattiq yozilgan kalit ularga mos kelmasdi,
+      // ro'yxat faqat pageni yangilaganda (yangi SWR nusxasi) to'g'irlanardi.
+      mutate((key: string) => typeof key === "string" && key.startsWith("/api/courses"),
+             undefined, { revalidate: true });
       setShowModal(false);
     } catch { setError("Serverga ulanib bo'lmadi"); }
     finally { setSaving(false); }
@@ -108,7 +113,12 @@ export default function CoursesPage() {
     try {
       const res = await fetch(`/api/courses/${deleteTarget.id}`, { method: "DELETE" });
       if (!res.ok) { const d = await res.json(); setError(d.error ?? "O'chirishda xatolik"); return; }
-      mutate("/api/courses");
+      // Oddiy "/api/courses" kaliti YETARLI EMAS — `useCourses()` faol
+      // filial bo'lsa `?branchId=...` bilan so'raydi, va aynan o'sha
+      // kalit keshda turadi. Qattiq yozilgan kalit ularga mos kelmasdi,
+      // ro'yxat faqat pageni yangilaganda (yangi SWR nusxasi) to'g'irlanardi.
+      mutate((key: string) => typeof key === "string" && key.startsWith("/api/courses"),
+             undefined, { revalidate: true });
       setDeleteTarget(null);
     } finally { setSaving(false); }
   }
