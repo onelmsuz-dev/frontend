@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { LOST_REASONS } from "@/lib/hooks/useLeads";
+import { LOST_REASONS, useLeadStages } from "@/lib/hooks/useLeads";
 import { useCourses } from "@/lib/hooks/useCourses";
+import { resolveNextStage } from "@/lib/lead-stages";
 import { Phone, PhoneOff, X, Undo2, Loader2, BookOpen } from "lucide-react";
 
 /**
@@ -32,13 +33,8 @@ function plusDays(n: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Backend bilan bir xil — "Gaplashdim" qaysi bosqichga olib boradi. */
-const NEXT_LABEL: Record<string, string> = {
-  YANGI: "Aloqa qilindi", ALOQA_QILINGAN: "Sinov darsi", SINOV_DARSI: "To'ladi",
-};
-
 export function CallOutcome({
-  leadId, canAdvance, hasCourse, status, onDone,
+  leadId, canAdvance, hasCourse, stageId, onDone,
 }: {
   leadId: string;
   /** Oldinga siljish mumkinmi (oxirgi bosqichda emasmi). */
@@ -46,12 +42,18 @@ export function CallOutcome({
   /** Lidda kurs allaqachon belgilanganmi. */
   hasCourse: boolean;
   /** Joriy bosqich — "Rozi" tugmasida qaysi bosqichga o'tishini ko'rsatish uchun. */
-  status: string;
+  stageId: string;
   onDone: () => void;
 }) {
   const { data: coursesRaw } = useCourses();
   const courses: { id: string; name: string }[] =
     Array.isArray(coursesRaw) ? coursesRaw : (coursesRaw?.data ?? []);
+
+  const { data: stagesRaw } = useLeadStages();
+  const stages = stagesRaw ?? [];
+  const current = stages.find((s) => s.id === stageId);
+  /** Backend bilan bir xil algoritm — "Gaplashdim" qaysi bosqichga olib boradi. */
+  const nextStage = current ? resolveNextStage(stages, current) : null;
 
   const [open, setOpen] = useState<null | "reason" | "date" | "course">(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -172,7 +174,7 @@ export function CallOutcome({
   }
 
   if (open === "date") {
-    const nextLabel = NEXT_LABEL[status];
+    const nextLabel = nextStage?.name;
     return (
       <div className="w-full space-y-1.5 pt-1.5">
         {/*

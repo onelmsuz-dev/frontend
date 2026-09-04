@@ -11,6 +11,7 @@ import {
   UserPlus, CalendarCheck, BookOpen, GraduationCap, Target,
 } from "lucide-react";
 import { useOverviewReport, type OverviewReport } from "@/lib/hooks/useReports";
+import { stageHue } from "@/lib/lead-stages";
 
 const fmtShort = (v: number) => {
   if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} mln`;
@@ -234,41 +235,41 @@ function AttendancePanel({ data, chart }: { data: OverviewReport; chart: ReturnT
 // ─── Lid voronkasi ────────────────────────────────────────────────────────────
 
 function LeadFunnel({ leads }: { leads: OverviewReport["leads"] }) {
-  const steps = [
-    { label: "Yangi",      value: leads.yangi,   color: "bg-blue-500" },
-    { label: "Aloqa",      value: leads.aloqa,   color: "bg-amber-500" },
-    { label: "Sinov darsi",value: leads.sinov,   color: "bg-purple-500" },
-    { label: "To'ladi",    value: leads.tolandi, color: "bg-green-500" },
-    { label: "Bekor",      value: leads.bekor,   color: "bg-neutral-400" },
-  ];
-  const max = Math.max(1, ...steps.map(s => s.value));
+  const stages = leads.stages ?? [];
+  const max = Math.max(1, ...stages.map(s => s.count));
+  const rateLabel = leads.conversionRate === null ? "kam sonda hisoblanmaydi" : `${leads.conversionRate}%`;
 
   return (
     <Panel icon={Target} title="Lid voronkasi" color="text-pink-500"
-      hint={`${leads.total} ta lid · konversiya ${leads.conversionRate}%`}>
+      hint={`${leads.total} ta lid · konversiya ${rateLabel}`}>
       {leads.total === 0 ? (
         <div className="py-10 text-center text-sm text-neutral-400">Bu davrda lid yo&apos;q</div>
       ) : (
         <div className="space-y-2.5">
-          {steps.map(s => (
-            <div key={s.label}>
-              <div className="flex items-center justify-between text-[12px] mb-1">
-                <span className="text-neutral-600 dark:text-neutral-400">{s.label}</span>
-                <span className="font-bold text-neutral-800 dark:text-neutral-200">
-                  {s.value}
-                  <span className="text-neutral-400 font-normal ml-1">
-                    {leads.total > 0 ? `${Math.round((s.value / leads.total) * 100)}%` : ""}
+          {stages.map(s => {
+            const hue = stageHue(s.color);
+            return (
+              <div key={s.id}>
+                <div className="flex items-center justify-between text-[12px] mb-1">
+                  <span className="text-neutral-600 dark:text-neutral-400">{s.name}</span>
+                  <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                    {s.count}
+                    <span className="text-neutral-400 font-normal ml-1">
+                      {leads.total > 0 ? `${Math.round((s.count / leads.total) * 100)}%` : ""}
+                    </span>
                   </span>
-                </span>
+                </div>
+                <div className="h-2 rounded-full bg-neutral-200/70 dark:bg-white/10 overflow-hidden">
+                  <div className={cn("h-full rounded-full transition-all", hue.bar)}
+                    style={{ width: `${(s.count / max) * 100}%` }} />
+                </div>
               </div>
-              <div className="h-2 rounded-full bg-neutral-200/70 dark:bg-white/10 overflow-hidden">
-                <div className={cn("h-full rounded-full transition-all", s.color)}
-                  style={{ width: `${(s.value / max) * 100}%` }} />
-              </div>
-            </div>
-          ))}
+            );
+          })}
           <p className="text-[11px] text-neutral-400 pt-1">
-            Har 100 ta liddan <strong>{leads.conversionRate}</strong>{" "}tasi to&apos;lovchi o&apos;quvchiga aylangan.
+            {leads.conversionRate === null
+              ? "Konversiya foizi hali hisoblanmaydi — bu davrda lidlar soni kam, foiz chalg'itardi."
+              : <>Har 100 ta liddan <strong>{leads.conversionRate}</strong>{" "}tasi to&apos;lovchi o&apos;quvchiga aylangan.</>}
           </p>
         </div>
       )}

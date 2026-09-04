@@ -1,64 +1,36 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import {
+  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+  type DragEndEvent, type DragStartEvent,
+} from "@dnd-kit/core";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormField } from "@/components/ui/form-field";
-import { Phone, Search, Plus, ChevronRight, Trash2, AlertCircle, Pencil, Upload, MessageSquare, UserPlus, LayoutGrid, Radio } from "lucide-react";
+import {
+  Search, Plus, ChevronRight, AlertCircle, Upload, LayoutGrid, Radio, Settings2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLeads } from "@/lib/hooks/useLeads";
+import { useLeads, useLeadStages } from "@/lib/hooks/useLeads";
 import { useCourses } from "@/lib/hooks/useCourses";
-import { SourcePicker, sourceColor } from "@/components/leads/source-picker";
+import { SourcePicker } from "@/components/leads/source-picker";
 import { LeadImportModal } from "@/components/leads/lead-import-modal";
 import { LeadFeedPanel } from "@/components/leads/lead-feed";
-import { CallOutcome, StepBack } from "@/components/leads/call-outcome";
 import { DueStrip } from "@/components/leads/due-strip";
 import { ConvertModal } from "@/components/leads/convert-modal";
 import { MetaIntegrationPanel } from "@/components/leads/meta-integration";
+import { KanbanColumn } from "@/components/leads/kanban-column";
+import { LeadCardPreview, type Lead } from "@/components/leads/lead-card";
+import { StageManagerModal } from "@/components/leads/stage-manager-modal";
 import { useFeature } from "@/lib/hooks/useFeatures";
-import { LOST_REASON_UZ } from "@/lib/hooks/useLeads";
-import { fmtRelative } from "@/lib/date-uz";
+import { stageHue, defaultStage } from "@/lib/lead-stages";
 import { mutate } from "swr";
 
-type LeadStatus = "YANGI" | "ALOQA_QILINGAN" | "SINOV_DARSI" | "TO_LANDI" | "BEKOR";
-
-interface Lead {
-  id: string;
-  name: string;
-  phone: string;
-  source: string;
-  status: LeadStatus;
-  course?: string | null;
-  courseId?: string | null;
-  /** TO'LIQ ro'yxat — bir nechta fanga bir vaqtda yozilgan bo'lishi mumkin. */
-  courses?: { courseId: string }[];
-  school?: string | null;
-  grade?: string | null;
-  note?: string | null;
-  assignedTo?: { name?: string } | null;
-  createdAt?: string;
-  lastContactAt?: string | null;
-  contactAttempts?: number;
-  lostReason?: string | null;
-  nextContactAt?: string | null;
-  convertedStudentId?: string | null;
-  _count?: { comments: number };
-}
-
 interface Course { id: string; name: string }
-
-const STATUS_CFG: Record<LeadStatus, { label: string; color: string; headerBg: string; dot: string }> = {
-  YANGI:          { label: "Yangi",         color: "text-blue-700 dark:text-blue-300",     headerBg: "bg-blue-50 dark:bg-blue-900/20",     dot: "bg-blue-500" },
-  ALOQA_QILINGAN: { label: "Aloqa qilindi", color: "text-yellow-700 dark:text-yellow-300", headerBg: "bg-yellow-50 dark:bg-yellow-900/20", dot: "bg-yellow-500" },
-  SINOV_DARSI:    { label: "Sinov darsi",   color: "text-purple-700 dark:text-purple-300", headerBg: "bg-purple-50 dark:bg-purple-900/20", dot: "bg-purple-500" },
-  TO_LANDI:       { label: "To'ladi",       color: "text-green-700 dark:text-green-300",   headerBg: "bg-green-50 dark:bg-green-900/20",   dot: "bg-green-500" },
-  BEKOR:          { label: "Bekor",         color: "text-red-700 dark:text-red-300",       headerBg: "bg-red-50 dark:bg-red-900/20",       dot: "bg-red-500" },
-};
-
-const COLUMNS: LeadStatus[] = ["YANGI", "ALOQA_QILINGAN", "SINOV_DARSI", "TO_LANDI", "BEKOR"];
 
 const EMPTY = { name: "", phone: "", source: "Instagram", course: "", courseId: "",
                 // Bitta odam bir nechta fanga (masalan Matematika +
@@ -70,145 +42,6 @@ const EMPTY = { name: "", phone: "", source: "Instagram", course: "", courseId: 
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
-}
-
-function LeadCard({ lead, onDelete, onEdit, onOpen, onConvert, onRefresh }: {
-  lead: Lead;
-  onDelete: (lead: Lead) => void;
-  onEdit: (lead: Lead) => void;
-  onOpen: (lead: Lead) => void;
-  onConvert: (lead: Lead) => void;
-  onRefresh: () => void;
-}) {
-  const st = lead.status as LeadStatus;
-  /** Oxirgi bosqichlarda oldinga siljish yo'q. */
-  const canAdvance = st === "YANGI" || st === "ALOQA_QILINGAN" || st === "SINOV_DARSI";
-  const canBack = st !== "YANGI";
-  const yopiq = st === "TO_LANDI" || st === "BEKOR";
-  return (
-    <div className="glass-panel rounded-xl border border-white/60 dark:border-white/10 p-3 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start gap-2.5 mb-2.5">
-        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center text-white font-bold text-[12px] shrink-0">
-          {lead.name[0]}
-        </div>
-        <div className="flex-1 min-w-0">
-          <button onClick={() => onOpen(lead)} title="Tarix va izohlar"
-            className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100
-                       leading-tight truncate hover:text-indigo-600 transition-colors text-left w-full">
-            {lead.name}
-          </button>
-          <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
-            {lead.phone || [lead.school, lead.grade].filter(Boolean).join(" · ") || "—"}
-          </p>
-          {/* YOSHI VA SOVUQLIGI. Ilgari o'nta kartochka bir xil ko'rinardi —
-              bugun kelgani ham, besh hafta turgani ham. Endi bir qarashda
-              ko'rinadi va ro'yxatni saralab o'tirish shart emas. */}
-          <p className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate">
-            {lead.lastContactAt
-              ? `oxirgi aloqa ${fmtRelative(lead.lastContactAt)}`
-              : lead.createdAt ? `${fmtRelative(lead.createdAt)} qo'shilgan` : ""}
-            {lead.contactAttempts ? ` · ${lead.contactAttempts}-urinish` : ""}
-            {lead._count?.comments ? ` · 💬 ${lead._count.comments}` : ""}
-          </p>
-        </div>
-        <button onClick={() => onDelete(lead)}
-          className="w-5 h-5 flex items-center justify-center rounded-md text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0">
-          <Trash2 className="w-3 h-3" />
-        </button>
-        <button onClick={() => onEdit(lead)}
-          className="w-5 h-5 flex items-center justify-center rounded-md text-neutral-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors shrink-0">
-          <Pencil className="w-3 h-3" />
-        </button>
-      </div>
-
-      {lead.course && (
-        <p className="text-[11px] text-neutral-600 dark:text-neutral-400 glass-soft rounded-lg px-2.5 py-1.5 mb-2">
-          📚 {lead.course}
-        </p>
-      )}
-
-      {lead.note && (
-        <p className="text-[11px] text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded-lg px-2.5 py-1.5 mb-2">
-          💬 {lead.note}
-        </p>
-      )}
-
-      <div className="flex items-center justify-between pt-2 border-t border-white/50 dark:border-white/10">
-        <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-full",
-          sourceColor(lead.source))}>
-          {lead.source}
-        </span>
-        <div className="flex items-center gap-0.5">
-          {/* Maktab tashrifidan kelgan lidda telefon bo'lmasligi mumkin —
-              unda tugma bosilmaydigan holatda turadi, bosh sahifaga
-              olib ketmasligi uchun. */}
-          {lead.phone ? (
-            <a href={`tel:${lead.phone}`} title={lead.phone}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
-              <Phone className="w-3 h-3" />
-            </a>
-          ) : (
-            <span title="Telefon kiritilmagan"
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-200 dark:text-neutral-700">
-              <Phone className="w-3 h-3" />
-            </span>
-          )}
-          <button onClick={() => onOpen(lead)} title="Tarix va izohlar"
-            className="w-6 h-6 flex items-center justify-center rounded-lg text-neutral-400
-                       hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-            <MessageSquare className="w-3 h-3" />
-          </button>
-          {/* Orqaga qaytish — noto'g'ri bosilgan tugmani tuzatish uchun.
-              Ilgari bir mis-klik lidni abadiy noto'g'ri ustunda
-              qoldirardi. */}
-          {canBack && <StepBack leadId={lead.id} onDone={onRefresh} />}
-
-          {/* «To'ladi» bosqichida asosiy amal — o'quvchiga aylantirish. */}
-          {st === "TO_LANDI" && !lead.convertedStudentId && (
-            <button onClick={() => onConvert(lead)}
-              className="flex items-center gap-0.5 ml-1 px-2 py-0.5 text-[10px] font-semibold
-                         bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
-              <UserPlus className="w-2.5 h-2.5" />{" "}O&apos;quvchiga
-            </button>
-          )}
-          {lead.convertedStudentId && (
-            <span title="O'quvchiga aylantirilgan"
-              className="ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold
-                         bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
-              ✓ o&apos;quvchi
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* QO'NG'IROQ NATIJASI — yopilmagan lidlarda. Uch tugma, chunki
-          qo'ng'iroqning natijasi ham uch xil bo'ladi. */}
-      {!yopiq && (
-        <CallOutcome leadId={lead.id} canAdvance={canAdvance} status={st}
-          hasCourse={!!lead.courseId} onDone={onRefresh} />
-      )}
-
-      {/* Nega yo'qotdik — «Bekor» ustunida ko'rinib tursin. */}
-      {st === "BEKOR" && lead.lostReason && (
-        <p className="mt-1.5 text-[10px] text-neutral-500 dark:text-neutral-400">
-          Sabab: {LOST_REASON_UZ[lead.lostReason] ?? lead.lostReason}
-        </p>
-      )}
-
-      {/* Keyingi aloqa sanasi. */}
-      {!yopiq && lead.nextContactAt && (
-        <p className="mt-1.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400">
-          Keyingi aloqa: {fmtRelative(lead.nextContactAt)}
-        </p>
-      )}
-
-      {lead.assignedTo?.name && (
-        <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-2 truncate">
-          👤 {lead.assignedTo.name}
-        </p>
-      )}
-    </div>
-  );
 }
 
 export default function LeadsPage() {
@@ -234,7 +67,8 @@ export default function LeadsPage() {
   const [form,         setForm]         = useState(EMPTY);
   const [saving,       setSaving]       = useState(false);
   const [error,        setError]        = useState("");
-  const [initStatus,   setInitStatus]   = useState<LeadStatus>("YANGI");
+  const [initStageId,  setInitStageId]  = useState("");
+  const [showStages,   setShowStages]   = useState(false);
 
   const [editTarget,   setEditTarget]   = useState<Lead | null>(null);
   const [editForm,     setEditForm]     = useState(EMPTY);
@@ -252,6 +86,14 @@ export default function LeadsPage() {
   // edi — u faqat o'z-o'zidan chaqirilardi va CallOutcome joriy
   // qilinganda hech kim uni ishga tushirmay qoldi (jim regressiya).
 
+  /** Sudrab tashlash — "g'olib" turidagi ustunga kursisiz tashlansa shu yerda so'raladi. */
+  const [pendingDrop,    setPendingDrop]    = useState<{ lead: Lead; stageId: string } | null>(null);
+  const [pendingCourses, setPendingCourses] = useState<string[]>([]);
+  const [dropSaving,     setDropSaving]     = useState(false);
+  const [dropError,      setDropError]      = useState("");
+  const [activeLead,     setActiveLead]     = useState<Lead | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
   /**
    * Taxta VA «bugun qo'ng'iroq» chizig'ini birga yangilaydi.
    * Ikkalasi bir xil ma'lumotdan oziqlanadi — biri yangilanib
@@ -261,10 +103,13 @@ export default function LeadsPage() {
     mutate("/api/leads");
     mutate("/api/leads/due");
   };
-  // «To'ladi» ga o'tkazishdan oldin kurs so'raladigan oyna
 
   const { data: raw, isLoading } = useLeads();
-  const leads: Lead[] = Array.isArray(raw) ? raw : [];
+  const leads: Lead[] = useMemo(() => (Array.isArray(raw) ? raw : []), [raw]);
+  const { data: stagesRaw, isLoading: stagesLoading } = useLeadStages();
+  const stages = useMemo(() => stagesRaw ?? [], [stagesRaw]);
+  const stagesById = useMemo(() =>
+    Object.fromEntries(stages.map((s) => [s.id, s])), [stages]);
   const { data: courseData } = useCourses();
   const courses: Course[] = Array.isArray(courseData) ? courseData : (courseData?.data ?? []);
 
@@ -320,9 +165,12 @@ export default function LeadsPage() {
     finally { setEditSaving(false); }
   }
 
-  function openCreate(status: LeadStatus = "YANGI") {
-    setInitStatus(status); setForm(EMPTY); setError(""); setShowModal(true);
+  function openCreate(stageId?: string) {
+    setInitStageId(stageId ?? defaultStage(stages)?.id ?? "");
+    setForm(EMPTY); setError(""); setShowModal(true);
   }
+
+  const initStage = stagesById[initStageId];
 
   async function submit() {
     if (!form.name.trim()) { setError("Ism majburiy"); return; }
@@ -335,8 +183,8 @@ export default function LeadsPage() {
       setError("Telefonni to'liq kiriting yoki bo'sh qoldiring"); return;
     }
     if (!form.source) { setError("Manba tanlang"); return; }
-    if (initStatus === "TO_LANDI" && form.courseIds.length === 0) {
-      setError("«To'ladi» bosqichi uchun kursni tanlang"); return;
+    if (initStage?.kind === "WON" && form.courseIds.length === 0) {
+      setError(`«${initStage.name}» bosqichi uchun kursni tanlang`); return;
     }
     setSaving(true); setError("");
     try {
@@ -344,7 +192,7 @@ export default function LeadsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: form.name, source: form.source, status: initStatus,
+          name: form.name, source: form.source, stageId: initStageId || undefined,
           phone:  phoneDigits.length === 12 ? form.phone : "",
           // Bir nechta kurs tanlangan bo'lsa `courseIds` USTUN turadi
           // (backend birinchisini `courseId`/`course`ga yozadi).
@@ -374,6 +222,48 @@ export default function LeadsPage() {
     finally { setSaving(false); }
   }
 
+  /** Bosqich o'zgarishi — kartani qo'lda tahrirlashdan HAM, sudrab tashlashdan HAM shu orqali. */
+  async function moveLead(lead: Lead, stageId: string, courseIds?: string[]) {
+    setDropError("");
+    if (courseIds) setDropSaving(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stageId, ...(courseIds ? { courseIds } : {}) }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Server AYNAN shu sababdan rad etsa — kurs tanlash oynasini
+        // ochamiz (xuddi CallOutcome server rad etganda o'zi
+        // so'raganidek).
+        if (String(d?.error ?? "").includes("kursni tanlang")) {
+          setPendingDrop({ lead, stageId }); setPendingCourses([]);
+          return;
+        }
+        setDropError(d?.error ?? "Ko'chirib bo'lmadi");
+        return;
+      }
+      refreshAll();
+      setPendingDrop(null); setPendingCourses([]);
+    } catch { setDropError("Serverga ulanib bo'lmadi"); }
+    finally { setDropSaving(false); }
+  }
+
+  function handleDragStart(e: DragStartEvent) {
+    setActiveLead(leads.find((l) => l.id === e.active.id) ?? null);
+  }
+
+  function handleDragEnd(e: DragEndEvent) {
+    setActiveLead(null);
+    const { active, over } = e;
+    if (!over) return;
+    const lead = leads.find((l) => l.id === active.id);
+    const targetStageId = String(over.id);
+    if (!lead || lead.stageId === targetStageId) return;
+    moveLead(lead, targetStageId);
+  }
+
   const filteredLeads = useMemo(() =>
     leads.filter(l => {
       const q = search.toLowerCase();
@@ -384,17 +274,17 @@ export default function LeadsPage() {
           || (l.course ?? "").toLowerCase().includes(q);
     }), [leads, search]);
 
-  const getCol = (s: LeadStatus) => filteredLeads.filter((l) => l.status === s);
-  const totalByStatus = useMemo(() =>
-    COLUMNS.reduce((acc, s) => { acc[s] = leads.filter((l) => l.status === s).length; return acc; },
-    {} as Record<LeadStatus, number>), [leads]);
+  const getCol = (stageId: string) => filteredLeads.filter((l) => l.stageId === stageId);
+  const totalByStage = useMemo(() =>
+    Object.fromEntries(stages.map((s) => [s.id, leads.filter((l) => l.stageId === s.id).length])),
+    [leads, stages]);
 
   return (
     <div>
       <TopHeader
         title="Lidlar (CRM)"
         subtitle={isLoading ? "Yuklanmoqda..." : `Jami ${leads.length} ta lid`}
-        action={tab === "board" ? { label: "Yangi lid", onClick: () => openCreate("YANGI") } : undefined}
+        action={tab === "board" ? { label: "Yangi lid", onClick: () => openCreate() } : undefined}
       />
 
       {/* Bayroq o'chiq bo'lsa tab qatori umuman ko'rsatilmaydi — hozircha
@@ -425,6 +315,8 @@ export default function LeadsPage() {
       <LeadImportModal open={showImport}
         onClose={() => setShowImport(false)}
         onDone={() => mutate("/api/leads")} />
+
+      <StageManagerModal open={showStages} onClose={() => setShowStages(false)} />
 
       {/* Lid tarixi va izohlari. Kanban holatini yo'qotmaslik uchun
           alohida sahifa emas, oyna — xodim taxtaga qaytganda o'sha
@@ -498,10 +390,10 @@ export default function LeadsPage() {
         </div>
 
         <FormField label="Kurs"
-          hint={initStatus === "TO_LANDI" ? "«To'ladi» uchun majburiy — bir nechtasini tanlash mumkin" : "Ixtiyoriy, bir nechtasini tanlash mumkin"}>
+          hint={initStage?.kind === "WON" ? `«${initStage.name}» uchun majburiy — bir nechtasini tanlash mumkin` : "Ixtiyoriy, bir nechtasini tanlash mumkin"}>
           {/* TANLASH, ERKIN MATN EMAS — `courseId` saqlanishi kerak,
-              aks holda «To'ladi» qoidasi UI orqali hech qachon
-              qondirilmasdi (yozilgan "Matematika" so'zi bazadagi
+              aks holda «g'olib» turidagi bosqich qoidasi UI orqali hech
+              qachon qondirilmasdi (yozilgan "Matematika" so'zi bazadagi
               kursga bog'lanmaydi).
               KO'P TANLASH: bitta odam bir nechta fanga (masalan
               Matematika + Ingliz tili) BIR VAQTDA yozilishi mumkin —
@@ -597,7 +489,7 @@ export default function LeadsPage() {
           </FormField>
         </div>
         <FormField label="Kurs"
-          hint={editTarget?.status === "TO_LANDI" ? "«To'ladi» uchun majburiy — bir nechtasini tanlash mumkin" : "Ixtiyoriy, bir nechtasini tanlash mumkin"}>
+          hint={stagesById[editTarget?.stageId ?? ""]?.kind === "WON" ? "Majburiy — bir nechtasini tanlash mumkin" : "Ixtiyoriy, bir nechtasini tanlash mumkin"}>
           {/* KO'P TANLASH — bitta odam bir nechta fanga (masalan
               Matematika + Ingliz tili) BIR VAQTDA yozilishi mumkin. */}
           {courses.length === 0 ? (
@@ -636,6 +528,44 @@ export default function LeadsPage() {
         )}
       </Modal>
 
+      {/* Sudrab, kursisiz "g'olib" turidagi ustunga tashlanganda — xuddi
+          CallOutcome ichidagi kurs so'rash oynasi kabi. */}
+      <Modal
+        open={!!pendingDrop}
+        onClose={() => { setPendingDrop(null); setPendingCourses([]); setDropError(""); }}
+        title="Kursni tanlang"
+        subtitle={pendingDrop ? `«${stagesById[pendingDrop.stageId]?.name}» bosqichiga o'tish uchun` : ""}
+        footer={
+          <>
+            <Button disabled={dropSaving || pendingCourses.length === 0}
+              onClick={() => pendingDrop && moveLead(pendingDrop.lead, pendingDrop.stageId, pendingCourses)}
+              className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
+              {dropSaving ? "Saqlanmoqda..." : "Tasdiqlash"}
+            </Button>
+            <Button variant="outline" className="h-9 px-4 text-[13px]"
+              onClick={() => { setPendingDrop(null); setPendingCourses([]); setDropError(""); }}>Bekor</Button>
+          </>
+        }
+      >
+        {courses.length === 0 ? (
+          <p className="text-[12px] text-neutral-400">Hali kurs yaratilmagan</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {courses.map((c) => (
+              <button key={c.id} type="button"
+                onClick={() => setPendingCourses(p => p.includes(c.id) ? p.filter(id => id !== c.id) : [...p, c.id])}
+                className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
+                  pendingCourses.includes(c.id)
+                    ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900 dark:border-neutral-100"
+                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+        {dropError && <p className="text-[12px] text-red-600 dark:text-red-400 mt-2">{dropError}</p>}
+      </Modal>
+
       <ConfirmDeleteModal
         open={!!deleteTarget}
         onClose={() => { setDeleteTarget(null); setError(""); }}
@@ -657,19 +587,25 @@ export default function LeadsPage() {
       <div className="p-5">
         {/* Pipeline summary */}
         <div className="flex items-center gap-2 mb-5 flex-wrap">
-          {COLUMNS.map((s, i) => {
-            const cfg = STATUS_CFG[s];
+          {stages.map((s, i) => {
+            const hue = stageHue(s.color);
             return (
-              <div key={s} className="flex items-center gap-1.5">
-                <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[12px] font-semibold", cfg.headerBg, cfg.color, "border-current/20")}>
-                  <span className={cn("w-2 h-2 rounded-full", cfg.dot)} />
-                  {cfg.label}
-                  <span className="font-black">{isLoading ? "…" : totalByStatus[s] ?? 0}</span>
+              <div key={s.id} className="flex items-center gap-1.5">
+                <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[12px] font-semibold", hue.headerBg, hue.text, "border-current/20")}>
+                  <span className={cn("w-2 h-2 rounded-full", hue.dot)} />
+                  {s.name}
+                  <span className="font-black">{isLoading ? "…" : totalByStage[s.id] ?? 0}</span>
                 </div>
-                {i < COLUMNS.length - 1 && <ChevronRight className="w-3 h-3 text-neutral-300 dark:text-neutral-700" />}
+                {i < stages.length - 1 && <ChevronRight className="w-3 h-3 text-neutral-300 dark:text-neutral-700" />}
               </div>
             );
           })}
+          <button onClick={() => setShowStages(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold
+                       glass-soft text-neutral-500 dark:text-neutral-400 hover:text-indigo-600
+                       border border-dashed border-neutral-300 dark:border-neutral-600 transition-colors">
+            <Settings2 className="w-3.5 h-3.5" /> Bosqichlarni sozlash
+          </button>
         </div>
 
         {/* Bugun qo'ng'iroq qilinadiganlar — taxtadan YUQORIDA. */}
@@ -693,53 +629,51 @@ export default function LeadsPage() {
           </button>
         </div>
 
-        {/* Kanban */}
-        <div className="flex gap-3 overflow-x-auto pb-4">
-          {COLUMNS.map(status => {
-            const cfg      = STATUS_CFG[status];
-            const colLeads = isLoading ? [] : getCol(status);
-            return (
-              <div key={status} className="flex-shrink-0 w-[260px] flex flex-col">
-                <div className={cn("flex items-center justify-between px-3 py-2.5 rounded-xl mb-2", cfg.headerBg)}>
-                  <div className="flex items-center gap-2">
-                    <span className={cn("w-2 h-2 rounded-full shrink-0", cfg.dot)} />
-                    <span className={cn("text-[12px] font-bold", cfg.color)}>{cfg.label}</span>
-                    <span className="bg-white/60 dark:bg-black/20 text-[11px] font-black px-1.5 py-0.5 rounded-full text-neutral-700 dark:text-neutral-300">
-                      {colLeads.length}
-                    </span>
-                  </div>
-                  <button onClick={() => openCreate(status)}
-                    className={cn("w-6 h-6 flex items-center justify-center rounded-lg hover:bg-white/40 dark:hover:bg-black/20 transition-colors", cfg.color)}>
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+        {dropError && (
+          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5 mb-3">
+            <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+            <p className="text-[12px] font-medium text-red-600 dark:text-red-400 flex-1">{dropError}</p>
+            <button onClick={() => setDropError("")} className="text-[11px] font-semibold text-red-600 hover:underline shrink-0">Yopish</button>
+          </div>
+        )}
 
-                <div className="flex flex-col gap-2 min-h-24 flex-1">
-                  {isLoading
-                    ? Array.from({length:2}).map((_,i) => (
-                        <div key={i} className="glass-panel rounded-xl border border-white/60 dark:border-white/10 p-3 space-y-2">
-                          <div className="flex gap-2"><Skeleton className="w-8 h-8 shrink-0" /><div className="space-y-1 flex-1"><Skeleton className="h-3 w-24" /><Skeleton className="h-2.5 w-16" /></div></div>
-                          <Skeleton className="h-7 w-full rounded-lg" />
-                        </div>
-                      ))
-                    : colLeads.map((lead) => (
-                        <LeadCard key={lead.id} lead={lead}
-                          onDelete={l => { setError(""); setDeleteTarget(l); }}
-                          onEdit={openEdit} onOpen={setFeedTarget}
-                          onConvert={setConvertTarget} onRefresh={refreshAll} />
-                      ))
-                  }
-                  {!isLoading && colLeads.length === 0 && (
-                    <div className="border-2 border-dashed border-white/60 dark:border-white/10 rounded-xl p-6 text-center text-neutral-400 dark:text-neutral-600 text-xs cursor-pointer hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors"
-                      onClick={() => openCreate(status)}>
-                      + Lid qo&apos;shish
-                    </div>
-                  )}
-                </div>
+        {/* Kanban */}
+        {stagesLoading && stages.length === 0 ? (
+          <div className="flex gap-3 overflow-x-auto pb-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex-shrink-0 w-[260px] space-y-2">
+                <Skeleton className="h-10 w-full rounded-xl" />
+                <Skeleton className="h-24 w-full rounded-xl" />
+                <Skeleton className="h-24 w-full rounded-xl" />
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : stages.length === 0 ? (
+          <div className="border-2 border-dashed border-white/60 dark:border-white/10 rounded-xl p-10 text-center">
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">Hali bosqich yaratilmagan</p>
+            <button onClick={() => setShowStages(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+              <Plus className="w-3.5 h-3.5" />{" "}Birinchi bosqichni qo&apos;shish
+            </button>
+          </div>
+        ) : (
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveLead(null)}>
+            <div className="flex gap-3 overflow-x-auto pb-4">
+              {stages.map((stage) => (
+                <KanbanColumn key={stage.id} stage={stage} stages={stages}
+                  leads={isLoading ? [] : getCol(stage.id)} isLoading={isLoading}
+                  onAdd={() => openCreate(stage.id)}
+                  onDelete={l => { setError(""); setDeleteTarget(l); }}
+                  onEdit={openEdit} onOpen={setFeedTarget}
+                  onConvert={setConvertTarget} onRefresh={refreshAll} />
+              ))}
+            </div>
+            <DragOverlay>
+              {activeLead && <LeadCardPreview lead={activeLead} />}
+            </DragOverlay>
+          </DndContext>
+        )}
       </div>
       )}
     </div>

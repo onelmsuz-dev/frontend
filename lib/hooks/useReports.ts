@@ -56,8 +56,11 @@ export interface OverviewReport {
   courses: { id: string; name: string; price: number; students: number; groups: number; revenue: number }[];
   teachers: { id: string; name: string; groups: number; students: number; revenue: number }[];
   leads: {
-    total: number; yangi: number; aloqa: number; sinov: number;
-    tolandi: number; bekor: number; conversionRate: number;
+    total: number;
+    /** Dinamik — markazda nechta bosqich bo'lsa, shuncha element (2026-09-04, moslashtiriladigan bosqichlar). */
+    stages: { id: string; name: string; kind: "NORMAL" | "WON" | "LOST"; color: string; count: number }[];
+    /** Kam sonda `null` — markaz belgilagan barcha "g'olib" turidagi bosqichlar yig'indisi. */
+    conversionRate: number | null;
   };
 }
 

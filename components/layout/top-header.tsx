@@ -8,6 +8,8 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useNotifications, type Notification } from "@/lib/hooks/useNotifications";
+import { useLeadStages } from "@/lib/hooks/useLeads";
+import { stageHue } from "@/lib/lead-stages";
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { BranchHeaderControls } from "@/components/layout/branch-header-controls";
@@ -52,21 +54,15 @@ function timeAgo(iso: string) {
 type SearchResult = {
   students: { id: string; name: string; phone: string; isActive: boolean }[];
   groups:   { id: string; name: string; status: string; course: { name: string } | null }[];
-  leads:    { id: string; name: string; phone: string; status: string }[];
+  leads:    { id: string; name: string; phone: string; stageId: string }[];
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  YANGI: "bg-blue-100 text-blue-700",
-  ALOQA_QILINGAN: "bg-yellow-100 text-yellow-700",
-  SINOV_DARSI: "bg-amber-100 text-amber-700",
-  TO_LANDI: "bg-green-100 text-green-700",
-  BEKOR: "bg-neutral-100 text-neutral-500",
   ACTIVE: "bg-green-100 text-green-700",
   UPCOMING: "bg-blue-100 text-blue-700",
   COMPLETED: "bg-neutral-100 text-neutral-500",
 };
 const STATUS_LABEL: Record<string, string> = {
-  YANGI: "Yangi", ALOQA_QILINGAN: "Aloqa", SINOV_DARSI: "Sinov", TO_LANDI: "To'ladi", BEKOR: "Bekor",
   ACTIVE: "Faol", UPCOMING: "Kutilmoqda", COMPLETED: "Tugagan",
 };
 
@@ -80,6 +76,8 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 function GlobalSearch() {
+  const { data: stagesData } = useLeadStages();
+  const stagesById = Object.fromEntries((stagesData ?? []).map((s) => [s.id, s]));
   const [query,      setQuery]      = useState("");
   const [results,    setResults]    = useState<SearchResult | null>(null);
   const [loading,    setLoading]    = useState(false);
@@ -223,22 +221,26 @@ function GlobalSearch() {
                   <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-white/50 dark:border-white/10">
                     Arizalar (CRM)
                   </p>
-                  {results!.leads.map(l => (
-                    <Link key={l.id} href="/leads" onClick={clear}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
-                      <div className="w-7 h-7 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                        <UserPlus className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{l.name}</p>
-                        <p className="text-[11px] text-neutral-400">{l.phone}</p>
-                      </div>
-                      <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0",
-                        STATUS_BADGE[l.status] ?? "bg-neutral-100 text-neutral-500")}>
-                        {STATUS_LABEL[l.status] ?? l.status}
-                      </span>
-                    </Link>
-                  ))}
+                  {results!.leads.map(l => {
+                    const stage = stagesById[l.stageId];
+                    const hue = stage ? stageHue(stage.color) : null;
+                    return (
+                      <Link key={l.id} href="/leads" onClick={clear}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
+                        <div className="w-7 h-7 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                          <UserPlus className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{l.name}</p>
+                          <p className="text-[11px] text-neutral-400">{l.phone}</p>
+                        </div>
+                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0",
+                          hue?.badge ?? "bg-neutral-100 text-neutral-500")}>
+                          {stage?.name ?? "—"}
+                        </span>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </>

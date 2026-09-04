@@ -15,7 +15,8 @@ import { useSession } from "next-auth/react";
 import { useDashboard } from "@/lib/hooks/useDashboard";
 import { TeacherDashboard, type TeacherDashboardData } from "@/components/dashboard/teacher-dashboard";
 import { usePayments } from "@/lib/hooks/usePayments";
-import { useLeads } from "@/lib/hooks/useLeads";
+import { useLeads, useLeadStages } from "@/lib/hooks/useLeads";
+import { stageHue } from "@/lib/lead-stages";
 import { useBranchQueryString, useBranch } from "@/lib/contexts/branch-context";
 import useSWR from "swr";
 import { OnboardingChecklist } from "@/components/onboarding/onboarding-checklist";
@@ -25,17 +26,6 @@ const _fetcher = (url: string) => fetch(url).then(r => r.json());
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
 }
-
-const LEAD_COLORS: Record<string, string> = {
-  YANGI:          "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  ALOQA_QILINGAN: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
-  SINOV_DARSI:    "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-  TO_LANDI:       "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  BEKOR:          "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-};
-const LEAD_LABELS: Record<string, string> = {
-  YANGI: "Yangi", ALOQA_QILINGAN: "Aloqa", SINOV_DARSI: "Sinov", TO_LANDI: "To'ladi", BEKOR: "Bekor",
-};
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -68,12 +58,14 @@ function OwnerDashboardPage() {
   const { activeBranch } = useBranch();
   const { data: stats, isLoading: statsLoading } = useDashboard();
   const { data: leadsData, isLoading: leadsLoading } = useLeads();
+  const { data: stagesData } = useLeadStages();
   const { data: paymentsData, isLoading: paymentsLoading } = usePayments();
   const { data: reportsData } = useSWR(`/api/reports${reportsQs}`, _fetcher);
   const revenueData = reportsData?.revenue ?? [];
 
   const leads    = Array.isArray(leadsData)    ? leadsData    : [];
   const payments = Array.isArray(paymentsData) ? paymentsData : [];
+  const stagesById = Object.fromEntries((stagesData ?? []).map((s) => [s.id, s]));
 
   const STAT_CARDS = [
     {
@@ -226,21 +218,25 @@ function OwnerDashboardPage() {
                     <Skeleton className="h-5 w-14 rounded-lg" />
                   </div>
                 ))
-              : leads.slice(0, 5).map((l: any) => (
-                  <div key={l.id}
-                    className="flex items-center gap-3 px-5 py-3 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
-                    <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-violet-500 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0">
-                      {l.name[0]}
+              : leads.slice(0, 5).map((l: any) => {
+                  const stage = stagesById[l.stageId];
+                  const hue = stage ? stageHue(stage.color) : null;
+                  return (
+                    <div key={l.id}
+                      className="flex items-center gap-3 px-5 py-3 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
+                      <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-violet-500 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0">
+                        {l.name[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{l.name}</p>
+                        <p className="text-[11px] text-neutral-400 truncate">{l.phone}{l.course ? ` · ${l.course}` : ""}</p>
+                      </div>
+                      <span className={cn("text-[10px] px-2 py-0.5 rounded-lg font-semibold shrink-0", hue?.badge ?? "bg-neutral-100 text-neutral-600")}>
+                        {stage?.name ?? "—"}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{l.name}</p>
-                      <p className="text-[11px] text-neutral-400 truncate">{l.phone}{l.course ? ` · ${l.course}` : ""}</p>
-                    </div>
-                    <span className={cn("text-[10px] px-2 py-0.5 rounded-lg font-semibold shrink-0", LEAD_COLORS[l.status] ?? "bg-neutral-100 text-neutral-600")}>
-                      {LEAD_LABELS[l.status] ?? l.status}
-                    </span>
-                  </div>
-                ))
+                  );
+                })
             }
             {!leadsLoading && leads.length === 0 && (
               <div className="py-10 text-center text-sm text-neutral-400">Hali lid yo'q</div>

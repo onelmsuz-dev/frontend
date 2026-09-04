@@ -28,9 +28,9 @@ async function deleter(url: string) {
   return r.json();
 }
 
-export function useLeads(params?: { status?: string; search?: string }) {
+export function useLeads(params?: { stageId?: string; search?: string }) {
   const query = new URLSearchParams();
-  if (params?.status) query.set("status", params.status);
+  if (params?.stageId) query.set("stageId", params.stageId);
   if (params?.search) query.set("search", params.search);
   const qs = query.toString();
   return useSWR(`/api/leads${qs ? `?${qs}` : ""}`, fetcher);
@@ -58,6 +58,26 @@ export function useDeleteLead(id: string) {
  */
 export function useLeadSources() {
   return useSWR<{ id: string; name: string }[]>("/api/leads/sources", fetcher);
+}
+
+/**
+ * LID BOSQICHLARI (Kanban ustunlari) — markaz o'zi to'liq boshqaradi.
+ *
+ * Ilgari qattiq 5 qiymatli edi. `LeadSource`dan farqi: bu yerda
+ * `sortOrder` MUHIM (ustunlar tartibi) va `kind` orqali maxsus xatti-
+ * harakat (kurs talabi, konversiya) aniqlanadi — backend
+ * `LeadStagesService`ga qarang.
+ */
+export interface LeadStage {
+  id: string;
+  name: string;
+  kind: "NORMAL" | "WON" | "LOST";
+  color: string;
+  sortOrder: number;
+}
+
+export function useLeadStages() {
+  return useSWR<LeadStage[]>("/api/leads/stages", fetcher);
 }
 
 export interface FeedItem {
@@ -108,7 +128,7 @@ export const LOST_REASON_UZ: Record<string, string> =
   Object.fromEntries(LOST_REASONS.map((r) => [r.v, r.l]));
 
 export interface DueLead {
-  id: string; name: string; phone: string; status: string;
+  id: string; name: string; phone: string; stageId: string;
   nextContactAt: string; contactAttempts: number; course?: string | null;
 }
 
