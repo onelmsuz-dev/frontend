@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { StudentDeleteModal } from "@/components/students/student-delete-modal";
 import { StudentFormModal } from "@/components/students/student-form-modal";
 import { StudentBulkBar } from "@/components/students/student-bulk-bar";
@@ -114,6 +115,9 @@ export default function StudentsPage() {
   const [filterGroup,  setFilterGroup]  = useState("barchasi");
   const [filterTeacher,setFilterTeacher]= useState("barchasi");
   const [filterDebt,   setFilterDebt]   = useState("barchasi");
+  /** Qabul sanasi oralig'i — "shu davrda qo'shilganlar". */
+  const [joinedFrom,   setJoinedFrom]   = useState("");
+  const [joinedTo,     setJoinedTo]     = useState("");
 
   const [modalMode,    setModalMode]    = useState<"create" | "edit" | null>(null);
   const [modalInitial, setModalInitial] = useState<any>(null);
@@ -138,6 +142,8 @@ export default function StudentsPage() {
     teacherId: filterTeacher !== "barchasi" ? filterTeacher : undefined,
     debt:      filterDebt    !== "barchasi" ? filterDebt    : undefined,
     enrollmentStatus: filterEnroll !== "barchasi" ? filterEnroll : undefined,
+    joinedFrom: joinedFrom || undefined,
+    joinedTo:   joinedTo   || undefined,
   });
   const { data: groupsRaw }   = useGroups({ status: "ACTIVE,UPCOMING" });
   const { data: teachersRaw } = useTeachers();
@@ -263,11 +269,13 @@ export default function StudentsPage() {
 
   const filtersOn =
     filterEnroll !== "barchasi" || filterGroup !== "barchasi" ||
-    filterTeacher !== "barchasi" || filterDebt !== "barchasi" || !!search;
+    filterTeacher !== "barchasi" || filterDebt !== "barchasi" || !!search ||
+    !!joinedFrom || !!joinedTo;
 
   function clearFilters() {
     setSearch(""); setFilterEnroll("barchasi"); setFilterGroup("barchasi");
     setFilterTeacher("barchasi"); setFilterDebt("barchasi");
+    setJoinedFrom(""); setJoinedTo("");
   }
 
   return (
@@ -405,6 +413,18 @@ export default function StudentsPage() {
               <option value="tolangan">Qarzi yo&apos;qlar</option>
             </select>
           )}
+
+          {/* Qabul sanasi oralig'i — "shu davrda qo'shilganlar". */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-neutral-400 shrink-0">Qabul sanasi:</span>
+            <DatePicker value={joinedFrom} max={joinedTo || undefined} clearable
+              placeholder="Dan" className="h-9 w-32 text-xs"
+              onChange={setJoinedFrom} />
+            <span className="text-neutral-300 dark:text-neutral-600">—</span>
+            <DatePicker value={joinedTo} min={joinedFrom || undefined} clearable
+              placeholder="Gacha" className="h-9 w-32 text-xs"
+              onChange={setJoinedTo} />
+          </div>
 
           {filtersOn && (
             <button onClick={clearFilters}

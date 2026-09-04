@@ -40,7 +40,7 @@ function emptyForm() {
     source: "", gender: "MALE" as Gender,
     parentPhone: "", parentName: "",
     groupId: "", joinDate: todayStr(),
-    referralCode: "",
+    referralCode: "", note: "",
   };
 }
 
@@ -99,6 +99,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
         parentPhone: initial.parentPhone ?? "", parentName: initial.parentName ?? "",
         groupId: "", joinDate: todayStr(),
         referralCode: initial.referredBy?.referralCode ?? "",
+        note: initial.note ?? "",
       });
       setOpenParent(!!(initial.parentPhone || initial.parentName));
       setOpenGroup(false);
@@ -227,6 +228,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       // tahrirlash mavjud bog'lanishni jimgina o'chirib yuborardi.
       if (referrer) body.referredById = referrer.id;
       else if (isEdit && initial?.referredBy && !form.referralCode.trim()) body.referredById = "";
+      if (form.note.trim()) body.note = form.note.trim();
 
       if (!isEdit) {
         if (form.groupId) { body.groupId = form.groupId; body.joinDate = form.joinDate; }
@@ -353,6 +355,11 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
 
       <FormField label="Jinsini tanlang">
         <GenderPicker value={form.gender} onChange={v => setForm(p => ({ ...p, gender: v }))} />
+      </FormField>
+
+      <FormField label="Izoh" hint="Ixtiyoriy">
+        <Input placeholder="Qo'shimcha ma'lumot..." value={form.note}
+          onChange={e => setForm(p => ({ ...p, note: e.target.value }))} className="h-10" />
       </FormField>
 
       {/* ── Guruhga qo'shish (faqat yaratishda) ── */}

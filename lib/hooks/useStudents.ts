@@ -38,6 +38,9 @@ export interface StudentsQuery {
   debt?: string;
   /** "SINOV" | "FAOL" | "CHIQIB_KETGAN" — a'zolik holati. */
   enrollmentStatus?: string;
+  /** Qabul sanasi (`joinedAt`) oralig'i — "YYYY-MM-DD". */
+  joinedFrom?: string;
+  joinedTo?: string;
 }
 
 /**
@@ -56,6 +59,8 @@ export function useStudents(params?: StudentsQuery) {
   if (params?.teacherId) query.set("teacherId", params.teacherId);
   if (params?.debt)      query.set("debt",      params.debt);
   if (params?.enrollmentStatus) query.set("enrollmentStatus", params.enrollmentStatus);
+  if (params?.joinedFrom) query.set("joinedFrom", params.joinedFrom);
+  if (params?.joinedTo)   query.set("joinedTo",   params.joinedTo);
   if (activeBranchId)    query.set("branchId",  activeBranchId);
   const qs = query.toString();
   return useSWR(`/api/students${qs ? `?${qs}` : ""}`, fetcher);
