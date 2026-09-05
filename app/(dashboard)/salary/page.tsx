@@ -69,7 +69,10 @@ export default function SalaryPage() {
                       <p className="text-[14px] font-semibold text-neutral-900 dark:text-neutral-100">{monthLabel(s.month)}</p>
                       <p className="text-[11px] text-neutral-400">
                         Yig'ilgan: {fmtMoney(s.totalCollected)}
-                        {s.baseSalary ? ` · Baza: ${fmtMoney(s.baseSalary)}` : ""}
+                        {/* `baseSalary` — usuliga qarab yoki so'm, yoki foiz (masalan 50% ish haqi
+                            uchun 50). Har doim `fmtMoney` bilan ko'rsatilsa, "Baza: 50 so'm" deb
+                            chiqib, birinchi ko'rgan odam buni haqiqiy pul deb o'ylab qolardi. */}
+                        {s.baseSalary ? ` · Baza: ${salaryDisplay(data?.salaryType, s.baseSalary)}` : ""}
                       </p>
                     </div>
                     <div className="text-right">
