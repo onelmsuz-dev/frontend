@@ -28,6 +28,18 @@ export function BottomNav() {
   const role = (session?.user?.role ?? "TEACHER") as Role;
   const permissions = me?.permissions;
 
+  // MOLIYA — ruxsati yo'q bo'lsa TABNING O'ZI ko'rinmasin, ichkarida
+  // "Ruxsat yo'q" chizib turmasin. Boshqa uchtasi (Bosh sahifa/O'quvchilar/
+  // Guruhlar) hamma rolda ochiq bo'lgani uchun shart emas — faqat shu
+  // tab, aynan `/finance` uchun `nav-config.ts`da e'lon qilingan
+  // ruxsatning O'ZIDAN foydalanamiz (ikkinchi joyda qattiq yozib
+  // qo'yilsa, ikkalasi bir-biridan uzilib qolishi mumkin edi).
+  const financePerm = navSections.flatMap(s => s.items).find(i => i.href === "/finance")?.perm;
+  const financeVisible = permissions
+    ? itemVisible(financePerm, permissions)
+    : (NAV_PERMISSIONS["/finance"]?.includes(role) ?? true);
+  const visibleBottomItems = BOTTOM_ITEMS.filter(item => item.href !== "/finance" || financeVisible);
+
   const moreItems = navSections
     .flatMap(s => s.items)
     .filter(item => {
@@ -98,7 +110,7 @@ export function BottomNav() {
       )}
 
       <nav className="glass-strong fixed bottom-3 left-3 right-3 z-[60] lg:hidden rounded-3xl border border-white/60 dark:border-white/10 shadow-xl flex items-stretch overflow-hidden">
-        {BOTTOM_ITEMS.map(item => {
+        {visibleBottomItems.map(item => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
           return (
