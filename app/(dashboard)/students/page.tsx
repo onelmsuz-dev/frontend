@@ -163,7 +163,14 @@ export default function StudentsPage() {
     // guruhi borlar sanalar va yangi qo'shilganlar hisobga kirmasdi.
     jami:  students.length,
     yangi: students.filter(s => enrollOf(s) === "YANGI").length,
-    guruhsiz: students.filter(s => enrollOf(s) === "GURUHSIZ").length,
+    // "Guruhsiz" KARTASI backenddagi "GURUHSIZ" filtri bilan BIR XIL
+    // hisoblashi kerak: hozir hech qaysi guruhda faol/sinov emas (arxiv
+    // bo'lmasa) — `enrollOf()`dagi tor "YANGI"/"GURUHSIZ" ajratimidan
+    // MUSTAQIL. `enrollOf()` esa jadvaldagi HOLAT belgisi uchun
+    // qoladi — u yerda "hech qachon guruhga tushmagan" va "guruhdan
+    // chiqqan"ni alohida ko'rsatish foydali, faqat bu kartaning
+    // yig'indisiga kirmasligi kerak emas edi.
+    guruhsiz: students.filter(s => !s.archivedAt && activeGroupsOf(s).length === 0).length,
     sinov: students.filter(s => enrollOf(s) === "SINOV").length,
     faol:  students.filter(s => enrollOf(s) === "FAOL").length,
     ketgan: students.filter(s => enrollOf(s) === "CHIQIB_KETGAN").length,
