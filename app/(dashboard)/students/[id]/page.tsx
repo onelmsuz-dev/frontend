@@ -92,6 +92,13 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   /** Qaysi a'zolikning sanasi tahrirlanmoqda. */
   const [dateModalId,     setDateModalId]     = useState<string | null>(null);
   const [transferring,    setTransferring]    = useState(false);
+  /**
+   * Almashtirilayotgan a'zolikning ESKI guruhida qarz bo'lsa — API
+   * chaqirilishidan OLDIN shu bilan to'ldiriladi va tasdiqlash oynasi
+   * ochiladi. `null` — oyna yopiq.
+   */
+  const [transferDebtChoice, setTransferDebtChoice] =
+    useState<{ replacing: any; groupName: string; debt: number } | null>(null);
 
   const [activating,      setActivating]      = useState<string | null>(null);
   const [groupActionErr,  setGroupActionErr]  = useState("");
@@ -230,9 +237,10 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   // guruh qo'shiladi. Ilgari faqat "almashtirish" bor edi va u har doim
   // eski guruhdan chiqarib yuborardi, ya'ni ikkinchi fanni qo'shishning
   // umuman iloji yo'q edi.
-  async function submitGroupModal() {
-    if (!transferGroupId) { setTransferErr("Guruhni tanlang"); return; }
-    const replacing = groupModal?.sg ?? null;
+  // Haqiqiy API chaqiruvi — ajratilgan, chunki almashtirishda bittasi
+  // to'g'ridan-to'g'ri, ikkinchisi esa eski qarz tasdiqlash oynasidan
+  // keyin chaqiriladi.
+  async function runTransfer(replacing: any, waiveOldDebt: boolean) {
     setTransferring(true); setTransferErr("");
     try {
       // ALMASHTIRISH — bitta amal (server tomonda).
@@ -246,6 +254,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             body: JSON.stringify({
               fromId: replacing.id, groupId: transferGroupId,
               ...(enrollDate ? { joinedAt: enrollDate } : {}),
+              ...(waiveOldDebt ? { waiveOldDebt: true } : {}),
             }),
           })
         : await fetch("/api/student-groups", {
@@ -261,8 +270,30 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       revalidateAll();
       setGroupModal(null);
       setTransferGroupId("");
+      setTransferDebtChoice(null);
     } catch { setTransferErr("Serverga ulanib bo'lmadi"); }
     finally { setTransferring(false); }
+  }
+
+  async function submitGroupModal() {
+    if (!transferGroupId) { setTransferErr("Guruhni tanlang"); return; }
+    const replacing = groupModal?.sg ?? null;
+
+    // ALMASHTIRISH bo'lsa — eski guruhda qarz bormi tekshiramiz. Bor bo'lsa
+    // to'g'ridan-to'g'ri o'tkazmasdan, avval xodimga ko'rsatib tasdiqlatamiz
+    // (Gulsevar/BePro: "guruhni o'zgartirsam, eskisiga ham to'lov
+    // hisoblanib qoladi" — endi bu ko'rinmas emas, ATAYLAB tanlanadi).
+    // `canSeeMoney` bo'lmasa raqamni ko'rsata olmaymiz — ogohlantirishsiz
+    // hozirgidek davom etamiz.
+    if (replacing && canSeeMoney) {
+      const debt = (student as any)?.groupLedger?.rows
+        ?.find((r: any) => r.groupId === replacing.groupId)?.debt ?? 0;
+      if (debt > 0) {
+        setTransferDebtChoice({ replacing, groupName: replacing.group?.name ?? "", debt });
+        return;
+      }
+    }
+    await runTransfer(replacing, false);
   }
 
   // ── Loading / Not found ───────────────────────────────────────────────────────
@@ -587,6 +618,45 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         )}
         {transferErr && !transferErr.includes("guruh") && !transferErr.includes("Guruh") && (
           <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 rounded-xl px-3 py-2.5">
+            <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+            <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{transferErr}</p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Guruh almashtirishda ESKI guruhdagi qarz — saqlansinmi, kechirilsinmi.
+          Faqat shu guruhda haqiqiy qarz bo'lsa ochiladi (`submitGroupModal`da
+          tekshiriladi); qarzsiz almashtirish hozirgidek to'g'ridan-to'g'ri o'tadi. */}
+      <Modal open={!!transferDebtChoice} onClose={() => setTransferDebtChoice(null)}
+        title="Eski guruhdagi qarz"
+        subtitle={transferDebtChoice?.groupName}
+        footer={
+          <>
+            <Button variant="outline" disabled={transferring}
+              className="flex-1 h-9 text-[13px]"
+              onClick={() => runTransfer(transferDebtChoice?.replacing, false)}>
+              {transferring ? "Saqlanmoqda..." : "Saqlab qolish"}
+            </Button>
+            <Button disabled={transferring}
+              className="flex-1 h-9 bg-amber-600 hover:bg-amber-700 text-white text-[13px]"
+              onClick={() => runTransfer(transferDebtChoice?.replacing, true)}>
+              {transferring ? "Saqlanmoqda..." : "Kechirish"}
+            </Button>
+          </>
+        }>
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-4 py-3">
+          <p className="text-[13px] text-amber-700 dark:text-amber-400">
+            <strong>{transferDebtChoice?.groupName}</strong> guruhida hali{" "}
+            <strong>{transferDebtChoice ? fmt(transferDebtChoice.debt) : ""}</strong> qarz bor.
+          </p>
+          <p className="text-[12px] text-amber-600/80 dark:text-amber-400/80 mt-1.5">
+            <strong>Saqlab qolish</strong> — qarz eski guruhda qolaveradi, o&apos;zgarish yo&apos;q (standart).
+            <br />
+            <strong>Kechirish</strong> — shu summa o&apos;quvchi balansiga qaytariladi, eski guruh qarzsiz bo&apos;ladi.
+          </p>
+        </div>
+        {transferErr && (
+          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 rounded-xl px-3 py-2.5 mt-3">
             <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
             <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{transferErr}</p>
           </div>

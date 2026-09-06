@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarClock, Check, AlertTriangle, Loader2, Info } from "lucide-react";
+import { CalendarClock, Check, AlertTriangle, Loader2, Info, Hourglass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,8 @@ interface OrgBilling {
   billingStart?: "ACTIVATION" | "JOIN";
   billingProrate?: boolean;
   trialLessonLimit?: number;
+  billingTiming?: "OLDINDAN" | "OXIRIDA";
+  billingAdvanceDays?: number;
 }
 
 export function BillingSettings({
@@ -32,6 +34,8 @@ export function BillingSettings({
   const [start, setStart] = useState<"ACTIVATION" | "JOIN">("ACTIVATION");
   const [prorate, setProrate] = useState(false);
   const [trialLimit, setTrialLimit] = useState("0");
+  const [timing, setTiming] = useState<"OLDINDAN" | "OXIRIDA">("OXIRIDA");
+  const [advanceDays, setAdvanceDays] = useState("3");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -40,6 +44,11 @@ export function BillingSettings({
     setStart(org.billingStart ?? "ACTIVATION");
     setProrate(!!org.billingProrate);
     setTrialLimit(String(org.trialLessonLimit ?? 0));
+    // Standart "OXIRIDA" — markaz sozlamani hali ko'rmagan bo'lsa ham
+    // hisobi o'zgarmasin (sxemadagi yangi markaz standarti bu yerga
+    // tegishli emas, u faqat bazaviy `@default`).
+    setTiming(org.billingTiming ?? "OXIRIDA");
+    setAdvanceDays(String(org.billingAdvanceDays ?? 3));
   }, [org]);
 
   async function save() {
@@ -52,6 +61,8 @@ export function BillingSettings({
           billingStart: start,
           billingProrate: prorate,
           trialLessonLimit: Math.max(0, Number(trialLimit) || 0),
+          billingTiming: timing,
+          billingAdvanceDays: Math.min(14, Math.max(0, Number(advanceDays) || 0)),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -170,6 +181,71 @@ export function BillingSettings({
             </p>
           </div>
         )}
+      </div>
+
+      {/* ── To'lov vaqti: oldindan yoki oxirida ──────────────────────── */}
+      <div className="glass-panel rounded-2xl border border-white/60 dark:border-white/10 p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-2xl shrink-0 grid place-items-center bg-indigo-100/70 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-300">
+            <Hourglass className="w-4.5 h-4.5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100">
+              To&apos;lov vaqti
+            </p>
+            <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Qarz davr (oy yoki sikl) boshlanishidan oldinmi, keyinmi yoziladi — Oylik va Individual ikkalasida ham
+            </p>
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-2.5 mt-4">
+          {([
+            {
+              v: "OXIRIDA" as const,
+              l: "Oy/sikl oxirida",
+              d: "Davr haqiqatan boshlangandan keyin qarz yoziladi (standart).",
+            },
+            {
+              v: "OLDINDAN" as const,
+              l: "Oldindan",
+              d: "Davr boshlanishidan bir necha kun oldin qarz ko'rinadi.",
+            },
+          ]).map(o => (
+            <button key={o.v} type="button" onClick={() => setTiming(o.v)}
+              className={cn(
+                "text-left px-4 py-3 rounded-2xl border-2 transition-all",
+                timing === o.v
+                  ? "border-indigo-600 bg-indigo-50/70 dark:bg-indigo-900/20 dark:border-indigo-400"
+                  : "border-white/60 dark:border-white/10 hover:border-neutral-400",
+              )}>
+              <p className={cn("text-[13px] font-bold",
+                timing === o.v ? "text-indigo-700 dark:text-indigo-300" : "text-neutral-800 dark:text-neutral-200")}>
+                {o.l}
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                {o.d}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        {timing === "OLDINDAN" && (
+          <div className="flex items-center gap-3 mt-3">
+            <Input type="number" min={0} max={14} value={advanceDays}
+              onChange={e => setAdvanceDays(e.target.value)}
+              className="h-10 w-24 text-[13px]" />
+            <span className="text-[12px] text-neutral-500 dark:text-neutral-400">kun oldin</span>
+          </div>
+        )}
+
+        <div className="flex items-start gap-2 mt-3 text-[11px] text-neutral-500 dark:text-neutral-400">
+          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <p>
+            O&apos;zgarish faqat BUNDAN KEYINGI hisoblarga ta&apos;sir qiladi —
+            allaqachon yozilgan qarzlar qayta hisoblanmaydi.
+          </p>
+        </div>
       </div>
 
       {/* ── Sinov chegarasi ──────────────────────────────────────────── */}
