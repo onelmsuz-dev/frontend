@@ -127,18 +127,54 @@ export default function OrganizationsPage() {
     } finally { setTogglingId(null); }
   }
 
-  /** Demo/sinov markazi bayrog'i — yangi funksiyalar avval shu yerda sinaladi. */
-  async function toggleDemo(id: string, cur: boolean) {
+  /**
+   * Demo/sinov markazi bayrog'i — yangi funksiyalar avval shu yerda sinaladi.
+   *
+   * Demo YOQILGANDA: agar markazning muddati hali faol bo'lmasa (yangi
+   * markaz, hech qachon to'lamagan, yoki muddati allaqachon tugagan),
+   * shu bitta so'rovda `planExpiresAt`ni ham +14 kunga o'rnatadi — aks
+   * holda demo yoqilgan zahoti markaz "tarif muddati tugagan" bilan
+   * bloklangan holda qolib ketardi. Muddat ALLAQACHON faol bo'lsa
+   * (masalan haqiqiy to'lovchi mijoz vaqtincha demo qilinsa) — sanaga
+   * TEGILMAYDI.
+   */
+  async function toggleDemo(id: string, cur: boolean, subscriptionActive: boolean) {
     setDemoId(id);
     try {
+      const body: Record<string, unknown> = { isDemo: !cur };
+      if (!cur && !subscriptionActive) {
+        body.planExpiresAt = new Date(Date.now() + 14 * 86400000).toISOString();
+      }
       const res = await fetch(`/api/admode/organizations/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isDemo: !cur }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         setDeleteErr(d.error ?? "Demo bayrog'ini o'zgartirib bo'lmadi");
+        return;
+      }
+      mutate();
+    } catch { setDeleteErr("Serverga ulanib bo'lmadi"); }
+    finally { setDemoId(null); }
+  }
+
+  /** Muddatni N kunga uzaytiradi — joriy muddat (yoki bugun, qaysi biri keyinroq) dan boshlab. */
+  async function extendSubscription(id: string, currentExpiresAt: string | null, days: number) {
+    setDemoId(id);
+    try {
+      const base = currentExpiresAt && new Date(currentExpiresAt).getTime() > Date.now()
+        ? new Date(currentExpiresAt).getTime() : Date.now();
+      const planExpiresAt = new Date(base + days * 86400000).toISOString();
+      const res = await fetch(`/api/admode/organizations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planExpiresAt }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setDeleteErr(d.error ?? "Muddatni uzaytirib bo'lmadi");
         return;
       }
       mutate();
@@ -519,23 +555,50 @@ export default function OrganizationsPage() {
                             : <div className="flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /><span className="text-[11px] text-red-600 dark:text-red-400 font-medium">Blok</span></div>
                           }
                         </td>
-                        {/* Demo markaz — bosqichi "DEMO" bo'lgan funksiyalar shu yerda yoqiladi */}
+                        {/* Demo markaz — bosqichi "DEMO" bo'lgan funksiyalar shu yerda yoqiladi.
+                            Muddat (`planExpiresAt`) ham demo, ham pullik markazda BIR XIL maydon —
+                            demo yoqilganda tugagan/yo'q bo'lsa avtomatik +14 kun qo'yiladi, keyin
+                            shu yerdagi tugmalar bilan uzaytiriladi. Muddat tugasa — markaz ODDIY
+                            "Tarif muddati tugagan" (to'lov) oynasini ko'radi, demo bo'lsa ham. */}
                         <td className="px-4 py-3.5">
-                          <button
-                            onClick={() => toggleDemo(org.id, !!org.isDemo)}
-                            disabled={demoId === org.id}
-                            title={org.isDemo
-                              ? "Demo markaz — yangi funksiyalar shu yerda sinaladi"
-                              : "Demo markaz qilish"}
-                            className={cn(
-                              "relative w-9 h-5 rounded-full transition-colors disabled:opacity-40",
-                              org.isDemo ? "bg-amber-500" : "bg-neutral-300 dark:bg-neutral-600",
-                            )}>
-                            <span className={cn(
-                              "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-                              org.isDemo && "translate-x-4",
-                            )} />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => toggleDemo(org.id, !!org.isDemo, !!org.subscription?.active)}
+                              disabled={demoId === org.id}
+                              title={org.isDemo
+                                ? "Demo markaz — yangi funksiyalar shu yerda sinaladi"
+                                : "Demo markaz qilish"}
+                              className={cn(
+                                "relative w-9 h-5 rounded-full shrink-0 transition-colors disabled:opacity-40",
+                                org.isDemo ? "bg-amber-500" : "bg-neutral-300 dark:bg-neutral-600",
+                              )}>
+                              <span className={cn(
+                                "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                                org.isDemo && "translate-x-4",
+                              )} />
+                            </button>
+                            <div className="flex flex-col gap-0.5">
+                              <span className={cn("text-[10px] font-semibold whitespace-nowrap",
+                                !org.subscription?.expiresAt ? "text-neutral-400"
+                                  : org.subscription?.active
+                                    ? (org.subscription?.warning ? "text-amber-600 dark:text-amber-400" : "text-neutral-500")
+                                    : "text-red-600 dark:text-red-400")}>
+                                {!org.subscription?.expiresAt ? "Muddat yo'q"
+                                  : org.subscription?.active ? `${org.subscription.daysLeft} kun qoldi`
+                                  : "Tugagan"}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                {[7, 14, 30].map(d => (
+                                  <button key={d} disabled={demoId === org.id}
+                                    onClick={() => extendSubscription(org.id, org.subscription?.expiresAt ?? null, d)}
+                                    title={`+${d} kunga uzaytirish`}
+                                    className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 disabled:opacity-40 transition-colors">
+                                    +{d}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
                         </td>
                         {/* Gamifikatsiya — MARKAZ kaliti (global kalitdan pastda turadi) */}
                         <td className="px-4 py-3.5">
