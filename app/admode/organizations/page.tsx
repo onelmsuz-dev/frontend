@@ -589,7 +589,16 @@ export default function OrganizationsPage() {
                               </span>
                               <div className="flex items-center gap-1">
                                 {[7, 14, 30].map(d => (
-                                  <button key={d} disabled={demoId === org.id}
+                                  <button key={`-${d}`} disabled={demoId === org.id}
+                                    onClick={() => extendSubscription(org.id, org.subscription?.expiresAt ?? null, -d)}
+                                    title={`${d} kunga kamaytirish`}
+                                    className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 transition-colors">
+                                    −{d}
+                                  </button>
+                                ))}
+                                <span className="w-px h-3 bg-neutral-300 dark:bg-neutral-700 mx-0.5" />
+                                {[7, 14, 30].map(d => (
+                                  <button key={`+${d}`} disabled={demoId === org.id}
                                     onClick={() => extendSubscription(org.id, org.subscription?.expiresAt ?? null, d)}
                                     title={`+${d} kunga uzaytirish`}
                                     className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 disabled:opacity-40 transition-colors">
