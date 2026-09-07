@@ -503,14 +503,50 @@ export default function OrganizationsPage() {
                             </div>
                           </div>
                         </td>
-                        {/* Plan */}
+                        {/* Tarif — istalgan markazni istalgan tarifga o'tqizish (select),
+                            muddati qachongacha ekani (sana + necha kun qoldi) va
+                            uzaytirish/kamaytirish tugmalari — demo yoki pullik farqisiz,
+                            hammasi BIR XIL `planExpiresAt`dan. */}
                         <td className="px-4 py-3.5">
-                          <select value={org.plan} onChange={e => changePlan(org.id, e.target.value)}
-                            className={cn("text-[10px] font-bold px-2 py-1 rounded-full border-0 outline-none cursor-pointer", plan.cls)}>
-                            {PLANS.map(p => (
-                              <option key={p} value={p}>{PLAN_CFG[p].label}</option>
-                            ))}
-                          </select>
+                          <div className="flex flex-col gap-1">
+                            <select value={org.plan} onChange={e => changePlan(org.id, e.target.value)}
+                              className={cn("text-[10px] font-bold px-2 py-1 rounded-full border-0 outline-none cursor-pointer w-fit", plan.cls)}>
+                              {PLANS.map(p => (
+                                <option key={p} value={p}>{PLAN_CFG[p].label}</option>
+                              ))}
+                            </select>
+                            <span className={cn("text-[10px] font-semibold whitespace-nowrap",
+                              !org.subscription?.expiresAt ? "text-neutral-400"
+                                : org.subscription?.active
+                                  ? (org.subscription?.warning ? "text-amber-600 dark:text-amber-400" : "text-neutral-500")
+                                  : "text-red-600 dark:text-red-400")}
+                              title={org.subscription?.expiresAt
+                                ? new Date(org.subscription.expiresAt).toLocaleDateString("uz-UZ") + " gacha"
+                                : undefined}>
+                              {!org.subscription?.expiresAt ? "Muddat yo'q"
+                                : `${new Date(org.subscription.expiresAt).toLocaleDateString("uz-UZ")}` +
+                                  (org.subscription?.active ? ` (${org.subscription.daysLeft} kun)` : " (tugagan)")}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              {[7, 14, 30].map(d => (
+                                <button key={`-${d}`} disabled={demoId === org.id}
+                                  onClick={() => extendSubscription(org.id, org.subscription?.expiresAt ?? null, -d)}
+                                  title={`${d} kunga kamaytirish`}
+                                  className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 transition-colors">
+                                  −{d}
+                                </button>
+                              ))}
+                              <span className="w-px h-3 bg-neutral-300 dark:bg-neutral-700 mx-0.5" />
+                              {[7, 14, 30].map(d => (
+                                <button key={`+${d}`} disabled={demoId === org.id}
+                                  onClick={() => extendSubscription(org.id, org.subscription?.expiresAt ?? null, d)}
+                                  title={`+${d} kunga uzaytirish`}
+                                  className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 disabled:opacity-40 transition-colors">
+                                  +{d}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </td>
                         {/* Stats */}
                         <td className="px-4 py-3.5">
@@ -555,59 +591,26 @@ export default function OrganizationsPage() {
                             : <div className="flex items-center gap-1.5"><XCircle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" /><span className="text-[11px] text-red-600 dark:text-red-400 font-medium">Blok</span></div>
                           }
                         </td>
-                        {/* Demo markaz — bosqichi "DEMO" bo'lgan funksiyalar shu yerda yoqiladi.
-                            Muddat (`planExpiresAt`) ham demo, ham pullik markazda BIR XIL maydon —
-                            demo yoqilganda tugagan/yo'q bo'lsa avtomatik +14 kun qo'yiladi, keyin
-                            shu yerdagi tugmalar bilan uzaytiriladi. Muddat tugasa — markaz ODDIY
-                            "Tarif muddati tugagan" (to'lov) oynasini ko'radi, demo bo'lsa ham. */}
+                        {/* Demo markaz — bosqichi "DEMO" bo'lgan funksiyalar shu yerda yoqiladi
+                            va tarif SONI chegaralari (o'quvchi/filial/xodim) chetlab o'tiladi.
+                            Muddat va uzaytirish endi "Tarif" ustunida — u demo/pullikdan
+                            qat'i nazar BIR XIL `planExpiresAt`dan ishlaydi. */}
                         <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => toggleDemo(org.id, !!org.isDemo, !!org.subscription?.active)}
-                              disabled={demoId === org.id}
-                              title={org.isDemo
-                                ? "Demo markaz — yangi funksiyalar shu yerda sinaladi"
-                                : "Demo markaz qilish"}
-                              className={cn(
-                                "relative w-9 h-5 rounded-full shrink-0 transition-colors disabled:opacity-40",
-                                org.isDemo ? "bg-amber-500" : "bg-neutral-300 dark:bg-neutral-600",
-                              )}>
-                              <span className={cn(
-                                "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
-                                org.isDemo && "translate-x-4",
-                              )} />
-                            </button>
-                            <div className="flex flex-col gap-0.5">
-                              <span className={cn("text-[10px] font-semibold whitespace-nowrap",
-                                !org.subscription?.expiresAt ? "text-neutral-400"
-                                  : org.subscription?.active
-                                    ? (org.subscription?.warning ? "text-amber-600 dark:text-amber-400" : "text-neutral-500")
-                                    : "text-red-600 dark:text-red-400")}>
-                                {!org.subscription?.expiresAt ? "Muddat yo'q"
-                                  : org.subscription?.active ? `${org.subscription.daysLeft} kun qoldi`
-                                  : "Tugagan"}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                {[7, 14, 30].map(d => (
-                                  <button key={`-${d}`} disabled={demoId === org.id}
-                                    onClick={() => extendSubscription(org.id, org.subscription?.expiresAt ?? null, -d)}
-                                    title={`${d} kunga kamaytirish`}
-                                    className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 transition-colors">
-                                    −{d}
-                                  </button>
-                                ))}
-                                <span className="w-px h-3 bg-neutral-300 dark:bg-neutral-700 mx-0.5" />
-                                {[7, 14, 30].map(d => (
-                                  <button key={`+${d}`} disabled={demoId === org.id}
-                                    onClick={() => extendSubscription(org.id, org.subscription?.expiresAt ?? null, d)}
-                                    title={`+${d} kunga uzaytirish`}
-                                    className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-amber-500 hover:text-amber-600 dark:hover:text-amber-400 disabled:opacity-40 transition-colors">
-                                    +{d}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
+                          <button
+                            onClick={() => toggleDemo(org.id, !!org.isDemo, !!org.subscription?.active)}
+                            disabled={demoId === org.id}
+                            title={org.isDemo
+                              ? "Demo markaz — yangi funksiyalar shu yerda sinaladi, tarif limitlariga urilmaydi"
+                              : "Demo markaz qilish"}
+                            className={cn(
+                              "relative w-9 h-5 rounded-full shrink-0 transition-colors disabled:opacity-40",
+                              org.isDemo ? "bg-amber-500" : "bg-neutral-300 dark:bg-neutral-600",
+                            )}>
+                            <span className={cn(
+                              "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                              org.isDemo && "translate-x-4",
+                            )} />
+                          </button>
                         </td>
                         {/* Gamifikatsiya — MARKAZ kaliti (global kalitdan pastda turadi) */}
                         <td className="px-4 py-3.5">
