@@ -138,6 +138,36 @@ export default function OrganizationsPage() {
    * (masalan haqiqiy to'lovchi mijoz vaqtincha demo qilinsa) — sanaga
    * TEGILMAYDI.
    */
+  /**
+   * OYLIK REJIMNI DVIGATELGA KO'CHIRISH — ichki migratsiya kaliti.
+   *
+   * Markaz buni ko'rmaydi. Yoqishdan OLDIN serverda
+   * `npm run db:billing-compare` farq 0 ekanini ko'rsatishi kerak.
+   * Xato ko'rinsa — shu tugmani o'chirish kifoya, kod deploy qilish
+   * shart emas.
+   */
+  async function toggleEngine(id: string, cur: boolean, name: string) {
+    if (!cur && !confirm(
+      `"${name}" markazining OYLIK hisobi dvigatelga ko'chiriladi.\n\n`
+      + `Oldin serverda "npm run db:billing-compare" farq 0 ekanini `
+      + `ko'rsatgan bo'lishi kerak.\n\nDavom etamizmi?`)) return;
+    setDemoId(id);
+    try {
+      const res = await fetch(`/api/admode/organizations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ billingEngineMonthly: !cur }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setDeleteErr(d.error ?? "Kalitni o'zgartirib bo'lmadi");
+        return;
+      }
+      mutate();
+    } catch { setDeleteErr("Serverga ulanib bo'lmadi"); }
+    finally { setDemoId(null); }
+  }
+
   async function toggleDemo(id: string, cur: boolean, subscriptionActive: boolean) {
     setDemoId(id);
     try {
@@ -465,7 +495,7 @@ export default function OrganizationsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80">
-                {["Tashkilot", "Tarif", "O'quvchi", "O'qituvchi", "Guruh", "Xona", "Kurs", "Daromad", "Holat", "Demo", "Gamifikatsiya", "Qo'shilgan", "Amallar"].map(h => (
+                {["Tashkilot", "Tarif", "O'quvchi", "O'qituvchi", "Guruh", "Xona", "Kurs", "Daromad", "Holat", "Demo", "Dvigatel", "Gamifikatsiya", "Qo'shilgan", "Amallar"].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-[10px] font-bold text-neutral-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -609,6 +639,26 @@ export default function OrganizationsPage() {
                             <span className={cn(
                               "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
                               org.isDemo && "translate-x-4",
+                            )} />
+                          </button>
+                        </td>
+                        {/* DVIGATEL — oylik rejim qaysi yo'ldan hisoblanadi.
+                            ICHKI migratsiya kaliti: markaz buni ko'rmaydi.
+                            Yashil = ko'chirilgan (dvigatel), kulrang = eski yo'l. */}
+                        <td className="px-4 py-3.5">
+                          <button
+                            onClick={() => toggleEngine(org.id, !!org.billingEngineMonthly, org.name)}
+                            disabled={demoId === org.id}
+                            title={org.billingEngineMonthly
+                              ? "Oylik hisob DVIGATELDAN yuradi. O'chirish — eski yo'lga qaytaradi."
+                              : "Oylik hisob eski yo'ldan yuradi. Yoqishdan oldin db:billing-compare farq 0 bo'lsin."}
+                            className={cn(
+                              "relative w-9 h-5 rounded-full shrink-0 transition-colors disabled:opacity-40",
+                              org.billingEngineMonthly ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600",
+                            )}>
+                            <span className={cn(
+                              "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform",
+                              org.billingEngineMonthly && "translate-x-4",
                             )} />
                           </button>
                         </td>
