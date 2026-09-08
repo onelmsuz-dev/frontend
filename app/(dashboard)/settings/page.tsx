@@ -39,26 +39,54 @@ const WORK_DAYS = [
   { v: "YAKSHANBA", l: "Yak" },
 ];
 
+/**
+ * BO'LIMLAR — GURUHLANGAN.
+ *
+ * Ilgari 11 ta tab bitta tekis ro'yxatda turardi va eng chalkashtiradigan
+ * juftlik YONMA-YON edi: "Tarif" (markazning OneRoom'ga to'lovi) va
+ * "To'lov qoidalari" (o'quvchidan qanday pul olish). Ikkalasi ham "to'lov"
+ * so'zi bilan boshlanardi, ikkalasi ham pul haqida — lekin butunlay
+ * boshqa narsa. Markaz egalari shu ikkitasini adashtirar edi.
+ *
+ * Endi guruhlangan va nomlar aniqlashtirilgan: "O'quvchi to'lovlari"
+ * (bizning mijozimizning mijozi) va "OneRoom obunasi" (bizning
+ * mijozimiz bizga to'laydi) — nomning o'zi kimga to'lov ekanini aytadi.
+ */
+const groups = [
+  { id: "markaz", label: "Markaz" },
+  { id: "pul",    label: "Pul va hisob" },
+  { id: "obuna",  label: "OneRoom obunasi" },
+  { id: "tizim",  label: "Tizim" },
+] as const;
+
 const sections = [
-  { id: "markaz",        label: "O'quv markaz",    icon: Building },
-  { id: "tolov",         label: "To'lov qoidalari", icon: Wallet },
-  { id: "tarif",         label: "Tarif",           icon: CreditCard },
-  { id: "filliallar",    label: "Filliallar",      icon: MapPin },
-  { id: "xonalar",       label: "Xonalar",         icon: DoorOpen },
-  { id: "xodimlar",      label: "Xodimlar",        icon: Users },
-  { id: "bildirishnoma", label: "Bildirishnomalar", icon: Bell },
+  // ─ Markaz: markazning o'zi haqida ─
+  { id: "markaz",        label: "Markaz ma'lumoti", icon: Building,  group: "markaz" },
+  { id: "filliallar",    label: "Filiallar",        icon: MapPin,    group: "markaz" },
+  { id: "xonalar",       label: "Xonalar",          icon: DoorOpen,  group: "markaz" },
+  { id: "xodimlar",      label: "Xodimlar",         icon: Users,     group: "markaz" },
+
+  // ─ Pul: O'QUVCHIDAN qanday pul olinadi ─
+  { id: "tolov",         label: "O'quvchi to'lovlari", icon: Wallet, group: "pul" },
+  { id: "chegirma",      label: "Chegirmalar", icon: Percent, group: "pul",
+    feature: "discounts", perm: "discounts.view" },
+
+  // ─ Obuna: MARKAZ BIZGA qancha to'laydi ─
+  { id: "tarif",         label: "Tarif va muddat", icon: CreditCard, group: "obuna" },
+
+  // ─ Tizim ─
+  { id: "bildirishnoma", label: "Bildirishnomalar", icon: Bell, group: "tizim" },
   // Yo'l ko'rsatuvchi bayrog'i o'chiq markazda bu tab ko'rsatilmaydi
   // (quyida `visibleSections` da filtrlanadi).
-  { id: "organish",      label: "Yo'l ko'rsatuvchi", icon: Rocket, feature: "onboarding" },
+  { id: "organish",      label: "Yo'l ko'rsatuvchi", icon: Rocket, group: "tizim",
+    feature: "onboarding" },
   // Harakatlar tarixi ham bayroq ortida chiqariladi va qo'shimcha ravishda
   // `activity.view` ruxsatini talab qiladi — jurnalda kim qachon nima
   // qilgani turadi, uni har bir xodimga ochib qo'yish markaz ichidagi
   // munosabatga aralashish bo'lardi.
-  { id: "chegirma",      label: "Chegirmalar", icon: Percent,
-    feature: "discounts", perm: "discounts.view" },
-  { id: "harakatlar",    label: "So'nggi harakatlar", icon: History,
+  { id: "harakatlar",    label: "So'nggi harakatlar", icon: History, group: "tizim",
     feature: "activity", perm: "activity.view" },
-  { id: "korzinka",      label: "Korzinka", icon: Trash2,
+  { id: "korzinka",      label: "Korzinka", icon: Trash2, group: "tizim",
     feature: "trash", perm: "trash.view" },
 ];
 
@@ -285,21 +313,36 @@ function SettingsContent() {
         <div className="lg:w-52 lg:shrink-0 -mx-1 px-1 lg:mx-0 lg:px-0">
           <nav className="flex lg:flex-col gap-1.5 lg:gap-0.5 overflow-x-auto pb-1 lg:pb-0
             [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {visibleSections.map(s => {
-              const Icon = s.icon;
+            {/* Guruh sarlavhalari FAQAT desktopda: mobil lenta gorizontal
+                aylanadi va u yerda sarlavha qatorni buzib, tablarni
+                topishni qiyinlashtirardi. */}
+            {groups.map(g => {
+              const items = visibleSections.filter(s => s.group === g.id);
+              if (items.length === 0) return null;
               return (
-                <button key={s.id} onClick={() => setActiveSection(s.id)}
-                  data-tour={`settings-tab-${s.id}`}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-lg text-sm font-medium transition-colors",
-                    "shrink-0 whitespace-nowrap px-3 py-2.5 lg:w-full",
-                    activeSection === s.id
-                      ? "bg-indigo-600 text-white dark:bg-indigo-500"
-                      : "glass-soft lg:bg-transparent text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10"
-                  )}>
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {s.label}
-                </button>
+                <div key={g.id} className="contents lg:block">
+                  <p className="hidden lg:block text-[10px] font-bold uppercase tracking-wider
+                    text-neutral-400 dark:text-neutral-500 px-3 pt-4 pb-1.5 first:pt-0">
+                    {g.label}
+                  </p>
+                  {items.map(s => {
+                    const Icon = s.icon;
+                    return (
+                      <button key={s.id} onClick={() => setActiveSection(s.id)}
+                        data-tour={`settings-tab-${s.id}`}
+                        className={cn(
+                          "flex items-center gap-2.5 rounded-lg text-sm font-medium transition-colors",
+                          "shrink-0 whitespace-nowrap px-3 py-2.5 lg:w-full",
+                          activeSection === s.id
+                            ? "bg-indigo-600 text-white dark:bg-indigo-500"
+                            : "glass-soft lg:bg-transparent text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10"
+                        )}>
+                        <Icon className="w-4 h-4 shrink-0" />
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
               );
             })}
           </nav>

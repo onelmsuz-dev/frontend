@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CalendarClock, Check, AlertTriangle, Loader2, Info, Hourglass } from "lucide-react";
+import { CalendarClock, Check, AlertTriangle, Loader2, Info, Hourglass, UserMinus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ interface OrgBilling {
   trialLessonLimit?: number;
   billingTiming?: "OLDINDAN" | "OXIRIDA";
   billingAdvanceDays?: number;
+  archiveDebtPolicy?: "QOLSIN" | "KECHIRILSIN";
 }
 
 export function BillingSettings({
@@ -36,6 +37,7 @@ export function BillingSettings({
   const [trialLimit, setTrialLimit] = useState("0");
   const [timing, setTiming] = useState<"OLDINDAN" | "OXIRIDA">("OXIRIDA");
   const [advanceDays, setAdvanceDays] = useState("3");
+  const [archivePolicy, setArchivePolicy] = useState<"QOLSIN" | "KECHIRILSIN">("QOLSIN");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -49,6 +51,7 @@ export function BillingSettings({
     // tegishli emas, u faqat bazaviy `@default`).
     setTiming(org.billingTiming ?? "OXIRIDA");
     setAdvanceDays(String(org.billingAdvanceDays ?? 3));
+    setArchivePolicy(org.archiveDebtPolicy ?? "QOLSIN");
   }, [org]);
 
   async function save() {
@@ -63,6 +66,7 @@ export function BillingSettings({
           trialLessonLimit: Math.max(0, Number(trialLimit) || 0),
           billingTiming: timing,
           billingAdvanceDays: Math.min(14, Math.max(0, Number(advanceDays) || 0)),
+          archiveDebtPolicy: archivePolicy,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -244,6 +248,64 @@ export function BillingSettings({
           <p>
             O&apos;zgarish faqat BUNDAN KEYINGI hisoblarga ta&apos;sir qiladi —
             allaqachon yozilgan qarzlar qayta hisoblanmaydi.
+          </p>
+        </div>
+      </div>
+
+      {/* ── "Ketgan" deb belgilanganda qarz ──────────────────────────── */}
+      <div className="glass-panel rounded-2xl border border-white/60 dark:border-white/10 p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-2xl shrink-0 grid place-items-center bg-indigo-100/70 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-300">
+            <UserMinus className="w-4.5 h-4.5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100">
+              O&apos;quvchi ketganda qolgan qarz
+            </p>
+            <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+              &quot;Ketgan deb belgilash&quot; bosilganda to&apos;lanmagan qarz nima bo&apos;ladi
+            </p>
+          </div>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-2.5 mt-4">
+          {([
+            {
+              v: "QOLSIN" as const,
+              l: "Qarz qolsin",
+              d: "Qarz o'quvchida qoladi va qarzdorlar ro'yxatida ko'rinadi — keyin undirish mumkin.",
+            },
+            {
+              v: "KECHIRILSIN" as const,
+              l: "Hisob 0 qilinsin",
+              d: "Qolgan qarz kechiriladi, hisob 0 bo'ladi va qarzdorlar sonidan chiqadi.",
+            },
+          ]).map(o => (
+            <button key={o.v} type="button" onClick={() => setArchivePolicy(o.v)}
+              className={cn(
+                "text-left px-4 py-3 rounded-2xl border-2 transition-all",
+                archivePolicy === o.v
+                  ? "border-indigo-600 bg-indigo-50/70 dark:bg-indigo-900/20 dark:border-indigo-400"
+                  : "border-white/60 dark:border-white/10 hover:border-neutral-400",
+              )}>
+              <p className={cn("text-[13px] font-bold",
+                archivePolicy === o.v ? "text-indigo-700 dark:text-indigo-300" : "text-neutral-800 dark:text-neutral-200")}>
+                {o.l}
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                {o.d}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-start gap-2 mt-3 text-[11px] text-neutral-500 dark:text-neutral-400">
+          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <p>
+            Kechirilganda qarz <strong>o&apos;chirilmaydi</strong> — jurnalga
+            &quot;kechirildi&quot; deb yoziladi, ya&apos;ni keyin kim, qachon, qancha
+            kechirganini ko&apos;rish mumkin. O&apos;zgarish faqat BUNDAN KEYIN
+            ketgan deb belgilanganlarga ta&apos;sir qiladi.
           </p>
         </div>
       </div>
