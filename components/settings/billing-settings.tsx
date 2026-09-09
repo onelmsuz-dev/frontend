@@ -23,7 +23,7 @@ interface OrgBilling {
   trialLessonLimit?: number;
   billingTiming?: "OLDINDAN" | "OXIRIDA";
   billingAdvanceDays?: number;
-  archiveDebtPolicy?: "QOLSIN" | "KECHIRILSIN";
+  archiveDebtPolicy?: "QOLSIN" | "QISMAN" | "KECHIRILSIN";
 }
 
 export function BillingSettings({
@@ -37,7 +37,7 @@ export function BillingSettings({
   const [trialLimit, setTrialLimit] = useState("0");
   const [timing, setTiming] = useState<"OLDINDAN" | "OXIRIDA">("OXIRIDA");
   const [advanceDays, setAdvanceDays] = useState("3");
-  const [archivePolicy, setArchivePolicy] = useState<"QOLSIN" | "KECHIRILSIN">("QOLSIN");
+  const [archivePolicy, setArchivePolicy] = useState<"QOLSIN" | "QISMAN" | "KECHIRILSIN">("QOLSIN");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -96,7 +96,7 @@ export function BillingSettings({
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-2.5 mt-4">
+        <div className="grid sm:grid-cols-3 gap-2.5 mt-4">
           {([
             {
               v: "ACTIVATION" as const,
@@ -145,7 +145,7 @@ export function BillingSettings({
           Oy o&apos;rtasida qo&apos;shilgan o&apos;quvchidan qancha olinadi
         </p>
 
-        <div className="grid sm:grid-cols-2 gap-2.5 mt-4">
+        <div className="grid sm:grid-cols-3 gap-2.5 mt-4">
           {([
             {
               v: false,
@@ -203,7 +203,7 @@ export function BillingSettings({
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-2.5 mt-4">
+        <div className="grid sm:grid-cols-3 gap-2.5 mt-4">
           {([
             {
               v: "OXIRIDA" as const,
@@ -263,17 +263,23 @@ export function BillingSettings({
               O&apos;quvchi ketganda qolgan qarz
             </p>
             <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-              &quot;Ketgan deb belgilash&quot; bosilganda to&apos;lanmagan qarz nima bo&apos;ladi
+              &quot;Ketgan deb belgilash&quot; bosilganda qaysi tanlov oldindan belgilangan bo&apos;lsin.
+              Yakuniy qaror har o&apos;quvchida alohida qabul qilinadi.
             </p>
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-2.5 mt-4">
+        <div className="grid sm:grid-cols-3 gap-2.5 mt-4">
           {([
             {
               v: "QOLSIN" as const,
               l: "Qarz qolsin",
               d: "Qarz o'quvchida qoladi va qarzdorlar ro'yxatida ko'rinadi — keyin undirish mumkin.",
+            },
+            {
+              v: "QISMAN" as const,
+              l: "Faqat qatnashgan darslar uchun",
+              d: "Summa qo'lda kiritiladi — tizim davomatdan taklif beradi, qolgani kechiriladi. Ommaviy belgilashda ishlamaydi.",
             },
             {
               v: "KECHIRILSIN" as const,

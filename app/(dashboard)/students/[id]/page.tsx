@@ -62,6 +62,30 @@ type Membership = {
   group?: { name?: string };
 };
 
+/**
+ * "Ketgan" modalini chizish uchun server javobi.
+ *
+ * `suggested` — taklif summasi. `null` bo'lishi MUMKIN va bu xato emas:
+ * davomat belgilanmagan bo'lsa tizim "0 dars" deb taxmin qilmaydi,
+ * "bilmayman" deydi va summani admin kiritadi.
+ */
+type ArchivePreview = {
+  debt: number;
+  credit: number;
+  defaultAction: "QOLSIN" | "QISMAN" | "KECHIRILSIN";
+  settlement: {
+    suggestedTotal: number | null;
+    items: {
+      groupName: string;
+      charged: number;
+      attended: number | null;
+      totalLessons: number;
+      suggested: number | null;
+      reason: string | null;
+    }[];
+  };
+};
+
 export default function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: student, isLoading, error, mutate: revalidate } = useStudent(id);
@@ -137,6 +161,12 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const [archiving, setArchiving] = useState(false);
   const [archiveErr, setArchiveErr] = useState("");
   const [confirmArchive, setConfirmArchive] = useState(false);
+  // "Ketgan" modalidagi qarz qarori — markaz sozlamasi standart bo'lib
+  // keladi, lekin har o'quvchida o'zgartirilishi mumkin.
+  const [debtAction, setDebtAction] = useState<"QOLSIN" | "QISMAN" | "KECHIRILSIN">("QOLSIN");
+  const [keepAmount, setKeepAmount] = useState("");
+  const [preview, setPreview] = useState<ArchivePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   // Moliya (qarz va to'lov) — faqat to'lov huquqi borlarga. "To'lov qabul
   // qilmaydi" deb belgilangan o'qituvchida bu huquq yo'q, server ham
   // balansni bermaydi.
@@ -159,7 +189,21 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   async function setArchived(archived: boolean) {
     setArchiving(true); setArchiveErr("");
     try {
-      const res = await fetch(`/api/students/${id}/${archived ? "archive" : "unarchive"}`, { method: "POST" });
+      // Qarz bo'yicha qaror FAQAT arxivlashda yuboriladi. `QISMAN` da
+      // summa ham ketadi — bo'sh qoldirilsa 0 deb qaraladi, ya'ni to'liq
+      // kechirimga aylanib qolardi; shuning uchun tugma bloklanadi.
+      const body = archived
+        ? JSON.stringify({
+            debtAction,
+            ...(debtAction === "QISMAN"
+              ? { keepAmount: Math.round(Number(keepAmount.replace(/\s/g, "")) || 0) }
+              : {}),
+          })
+        : undefined;
+      const res = await fetch(`/api/students/${id}/${archived ? "archive" : "unarchive"}`, {
+        method: "POST",
+        ...(body ? { headers: { "Content-Type": "application/json" }, body } : {}),
+      });
       const data = await res.json().catch(() => ({}));
       // Javob tekshirilmasa (filial doirasi, obuna, tarmoq) amal bajarilmagani
       // bilinmas va tugma ishlamayotgandek tuyulardi.
@@ -170,6 +214,38 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     finally { setArchiving(false); }
   }
   const unarchiveStudent = () => setArchived(false);
+
+  /**
+   * Modal ochilganda qarz va taklif summasi yuklanadi.
+   *
+   * Server standart tanlovni ham qaytaradi (markaz sozlamasi) — modal
+   * o'sha bilan ochiladi. Taklif chiqmasa (davomat belgilanmagan) summa
+   * bo'sh qoladi va admin o'zi kiritadi.
+   */
+  // Kiritilgan summa va undan kelib chiqadigan kechirim. Bo'sh maydon
+  // `NaN` beradi — uni 0 deb qaramaymiz, aks holda "hammasi kechirilsin"
+  // ga aylanib ketardi; `qismanNotogri` tugmani bloklaydi.
+  const keepRaw = keepAmount.replace(/\s/g, "");
+  const keepNum = keepRaw === "" ? NaN : Number(keepRaw);
+  const qismanNotogri = debtAction === "QISMAN"
+    && (!Number.isFinite(keepNum) || keepNum < 0 || keepNum > (preview?.debt ?? 0));
+  const kechiriladi = Math.max((preview?.debt ?? 0) - (Number.isFinite(keepNum) ? keepNum : 0), 0);
+
+  async function openArchive() {
+    setArchiveErr(""); setConfirmArchive(true);
+    setPreview(null); setPreviewLoading(true);
+    setDebtAction("QOLSIN"); setKeepAmount("");
+    try {
+      const res = await fetch(`/api/students/${id}/archive-preview`);
+      if (!res.ok) return;
+      const p = await res.json();
+      setPreview(p);
+      setDebtAction(p?.defaultAction ?? "QOLSIN");
+      const taklif = p?.settlement?.suggestedTotal;
+      if (typeof taklif === "number") setKeepAmount(String(taklif));
+    } catch { /* taklifsiz ham ishlayveradi — summa qo'lda kiritiladi */ }
+    finally { setPreviewLoading(false); }
+  }
 
   async function submitPayment() {
     const amount = parseFloat(payForm.amount.replace(/\s/g, ""));
@@ -490,7 +566,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         subtitle={student.name}
         footer={
           <>
-            <Button onClick={() => setArchived(true)} disabled={archiving}
+            <Button onClick={() => setArchived(true)}
+              disabled={archiving || previewLoading || qismanNotogri}
               className="flex-1 h-9 bg-red-600 hover:bg-red-700 text-white text-[13px]">
               {archiving ? "Belgilanmoqda..." : "Ha, ketgan"}
             </Button>
@@ -502,8 +579,85 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           O&apos;quvchi ro&apos;yxatda &quot;Ketgan&quot; bo&apos;lib qoladi
           {activeSgs.length > 0 && (
             <> va <b>{activeSgs.length} ta guruhdan</b> chiqariladi</>
-          )}.
+          )}. Analitikada boshqa sanalmaydi.
         </p>
+
+        {/* QARZ BO'YICHA QAROR.
+            Qarzi yo'q o'quvchida umuman ko'rsatilmaydi — tanlaydigan
+            narsa yo'q va uchta tugma faqat chalkashtirardi. */}
+        {previewLoading && (
+          <p className="text-[12px] text-neutral-400 mt-3">Hisob tekshirilmoqda...</p>
+        )}
+        {!previewLoading && preview && preview.debt > 0 && (
+          <div className="mt-3 rounded-xl border border-white/60 dark:border-white/10 p-3">
+            <div className="flex items-center justify-between text-[13px] mb-2">
+              <span className="text-neutral-500 dark:text-neutral-400">Qarzi</span>
+              <b className="text-red-600 dark:text-red-400">
+                {preview.debt.toLocaleString("uz-UZ")}{" "}so&apos;m
+              </b>
+            </div>
+
+            {([
+              ["QOLSIN",      "Qarzi qolsin",                  `${preview.debt.toLocaleString("uz-UZ")} so'm qarzdor bo'lib qoladi`],
+              ["QISMAN",      "Faqat qatnashgan darslar uchun", "Summani kiritasiz, qolgani kechiriladi"],
+              ["KECHIRILSIN", "Butunlay kechirilsin",           "Hisobi 0 ga tushadi"],
+            ] as const).map(([qiymat, sarlavha, izoh]) => (
+              <label key={qiymat}
+                className={`flex items-start gap-2.5 p-2 rounded-lg cursor-pointer transition-colors
+                  ${debtAction === qiymat
+                    ? "bg-neutral-100 dark:bg-white/10"
+                    : "hover:bg-neutral-50 dark:hover:bg-white/5"}`}>
+                <input type="radio" name="debtAction" className="mt-1"
+                  checked={debtAction === qiymat}
+                  onChange={() => setDebtAction(qiymat)} />
+                <span className="flex-1">
+                  <span className="block text-[13px] font-medium">{sarlavha}</span>
+                  <span className="block text-[11px] text-neutral-500 dark:text-neutral-400">{izoh}</span>
+                </span>
+              </label>
+            ))}
+
+            {debtAction === "QISMAN" && (
+              <div className="mt-2 pl-7">
+                {/* Har guruh bo'yicha hisob — admin taklif qayerdan
+                    chiqqanini ko'rib turishi kerak, aks holda raqamga
+                    ishonmaydi. */}
+                {preview.settlement.items.map((it, i) => (
+                  <p key={i} className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    {it.groupName}: {it.suggested !== null
+                      ? <>{it.attended}/{it.totalLessons} dars → <b>{it.suggested.toLocaleString("uz-UZ")}</b></>
+                      : <span className="text-amber-600 dark:text-amber-400">{it.reason}</span>}
+                  </p>
+                ))}
+                <label className="block text-[11px] text-neutral-500 dark:text-neutral-400 mt-2 mb-1">
+                  O&apos;quvchi qancha to&apos;lasin
+                </label>
+                <input
+                  value={keepAmount}
+                  onChange={(e) => setKeepAmount(e.target.value.replace(/[^\d\s]/g, ""))}
+                  inputMode="numeric" placeholder="0"
+                  className="w-full h-9 px-3 rounded-lg text-[13px] bg-white dark:bg-neutral-900
+                    border border-neutral-200 dark:border-white/10" />
+                {qismanNotogri ? (
+                  <p className="text-[11px] text-red-600 dark:text-red-400 mt-1">
+                    Summa 0 dan {preview.debt.toLocaleString("uz-UZ")}{" "}gacha bo&apos;lishi kerak
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+                    {kechiriladi.toLocaleString("uz-UZ")}{" "}so&apos;m kechiriladi
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {!previewLoading && preview && preview.credit > 0 && (
+          <p className="text-[12px] text-amber-600 dark:text-amber-400 mt-3">
+            Diqqat: hisobida <b>{preview.credit.toLocaleString("uz-UZ")} so&apos;m</b> ortiqcha
+            pul bor. Uni qaytarish alohida hal qilinadi — bu oyna faqat qarz
+            bilan ishlaydi.
+          </p>
+        )}
         <p className="text-[12px] text-amber-600 dark:text-amber-400 mt-2">
           Diqqat: keyinroq belgini olib tashlasangiz, guruhlar avtomatik
           qaytmaydi — ularni qayta biriktirish kerak bo&apos;ladi.
@@ -650,9 +804,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             <strong>{transferDebtChoice ? fmt(transferDebtChoice.debt) : ""}</strong> qarz bor.
           </p>
           <p className="text-[12px] text-amber-600/80 dark:text-amber-400/80 mt-1.5">
-            <strong>Saqlab qolish</strong> — qarz eski guruhda qolaveradi, o&apos;zgarish yo&apos;q (standart).
+            <strong>Saqlab qolish</strong>{" "}— qarz eski guruhda qolaveradi, o&apos;zgarish yo&apos;q (standart).
             <br />
-            <strong>Kechirish</strong> — shu summa o&apos;quvchi balansiga qaytariladi, eski guruh qarzsiz bo&apos;ladi.
+            <strong>Kechirish</strong>{" "}— shu summa o&apos;quvchi balansiga qaytariladi, eski guruh qarzsiz bo&apos;ladi.
           </p>
         </div>
         {transferErr && (
@@ -715,7 +869,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     {archiving ? "..." : "Ketgan belgisini olib tashlash"}
                   </button>
                 ) : (
-                  <button onClick={() => { setArchiveErr(""); setConfirmArchive(true); }} disabled={archiving}
+                  <button onClick={openArchive} disabled={archiving}
                     className="mt-1 flex items-center gap-1.5 w-fit text-[12px] px-3 h-8 rounded-lg font-semibold
                       text-neutral-500 dark:text-neutral-400 border border-white/60 dark:border-white/10
                       hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 transition-colors disabled:opacity-60">
