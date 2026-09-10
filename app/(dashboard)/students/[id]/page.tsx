@@ -69,6 +69,16 @@ type Membership = {
  * davomat belgilanmagan bo'lsa tizim "0 dars" deb taxmin qilmaydi,
  * "bilmayman" deydi va summani admin kiritadi.
  */
+/** Rejim nomlari — backenddagi MODE_INFO bilan bir xil matn. */
+const MODE_LABEL: Record<string, string> = {
+  OYLIK_KALENDAR: "Oylik (kalendar)",
+  GURUH_SANASI:   "Guruh sanasidan",
+  INDIVIDUAL:     "Individual sana",
+  KUNLIK:         "Kunlik (har dars)",
+  MODUL:          "Modul (N dars)",
+  KURS_UCHUN:     "Butun kurs uchun",
+};
+
 type ArchivePreview = {
   debt: number;
   credit: number;
@@ -1050,6 +1060,29 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                       <p className="text-[11px] text-neutral-400">
                         {g.scheduleDays?.join(", ").toUpperCase()} · {g.startTime}–{g.endTime}
                       </p>
+
+                      {/* TO'LOV JADVALI — bu ma'lumot dvigatelda bor edi,
+                          lekin hech qayerda ko'rinmasdi. Prodda oqibati:
+                          BePro markazining rejimi INDIVIDUAL, 89 ta
+                          a'zolikdan 88 tasi esa OYLIK_KALENDAR da
+                          muzlatilgan — markaz buni bilmay yurgan. */}
+                      {sg.schedule && (
+                        <div className="rounded-lg bg-neutral-50 dark:bg-white/5 px-2.5 py-2 space-y-0.5">
+                          <p className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-200">
+                            {sg.schedule.rule}
+                          </p>
+                          <p className="text-[10px] text-neutral-400">
+                            {MODE_LABEL[sg.schedule.mode] ?? sg.schedule.mode}
+                            {sg.schedule.nextDue && <>{" "}· keyingi: {formatUzDate(sg.schedule.nextDue)}</>}
+                          </p>
+                          {sg.schedule.modeSource === "membership" && (
+                            <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                              Bu o&apos;quvchiga alohida qotirilgan — markaz rejimi
+                              o&apos;zgarsa ham o&apos;zgarmaydi.
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {isTrial && (
                         <button onClick={() => activateMembership(sg)} disabled={activating === sg.id}
