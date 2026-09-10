@@ -67,6 +67,10 @@ export default function GroupsPage() {
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState("");
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  // O'chirishdan oldin guruhga qancha pul bog'langanini ko'rsatamiz —
+  // "qaytarib bo'lmaydi" degan umumiy gap yetarli emas edi.
+  const [deleteInfo, setDeleteInfo] = useState<any>(null);
+  const [deleteChecking, setDeleteChecking] = useState(false);
 
   // Inline xona qo'shish (guruh yaratish formasidan chiqmasdan)
   const [showNewRoom,    setShowNewRoom]    = useState(false);
@@ -231,6 +235,16 @@ export default function GroupsPage() {
     finally { setSaving(false); }
   }
 
+  async function openDelete(g: any) {
+    setError(""); setDeleteTarget(g);
+    setDeleteInfo(null); setDeleteChecking(true);
+    try {
+      const res = await fetch(`/api/groups/${g.id}/delete-preview`);
+      if (res.ok) setDeleteInfo(await res.json());
+    } catch { /* ma'lumotsiz ham server o'zi to'sadi */ }
+    finally { setDeleteChecking(false); }
+  }
+
   async function confirmDelete() {
     if (!deleteTarget) return;
     setSaving(true);
@@ -381,11 +395,42 @@ export default function GroupsPage() {
       </Modal>
 
       <ConfirmDeleteModal
-        open={!!deleteTarget} onClose={() => { setDeleteTarget(null); setError(""); }}
+        open={!!deleteTarget}
+        onClose={() => { setDeleteTarget(null); setDeleteInfo(null); setError(""); }}
         onConfirm={confirmDelete} loading={saving}
+        confirmDisabled={deleteChecking || deleteInfo?.canDelete === false}
+        confirmLabel={deleteInfo?.canDelete === false ? "O'chirib bo'lmaydi" : undefined}
         title="Guruhni o'chirish"
-        description={<><span className="font-semibold">{deleteTarget?.name}</span> o'chirilsinmi? Bu amalni qaytarib bo'lmaydi.
-          {error && <span className="block mt-2 text-red-500">{error}</span>}</>}
+        description={<>
+          <span className="font-semibold">{deleteTarget?.name}</span>{" "}o&apos;chirilsinmi?
+          Bu amalni qaytarib bo&apos;lmaydi.
+          {deleteChecking && (
+            <span className="block mt-2 text-neutral-400">Hisob tekshirilmoqda...</span>
+          )}
+          {deleteInfo?.canDelete === false && (
+            <span className="block mt-3 text-left rounded-xl bg-red-50 dark:bg-red-900/20 p-3 text-red-700 dark:text-red-300">
+              <span className="block font-semibold mb-1">Bu guruhda pul tarixi bor</span>
+              <span className="block">
+                {deleteInfo.students} ta o&apos;quvchi ·{" "}
+                {deleteInfo.chargeCount}{" "}ta hisob ({deleteInfo.charged.toLocaleString("uz-UZ")}{" "}so&apos;m)
+                {deleteInfo.paymentCount > 0 && <>{" "}· {deleteInfo.paymentCount} ta to&apos;lov</>}
+              </span>
+              <span className="block mt-2 text-[11px] opacity-90">
+                O&apos;chirilsa bu pul o&apos;quvchilar balansida qoladi, lekin qaysi
+                guruhga tegishli ekani yo&apos;qoladi va o&apos;qituvchi oyligidan
+                tushib qoladi. O&apos;rniga guruh statusini{" "}
+                <b>&quot;Tugagan&quot;</b> qiling — tarix ham, hisob-kitob ham joyida qoladi.
+              </span>
+            </span>
+          )}
+          {deleteInfo?.canDelete === true && deleteInfo.students > 0 && (
+            <span className="block mt-2 text-amber-600 dark:text-amber-400">
+              {deleteInfo.students}{" "}ta o&apos;quvchi a&apos;zoligi bilan birga o&apos;chadi
+              (pul tarixi yo&apos;q).
+            </span>
+          )}
+          {error && <span className="block mt-2 text-red-500">{error}</span>}
+        </>}
       />
 
       <div className="p-5 space-y-5">
@@ -461,7 +506,7 @@ export default function GroupsPage() {
                           </button>
                         )}
                         {canDelete && (
-                          <button onClick={() => { setError(""); setDeleteTarget(g); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                          <button onClick={() => openDelete(g)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}

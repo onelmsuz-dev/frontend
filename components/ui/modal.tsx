@@ -67,9 +67,16 @@ interface ConfirmDeleteModalProps {
   loading?: boolean;
   title: string;
   description: React.ReactNode;
+  /** O'chirishga ruxsat yo'q (masalan guruhga pul bog'langan). */
+  confirmDisabled?: boolean;
+  /** Tugma matni — bloklanganda sababni aytish uchun. */
+  confirmLabel?: string;
 }
 
-export function ConfirmDeleteModal({ open, onClose, onConfirm, loading, title, description }: ConfirmDeleteModalProps) {
+export function ConfirmDeleteModal({
+  open, onClose, onConfirm, loading, title, description,
+  confirmDisabled, confirmLabel,
+}: ConfirmDeleteModalProps) {
   return (
     <ModalOverlay open={open} onClose={onClose} panelClassName="sm:max-w-sm">
       <div className="glass-strong rounded-2xl shadow-2xl w-full border border-white/60 dark:border-white/10 p-5 sm:p-6 space-y-5">
@@ -86,11 +93,11 @@ export function ConfirmDeleteModal({ open, onClose, onConfirm, loading, title, d
           <button
             type="button"
             onClick={onConfirm}
-            disabled={loading}
+            disabled={loading || confirmDisabled}
             className="flex-1 h-10 rounded-xl bg-red-600 hover:bg-red-700 text-white text-[13px] font-semibold transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {loading && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-            {loading ? "O'chirilmoqda..." : "O'chirish"}
+            {loading ? "O'chirilmoqda..." : (confirmLabel ?? "O'chirish")}
           </button>
           <button
             type="button"
