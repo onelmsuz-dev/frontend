@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { OnboardingSettingsPanel } from "@/components/onboarding/onboarding-settings-panel";
 import { BillingSettings } from "@/components/settings/billing-settings";
+import { HolidaysSettings } from "@/components/settings/holidays-settings";
 import { BillingModes } from "@/components/settings/billing-modes";
 import { DiscountsSection } from "@/components/settings/discounts-section";
 import { ActivitySection } from "@/components/settings/activity-section";
@@ -21,6 +22,7 @@ import type { Branch, Room } from "@/types";
 import {
   Plus, Trash2, Users, Building, Bell,
   MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket, Wallet, History, Percent,
+  CalendarOff,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useRooms } from "@/lib/hooks/useRooms";
@@ -65,6 +67,10 @@ const sections = [
   { id: "filliallar",    label: "Filiallar",        icon: MapPin,    group: "markaz" },
   { id: "xonalar",       label: "Xonalar",          icon: DoorOpen,  group: "markaz" },
   { id: "xodimlar",      label: "Xodimlar",         icon: Users,     group: "markaz" },
+  // Bayram DARS SONINI o'zgartiradi, dars soni esa "necha darsga kelgan"
+  // hisobining maxraji — ya'ni pulga tegadi. Shuning uchun o'z ruxsat kaliti.
+  { id: "bayramlar",     label: "Bayram kunlari",   icon: CalendarOff, group: "markaz",
+    perm: "holidays.view" },
 
   // ─ Pul: O'QUVCHIDAN qanday pul olinadi ─
   { id: "tolov",         label: "O'quvchi to'lovlari", icon: Wallet, group: "pul" },
@@ -466,6 +472,11 @@ function SettingsContent() {
           )}
 
           {/* ── Yo'l ko'rsatuvchi ── */}
+          {/* ── Bayram kunlari ── */}
+          {activeSection === "bayramlar" && (
+            <HolidaysSettings canManage={hasPerm(me?.permissions, "holidays.manage")} />
+          )}
+
           {activeSection === "organish" && <OnboardingSettingsPanel />}
 
           {activeSection === "chegirma" && <DiscountsSection />}
