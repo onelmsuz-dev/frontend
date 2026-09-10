@@ -113,6 +113,12 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   // qatnashadigan o'quvchida chiqarish/almashtirish har doim tasodifiy
   // guruhga tegardi va ikkinchisiga umuman yetib bo'lmasdi.
   const [exitTarget,   setExitTarget]   = useState<any>(null);
+  // Chiqarishda qisman hisob. Standart — "to'liq qarz qolsin", ya'ni
+  // bugungi xulq: markaz o'zi tanlamaguncha hech qanday raqam qimirlamaydi.
+  const [exitInfo,     setExitInfo]     = useState<any>(null);
+  const [exitLoading,  setExitLoading]  = useState(false);
+  const [exitPartial,  setExitPartial]  = useState(false);
+  const [exitKeep,     setExitKeep]     = useState("");
   const [exiting,      setExiting]      = useState(false);
 
   /** null → yopiq; { sg: null } → yangi guruhga QO'SHISH; { sg } → SHU guruhni almashtirish. */
@@ -289,14 +295,42 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   }
 
   // ── Guruhdan chiqarish — faqat TANLANGAN a'zolik ────────────────────────────
+  /**
+   * Chiqarish oynasini ochish — hisobni OLDINDAN so'raymiz.
+   *
+   * Server arifmetikani tayyor satr bilan qaytaradi va oyna AYNAN shuni
+   * ko'rsatadi. Jurnalga ham o'sha satr yoziladi, ya'ni ekran bilan tarix
+   * bir-biriga zid gapirmaydi.
+   */
+  async function openExit(sg: any) {
+    setExitTarget(sg);
+    setExitInfo(null); setExitPartial(false); setExitKeep("");
+    setExitLoading(true);
+    try {
+      const r = await fetch(`/api/student-groups/${sg.id}/exit-preview`);
+      if (r.ok) {
+        const d = await r.json();
+        setExitInfo(d);
+        if (d?.settlement?.suggested != null) setExitKeep(String(d.settlement.suggested));
+      }
+    } catch { /* hisobsiz ham chiqarish ishlayveradi */ }
+    finally { setExitLoading(false); }
+  }
+
   async function exitGroup() {
     const sg = exitTarget;
     if (!sg) return;
     setExiting(true);
     try {
+      // `exitSettlement` FAQAT admin ataylab tanlaganda yuboriladi.
+      // Yuborilmasa server hech qanday pul harakati qilmaydi.
+      const keep = Math.round(Number(exitKeep.replace(/\s/g, "")) || 0);
       await fetch(`/api/student-groups/${sg.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enrollmentStatus: "CHIQIB_KETGAN" }),
+        body: JSON.stringify({
+          enrollmentStatus: "CHIQIB_KETGAN",
+          ...(exitPartial ? { exitSettlement: { keepAmount: keep } } : {}),
+        }),
       });
       // O'quvchi faqat BOSHQA guruhi qolmagan bo'lsa nofaol bo'ladi.
       // Ilgari bu shartsiz bajarilardi: ikki fanga qatnashadigan o'quvchi
@@ -312,7 +346,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         });
       }
       revalidateAll();
-      setExitTarget(null);
+      setExitTarget(null); setExitInfo(null);
     } finally { setExiting(false); }
   }
 
@@ -534,7 +568,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       </Modal>
 
       {/* Guruhdan chiqarish — aynan tanlangan a'zolik */}
-      <Modal open={!!exitTarget} onClose={() => setExitTarget(null)}
+      <Modal open={!!exitTarget} onClose={() => { setExitTarget(null); setExitInfo(null); }}
         title="Guruhdan chiqarish"
         subtitle={`${student.name} — ${exitTarget?.group?.name ?? "guruh"}`}
         footer={
@@ -546,6 +580,70 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setExitTarget(null)}>Bekor</Button>
           </>
         }>
+        {/* QARZ BO'YICHA QAROR.
+            Standart — "to'liq qarz qolsin", ya'ni bugungi xulq. Markaz
+            o'zi tanlamaguncha bironta raqam o'z-o'zidan o'zgarmaydi. */}
+        {exitLoading && (
+          <p className="text-[12px] text-neutral-400 mb-3">Hisob tekshirilmoqda...</p>
+        )}
+        {!exitLoading && exitInfo?.settlement && !exitInfo.settlement.reason
+          && exitInfo.settlement.forgive > 0 && (
+          <div className="mb-3 rounded-xl border border-white/60 dark:border-white/10 p-3">
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
+              {exitInfo.settlement.explain}
+            </p>
+
+            <label className="flex items-start gap-2.5 p-2 mt-2 rounded-lg cursor-pointer
+              hover:bg-neutral-50 dark:hover:bg-white/5">
+              <input type="radio" name="exitDebt" className="mt-1"
+                checked={!exitPartial} onChange={() => setExitPartial(false)} />
+              <span className="flex-1">
+                <span className="block text-[13px] font-medium">To&apos;liq qarz qolsin</span>
+                <span className="block text-[11px] text-neutral-500 dark:text-neutral-400">
+                  {exitInfo.settlement.charged.toLocaleString("uz-UZ")}{" "}so&apos;m qarzdor bo&apos;lib qoladi
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 p-2 rounded-lg cursor-pointer
+              hover:bg-neutral-50 dark:hover:bg-white/5">
+              <input type="radio" name="exitDebt" className="mt-1"
+                checked={exitPartial} onChange={() => setExitPartial(true)} />
+              <span className="flex-1">
+                <span className="block text-[13px] font-medium">
+                  Faqat o&apos;tgan darslar uchun
+                </span>
+                <span className="block text-[11px] text-neutral-500 dark:text-neutral-400">
+                  {exitInfo.settlement.usedLessons}/{exitInfo.settlement.totalLessons}{" "}dars
+                  {exitInfo.settlement.attended !== null && (
+                    <>{" "}· {exitInfo.settlement.attended}{" "}tasiga kelgan</>
+                  )}
+                </span>
+              </span>
+            </label>
+
+            {exitPartial && (
+              <div className="pl-7 mt-1">
+                <label className="block text-[11px] text-neutral-500 dark:text-neutral-400 mb-1">
+                  O&apos;quvchi qancha to&apos;lasin
+                </label>
+                <input value={exitKeep} inputMode="numeric"
+                  onChange={(e) => setExitKeep(e.target.value.replace(/[^\d\s]/g, ""))}
+                  className="w-full h-9 px-3 rounded-lg text-[13px] bg-white dark:bg-neutral-900
+                    border border-neutral-200 dark:border-white/10" />
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+                  {Math.max(exitInfo.settlement.charged
+                    - (Number(exitKeep.replace(/\s/g, "")) || 0), 0).toLocaleString("uz-UZ")}
+                  {" "}so&apos;m kechiriladi
+                </p>
+                <p className="text-[11px] text-neutral-400 mt-1">
+                  Kamaytirish kerak bo&apos;lsa chegirmadan foydalaning.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-xl px-4 py-3">
           <p className="text-[13px] text-red-700 dark:text-red-400">
             <strong>{student.name}</strong> <strong>{exitTarget?.group?.name}</strong> guruhidan chiqariladi.
@@ -1098,7 +1196,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                             className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                             <Shuffle className="w-3 h-3" /> Almashtirish
                           </button>
-                          <button onClick={() => setExitTarget(sg)}
+                          <button onClick={() => openExit(sg)}
                             className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
                             <LogOut className="w-3 h-3" /> Chiqarish
                           </button>
