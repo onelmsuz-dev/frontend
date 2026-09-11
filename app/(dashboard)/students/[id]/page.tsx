@@ -1007,6 +1007,14 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                       studentId={student.id}
                       studentName={student.name}
                       balance={student.balance ?? 0}
+                      // Faol a'zoliklar + har birining qarzi. Ikkitadan
+                      // ko'p bo'lsa oynada guruh tanlovi chiqadi.
+                      groups={activeSgs.map((sg: any) => ({
+                        groupId: sg.groupId,
+                        name: sg.group?.name ?? "Guruh",
+                        debt: Math.max(0, (student as any)?.groupLedger?.rows
+                          ?.find((r: any) => r.groupId === sg.groupId)?.debt ?? 0),
+                      }))}
                       onDone={() => mutate(`/api/students/${student.id}`)}
                     />
                   )}

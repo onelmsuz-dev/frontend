@@ -26,13 +26,18 @@ import { Button } from "@/components/ui/button";
 const fmt = (v: number) => new Intl.NumberFormat("uz-UZ").format(v);
 
 export function OneTimeDiscount({
-  studentId, studentName, balance, onDone,
+  studentId, studentName, balance, groups = [], onDone,
 }: {
-  studentId: string; studentName: string; balance: number; onDone: () => void;
+  studentId: string; studentName: string; balance: number;
+  /** O'quvchining faol guruhlari va ularning qarzi. */
+  groups?: { groupId: string; name: string; debt: number }[];
+  onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  // "" — barcha qarzli guruhlar orasida teng bo'linsin (eski xulq).
+  const [groupId, setGroupId] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
@@ -45,18 +50,21 @@ export function OneTimeDiscount({
     try {
       const r = await fetch("/api/discounts/one-time", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ studentId, amount: n, note: note.trim() }),
+        body: JSON.stringify({
+          studentId, amount: n, note: note.trim(),
+          ...(groupId ? { groupId } : {}),
+        }),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error ?? "Saqlab bo'lmadi");
-      setOpen(false); setAmount(""); setNote("");
+      setOpen(false); setAmount(""); setNote(""); setGroupId("");
       onDone();
     } catch (e) { setErr((e as Error).message); }
     finally { setSaving(false); }
   }
 
   function close() {
-    setOpen(false); setAmount(""); setNote(""); setErr("");
+    setOpen(false); setAmount(""); setNote(""); setGroupId(""); setErr("");
   }
 
   return (
@@ -89,6 +97,37 @@ export function OneTimeDiscount({
             {debt > 0 ? `${fmt(debt)} so'm` : "Qarz yo'q"}
           </p>
         </div>
+
+        {/* QAYSI GURUHGA.
+            Bir nechta guruhda o'qiydigan o'quvchida tanlov SHART: ilgari
+            chegirma qarzi bor BARCHA guruhlar orasida teng bo'linardi va
+            "bitta guruhga berdim, uchalasiga ketdi" degan holat chiqardi.
+            Bitta guruhli o'quvchida tanlov ko'rsatilmaydi — keraksiz. */}
+        {groups.length > 1 && (
+          <div>
+            <label className="block text-[11px] font-semibold text-neutral-500 dark:text-neutral-400
+                              mb-1.5 uppercase tracking-wide">
+              Qaysi guruhga
+            </label>
+            <select value={groupId} onChange={(e) => setGroupId(e.target.value)}
+              className="w-full rounded-xl border border-neutral-200 dark:border-neutral-700
+                         bg-white dark:bg-neutral-900 px-3 py-2 text-sm
+                         text-neutral-900 dark:text-neutral-100 focus:outline-none
+                         focus:ring-2 focus:ring-neutral-900/10 dark:focus:ring-white/10">
+              <option value="">Qarzi bor guruhlarga teng bo&apos;linsin</option>
+              {groups.map((g) => (
+                <option key={g.groupId} value={g.groupId}>
+                  {g.name}{g.debt > 0 ? ` — ${fmt(g.debt)} so'm qarz` : " — qarzi yo'q"}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-neutral-400 dark:text-neutral-500">
+              {groupId
+                ? "Chegirma faqat shu guruhga yoziladi."
+                : "Guruh tanlanmasa qarzi bor guruhlar orasida teng bo'linadi."}
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="block text-[11px] font-semibold text-neutral-500 dark:text-neutral-400
