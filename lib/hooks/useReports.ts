@@ -13,11 +13,11 @@ export interface FinanceReport {
     /** Kutilgan 0 bo'lsa `null` — foiz ma'nosiz. */
     collectionRate: number | null;
     remaining: number;
-    expenses: number;
-    profit: number;
+    expenses: number | null;
+    profit: number | null;
     paymentCount: number;
   };
-  prev: { label: string; collected: number; expenses: number; profit: number };
+  prev: { label: string; collected: number; expenses: number | null; profit: number | null };
   change: { collected: number | null; expenses: number | null; profit: number | null };
   debt: {
     total: number;

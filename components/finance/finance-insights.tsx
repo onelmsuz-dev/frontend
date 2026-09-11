@@ -10,7 +10,11 @@ import { useFinanceReport, METHOD_LABELS, METHOD_COLORS } from "@/lib/hooks/useR
 
 const fmt = (v: number) =>
   new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
-const fmtShort = (v: number) => {
+const fmtShort = (v: number | null | undefined) => {
+  // Xarajat va foyda faqat hisobot/xarajat huquqi bilan keladi — kassirga
+  // server `null` yuboradi (raqam yashiriladi, 0 emas).
+  if (v == null) return "—";
+
   if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} mln`;
   if (Math.abs(v) >= 1_000) return `${Math.round(v / 1_000)} ming`;
   return String(Math.round(v));
@@ -237,7 +241,7 @@ export function FinanceInsights() {
 }
 
 function CompareRow({ label, cur, prev, change, good }: {
-  label: string; cur: number; prev: number; change: number | null; good: "up" | "down";
+  label: string; cur: number | null; prev: number | null; change: number | null; good: "up" | "down";
 }) {
   const isUp = change != null && change > 0;
   const isGood = change == null || change === 0 ? null : (good === "up" ? isUp : !isUp);
