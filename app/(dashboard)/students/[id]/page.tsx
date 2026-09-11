@@ -120,6 +120,10 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const [exitPartial,  setExitPartial]  = useState(false);
   const [exitKeep,     setExitKeep]     = useState("");
   const [exiting,      setExiting]      = useState(false);
+  // Chiqarish xatosi. Ilgari javob UMUMAN tekshirilmasdi: server rad
+  // etsa ham modal yopilar va ekranda hech narsa chiqmasdi — xato
+  // "hech narsa bo'lmayapti" bo'lib ko'rinardi (2026-09-11).
+  const [exitErr,      setExitErr]      = useState("");
 
   /** null → yopiq; { sg: null } → yangi guruhga QO'SHISH; { sg } → SHU guruhni almashtirish. */
   const [groupModal,      setGroupModal]      = useState<{ sg: any | null } | null>(null);
@@ -303,7 +307,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
    * bir-biriga zid gapirmaydi.
    */
   async function openExit(sg: any) {
-    setExitTarget(sg);
+    setExitTarget(sg); setExitErr("");
     setExitInfo(null); setExitPartial(false); setExitKeep("");
     setExitLoading(true);
     try {
@@ -320,18 +324,25 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   async function exitGroup() {
     const sg = exitTarget;
     if (!sg) return;
-    setExiting(true);
+    setExiting(true); setExitErr("");
     try {
       // `exitSettlement` FAQAT admin ataylab tanlaganda yuboriladi.
       // Yuborilmasa server hech qanday pul harakati qilmaydi.
       const keep = Math.round(Number(exitKeep.replace(/\s/g, "")) || 0);
-      await fetch(`/api/student-groups/${sg.id}`, {
+      const r = await fetch(`/api/student-groups/${sg.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           enrollmentStatus: "CHIQIB_KETGAN",
           ...(exitPartial ? { exitSettlement: { keepAmount: keep } } : {}),
         }),
       });
+      // JAVOB TEKSHIRILADI. Busiz server rad etganda ham modal yopilar
+      // va o'quvchi guruhda qolib ketardi — hech kim sababini bilmasdi.
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setExitErr(d?.error ?? "Chiqarib bo'lmadi");
+        return;
+      }
       // O'quvchi faqat BOSHQA guruhi qolmagan bo'lsa nofaol bo'ladi.
       // Ilgari bu shartsiz bajarilardi: ikki fanga qatnashadigan o'quvchi
       // bittasidan chiqarilganda butunlay nofaol bo'lib, ro'yxatdan
@@ -568,7 +579,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       </Modal>
 
       {/* Guruhdan chiqarish — aynan tanlangan a'zolik */}
-      <Modal open={!!exitTarget} onClose={() => { setExitTarget(null); setExitInfo(null); }}
+      <Modal open={!!exitTarget} onClose={() => { setExitTarget(null); setExitInfo(null); setExitErr(""); }}
         title="Guruhdan chiqarish"
         subtitle={`${student.name} — ${exitTarget?.group?.name ?? "guruh"}`}
         footer={
@@ -641,6 +652,14 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {exitErr && (
+          <div className="mb-3 flex items-start gap-2 rounded-xl bg-red-50 dark:bg-red-900/20
+            border border-red-200 dark:border-red-900/40 px-3 py-2.5">
+            <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+            <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{exitErr}</p>
           </div>
         )}
 
