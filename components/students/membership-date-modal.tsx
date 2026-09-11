@@ -8,6 +8,8 @@ import { FormField } from "@/components/ui/form-field";
 import { DatePicker } from "@/components/ui/date-picker";
 import { formatUzDate } from "@/lib/date-uz";
 import { todayStr } from "@/lib/form-constants";
+import { Input } from "@/components/ui/input";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
 
 /**
  * GURUHGA QO'SHILGAN SANANI TUZATISH.
@@ -25,6 +27,10 @@ interface EditInfo {
   enrollmentStatus: string;
   /** O'qituvchining ALLAQACHON to'langan oyliklari ("YYYY-MM"). */
   paidSalaryMonths: string[];
+  /** Kelishilgan narx (M6) — `null` = kurs narxi. */
+  priceOverride?: number | null;
+  discountPercent?: number | null;
+  coursePrice?: number | null;
 }
 
 export function MembershipDateModal({
@@ -35,8 +41,13 @@ export function MembershipDateModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { me } = useMe();
+  // Kelishilgan narx — pul qarori, faqat to'lov rejimini boshqara oladigan xodimga.
+  const canPrice = hasPerm(me?.permissions, "billing.manage");
   const [info, setInfo] = useState<EditInfo | null>(null);
   const [date, setDate] = useState("");
+  const [price, setPrice] = useState("");
+  const [pct, setPct] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -50,6 +61,8 @@ export function MembershipDateModal({
         if (d?.error) { setErr(d.error); return; }
         setInfo(d);
         setDate(String(d.joinedAt ?? "").slice(0, 10));
+        setPrice(d.priceOverride == null ? "" : String(d.priceOverride));
+        setPct(d.discountPercent == null ? "" : String(d.discountPercent));
       })
       .catch(() => setErr("Ma'lumot yuklanmadi"))
       .finally(() => setLoading(false));
@@ -68,7 +81,13 @@ export function MembershipDateModal({
       const res = await fetch(`/api/student-groups/${membershipId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ joinedAt: date }),
+        body: JSON.stringify({
+          joinedAt: date,
+          ...(canPrice ? {
+            priceOverride:   price.trim() === "" ? null : Number(price.replace(/\s/g, "")),
+            discountPercent: pct.trim() === "" ? null : Number(pct),
+          } : {}),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(data?.error ?? "Saqlanmadi"); return; }
@@ -83,7 +102,7 @@ export function MembershipDateModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Qo'shilgan sanani tuzatish"
+      title="A'zolikni tahrirlash"
       subtitle={info?.groupName}
       footer={
         <>
@@ -106,6 +125,24 @@ export function MembershipDateModal({
             <p className="text-[11px] text-neutral-500 dark:text-neutral-400 -mt-1">
               Guruh {formatUzDate(info.groupStartDate)}{" "}dan boshlangan — sana
               undan oldin bo&apos;lishi mumkin emas.
+            </p>
+          )}
+
+          {canPrice && (
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <FormField label="Kelishilgan narx (so'm)" hint={info?.coursePrice != null ? `Kurs narxi: ${Math.round(info.coursePrice).toLocaleString("ru-RU")}` : "Bo'sh — kurs narxi"}>
+                <Input type="number" inputMode="numeric" value={price} placeholder="Bo'sh — kurs narxi"
+                  onChange={(e) => setPrice(e.target.value)} className="h-10" />
+              </FormField>
+              <FormField label="Shaxsiy chegirma (%)" hint="Qoidalar bilan raqobatda — eng kattasi">
+                <Input type="number" inputMode="numeric" min={0} max={100} value={pct} placeholder="0"
+                  onChange={(e) => setPct(e.target.value)} className="h-10" />
+              </FormField>
+            </div>
+          )}
+          {canPrice && price.trim() !== "" && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 -mt-1">
+              Kelishilgan narx berilganda chegirma qoidalari qo&apos;llanmaydi. Faqat keyingi hisoblarga ta&apos;sir qiladi.
             </p>
           )}
 

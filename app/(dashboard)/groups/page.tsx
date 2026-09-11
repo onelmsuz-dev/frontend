@@ -18,6 +18,9 @@ import { useBranch } from "@/lib/contexts/branch-context";
 import { WEEKDAYS, WEEKDAY_SHORT, SCHEDULE_PRESETS, todayStr } from "@/lib/form-constants";
 import { mutate } from "swr";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { useFeature } from "@/lib/hooks/useFeatures";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
   ACTIVE:    { label: "Faol",    cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -43,6 +46,8 @@ const EMPTY_FORM = {
   name: "", courseId: "", teacherId: "", roomId: "", maxStudents: "15",
   scheduleDays: [] as string[], startTime: "18:00", endTime: "19:30",
   startDate: todayStr(), endDate: "", status: "ACTIVE",
+  // Guruh darajasidagi to'lov rejimi (M6) — bo'sh = kurs/markaz.
+  billingMode: "", moduleLessons: "",
 };
 
 function revalidate() {
@@ -58,6 +63,9 @@ export default function GroupsPage() {
   const canDelete = hasPerm(me?.permissions, "groups.delete");
   // Xona qo'shish Sozlamalar bo'limida — huquqi yo'qni u yerga yubormaymiz.
   const canManageRooms = hasPerm(me?.permissions, "rooms.create");
+  const modesOn = useFeature("billing-modes") === true;
+  const { data: modesData } = useSWR<any>(modesOn ? "/api/billing/modes" : null, fetcher);
+  const allowedModes: any[] = (modesData?.modes ?? []).filter((m: any) => m.allowed);
   const { activeBranchId } = useBranch();
   const [search,    setSearch]    = useState("");
   const [statusTab, setStatusTab] = useState("barchasi");
@@ -148,6 +156,7 @@ export default function GroupsPage() {
     setForm({
       name: g.name, courseId: g.courseId ?? "", teacherId: g.teacherId ?? "", roomId: g.roomId ?? "",
       maxStudents: String(g.maxStudents ?? 15),
+      billingMode: g.billingMode ?? "", moduleLessons: g.moduleLessons == null ? "" : String(g.moduleLessons),
       scheduleDays: g.scheduleDays ?? [],
       startTime: g.startTime, endTime: g.endTime,
       startDate: g.startDate?.slice(0,10) ?? todayStr(),
@@ -216,6 +225,10 @@ export default function GroupsPage() {
         startDate: form.startDate, status: form.status,
       };
       body.roomId = form.roomId;
+      if (modesOn) {
+        body.billingMode = form.billingMode || null;
+        body.moduleLessons = form.moduleLessons.trim() === "" ? null : Number(form.moduleLessons);
+      }
       // Tahrirda bo'sh qiymat ham yuboriladi — aks holda tugash sanasini
       // olib tashlab bo'lmasdi (server "yuborilmadi" ni "o'zgarmadi" deb
       // tushunardi va guruh o'z-o'zidan "Tugagan" bo'lib qolaverardi).
@@ -296,6 +309,23 @@ export default function GroupsPage() {
             </select>
           </FormField>
         </div>
+
+        {modesOn && (
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="To'lov usuli" hint="Bo'sh — kurs yoki markaz standarti">
+              <select value={form.billingMode} onChange={e => setForm(p => ({...p, billingMode: e.target.value}))} className={selectCls}>
+                <option value="">Kurs / markaz standarti</option>
+                {allowedModes.map((m: any) => <option key={m.mode} value={m.mode}>{m.label}</option>)}
+              </select>
+            </FormField>
+            {form.billingMode === "MODUL" && (
+              <FormField label="Moduldagi dars soni" hint="Bo'sh — kursdagi qiymat">
+                <Input type="number" inputMode="numeric" placeholder="12" value={form.moduleLessons}
+                  onChange={e => setForm(p => ({...p, moduleLessons: e.target.value}))} className="h-10" />
+              </FormField>
+            )}
+          </div>
+        )}
 
         <FormField label="Guruh nomi" required>
           <Input placeholder="Ingliz tili A1 guruh" value={form.name}

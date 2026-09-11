@@ -13,6 +13,9 @@ import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { mutate } from "swr";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { useFeature } from "@/lib/hooks/useFeatures";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -34,7 +37,12 @@ const COLORS = [
 
 const DURATION_PRESETS = ["1 oy", "3 oy", "6 oy", "9 oy", "12 oy"];
 
-const EMPTY = { name: "", description: "", duration: "", price: "", color: "bg-blue-500" };
+const EMPTY = {
+  name: "", description: "", duration: "", price: "", color: "bg-blue-500",
+  // To'lov rejimi va narxlari (M6) — bo'sh = markaz standarti / hosila narx.
+  billingMode: "", lessonPrice: "", moduleLessons: "", modulePrice: "", coursePrice: "", durationMonths: "",
+};
+const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(/\s/g, "")));
 
 export default function CoursesPage() {
   // Amal tugmalari ruxsatga bog'landi — ilgari hammaga ko'rinardi va
@@ -52,6 +60,10 @@ export default function CoursesPage() {
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const { data: raw, isLoading } = useCourses();
+  // Kurs darajasidagi to'lov rejimi — faqat bayroq yoqiq va markazga ochilgan rejimlar.
+  const modesOn = useFeature("billing-modes") === true;
+  const { data: modesData } = useSWR<any>(modesOn ? "/api/billing/modes" : null, fetcher);
+  const allowedModes: any[] = (modesData?.modes ?? []).filter((m: any) => m.allowed);
   const courses: any[] = Array.isArray(raw) ? raw : [];
 
   const filtered = useMemo(() =>
@@ -76,7 +88,10 @@ export default function CoursesPage() {
   }
   function openEdit(c: any) {
     setEditId(c.id);
-    setForm({ name: c.name, description: c.description ?? "", duration: c.duration, price: String(c.price), color: c.color ?? "bg-blue-500" });
+    setForm({ name: c.name, description: c.description ?? "", duration: c.duration, price: String(c.price), color: c.color ?? "bg-blue-500",
+      billingMode: c.billingMode ?? "", lessonPrice: c.lessonPrice == null ? "" : String(c.lessonPrice),
+      moduleLessons: c.moduleLessons == null ? "" : String(c.moduleLessons), modulePrice: c.modulePrice == null ? "" : String(c.modulePrice),
+      coursePrice: c.coursePrice == null ? "" : String(c.coursePrice), durationMonths: c.durationMonths == null ? "" : String(c.durationMonths) });
     setError(""); setShowModal(true);
   }
 
@@ -92,7 +107,14 @@ export default function CoursesPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: form.name, description: form.description || undefined, duration: form.duration, price: parseFloat(form.price), color: form.color }),
+        body: JSON.stringify({
+          name: form.name, description: form.description || undefined, duration: form.duration, price: parseFloat(form.price), color: form.color,
+          ...(modesOn ? {
+            billingMode: form.billingMode || null,
+            lessonPrice: num(form.lessonPrice), moduleLessons: num(form.moduleLessons), modulePrice: num(form.modulePrice),
+            coursePrice: num(form.coursePrice), durationMonths: num(form.durationMonths),
+          } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Xatolik"); return; }
@@ -178,6 +200,43 @@ export default function CoursesPage() {
               onChange={e => setForm(p => ({...p, price: e.target.value}))} className="h-10" />
           </FormField>
         </div>
+
+        {modesOn && (
+          <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 p-3 space-y-3">
+            <FormField label="To'lov usuli" hint="Bo'sh — markaz standarti (Sozlamalar → To'lov rejimi)">
+              <select value={form.billingMode} onChange={e => setForm(p => ({...p, billingMode: e.target.value}))}
+                className="w-full h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-3 text-[13px]">
+                <option value="">Markaz standarti</option>
+                {allowedModes.map((m: any) => <option key={m.mode} value={m.mode}>{m.label}</option>)}
+              </select>
+            </FormField>
+            {form.billingMode === "KUNLIK" && (
+              <FormField label="Bir dars narxi (so'm)" hint="Bo'sh — oylik narxdan hosila (oydagi darslar yig'indisi aynan oylik narx)">
+                <Input type="number" inputMode="numeric" value={form.lessonPrice} onChange={e => setForm(p => ({...p, lessonPrice: e.target.value}))} className="h-10" />
+              </FormField>
+            )}
+            {form.billingMode === "MODUL" && (
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Moduldagi dars soni" required>
+                  <Input type="number" inputMode="numeric" placeholder="12" value={form.moduleLessons} onChange={e => setForm(p => ({...p, moduleLessons: e.target.value}))} className="h-10" />
+                </FormField>
+                <FormField label="Modul narxi (so'm)" hint="Bo'sh — bir oylik narx">
+                  <Input type="number" inputMode="numeric" value={form.modulePrice} onChange={e => setForm(p => ({...p, modulePrice: e.target.value}))} className="h-10" />
+                </FormField>
+              </div>
+            )}
+            {form.billingMode === "KURS_UCHUN" && (
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label="Davomiylik (oy)" required hint="Kurs puli shuncha oyga taqsimlanadi">
+                  <Input type="number" inputMode="numeric" placeholder="6" value={form.durationMonths} onChange={e => setForm(p => ({...p, durationMonths: e.target.value}))} className="h-10" />
+                </FormField>
+                <FormField label="Butun kurs narxi (so'm)" hint="Bo'sh — oylik × davomiylik">
+                  <Input type="number" inputMode="numeric" value={form.coursePrice} onChange={e => setForm(p => ({...p, coursePrice: e.target.value}))} className="h-10" />
+                </FormField>
+              </div>
+            )}
+          </div>
+        )}
 
         <FormField label="Rang">
           <div className="flex gap-2 flex-wrap">

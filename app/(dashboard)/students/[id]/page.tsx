@@ -19,6 +19,8 @@ import {
 import { todayStr } from "@/lib/form-constants";
 import { DatePicker } from "@/components/ui/date-picker";
 import { MembershipDateModal } from "@/components/students/membership-date-modal";
+import { FreezeModal } from "@/components/students/freeze-modal";
+import { Snowflake } from "lucide-react";
 import { formatUzDate } from "@/lib/date-uz";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import {
@@ -135,6 +137,16 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const [enrollDate,      setEnrollDate]      = useState(todayStr());
   /** Qaysi a'zolikning sanasi tahrirlanmoqda. */
   const [dateModalId,     setDateModalId]     = useState<string | null>(null);
+  /** Qaysi a'zolik muzlatilmoqda (M7). */
+  const [freezeFor,       setFreezeFor]       = useState<{ id: string; groupName: string } | null>(null);
+  const [unfreezing,      setUnfreezing]      = useState<string | null>(null);
+  async function unfreeze(sgId: string, freezeId: string) {
+    setUnfreezing(freezeId);
+    try {
+      const res = await fetch(`/api/student-groups/${sgId}/freezes/${freezeId}`, { method: "DELETE" });
+      if (res.ok) revalidateAll();
+    } finally { setUnfreezing(null); }
+  }
   const [transferring,    setTransferring]    = useState(false);
   /**
    * Almashtirilayotgan a'zolikning ESKI guruhida qarz bo'lsa — API
@@ -808,6 +820,14 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         onSaved={revalidateAll}
       />
 
+      {/* Muzlatish (M7) */}
+      <FreezeModal
+        membership={freezeFor}
+        open={!!freezeFor}
+        onClose={() => setFreezeFor(null)}
+        onSaved={revalidateAll}
+      />
+
       {/* Guruhga qo'shish / almashtirish — bitta oyna, ikki rejim */}
       <Modal open={!!groupModal} onClose={() => { setGroupModal(null); setTransferGroupId(""); setTransferErr(""); }}
         title={groupModal?.sg ? "Guruh almashtirish" : "Guruhga qo'shish"}
@@ -1209,6 +1229,26 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                         </div>
                       )}
 
+                      {/* MUZLATISHLAR (M7) — oraliqda pul yechilmaydi. */}
+                      {Array.isArray(sg.freezes) && sg.freezes.length > 0 && (
+                        <div className="space-y-1">
+                          {sg.freezes.map((f: any) => (
+                            <div key={f.id} className="flex items-center gap-1.5 text-[11px] rounded-lg bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 px-2 py-1">
+                              <Snowflake className="w-3 h-3 shrink-0" />
+                              <span className="truncate">
+                                {formatUzDate(f.from)} – {f.to ? formatUzDate(f.to) : "ochiq"}{f.reason ? ` · ${f.reason}` : ""}
+                              </span>
+                              {canManageGroups && (
+                                <button onClick={() => unfreeze(sg.id, f.id)} disabled={unfreezing === f.id}
+                                  className="ml-auto font-semibold hover:underline disabled:opacity-50">
+                                  bekor
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {isTrial && (
                         <button onClick={() => activateMembership(sg)} disabled={activating === sg.id}
                           className="w-full flex items-center justify-center gap-1.5 h-8 rounded-lg text-[12px] font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-60">
@@ -1223,6 +1263,12 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                             className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                             <Shuffle className="w-3 h-3" /> Almashtirish
                           </button>
+                          {!isTrial && (
+                            <button onClick={() => setFreezeFor({ id: sg.id, groupName: g.name })}
+                              className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/30 transition-colors">
+                              <Snowflake className="w-3 h-3" /> Muzlatish
+                            </button>
+                          )}
                           <button onClick={() => openExit(sg)}
                             className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
                             <LogOut className="w-3 h-3" /> Chiqarish
