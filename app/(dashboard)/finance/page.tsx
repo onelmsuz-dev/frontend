@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { AcceptPaymentModal } from "@/components/finance/accept-payment-modal";
+import { ReceiptModal } from "@/components/payments/receipt-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +13,7 @@ import {
 import {
   TrendingUp, TrendingDown, Wallet, Sparkles,
   Plus, X, CheckCircle, Clock, RefreshCw, BadgeCheck,
-  AlertTriangle, ChevronRight,
+  AlertTriangle, ChevronRight, ReceiptText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -66,6 +67,8 @@ export default function FinancePage() {
   const [payDate,    setPayDate]    = useState("");
   const [payMethod,  setPayMethod]  = useState("");
   const [showPayModal,  setShowPayModal]  = useState(false);
+  // Chek — to'lovlar tarixidagi har bir qatordan ochiladi.
+  const [chekId, setChekId] = useState<string | null>(null);
 
   // Xarajat
   const [showExpModal, setShowExpModal] = useState(false);
@@ -436,6 +439,7 @@ export default function FinancePage() {
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Sana</TableHead>
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Usul</TableHead>
                   <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Summa</TableHead>
+                  <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Chek</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -447,6 +451,7 @@ export default function FinancePage() {
                         <TableCell><Skeleton className="h-3 w-16" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-12 rounded-full" /></TableCell>
                         <TableCell className="text-right"><Skeleton className="h-3 w-20 ml-auto" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-6 w-6 rounded-lg ml-auto" /></TableCell>
                       </TableRow>
                     ))
                   : payments.map((p: any) => (
@@ -470,6 +475,15 @@ export default function FinancePage() {
                         </TableCell>
                         <TableCell className="text-right">
                           <span className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(p.amount)}</span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <button type="button" onClick={() => setChekId(p.id)}
+                            title="Chekni ko'rish va chop etish"
+                            className="w-7 h-7 inline-flex items-center justify-center rounded-lg
+                              text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50
+                              dark:hover:bg-indigo-500/10 transition-colors">
+                            <ReceiptText className="w-4 h-4" />
+                          </button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -820,6 +834,9 @@ export default function FinancePage() {
         onClose={() => setPayForStudent(null)}
         defaultStudentId={payForStudent?.id}
       />
+
+      <ReceiptModal paymentId={chekId} open={!!chekId}
+        onClose={() => setChekId(null)} />
     </div>
   );
 }

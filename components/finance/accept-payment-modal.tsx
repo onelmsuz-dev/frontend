@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
+import { ReceiptModal } from "@/components/payments/receipt-modal";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { cn } from "@/lib/utils";
 import { SELECTABLE_METHODS, methodGridCls } from "@/lib/payment-methods";
@@ -53,6 +54,10 @@ export function AcceptPaymentModal({
   const [payForm, setPayForm] = useState<PayForm>(EMPTY_FORM);
   const [payFormErr, setPayFormErr] = useState("");
   const [saving, setSaving] = useState(false);
+  // To'lov qabul qilinishi bilan chek OCHILADI — kassada qog'oz shu zahoti
+  // kerak bo'ladi. Yopish bir bosishda, ya'ni chek kerak bo'lmasa xalaqit
+  // qilmaydi.
+  const [chekId, setChekId] = useState<string | null>(null);
 
   const allStudents: any[] = Array.isArray(studentsRaw) ? studentsRaw : [];
 
@@ -117,9 +122,9 @@ export function AcceptPaymentModal({
           ...(groupId ? { groupId } : {}),
         }),
       });
+      const created = await res.json().catch(() => null);
       if (!res.ok) {
-        const data = await res.json();
-        setPayFormErr(data.error ?? "Xatolik yuz berdi");
+        setPayFormErr(created?.error ?? "Xatolik yuz berdi");
         return;
       }
       void mutate(key => typeof key === "string" && key.startsWith("/api/payments"));
@@ -127,6 +132,7 @@ export function AcceptPaymentModal({
       void mutate(key => typeof key === "string" && key.startsWith("/api/dashboard"));
       void mutate(key => typeof key === "string" && key.startsWith("/api/reports"));
       handleClose();
+      if (created?.id) setChekId(created.id);
     } catch {
       setPayFormErr("Serverga ulanib bo'lmadi");
     } finally {
@@ -135,6 +141,7 @@ export function AcceptPaymentModal({
   }
 
   return (
+    <>
     <ModalOverlay open={open} onClose={handleClose}>
       <div className="glass-strong rounded-2xl shadow-2xl w-full h-full flex flex-col overflow-hidden border border-white/60 dark:border-white/10">
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-white/50 dark:border-white/10 shrink-0">
@@ -283,5 +290,9 @@ export function AcceptPaymentModal({
         </div>
       </div>
     </ModalOverlay>
+
+    <ReceiptModal paymentId={chekId} open={!!chekId}
+      onClose={() => setChekId(null)} />
+    </>
   );
 }
