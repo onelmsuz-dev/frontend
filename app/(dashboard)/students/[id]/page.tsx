@@ -8,6 +8,7 @@ import { TopHeader } from "@/components/layout/top-header";
 import { GroupDebtBreakdown } from "@/components/students/group-debt-breakdown";
 import { OneTimeDiscount } from "@/components/students/one-time-discount";
 import { PaymentEdit } from "@/components/students/payment-edit";
+import { ReceiptModal } from "@/components/payments/receipt-modal";
 import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { mutate } from "swr";
 import {
   Phone, Calendar, DollarSign, ArrowLeft, AlertCircle,
-  Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays,
+  Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays, Printer
 } from "lucide-react";
 
 function fmt(v: number) {
@@ -114,6 +115,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   // Ilgari bu yerda faqat "birinchi faol guruh" olinardi: ikki fanga
   // qatnashadigan o'quvchida chiqarish/almashtirish har doim tasodifiy
   // guruhga tegardi va ikkinchisiga umuman yetib bo'lmasdi.
+  // Chek — to'lov qatoridagi tugma ochadi.
+  const [receiptId,    setReceiptId]    = useState<string | null>(null);
   const [exitTarget,   setExitTarget]   = useState<any>(null);
   // Chiqarishda qisman hisob. Standart — "to'liq qarz qolsin", ya'ni
   // bugungi xulq: markaz o'zi tanlamaguncha hech qanday raqam qimirlamaydi.
@@ -589,6 +592,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           </div>
         )}
       </Modal>
+
+      <ReceiptModal paymentId={receiptId} open={!!receiptId}
+        onClose={() => setReceiptId(null)} />
 
       {/* Guruhdan chiqarish — aynan tanlangan a'zolik */}
       <Modal open={!!exitTarget} onClose={() => { setExitTarget(null); setExitInfo(null); setExitErr(""); }}
@@ -1322,6 +1328,15 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     {p.note && <p className="text-[11px] text-neutral-400 max-w-[120px] text-right truncate">{p.note}</p>}
                     {/* Xato kiritilgan summani tuzatish — ilgari buning
                         hech qanday yo'li yo'q edi. */}
+                    {/* CHEK — markazlar mijozga qog'oz berishi kerak.
+                        Har bir to'lovda alohida, chunki chek raqami ham
+                        to'lovga bog'langan. */}
+                    <button onClick={() => setReceiptId(p.id)} title="Chek"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg
+                        text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50
+                        dark:hover:bg-indigo-950/30 transition-colors">
+                      <Printer className="w-3.5 h-3.5" />
+                    </button>
                     {hasPerm(me?.permissions, "payments.update") && (
                       <PaymentEdit
                         payment={p}
