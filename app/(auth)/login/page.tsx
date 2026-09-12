@@ -47,6 +47,10 @@ function LoginForm() {
   const params      = useSearchParams();
   const callbackUrl = params.get("callbackUrl") ?? "/dashboard";
 
+  // Muddat tugab chiqarilgan bo'lsa, odam NEGA qayta kirayotganini bilsin.
+  // Shikoyat aynan shu haqda edi: ekran jimgina buzilib qolardi.
+  const muddatTugadi = params.get("muddat") === "1";
+
   const [phone,     setPhone]     = useState("");
   const [password,  setPassword]  = useState("");
   const [showPass,  setShowPass]  = useState(false);
@@ -95,6 +99,15 @@ function LoginForm() {
           Telefon raqam va parolingizni kiriting
         </p>
       </div>
+
+      {muddatTugadi && !error && (
+        <div className="flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40 rounded-xl px-3 py-2.5">
+          <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-px" />
+          <p className="text-[13px] font-medium text-amber-800 dark:text-amber-300">
+            Sessiya muddati tugadi — xavfsizlik uchun qaytadan kiring
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5">

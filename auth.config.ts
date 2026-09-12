@@ -1,13 +1,30 @@
 import type { NextAuthConfig } from "next-auth";
+import { SESSION_EXPIRED } from "@/lib/session-expiry";
 
 // Edge/Node-compatible config (no DB, no bcrypt). Node runtime'da fetch mavjud —
 // access token muddati tugaganda backend `/api/auth/refresh` chaqiriladi.
 const BACKEND_URL     = process.env.BACKEND_URL ?? "http://localhost:4000";
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET ?? "";
 
+/**
+ * Access token muddati tugashidan qancha oldin yangilanadi (ms).
+ * So'rov yo'lda ketayotganda token o'lib qolmasligi uchun zaxira.
+ */
+const REFRESH_BUFFER_MS = 60_000;
+
+/**
+ * Vaqtinchalik nosozlikdan keyin qayta urinishgacha kutish (ms).
+ *
+ * DIQQAT: bu qiymat {@link REFRESH_BUFFER_MS} dan KATTA bo'lishi SHART.
+ * Teng bo'lsa, quyidagi `Date.now() < expires - REFRESH_BUFFER_MS` sharti
+ * darhol yolg'on bo'ladi va backend yiqilgan paytda har bir so'rov yangi
+ * refresh urinishini boshlab, serverni yana ko'proq uradi.
+ */
+const RETRY_MS = REFRESH_BUFFER_MS * 2;
+
 async function refreshAccessToken(token: any) {
   try {
-    if (!token.refreshToken) return { ...token, error: "NoRefreshToken" };
+    if (!token.refreshToken) return { ...token, error: SESSION_EXPIRED };
 
     const res = await fetch(`${BACKEND_URL}/api/auth/refresh`, {
       method:  "POST",
@@ -19,7 +36,18 @@ async function refreshAccessToken(token: any) {
       cache: "no-store",
     });
 
-    if (!res.ok) return { ...token, error: "RefreshFailed" };
+    // MUHIM FARQ: "sessiya o'ldi" bilan "server hozir javob bermadi" —
+    // butunlay boshqa narsa. Ilgari ikkalasi ham bir xil `RefreshFailed`
+    // edi; endi faqat 401/403 (backend "bu token yaroqsiz" dedi) sessiyani
+    // tugatadi. Backend bir daqiqaga yiqilsa yoki rate-limit ursa, eski
+    // token saqlanadi va keyingi so'rovda qayta urinamiz — aks holda
+    // qisqa uzilish BARCHA foydalanuvchini login sahifasiga otib yuborardi.
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        return { ...token, error: SESSION_EXPIRED };
+      }
+      return { ...token, error: undefined, accessTokenExpires: Date.now() + RETRY_MS };
+    }
 
     const data = await res.json();
     const u = data.user;
@@ -38,7 +66,8 @@ async function refreshAccessToken(token: any) {
       error:              undefined,
     };
   } catch {
-    return { ...token, error: "RefreshError" };
+    // Tarmoq xatosi — vaqtinchalik. Sessiya tugadi deb hisoblamaymiz.
+    return { ...token, error: undefined, accessTokenExpires: Date.now() + RETRY_MS };
   }
 }
 
@@ -67,7 +96,7 @@ export const authConfig: NextAuthConfig = {
 
       // Access token hali yaroqli (60s bufer bilan) — o'zini qaytaramiz
       const expires = (token as any).accessTokenExpires as number | undefined;
-      if (expires && Date.now() < expires - 60_000) {
+      if (expires && Date.now() < expires - REFRESH_BUFFER_MS) {
         return token;
       }
 
@@ -89,5 +118,19 @@ export const authConfig: NextAuthConfig = {
     },
   },
   providers: [],
-  session: { strategy: "jwt" },
+  /**
+   * Sessiya muddati — BIR OY.
+   *
+   * `maxAge` ilgari yozilmagan edi va NextAuth standartiga tayanardi.
+   * Endi aniq yozilgan: foydalanuvchi bir oy davomida TEGMASA sessiya
+   * tugaydi. Ishlatib turgan odam chiqarilmaydi — `updateAge` har kuni
+   * muddatni yangilab turadi. Backenddagi refresh token muddati ham
+   * shuncha (`JWT_REFRESH_TTL=30d`); ikkisi bir xil bo'lishi SHART, aks
+   * holda biri tirik, ikkinchisi o'lik holat yuzaga keladi.
+   */
+  session: {
+    strategy:  "jwt",
+    maxAge:    30 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
+  },
 };

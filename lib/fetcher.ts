@@ -20,6 +20,8 @@
  * Har qanday chetlanish `Error` bo'lib qaytadi va UI aniq sabab ko'rsatadi.
  */
 
+import { nudgeSessionCheck } from "@/lib/session-expiry";
+
 export interface ApiError extends Error {
   /** HTTP status — UI 403/404 uchun alohida matn ko'rsatishi mumkin. */
   status?: number;
@@ -51,6 +53,7 @@ export async function jsonFetcher<T = any>(url: string): Promise<T> {
 
   // Sahifaga yo'naltirilgan: JSON kutayotgan joyda HTML keldi.
   if (!isJson) {
+    nudgeSessionCheck();
     throw apiError(
       "Sessiya tugagan ko'rinadi — sahifani yangilab, qaytadan kiring",
       r.status,
@@ -66,6 +69,10 @@ export async function jsonFetcher<T = any>(url: string): Promise<T> {
   }
 
   if (!r.ok) {
+    // 401 — sessiya o'lgan bo'lishi MUMKIN. Bu yerda hech kim chiqarilmaydi:
+    // faqat NextAuth'dan holatni qayta tekshirish so'raladi (sabab
+    // `session-expiry.ts` da yozilgan). 403 — ruxsat yo'q, sessiya sog'lom.
+    if (r.status === 401) nudgeSessionCheck();
     const msg = (data as { error?: string } | null)?.error;
     throw apiError(msg ?? `So'rov bajarilmadi (${r.status})`, r.status);
   }

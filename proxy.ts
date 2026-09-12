@@ -3,8 +3,28 @@ import { authConfig } from "@/auth.config";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
+import { SESSION_EXPIRED } from "@/lib/session-expiry";
 
 const { auth } = NextAuth(authConfig);
+
+/**
+ * Login sahifasiga yuborish.
+ *
+ * `?muddat=1` login sahifasiga NIMA bo'lganini aytadi — shikoyat aynan shu
+ * haqda edi: odam nega chiqib qolganini tushunmasdi.
+ *
+ * DIQQAT — cookie bu YERDA o'chirilmaydi, garchi mantiqan shu joy ko'rinsa
+ * ham. NextAuth `auth()` o'ramasi bizning javobimiz tayyor bo'lgandan KEYIN
+ * o'z sessiya cookie'sini qo'shadi (`lib/index.js` → "Preserve cookies from
+ * the session response"), ya'ni bu yerdagi o'chirish darhol bekor qilinadi.
+ * O'lik cookie'ni `SessionWatcher` login sahifasida `signOut()` bilan
+ * tozalaydi — u haqiqatan ishlaydigan yagona joy.
+ */
+function loginGa(target: string | URL, muddatTugadi: boolean): Response {
+  const url = new URL(target.toString());
+  if (muddatTugadi) url.searchParams.set("muddat", "1");
+  return NextResponse.redirect(url);
+}
 
 /**
  * Marketing domenidagi SEO landing sahifalari (login talab qilmaydi) va
@@ -68,7 +88,12 @@ function isMarketingHost(req: NextRequest): boolean {
 }
 
 export const proxy = auth((req) => {
-  const isLoggedIn = !!req.auth;
+  // Sessiya bor, lekin backend refresh tokenni RAD ETGAN — ya'ni muddat
+  // tugagan. Ilgari bunday sessiya "kirgan" sanalardi: sahifa ochilardi,
+  // API esa 401 qaytarardi va ekran bo'sh turardi. Endi u chiqmagan
+  // sanaladi va login sahifasiga yuboriladi.
+  const muddatTugadi = (req.auth as any)?.error === SESSION_EXPIRED;
+  const isLoggedIn = !!req.auth && !muddatTugadi;
   const role       = (req.auth?.user as any)?.role ?? null;
   const { pathname } = req.nextUrl;
 
@@ -123,7 +148,7 @@ export const proxy = auth((req) => {
       return NextResponse.next();
     }
     if (!isLoggedIn)
-      return Response.redirect(new URL("/admode/login", req.nextUrl));
+      return loginGa(new URL("/admode/login", req.nextUrl), muddatTugadi);
     if (role !== "PLATFORM_ADMIN")
       return Response.redirect(new URL("/dashboard", req.nextUrl));
     return NextResponse.next();
@@ -144,6 +169,10 @@ export const proxy = auth((req) => {
     if (isLoggedIn && userSubdomain !== subdomain) {
       return Response.redirect(origin + "/login");
     }
+    // Muddati tugagan sessiya — o'z subdomenidagi login sahifasiga.
+    if (muddatTugadi && pathname !== "/login") {
+      return loginGa(origin + "/login", true);
+    }
 
     if (pathname === "/") {
       return Response.redirect(origin + (isLoggedIn ? home : "/login"));
@@ -152,7 +181,7 @@ export const proxy = auth((req) => {
       return Response.redirect(origin + home);
     }
     if (pathname !== "/login" && !isLoggedIn) {
-      return Response.redirect(origin + "/login");
+      return loginGa(origin + "/login", muddatTugadi);
     }
     // Rol bo'yicha panel ajratish
     if (isLoggedIn && role === "STUDENT" && !isPanel && pathname !== "/login") {
@@ -207,7 +236,7 @@ export const proxy = auth((req) => {
     if (isLoggedIn) return Response.redirect(new URL(home, req.nextUrl));
     return NextResponse.next();
   }
-  if (!isLoggedIn) return Response.redirect(new URL("/login", req.nextUrl));
+  if (!isLoggedIn) return loginGa(new URL("/login", req.nextUrl), muddatTugadi);
   if (role === "STUDENT" && !isPanel) return Response.redirect(new URL("/panel", req.nextUrl));
   if (role !== "STUDENT" && isPanel)  return Response.redirect(new URL("/dashboard", req.nextUrl));
 
