@@ -15,7 +15,7 @@ import {
   Search, Plus, ChevronRight, AlertCircle, Upload, LayoutGrid, Radio, Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useLeads, useLeadStages } from "@/lib/hooks/useLeads";
+import { useLeads, useLeadAssignees, useLeadStages } from "@/lib/hooks/useLeads";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { SourcePicker } from "@/components/leads/source-picker";
 import { LeadImportModal } from "@/components/leads/lead-import-modal";
@@ -26,6 +26,8 @@ import { MetaIntegrationPanel } from "@/components/leads/meta-integration";
 import { KanbanColumn } from "@/components/leads/kanban-column";
 import { LeadCardPreview, type Lead } from "@/components/leads/lead-card";
 import { StageManagerModal } from "@/components/leads/stage-manager-modal";
+import { SalesStats } from "@/components/leads/sales-stats";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { useFeature } from "@/lib/hooks/useFeatures";
 import { stageHue, defaultStage } from "@/lib/lead-stages";
 import { mutate } from "swr";
@@ -62,6 +64,12 @@ export default function LeadsPage() {
     if (metaEnabled === false) setTab("board");
   }, [metaEnabled]);
   const [search,    setSearch]    = useState("");
+  /** "Sotuvchi" filtri — "" hammasi, "yoq" biriktirilmaganlar, aks holda userId. */
+  const [sotuvchi,  setSotuvchi]  = useState("");
+  const { me: menOzim } = useMe();
+  const koraAlaman = hasPerm(menOzim?.permissions, "leads.viewAll");
+  const { data: xodimlarRaw } = useLeadAssignees();
+  const xodimlar = Array.isArray(xodimlarRaw) ? xodimlarRaw : [];
   const [showModal,    setShowModal]    = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
   const [form,         setForm]         = useState(EMPTY);
@@ -266,13 +274,17 @@ export default function LeadsPage() {
 
   const filteredLeads = useMemo(() =>
     leads.filter(l => {
+      // Sotuvchi bo'yicha filtr qidiruvdan OLDIN: boshliq odatda avval
+      // "Bekzodning lidlari" deb toraytirib, keyin ichidan qidiradi.
+      if (sotuvchi === "yoq" && (l as any).assignedToId) return false;
+      if (sotuvchi && sotuvchi !== "yoq" && (l as any).assignedToId !== sotuvchi) return false;
       const q = search.toLowerCase();
       return l.name.toLowerCase().includes(q)
           || (l.phone ?? "").includes(search)
           || (l.school ?? "").toLowerCase().includes(q)
           || (l.grade  ?? "").toLowerCase().includes(q)
           || (l.course ?? "").toLowerCase().includes(q);
-    }), [leads, search]);
+    }), [leads, search, sotuvchi]);
 
   const getCol = (stageId: string) => filteredLeads.filter((l) => l.stageId === stageId);
   const totalByStage = useMemo(() =>
@@ -621,6 +633,21 @@ export default function LeadsPage() {
             <Input placeholder="Ism, telefon, maktab, kurs..." className="pl-9 h-9 text-sm"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          {/* SOTUVCHI FILTRI — faqat boshqalarning lidini ko'ra oladigan
+              odamga ma'noli. Oddiy sotuvchida ro'yxat o'zidan iborat
+              bo'lardi, ya'ni tugma shunchaki joy egallardi. */}
+          {koraAlaman && xodimlar.length > 0 && (
+            <select value={sotuvchi} onChange={e => setSotuvchi(e.target.value)}
+              className="h-9 px-2.5 rounded-xl text-[12px] font-medium glass-soft shrink-0
+                text-neutral-600 dark:text-neutral-300 border border-white/60 dark:border-white/10">
+              <option value="">Barcha sotuvchilar</option>
+              <option value="yoq">Biriktirilmagan</option>
+              {xodimlar.map(x => (
+                <option key={x.id} value={x.id}>{x.name}</option>
+              ))}
+            </select>
+          )}
+
           <button onClick={() => setShowImport(true)}
             className="flex items-center gap-1.5 h-9 px-3 rounded-xl text-[12px] font-semibold
                        glass-soft text-neutral-600 dark:text-neutral-300
@@ -628,6 +655,10 @@ export default function LeadsPage() {
             <Upload className="w-3.5 h-3.5" />{" "}Excel&apos;dan import
           </button>
         </div>
+
+        {/* Sotuvchilar hisoboti — o'zi ruxsatni tekshiradi va yo'q bo'lsa
+            hech narsa chizmaydi (so'rov ham ketmaydi). */}
+        <SalesStats />
 
         {dropError && (
           <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5 mb-3">

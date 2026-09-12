@@ -50,6 +50,18 @@ export function usePermissionCatalog() {
   return useSWR<PermissionGroup[]>("/api/staff-roles/permissions", fetcher);
 }
 
+export interface RolePreset {
+  key: string;
+  label: string;
+  hint: string;
+  permissions: string[];
+}
+
+/** Tayyor rol shablonlari — ROP, sotuvchi, qabulxona, buxgalter. */
+export function useRolePresets() {
+  return useSWR<RolePreset[]>("/api/staff-roles/presets", fetcher);
+}
+
 export function useCreateStaffRole() {
   return useSWRMutation("/api/staff-roles", poster);
 }

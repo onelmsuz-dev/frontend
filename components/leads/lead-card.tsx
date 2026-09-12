@@ -6,6 +6,7 @@ import { Phone, Trash2, Pencil, MessageSquare, UserPlus, GripVertical } from "lu
 import { cn } from "@/lib/utils";
 import { sourceColor } from "@/components/leads/source-picker";
 import { CallOutcome, StepBack } from "@/components/leads/call-outcome";
+import { AssigneePicker } from "@/components/leads/assignee-picker";
 import { LOST_REASON_UZ, type LeadStage } from "@/lib/hooks/useLeads";
 import { resolvePrevStage, defaultStage } from "@/lib/lead-stages";
 import { fmtRelative } from "@/lib/date-uz";
@@ -23,6 +24,7 @@ export interface Lead {
   school?: string | null;
   grade?: string | null;
   note?: string | null;
+  assignedToId?: string | null;
   assignedTo?: { name?: string } | null;
   createdAt?: string;
   lastContactAt?: string | null;
@@ -191,7 +193,16 @@ export function LeadCard({ lead, stage, stages, onDelete, onEdit, onOpen, onConv
         </p>
       )}
 
-      {lead.assignedTo?.name && (
+      {/* MAS'UL — endi shunchaki yozuv emas, amal. Ilgari lid kimgadir
+          biriktirilgan bo'lsagina ismi ko'rinardi va biriktirish uchun
+          umuman joy yo'q edi — shu sabab 38 lidning 38 tasi egasiz
+          qolgan edi. */}
+      {!yopiq && (
+        <AssigneePicker leadId={lead.id}
+          current={lead.assignedTo ? { id: lead.assignedToId, name: lead.assignedTo.name } : null}
+          onDone={onRefresh} />
+      )}
+      {yopiq && lead.assignedTo?.name && (
         <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-2 truncate">
           👤 {lead.assignedTo.name}
         </p>

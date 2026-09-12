@@ -141,3 +141,43 @@ export interface DueLead {
 export function useDueLeads() {
   return useSWR<{ items: DueLead[]; overdue: number }>("/api/leads/due", fetcher);
 }
+
+
+// ─── SOTUV BO'LIMI (ROP) ─────────────────────────────────────────────────
+
+export interface Assignee { id: string; name: string; role: string }
+
+/** Lid biriktirish va "Sotuvchi" filtri uchun xodimlar ro'yxati. */
+export function useLeadAssignees() {
+  return useSWR<Assignee[]>("/api/leads/assignees", fetcher);
+}
+
+export interface LeadStatRow {
+  userId: string | null;
+  name: string;
+  jami: number;
+  aloqa: number;
+  yutildi: number;
+  yoqotildi: number;
+  jarayonda: number;
+  konversiya: number;
+}
+
+export interface LeadStats {
+  from: string;
+  to: string | null;
+  rows: LeadStatRow[];
+  jami: Omit<LeadStatRow, "userId" | "name">;
+}
+
+/**
+ * Sotuvchilar hisoboti. `enabled` false bo'lsa SO'ROV KETMAYDI —
+ * oddiy sotuvchida `leads.stats` yo'q va u har safar 403 olardi.
+ */
+export function useLeadStats(enabled: boolean, from?: string, to?: string) {
+  const qs = new URLSearchParams();
+  if (from) qs.set("from", from);
+  if (to)   qs.set("to", to);
+  const suffix = qs.toString() ? `?${qs}` : "";
+  return useSWR<LeadStats>(enabled ? `/api/leads/stats${suffix}` : null, fetcher);
+}

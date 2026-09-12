@@ -15,7 +15,7 @@ import { FormField } from "@/components/ui/form-field";
 import { PermissionPicker } from "@/components/settings/permission-picker";
 import { useUsers } from "@/lib/hooks/useUsers";
 import { useOrganization } from "@/lib/hooks/useOrganization";
-import { useStaffRoles, type StaffRole } from "@/lib/hooks/useStaffRoles";
+import { useStaffRoles, useRolePresets, type StaffRole } from "@/lib/hooks/useStaffRoles";
 import { cn } from "@/lib/utils";
 import type { Branch } from "@/types";
 
@@ -46,6 +46,7 @@ function ErrorBox({ text }: { text: string }) {
 export function StaffSection({ branches }: { branches: Branch[] }) {
   const { data: usersRaw, isLoading: usersLoading } = useUsers();
   const { data: rolesRaw } = useStaffRoles();
+  const { data: presets } = useRolePresets();
   const { data: org } = useOrganization();
 
   const users: any[] = Array.isArray(usersRaw) ? usersRaw : [];
@@ -478,10 +479,43 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
         ) : (
           <div className="space-y-3 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/40 dark:bg-indigo-950/20 p-3">
             {roleSel === NEW_ROLE && (
-              <FormField label="Yangi rol nomi" required>
-                <Input placeholder="Kassir, Buxgalter, Menejer..." value={newRoleName}
-                  onChange={e => setNewRoleName(e.target.value)} className="h-10" />
-              </FormField>
+              <>
+                <FormField label="Yangi rol nomi" required>
+                  <Input placeholder="Kassir, Buxgalter, Menejer..." value={newRoleName}
+                    onChange={e => setNewRoleName(e.target.value)} className="h-10" />
+                </FormField>
+
+                {/* TAYYOR SHABLONLAR. 40 dan ortiq katakchani noldan
+                    belgilash amalda ikki xil natija berardi: yo hammasi
+                    belgilanardi (rol ajratishning ma'nosi qolmasdi), yo
+                    yarmi qolib ketib xodim ishlay olmasdi. Shablon
+                    boshlang'ich nuqta — tanlangach katakchalar ochiq
+                    qoladi va markaz o'ziga moslaydi. */}
+                {(presets ?? []).length > 0 && (
+                  <div>
+                    <p className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
+                      Tayyor shablon <span className="text-neutral-400 font-normal">· ixtiyoriy</span>
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      {(presets ?? []).map(sh => (
+                        <button key={sh.key} type="button"
+                          onClick={() => { setPerms(sh.permissions);
+                            if (!newRoleName.trim()) setNewRoleName(sh.label); }}
+                          className="text-left px-2.5 py-2 rounded-lg border border-neutral-200
+                            dark:border-white/10 hover:border-indigo-400 hover:bg-indigo-50/60
+                            dark:hover:bg-indigo-950/30 transition-colors">
+                          <span className="block text-[12px] font-semibold text-neutral-800 dark:text-neutral-200">
+                            {sh.label}
+                          </span>
+                          <span className="block text-[10.5px] text-neutral-500 dark:text-neutral-400 leading-tight mt-0.5">
+                            {sh.hint}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
             <div>
               <p className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5">
