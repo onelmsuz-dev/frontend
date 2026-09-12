@@ -38,14 +38,18 @@ async function refreshAccessToken(token: any) {
 
     // MUHIM FARQ: "sessiya o'ldi" bilan "server hozir javob bermadi" —
     // butunlay boshqa narsa. Ilgari ikkalasi ham bir xil `RefreshFailed`
-    // edi; endi faqat 401/403 (backend "bu token yaroqsiz" dedi) sessiyani
-    // tugatadi. Backend bir daqiqaga yiqilsa yoki rate-limit ursa, eski
-    // token saqlanadi va keyingi so'rovda qayta urinamiz — aks holda
-    // qisqa uzilish BARCHA foydalanuvchini login sahifasiga otib yuborardi.
+    // edi; endi faqat 401 sessiyani tugatadi. Backend bir daqiqaga
+    // yiqilsa yoki rate-limit ursa, eski token saqlanadi va keyingi
+    // so'rovda qayta urinamiz — aks holda qisqa uzilish BARCHA
+    // foydalanuvchini login sahifasiga otib yuborardi.
+    //
+    // 403 ATAYLAB kirmaydi: `/api/auth/refresh` sessiya uchun HECH QACHON
+    // 403 qaytarmaydi (u faqat 401 tashlaydi). 403 — `InternalSecretGuard`,
+    // ya'ni `INTERNAL_API_SECRET` mos kelmagani. Bu infratuzilma nosozligi;
+    // uni "muddat tugadi" deb sanasak, sir noto'g'ri qo'yilgan zahoti
+    // BUTUN platforma bir vaqtda login sahifasiga otilib ketardi.
     if (!res.ok) {
-      if (res.status === 401 || res.status === 403) {
-        return { ...token, error: SESSION_EXPIRED };
-      }
+      if (res.status === 401) return { ...token, error: SESSION_EXPIRED };
       return { ...token, error: undefined, accessTokenExpires: Date.now() + RETRY_MS };
     }
 
