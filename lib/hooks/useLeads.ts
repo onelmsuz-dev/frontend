@@ -181,3 +181,24 @@ export function useLeadStats(enabled: boolean, from?: string, to?: string) {
   const suffix = qs.toString() ? `?${qs}` : "";
   return useSWR<LeadStats>(enabled ? `/api/leads/stats${suffix}` : null, fetcher);
 }
+
+export interface DailyRow {
+  userId: string;
+  name: string;
+  qongiroq: number;
+  aylandi: number;
+  yangiLid: number;
+  bosqichga: Record<string, number>;
+}
+
+export interface DailyReport {
+  date: string;
+  stages: { id: string; name: string; kind: string }[];
+  rows: DailyRow[];
+}
+
+/** Kunlik nazorat — "kun oxirida kim nima qildi". */
+export function useLeadDaily(enabled: boolean, date?: string) {
+  const suffix = date ? `?date=${date}` : "";
+  return useSWR<DailyReport>(enabled ? `/api/leads/daily${suffix}` : null, fetcher);
+}

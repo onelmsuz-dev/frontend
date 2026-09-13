@@ -12,7 +12,7 @@ import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormField } from "@/components/ui/form-field";
 import {
-  Search, Plus, ChevronRight, AlertCircle, Upload, LayoutGrid, Radio, Settings2,
+  Search, Plus, ChevronRight, AlertCircle, Upload, LayoutGrid, Radio, Settings2, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLeads, useLeadAssignees, useLeadStages } from "@/lib/hooks/useLeads";
@@ -27,6 +27,7 @@ import { KanbanColumn } from "@/components/leads/kanban-column";
 import { LeadCardPreview, type Lead } from "@/components/leads/lead-card";
 import { StageManagerModal } from "@/components/leads/stage-manager-modal";
 import { SalesStats } from "@/components/leads/sales-stats";
+import { DistributeModal } from "@/components/leads/distribute-modal";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { useFeature } from "@/lib/hooks/useFeatures";
 import { stageHue, defaultStage } from "@/lib/lead-stages";
@@ -70,6 +71,8 @@ export default function LeadsPage() {
   const koraAlaman = hasPerm(menOzim?.permissions, "leads.viewAll");
   const { data: xodimlarRaw } = useLeadAssignees();
   const xodimlar = Array.isArray(xodimlarRaw) ? xodimlarRaw : [];
+  const taqsimlay = hasPerm(menOzim?.permissions, "leads.assign");
+  const [showTaqsim, setShowTaqsim] = useState(false);
   const [showModal,    setShowModal]    = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
   const [form,         setForm]         = useState(EMPTY);
@@ -654,11 +657,31 @@ export default function LeadsPage() {
                        hover:bg-white/70 dark:hover:bg-white/10 transition-colors shrink-0">
             <Upload className="w-3.5 h-3.5" />{" "}Excel&apos;dan import
           </button>
+
+          {/* TAQSIMLASH — importdan keyingi birinchi ish. Import
+              tugmasining YONIDA turibdi, chunki oqim shu: 1000 tasini
+              kirit → 5 operatorga bo'l. */}
+          {taqsimlay && (
+            <button onClick={() => setShowTaqsim(true)}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-xl text-[12px] font-semibold
+                         bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm
+                         transition-colors shrink-0">
+              <Users className="w-3.5 h-3.5" />{" "}Taqsimlash
+            </button>
+          )}
         </div>
 
         {/* Sotuvchilar hisoboti — o'zi ruxsatni tekshiradi va yo'q bo'lsa
             hech narsa chizmaydi (so'rov ham ketmaydi). */}
         <SalesStats />
+
+        <DistributeModal
+          open={showTaqsim}
+          onClose={() => setShowTaqsim(false)}
+          unassignedIds={leads.filter(l => !(l as any).assignedToId).map(l => l.id)}
+          visibleIds={filteredLeads.map(l => l.id)}
+          onDone={refreshAll}
+        />
 
         {dropError && (
           <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5 mb-3">
