@@ -10,6 +10,7 @@ import { AssigneePicker } from "@/components/leads/assignee-picker";
 import { LOST_REASON_UZ, type LeadStage } from "@/lib/hooks/useLeads";
 import { resolvePrevStage, defaultStage } from "@/lib/lead-stages";
 import { fmtRelative } from "@/lib/date-uz";
+import { dueHolat, dueMatn } from "@/lib/lead-due";
 
 export interface Lead {
   id: string;
@@ -70,9 +71,27 @@ export function LeadCard({ lead, stage, stages, onDelete, onEdit, onOpen, onConv
     ? { transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.4 : 1 }
     : undefined;
 
+  /**
+   * VAQTI KELGAN KARTOCHKA KO'ZGA TASHLANADI.
+   *
+   * Yorliqning o'zi yetmaydi: ustunda 30 ta karta bo'lsa, kichkina
+   * yozuvni topish uchun baribir hammasini o'qib chiqish kerak.
+   * Chekka chiziq va sariq fon esa aylantirib o'tayotganda ham
+   * ko'rinadi — talab ham aynan shunday edi: "vaqti kelgan
+   * kartochkada sariq belgi".
+   */
+  const dueRang = yopiq ? "yoq" : dueHolat(lead.nextContactAt);
+
   return (
     <div ref={setNodeRef} style={style}
-      className="glass-panel rounded-xl border border-white/60 dark:border-white/10 p-3 shadow-sm hover:shadow-md transition-shadow">
+      className={cn(
+        "glass-panel rounded-xl border p-3 shadow-sm hover:shadow-md transition-shadow",
+        dueRang === "keldi"
+          ? "border-amber-400 dark:border-amber-600 ring-1 ring-amber-300/60 dark:ring-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20"
+          : dueRang === "kechikkan"
+            ? "border-red-300 dark:border-red-900/60 ring-1 ring-red-200/60 dark:ring-red-900/40"
+            : "border-white/60 dark:border-white/10",
+      )}>
       <div className="flex items-start gap-2.5 mb-2.5">
         <button {...attributes} {...listeners} title="Ushlab boshqa bosqichga o'tkazish"
           className="w-4 h-8 -ml-1 flex items-center justify-center text-neutral-300 dark:text-neutral-600
@@ -186,12 +205,28 @@ export function LeadCard({ lead, stage, stages, onDelete, onEdit, onOpen, onConv
         </p>
       )}
 
-      {/* Keyingi aloqa sanasi. */}
-      {!yopiq && lead.nextContactAt && (
-        <p className="mt-1.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400">
-          Keyingi aloqa: {fmtRelative(lead.nextContactAt)}
-        </p>
-      )}
+      {/* KEYINGI ALOQA — vaqt holatiga qarab uch rang.
+          Ilgari bu oddiy kulrang yozuv edi va "bugun soat 15:00" bilan
+          "keyingi haftada" bir xil ko'rinardi — ya'ni taxtaga qarab
+          turib qaysi biri SHOSHILINCH ekanini bilib bo'lmasdi. */}
+      {!yopiq && lead.nextContactAt && (() => {
+        const holat = dueRang;
+        const uslub =
+          holat === "kechikkan"
+            ? "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900/50"
+            : holat === "keldi"
+              ? "bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-900/60"
+              : "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/40";
+        return (
+          <p className={cn(
+            "mt-1.5 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5",
+            "text-[10px] font-semibold", uslub,
+          )}>
+            {holat === "keldi" ? "🔔" : holat === "kechikkan" ? "⚠️" : "🕑"}
+            {dueMatn(lead.nextContactAt)}
+          </p>
+        );
+      })()}
 
       {/* MAS'UL — endi shunchaki yozuv emas, amal. Ilgari lid kimgadir
           biriktirilgan bo'lsagina ismi ko'rinardi va biriktirish uchun

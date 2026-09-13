@@ -30,7 +30,51 @@ import { Phone, PhoneOff, X, Undo2, Loader2, BookOpen } from "lucide-react";
 function plusDays(n: number): string {
   const d = new Date();
   d.setDate(d.getDate() + n);
+  return kunStr(d);
+}
+
+function kunStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * ANIQ KUN VA SOAT — "payshanba soat 15:00 da qo'ng'iroq qiling".
+ *
+ * Tez tugmalar ("Ertaga", "3 kundan") ko'p uchraydigan javoblarni
+ * bir bosishda yopadi, lekin odam ANIQ vaqt aytganda ular yetmaydi:
+ * ilgari bunday javob qog'ozga ko'chardi yoki "ertaga" deb
+ * yaxlitlanardi va qo'ng'iroq noto'g'ri paytda bo'lardi.
+ *
+ * Soat kiritilmasa kun o'rtasi olinadi — server ham aynan shunday
+ * qiladi, ya'ni ikkala tomon bir xil qoidaga tayanadi.
+ */
+function AniqVaqt({
+  band, onPick,
+}: {
+  band: boolean;
+  onPick: (v: string) => void;
+}) {
+  const [kun, setKun] = useState(kunStr(new Date()));
+  const [soat, setSoat] = useState("");
+
+  return (
+    <div className="flex flex-wrap items-center gap-1 pt-1">
+      <input type="date" value={kun} onChange={(e) => setKun(e.target.value)}
+        className="h-6 px-1.5 rounded-md text-[10px] border border-neutral-200
+          dark:border-white/10 bg-white dark:bg-neutral-800
+          text-neutral-700 dark:text-neutral-200" />
+      <input type="time" value={soat} onChange={(e) => setSoat(e.target.value)}
+        className="h-6 px-1.5 rounded-md text-[10px] border border-neutral-200
+          dark:border-white/10 bg-white dark:bg-neutral-800
+          text-neutral-700 dark:text-neutral-200" />
+      <button type="button" disabled={band || !kun}
+        onClick={() => onPick(soat ? `${kun}T${soat}` : kun)}
+        className="h-6 px-2 rounded-md text-[10px] font-semibold
+          bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50">
+        Qo&apos;yish
+      </button>
+    </div>
+  );
 }
 
 export function CallOutcome({
@@ -223,6 +267,9 @@ export function CallOutcome({
             </button>
           )}
         </div>
+
+        <AniqVaqt band={!!busy}
+          onPick={(v) => send(pending!, { nextContactAt: v })} />
         <button onClick={() => { setOpen(null); setPending(null); setErr(""); }}
           className={cn(btn, "text-neutral-400")}>
           <X className="w-2.5 h-2.5" /> Bekor

@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { dueHolat, dueMatn } from "@/lib/lead-due";
 import { useDueLeads } from "@/lib/hooks/useLeads";
 import { PhoneCall, AlertCircle } from "lucide-react";
 
@@ -48,13 +49,16 @@ export function DueStrip({ onOpen }: { onOpen: (id: string) => void }) {
 
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {items.map((l) => {
-          const kech = new Date(l.nextContactAt) < new Date(new Date().setHours(0, 0, 0, 0));
+          // Kartochka bilan BIR XIL qoida — ikki joyda ikki xil rang
+          // bo'lsa, operator qaysi biriga ishonishni bilmasdi.
+          const holat = dueHolat(l.nextContactAt);
           return (
             <div key={l.id}
               className={cn(
                 "shrink-0 rounded-xl border px-2.5 py-1.5 bg-white dark:bg-neutral-900",
-                kech ? "border-amber-300 dark:border-amber-800"
-                     : "border-neutral-200 dark:border-neutral-700",
+                holat === "kechikkan" ? "border-red-300 dark:border-red-900/60"
+                  : holat === "keldi" ? "border-amber-400 dark:border-amber-600"
+                  : "border-neutral-200 dark:border-neutral-700",
               )}>
               <button onClick={() => onOpen(l.id)}
                 className="block text-[12px] font-semibold text-neutral-900 dark:text-neutral-100
@@ -79,6 +83,14 @@ export function DueStrip({ onOpen }: { onOpen: (id: string) => void }) {
                   </span>
                 )}
               </div>
+              {/* SOAT — endi "bugun" emas, "bugun 15:00". Operator
+                  navbatni vaqt bo'yicha tuzishi mumkin. */}
+              <p className={cn("text-[10px] font-semibold mt-0.5",
+                holat === "kechikkan" ? "text-red-600 dark:text-red-400"
+                  : holat === "keldi" ? "text-amber-700 dark:text-amber-400"
+                  : "text-neutral-400")}>
+                {dueMatn(l.nextContactAt)}
+              </p>
             </div>
           );
         })}
