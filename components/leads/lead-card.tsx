@@ -224,6 +224,20 @@ export function LeadCard({ lead, stage, stages, onDelete, onEdit, onOpen, onConv
           )}>
             {holat === "keldi" ? "🔔" : holat === "kechikkan" ? "⚠️" : "🕑"}
             {dueMatn(lead.nextContactAt)}
+            {/* "✓ BAJARILDI" — qo'ng'iroqsiz vazifalar uchun. Qo'ng'iroq
+                natijasi yozilganda vaqt o'zi tozalanadi; lekin vazifa
+                "material yuborish" bo'lsa, operator soxta "javob bermadi"
+                bosmasin. */}
+            <button type="button" title="Vazifa bajarildi — belgini olib tashlash"
+              onClick={async (e) => {
+                e.stopPropagation();
+                const r = await fetch(`/api/leads/${lead.id}/done`, { method: "POST" });
+                if (r.ok) onRefresh();
+              }}
+              className="ml-0.5 -mr-0.5 w-4 h-4 rounded flex items-center justify-center
+                         hover:bg-black/10 dark:hover:bg-white/15 transition-colors">
+              ✓
+            </button>
           </p>
         );
       })()}

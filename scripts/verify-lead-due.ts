@@ -27,16 +27,19 @@ check("buzuq sana — belgi yo'q", dueHolat("salom", hozir) === "yoq");
 
 check("bugun 15:00 (hali kelmagan) — kutilmoqda",
   dueHolat(d(2026, 9, 17, 15, 0), hozir) === "kutilmoqda");
-check("bugun 13:00 (o'tib ketgan) — KELDI, kechikkan EMAS",
+check("bugun 13:00 (1 soat o'tdi) — KELDI, hali qizil emas",
   dueHolat(d(2026, 9, 17, 13, 0), hozir) === "keldi",
   dueHolat(d(2026, 9, 17, 13, 0), hozir));
-check("bugun 09:00 — hali ham KELDI (kun ichida qizil bo'lmaydi)",
-  dueHolat(d(2026, 9, 17, 9, 0), hozir) === "keldi");
-check("bugun 00:00 — KELDI",
-  dueHolat(d(2026, 9, 17, 0, 0), hozir) === "keldi");
 check("aynan hozir (14:00) — KELDI",
   dueHolat(d(2026, 9, 17, 14, 0), hozir) === "keldi");
-
+check("bugun 12:00 (aynan 2 soat) — hali KELDI (chegara qat'iy)",
+  dueHolat(d(2026, 9, 17, 12, 0), hozir) === "keldi",
+  dueHolat(d(2026, 9, 17, 12, 0), hozir));
+check("bugun 11:59 (2 soatdan ko'p) — KECHIKKAN",
+  dueHolat(d(2026, 9, 17, 11, 59), hozir) === "kechikkan",
+  dueHolat(d(2026, 9, 17, 11, 59), hozir));
+check("bugun 09:00 — KECHIKKAN (kun ichida ham qizil bo'ladi)",
+  dueHolat(d(2026, 9, 17, 9, 0), hozir) === "kechikkan");
 check("kecha 23:59 — KECHIKKAN",
   dueHolat(d(2026, 9, 16, 23, 59), hozir) === "kechikkan");
 check("bir hafta oldin — KECHIKKAN",

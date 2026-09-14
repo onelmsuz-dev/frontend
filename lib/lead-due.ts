@@ -6,23 +6,25 @@
  *   • `keldi`      — AYNAN HOZIR shu bilan shug'ullanish kerak (sariq);
  *   • `kechikkan`  — vaqti o'tib ketgan (qizil).
  *
- * "Kechikkan" chegarasi BUGUN BOSHI, ya'ni soat emas, KUN bo'yicha.
- * Soat bo'yicha hisoblasak, ertalab 9:00 ga qo'yilgan qo'ng'iroq 9:01
- * da qizil bo'lib qolardi — operator hali telefonni ko'targancha
- * kartochka "kechikkan" ko'rinardi. Bugun ichida qolgani — sariq,
- * ya'ni "navbatda", kechagi va undan oldingisi — qizil.
+ * "Kechikkan" chegarasi — belgilangan vaqtdan KECHIKISH_SOAT o'tgach.
+ * Ilgari KUN bo'yicha edi (ertasi kunigacha qizil bo'lmasdi) va Doniyorjon
+ * "qizilga o'tmadi" deb topdi: bugun 10:00 ga qo'yilgani kechqurun ham
+ * "navbatda" ko'rinardi. Aniq soat bo'yicha (9:01 da qizil) ham yaramaydi —
+ * operator hali telefonni ko'targancha "kechikkan" bo'lardi. Ikki soat —
+ * "15:00 dedi, 17:00 bo'ldi, hali qilinmadi" — o'rtacha yo'l.
+ * Backend (`dueToday.overdue`) ham AYNAN shu qoidada.
  */
 export type DueHolat = "yoq" | "kutilmoqda" | "keldi" | "kechikkan";
+
+/** Belgilangan vaqtdan necha soat o'tgach "kechikkan" — backend bilan bir xil. */
+export const KECHIKISH_SOAT = 2;
 
 export function dueHolat(nextContactAt?: string | null, now = new Date()): DueHolat {
   if (!nextContactAt) return "yoq";
   const t = new Date(nextContactAt);
   if (Number.isNaN(t.getTime())) return "yoq";
 
-  const bugun = new Date(now);
-  bugun.setHours(0, 0, 0, 0);
-
-  if (t < bugun) return "kechikkan";
+  if (t.getTime() < now.getTime() - KECHIKISH_SOAT * 3_600_000) return "kechikkan";
   return t <= now ? "keldi" : "kutilmoqda";
 }
 

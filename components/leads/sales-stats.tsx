@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
-import { useLeadStats, useLeadDaily, type DailyReport } from "@/lib/hooks/useLeads";
+import { useLeadStats, useLeadDaily, useLeadAssignees, type DailyReport } from "@/lib/hooks/useLeads";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { cn } from "@/lib/utils";
 
@@ -23,15 +23,47 @@ export function SalesStats() {
   /** Ikki xil savol: "bugun kim nima qildi" va "davrda kim qancha yopdi". */
   const [tab, setTab] = useState<"kunlik" | "davr">("kunlik");
   const [sana, setSana] = useState("");
+  /** Davr bo'yicha: sana oralig'i (bo'sh — server joriy oyni oladi). */
+  const [dan, setDan] = useState("");
+  const [gacha, setGacha] = useState("");
+  /** Operator filtri — ikkala tabga bir xil ("" — hammasi). */
+  const [operator, setOperator] = useState("");
 
-  const { data, isLoading } = useLeadStats(koradi && ochiq && tab === "davr");
+  const { data, isLoading } = useLeadStats(koradi && ochiq && tab === "davr",
+    dan || undefined, gacha || undefined);
   const { data: kun, isLoading: kunYuklanmoqda } =
     useLeadDaily(koradi && ochiq && tab === "kunlik", sana || undefined);
+  const { data: xodimlar } = useLeadAssignees();
 
   if (!koradi) return null;
 
-  const qatorlar = data?.rows ?? [];
-  const jami = data?.jami;
+  // Operator filtri MIJOZDA: qatorlar allaqachon operator bo'yicha,
+  // server bitta operator uchun alohida so'rovni bilishi shart emas.
+  const qatorlar = (data?.rows ?? []).filter(r => !operator || r.userId === operator);
+  // Filtr qo'yilsa "Jami" ham ko'rinayotgan qatorlardan qayta hisoblanadi —
+  // aks holda bitta operator tanlanganda pastda butun markaz raqami turardi.
+  const jami = !data ? undefined : !operator ? data.jami : (() => {
+    const t = qatorlar.reduce((a, r) => ({
+      jami: a.jami + r.jami, aloqa: a.aloqa + r.aloqa, yutildi: a.yutildi + r.yutildi,
+      yoqotildi: a.yoqotildi + r.yoqotildi, jarayonda: a.jarayonda + r.jarayonda,
+    }), { jami: 0, aloqa: 0, yutildi: 0, yoqotildi: 0, jarayonda: 0 });
+    return { ...t, konversiya: t.jami ? Math.round((t.yutildi / t.jami) * 1000) / 10 : 0 };
+  })();
+  const kunFiltr = kun && operator ? { ...kun, rows: kun.rows.filter(r => r.userId === operator) } : kun;
+
+  const kunStr = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  /** Tez oraliqlar — boshliq ko'pincha shu uchtasini so'raydi. */
+  const tezOraliq = (qaysi: "buOy" | "otganOy" | "30kun") => {
+    const h = new Date();
+    if (qaysi === "buOy") { setDan(kunStr(new Date(h.getFullYear(), h.getMonth(), 1))); setGacha(kunStr(h)); }
+    if (qaysi === "otganOy") {
+      setDan(kunStr(new Date(h.getFullYear(), h.getMonth() - 1, 1)));
+      setGacha(kunStr(new Date(h.getFullYear(), h.getMonth(), 0)));
+    }
+    if (qaysi === "30kun") { setDan(kunStr(new Date(h.getTime() - 30 * 86_400_000))); setGacha(kunStr(h)); }
+  };
+  const filtrCls = "h-7 px-2 rounded-lg text-[11.5px] glass-soft border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300";
 
   return (
     <div className="mb-5 rounded-2xl border border-white/60 dark:border-white/10 glass-panel overflow-hidden">
@@ -64,16 +96,38 @@ export function SalesStats() {
                 {l}
               </button>
             ))}
-            {tab === "kunlik" && (
-              <input type="date" value={sana || kun?.date || ""}
-                onChange={e => setSana(e.target.value)}
-                className="ml-auto h-7 px-2 rounded-lg text-[11.5px] glass-soft
-                  border border-white/60 dark:border-white/10
-                  text-neutral-600 dark:text-neutral-300" />
-            )}
           </div>
 
-          {tab === "kunlik" && <KunlikJadval kun={kun} yuklanmoqda={kunYuklanmoqda} />}
+          {/* FILTRLAR — Doniyorjon so'rovi: sana oralig'i va operator. */}
+          <div className="flex flex-wrap items-center gap-1.5 px-4 pt-2">
+            {tab === "kunlik" && (
+              <input type="date" value={sana || kun?.date || ""}
+                onChange={e => setSana(e.target.value)} className={filtrCls} />
+            )}
+            {tab === "davr" && (
+              <>
+                <input type="date" value={dan} onChange={e => setDan(e.target.value)}
+                  className={filtrCls} title="Dan" />
+                <span className="text-[11px] text-neutral-400">—</span>
+                <input type="date" value={gacha} onChange={e => setGacha(e.target.value)}
+                  className={filtrCls} title="Gacha" />
+                {([["buOy", "Bu oy"], ["otganOy", "O'tgan oy"], ["30kun", "30 kun"]] as const).map(([k, l]) => (
+                  <button key={k} type="button" onClick={() => tezOraliq(k)}
+                    className="h-7 px-2 rounded-lg text-[11px] font-medium text-indigo-600
+                      dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30">
+                    {l}
+                  </button>
+                ))}
+              </>
+            )}
+            <select value={operator} onChange={e => setOperator(e.target.value)}
+              className={cn(filtrCls, "ml-auto")}>
+              <option value="">Barcha operatorlar</option>
+              {(xodimlar ?? []).map(x => <option key={x.id} value={x.id}>{x.name}</option>)}
+            </select>
+          </div>
+
+          {tab === "kunlik" && <KunlikJadval kun={kunFiltr} yuklanmoqda={kunYuklanmoqda} />}
 
           {tab === "davr" && <>
           {data?.from && (
