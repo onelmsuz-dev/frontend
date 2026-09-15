@@ -63,7 +63,12 @@ export default function CoursesPage() {
   // Kurs darajasidagi to'lov rejimi — faqat bayroq yoqiq va markazga ochilgan rejimlar.
   const modesOn = useFeature("billing-modes") === true;
   const { data: modesData } = useSWR<any>(modesOn ? "/api/billing/modes" : null, fetcher);
-  const allowedModes: any[] = (modesData?.modes ?? []).filter((m: any) => m.allowed);
+  // BARCHA rejimlar — ochilmagani ham. Ilgari faqat ochilganlar chiqardi va
+  // faqat Oylik ochiq markazda tanlagich "bo'sh" ko'rinardi: Doniyorjon
+  // "kurs/guruh uchun rejim umuman yozilmagan" deb o'yladi (2026-09-14).
+  // Ochilmagani o'chiq holda "platformadan so'rang" bilan turadi — markaz
+  // imkoniyat borligini biladi.
+  const allowedModes: any[] = modesData?.modes ?? [];
   const courses: any[] = Array.isArray(raw) ? raw : [];
 
   const filtered = useMemo(() =>
@@ -207,7 +212,11 @@ export default function CoursesPage() {
               <select value={form.billingMode} onChange={e => setForm(p => ({...p, billingMode: e.target.value}))}
                 className="w-full h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-3 text-[13px]">
                 <option value="">Markaz standarti</option>
-                {allowedModes.map((m: any) => <option key={m.mode} value={m.mode}>{m.label}</option>)}
+                {allowedModes.map((m: any) => (
+                  <option key={m.mode} value={m.mode} disabled={!m.allowed}>
+                    {m.allowed ? m.label : `${m.label} — ochilmagan, platformadan so'rang`}
+                  </option>
+                ))}
               </select>
             </FormField>
             {form.billingMode === "KUNLIK" && (

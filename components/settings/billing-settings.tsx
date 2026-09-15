@@ -198,7 +198,7 @@ export function BillingSettings({
               To&apos;lov vaqti
             </p>
             <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-              Qarz davr (oy yoki sikl) boshlanishidan oldinmi, keyinmi yoziladi — Oylik va Individual ikkalasida ham
+              Qarz to'lov sanasining o'zida yoziladimi, yoki undan bir necha kun oldinmi — Kunlikdan tashqari barcha rejimlarda
             </p>
           </div>
         </div>
@@ -207,13 +207,16 @@ export function BillingSettings({
           {([
             {
               v: "OXIRIDA" as const,
-              l: "Oy/sikl oxirida",
-              d: "Davr haqiqatan boshlangandan keyin qarz yoziladi (standart).",
+              // "Oy/sikl oxirida" EMAS — u "davr tugagach to'laydi" deb
+              // o'qilardi (Doniyorjon, 2026-09-14). Qarz har doim davr
+              // BOSHLANGAN kuni yoziladi; bu variant faqat "oldindan emas".
+              l: "To'lov sanasida",
+              d: "Qarz davr boshlangan kuni yoziladi (standart). 15-sentabrda qo'shilgan o'quvchi keyingi qarzni 15-oktabrda ko'radi.",
             },
             {
               v: "OLDINDAN" as const,
               l: "Oldindan",
-              d: "Davr boshlanishidan bir necha kun oldin qarz ko'rinadi.",
+              d: "Davr boshlanishidan bir necha kun oldin qarz ko'rinadi: 3 kun bo'lsa — 15-oktabr o'rniga 12-oktabrda. Birinchi davr baribir qo'shilgan kuni yoziladi.",
             },
           ]).map(o => (
             <button key={o.v} type="button" onClick={() => setTiming(o.v)}

@@ -65,7 +65,12 @@ export default function GroupsPage() {
   const canManageRooms = hasPerm(me?.permissions, "rooms.create");
   const modesOn = useFeature("billing-modes") === true;
   const { data: modesData } = useSWR<any>(modesOn ? "/api/billing/modes" : null, fetcher);
-  const allowedModes: any[] = (modesData?.modes ?? []).filter((m: any) => m.allowed);
+  // BARCHA rejimlar — ochilmagani ham. Ilgari faqat ochilganlar chiqardi va
+  // faqat Oylik ochiq markazda tanlagich "bo'sh" ko'rinardi: Doniyorjon
+  // "kurs/guruh uchun rejim umuman yozilmagan" deb o'yladi (2026-09-14).
+  // Ochilmagani o'chiq holda "platformadan so'rang" bilan turadi — markaz
+  // imkoniyat borligini biladi.
+  const allowedModes: any[] = modesData?.modes ?? [];
   const { activeBranchId } = useBranch();
   const [search,    setSearch]    = useState("");
   const [statusTab, setStatusTab] = useState("barchasi");
@@ -315,7 +320,11 @@ export default function GroupsPage() {
             <FormField label="To'lov usuli" hint="Bo'sh — kurs yoki markaz standarti">
               <select value={form.billingMode} onChange={e => setForm(p => ({...p, billingMode: e.target.value}))} className={selectCls}>
                 <option value="">Kurs / markaz standarti</option>
-                {allowedModes.map((m: any) => <option key={m.mode} value={m.mode}>{m.label}</option>)}
+                {allowedModes.map((m: any) => (
+                  <option key={m.mode} value={m.mode} disabled={!m.allowed}>
+                    {m.allowed ? m.label : `${m.label} — ochilmagan, platformadan so'rang`}
+                  </option>
+                ))}
               </select>
             </FormField>
             {form.billingMode === "MODUL" && (

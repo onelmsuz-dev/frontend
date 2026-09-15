@@ -160,7 +160,7 @@ export function BillingModes() {
           Qulflangan rejim kerak bo&apos;lsa — biz bilan bog&apos;laning, ochib beramiz.
           Rejimni alohida <span className="font-medium">kurs</span> yoki{" "}
           <span className="font-medium">guruh</span>{" "}uchun ham belgilash mumkin:
-          masalan markazda hamma oylik to&apos;laydi, «IELTS intensiv» esa modul bo&apos;yicha.
+          masalan markazda hamma oylik to&apos;laydi, «IELTS intensiv» esa modul bo&apos;yicha. Qayerda: Kurslar yoki Guruhlar → tahrirlash → «To&apos;lov usuli». Faqat platforma ochgan rejimlar tanlanadi.
           {!canManage && " Rejimni o'zgartirish uchun markaz egasidan ruxsat so'rang."}
         </p>
       </div>
