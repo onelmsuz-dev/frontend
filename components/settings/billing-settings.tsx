@@ -96,135 +96,27 @@ export function BillingSettings({
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-2.5 mt-4">
-          {([
-            {
-              v: "ACTIVATION" as const,
-              l: "Faol qilingan sanadan",
-              d: "Sinov kunlari bepul. Pul faqat «Faol» qilingandan keyin hisoblanadi.",
-            },
-            {
-              v: "JOIN" as const,
-              l: "Guruhga qo'shilgan sanadan",
-              d: "Sinov kunlari ham darsga kiradi va o'sha kunlar uchun ham pul olinadi.",
-            },
-          ]).map(o => (
-            <button key={o.v} type="button" onClick={() => setStart(o.v)}
-              className={cn(
-                "text-left px-4 py-3 rounded-2xl border-2 transition-all",
-                start === o.v
-                  ? "border-indigo-600 bg-indigo-50/70 dark:bg-indigo-900/20 dark:border-indigo-400"
-                  : "border-white/60 dark:border-white/10 hover:border-neutral-400",
-              )}>
-              <p className={cn("text-[13px] font-bold",
-                start === o.v ? "text-indigo-700 dark:text-indigo-300" : "text-neutral-800 dark:text-neutral-200")}>
-                {o.l}
-              </p>
-              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
-                {o.d}
-              </p>
-            </button>
-          ))}
-        </div>
+        {/* IKKI TANLOV. Uchinchi karta ("3 kun oldin") olib tashlandi —
+            u alohida rejim emas, "oldindan"ning mayda sozlamasi edi va
+            foydalanuvchini chalg'itardi (2026-09-15).
 
-        <div className="flex items-start gap-2 mt-3 text-[11px] text-neutral-500 dark:text-neutral-400">
-          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-          <p>
-            O&apos;zgarish faqat BUNDAN KEYINGI faollashtirishlarga ta&apos;sir qiladi —
-            allaqachon yozilgan qarzlar qayta hisoblanmaydi.
-          </p>
-        </div>
-      </div>
-
-      {/* ── Birinchi oy ──────────────────────────────────────────────── */}
-      <div className="glass-panel rounded-2xl border border-white/60 dark:border-white/10 p-5">
-        <p className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100">
-          Birinchi (to&apos;liq bo&apos;lmagan) oy
-        </p>
-        <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-          Oy o&apos;rtasida qo&apos;shilgan o&apos;quvchidan qancha olinadi
-        </p>
-
-        <div className="grid sm:grid-cols-3 gap-2.5 mt-4">
-          {([
-            {
-              v: false,
-              l: "To'liq oylik narx",
-              d: "Oyning 28-kunida qo'shilgan ham butun oy uchun to'laydi.",
-            },
-            {
-              v: true,
-              l: "Qolgan kunlarga mutanosib",
-              d: "Oyning yarmidan qo'shilsa — taxminan yarmini to'laydi.",
-            },
-          ]).map(o => (
-            <button key={String(o.v)} type="button" onClick={() => setProrate(o.v)}
-              className={cn(
-                "text-left px-4 py-3 rounded-2xl border-2 transition-all",
-                prorate === o.v
-                  ? "border-indigo-600 bg-indigo-50/70 dark:bg-indigo-900/20 dark:border-indigo-400"
-                  : "border-white/60 dark:border-white/10 hover:border-neutral-400",
-              )}>
-              <p className={cn("text-[13px] font-bold",
-                prorate === o.v ? "text-indigo-700 dark:text-indigo-300" : "text-neutral-800 dark:text-neutral-200")}>
-                {o.l}
-              </p>
-              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
-                {o.d}
-              </p>
-            </button>
-          ))}
-        </div>
-
-        {!prorate && (
-          <div className="flex items-start gap-2 mt-3 text-[11px] text-amber-600 dark:text-amber-400">
-            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            <p>
-              Oy oxirida qo&apos;shilgan o&apos;quvchi bir necha kunlik o&apos;qish uchun
-              to&apos;liq oylik to&apos;laydi, 1-sanada esa yangi oy yoziladi.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* ── To'lov vaqti: oldindan yoki oxirida ──────────────────────── */}
-      <div className="glass-panel rounded-2xl border border-white/60 dark:border-white/10 p-5">
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-2xl shrink-0 grid place-items-center bg-indigo-100/70 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-300">
-            <Hourglass className="w-4.5 h-4.5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100">
-              To&apos;lov vaqti
-            </p>
-            <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-              Qarz qachon yoziladi: davr boshida, undan bir necha kun oldin, yoki davr tugagach — barcha rejimlarda
-            </p>
-          </div>
-        </div>
-
-        <div className="grid sm:grid-cols-3 gap-2.5 mt-4">
+            DIQQAT — BAZADAGI NOMLAR CHALG'ITUVCHI, tarixiy sabab bilan
+            shunday qolgan:
+              "To'lov oldindan" → `OXIRIDA`      (qarz davr BOSHIDA)
+              "To'lov oxirida"  → `DAVR_OXIRIDA` (qarz davr OXIRIDA)
+            `OLDINDAN` qiymati bazada qoladi (eski ma'lumot buzilmasin),
+            lekin tanlab bo'lmaydi. */}
+        <div className="grid sm:grid-cols-2 gap-2.5 mt-4">
           {([
             {
               v: "OXIRIDA" as const,
-              // "Oy/sikl oxirida" EMAS — u "davr tugagach to'laydi" deb
-              // o'qilardi (Doniyorjon, 2026-09-14). Qarz har doim davr
-              // BOSHLANGAN kuni yoziladi; bu variant faqat "oldindan emas".
-              l: "To'lov sanasida",
-              d: "Qarz davr boshlangan kuni yoziladi (standart). 15-sentabrda qo'shilgan o'quvchi keyingi qarzni 15-oktabrda ko'radi.",
+              l: "To'lov oldindan",
+              d: "O'quvchi avval to'laydi, keyin o'qiydi. 15-sentabrda qo'shilganning qarzi o'sha kuni chiqadi, keyingisi 15-oktabrda.",
             },
             {
-              v: "OLDINDAN" as const,
-              l: "Oldindan",
-              d: "Davr boshlanishidan bir necha kun oldin qarz ko'rinadi: 3 kun bo'lsa — 15-oktabr o'rniga 12-oktabrda. Birinchi davr baribir qo'shilgan kuni yoziladi.",
-            },
-            {
-              // O'QIB BO'LGACH TO'LASH. Ilgari bunday rejim umuman yo'q
-              // edi: "oy oxirida" deb nomlangan tanlov ham aslida davr
-              // BOSHIDA yozardi (Doniyorjon/Gulsevar, 2026-09-15).
               v: "DAVR_OXIRIDA" as const,
-              l: "Davr oxirida",
-              d: "O'quvchi avval o'qiydi, keyin to'laydi. 5-sentabrda qo'shilgan o'quvchining qarzi 5-oktabrda chiqadi — birinchi oy davomida u qarzsiz ko'rinadi.",
+              l: "To'lov oxirida",
+              d: "O'quvchi avval o'qiydi, keyin to'laydi. 15-sentabrda qo'shilganning qarzi 15-oktabrda chiqadi — birinchi oy davomida u qarzsiz ko'rinadi.",
             },
           ]).map(o => (
             <button key={o.v} type="button" onClick={() => setTiming(o.v)}
@@ -244,15 +136,6 @@ export function BillingSettings({
             </button>
           ))}
         </div>
-
-        {timing === "OLDINDAN" && (
-          <div className="flex items-center gap-3 mt-3">
-            <Input type="number" min={0} max={14} value={advanceDays}
-              onChange={e => setAdvanceDays(e.target.value)}
-              className="h-10 w-24 text-[13px]" />
-            <span className="text-[12px] text-neutral-500 dark:text-neutral-400">kun oldin</span>
-          </div>
-        )}
 
         <div className="flex items-start gap-2 mt-3 text-[11px] text-neutral-500 dark:text-neutral-400">
           <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
