@@ -515,6 +515,25 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     .filter((c: any) => c.reason === "DISCOUNT")
     .slice(0, 5);
 
+  // CHEGIRMA QOPLAGAN QARZ — "nega bu o'quvchi qarzdor emas?"
+  //
+  // Yuqoridagi ro'yxat BIR MARTALIK chegirmalar (`reason === "DISCOUNT"`,
+  // alohida musbat qator). Qoidadan kelgan chegirma esa boshqacha: u
+  // qarz qatorining O'ZIDA yashaydi (`discountAmount` / `discountLabel`)
+  // va ekranda HECH QAYERDA ko'rinmasdi.
+  //
+  // Prodda oqibati (BePro, 15.09.2026): 100% chegirmali o'quvchining
+  // balansi 0 so'm bo'lib turardi — qarz ham, chegirma ham, sabab ham
+  // ko'rinmasdi. Xodim uchun bu "tizim bu o'quvchini hisoblamayapti"
+  // degani edi, aslida esa hisoblagan va chegirma to'liq qoplagan.
+  const chegirmaQoplagan: any[] = (student.charges ?? [])
+    .filter((c: any) => (c.discountAmount ?? 0) > 0 && !c.voidedAt)
+    .slice(0, 5);
+
+  /** Shu guruhdagi eng so'nggi chegirmali qarz qatori (`charges` — yangi→eski). */
+  const guruhChegirmasi = (groupId: string) => (student.charges ?? [])
+    .find((c: any) => c.groupId === groupId && (c.discountAmount ?? 0) > 0 && !c.voidedAt);
+
   return (
     <div>
       <TopHeader
@@ -1088,6 +1107,32 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     balance={student.balance ?? 0}
                     fmt={fmt}
                   />
+                  {/* CHEGIRMA QOPLAGAN QARZ. Qarz YOZILGAN, chegirma uni
+                      to'liq yoki qisman yopgan — ikkala raqam ham ko'rinadi,
+                      aks holda balans o'z-o'zicha "hisoblanmagan" ga
+                      o'xshab qolardi. */}
+                  {chegirmaQoplagan.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 space-y-1.5">
+                      <p className="text-[11px] text-neutral-400">Chegirma qoplagan</p>
+                      {chegirmaQoplagan.map((c: any) => (
+                        <div key={c.id} className="flex items-start justify-between gap-2">
+                          <span className="flex items-center gap-1 text-[12px] font-semibold shrink-0">
+                            <span className="text-neutral-400 line-through">
+                              {fmt((c.discountAmount ?? 0) + Math.abs(c.amount ?? 0))}
+                            </span>
+                            <span className="text-green-600 dark:text-green-400">
+                              {fmt(Math.abs(c.amount ?? 0))}
+                            </span>
+                          </span>
+                          <span className="text-[11px] text-neutral-400 text-right truncate">
+                            {c.groupId ? (groupNameById.get(c.groupId) ?? "O'chirilgan guruh") : "Umumiy"}
+                            {c.discountLabel ? ` · ${c.discountLabel}` : ""}
+                            {c.note ? ` · ${c.note}` : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {/* Balans nega shu raqamgacha kamaygani — to'lovdan
                       ANIQ ajratib, alohida ko'rsatiladi. */}
                   {recentDiscounts.length > 0 && (
@@ -1243,6 +1288,22 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                                     {" "}· kelishilgan narx
                                   </span>
                                 )}
+                              </p>
+                            );
+                          })()}
+                          {/* NARX YOLG'ON GAPIRMASIN. Yuqoridagi qator kurs
+                              narxini ko'rsatadi — chegirmani BILMAYDI. 100%
+                              chegirmali o'quvchining kartochkasida "300 000
+                              so'm / oylik" deb turardi, aslida u hech narsa
+                              to'lamasdi. Raqam qayta HISOBLANMAYDI: aynan
+                              yozilgan qarz qatoridan olinadi, shunda ekran
+                              bilan jurnal bir-biridan ajralib keta olmaydi. */}
+                          {canSeeMoney && (() => {
+                            const ch = guruhChegirmasi(sg.groupId);
+                            if (!ch) return null;
+                            return (
+                              <p className="text-[10px] text-pink-600 dark:text-pink-400">
+                                Chegirma −{fmt(ch.discountAmount)}{ch.discountLabel ? ` (${ch.discountLabel})` : ""} · to&apos;lanadi: {fmt(Math.abs(ch.amount ?? 0))}
                               </p>
                             );
                           })()}
