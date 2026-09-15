@@ -21,7 +21,7 @@ interface OrgBilling {
   billingStart?: "ACTIVATION" | "JOIN";
   billingProrate?: boolean;
   trialLessonLimit?: number;
-  billingTiming?: "OLDINDAN" | "OXIRIDA";
+  billingTiming?: "OLDINDAN" | "OXIRIDA" | "DAVR_OXIRIDA";
   billingAdvanceDays?: number;
   archiveDebtPolicy?: "QOLSIN" | "QISMAN" | "KECHIRILSIN";
 }
@@ -35,7 +35,7 @@ export function BillingSettings({
   const [start, setStart] = useState<"ACTIVATION" | "JOIN">("ACTIVATION");
   const [prorate, setProrate] = useState(false);
   const [trialLimit, setTrialLimit] = useState("0");
-  const [timing, setTiming] = useState<"OLDINDAN" | "OXIRIDA">("OXIRIDA");
+  const [timing, setTiming] = useState<"OLDINDAN" | "OXIRIDA" | "DAVR_OXIRIDA">("OXIRIDA");
   const [advanceDays, setAdvanceDays] = useState("3");
   const [archivePolicy, setArchivePolicy] = useState<"QOLSIN" | "QISMAN" | "KECHIRILSIN">("QOLSIN");
   const [saving, setSaving] = useState(false);
@@ -198,7 +198,7 @@ export function BillingSettings({
               To&apos;lov vaqti
             </p>
             <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-              Qarz to'lov sanasining o'zida yoziladimi, yoki undan bir necha kun oldinmi — Kunlikdan tashqari barcha rejimlarda
+              Qarz qachon yoziladi: davr boshida, undan bir necha kun oldin, yoki davr tugagach — barcha rejimlarda
             </p>
           </div>
         </div>
@@ -217,6 +217,14 @@ export function BillingSettings({
               v: "OLDINDAN" as const,
               l: "Oldindan",
               d: "Davr boshlanishidan bir necha kun oldin qarz ko'rinadi: 3 kun bo'lsa — 15-oktabr o'rniga 12-oktabrda. Birinchi davr baribir qo'shilgan kuni yoziladi.",
+            },
+            {
+              // O'QIB BO'LGACH TO'LASH. Ilgari bunday rejim umuman yo'q
+              // edi: "oy oxirida" deb nomlangan tanlov ham aslida davr
+              // BOSHIDA yozardi (Doniyorjon/Gulsevar, 2026-09-15).
+              v: "DAVR_OXIRIDA" as const,
+              l: "Davr oxirida",
+              d: "O'quvchi avval o'qiydi, keyin to'laydi. 5-sentabrda qo'shilgan o'quvchining qarzi 5-oktabrda chiqadi — birinchi oy davomida u qarzsiz ko'rinadi.",
             },
           ]).map(o => (
             <button key={o.v} type="button" onClick={() => setTiming(o.v)}
