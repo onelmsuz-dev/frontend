@@ -14,8 +14,10 @@ import { FormField } from "@/components/ui/form-field";
 import {
   Search, Plus, ChevronRight, AlertCircle, Upload, LayoutGrid, Radio, Settings2, Users,
 } from "lucide-react";
+import useSWR from "swr";
+import { fetcher as _fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
-import { useLeads, useLeadAssignees, useLeadStages } from "@/lib/hooks/useLeads";
+import { useLeadsPaged, useLeadAssignees, useLeadStages } from "@/lib/hooks/useLeads";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { SourcePicker } from "@/components/leads/source-picker";
 import { LeadImportModal } from "@/components/leads/lead-import-modal";
@@ -110,13 +112,31 @@ export default function LeadsPage() {
    * Ikkalasi bir xil ma'lumotdan oziqlanadi — biri yangilanib
    * ikkinchisi eskirib qolsa, ekranda ziddiyat ko'rinardi.
    */
+  /**
+   * LIDLAR KESHINI YANGILASH.
+   *
+   * `mutate("/api/leads")` endi YETARLI EMAS: ro'yxat `useSWRInfinite`
+   * bilan sahifalab olinadi va uning kalitlari `/api/leads?take=500&skip=0`
+   * ko'rinishida — aniq satrga teng emas. Shuning uchun BOSHLANISHI
+   * bo'yicha moslanadi, aks holda lid qo'shilgandan keyin taxta
+   * yangilanmay qolardi.
+   */
+  const lidlarniYangila = () =>
+    mutate((k) => typeof k === "string" && k.startsWith("/api/leads"));
+
   const refreshAll = () => {
-    mutate("/api/leads");
+    lidlarniYangila();
     mutate("/api/leads/due");
   };
 
-  const { data: raw, isLoading } = useLeads();
-  const leads: Lead[] = useMemo(() => (Array.isArray(raw) ? raw : []), [raw]);
+  // SAHIFALAB yuklanadi. Ilgari bitta so'rov edi va server 500 ta bilan
+  // cheklardi — 938 lidning 438 tasi ekranda umuman ko'rinmasdi.
+  const { items: raw, total: jamiLid, yanaBor, yanaYukla, isLoading } = useLeadsPaged();
+  const leads: Lead[] = useMemo(() => (raw as Lead[]) ?? [], [raw]);
+  // Bosqich sarlavhasidagi son SERVERDAN — yuklanmagan lidlar ham
+  // sanaladi, aks holda "12 ta" deb turib, aslida 300 ta bo'lardi.
+  const { data: counts } = useSWR<{ byStage: Record<string, number>; unassigned: number; total: number }>(
+    "/api/leads/counts", _fetcher);
   const { data: stagesRaw, isLoading: stagesLoading } = useLeadStages();
   const stages = useMemo(() => stagesRaw ?? [], [stagesRaw]);
   const stagesById = useMemo(() =>
@@ -170,7 +190,7 @@ export default function LeadsPage() {
       });
       const data = await res.json();
       if (!res.ok) { setEditError(data.error ?? "Xatolik"); return; }
-      mutate("/api/leads");
+      lidlarniYangila();
       setEditTarget(null);
     } catch { setEditError("Serverga ulanib bo'lmadi"); }
     finally { setEditSaving(false); }
@@ -215,7 +235,7 @@ export default function LeadsPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Xatolik"); return; }
-      mutate("/api/leads");
+      lidlarniYangila();
       setShowModal(false);
     } catch { setError("Serverga ulanib bo'lmadi"); }
     finally { setSaving(false); }
@@ -227,7 +247,7 @@ export default function LeadsPage() {
     try {
       const res = await fetch(`/api/leads/${deleteTarget.id}`, { method: "DELETE" });
       if (!res.ok) { const d = await res.json(); setError(d.error ?? "Xatolik"); setSaving(false); return; }
-      mutate("/api/leads");
+      lidlarniYangila();
       setDeleteTarget(null);
     } catch { setError("Xatolik"); }
     finally { setSaving(false); }
@@ -289,7 +309,22 @@ export default function LeadsPage() {
           || (l.course ?? "").toLowerCase().includes(q);
     }), [leads, search, sotuvchi]);
 
-  const getCol = (stageId: string) => filteredLeads.filter((l) => l.stageId === stageId);
+  /**
+   * USTUNLAR — BIR MARTA guruhlanadi.
+   *
+   * Ilgari `getCol()` har bosqich uchun BUTUN ro'yxatni qaytadan
+   * filtrlardi va u `useMemo` ichida emas edi: qidiruvga har harf
+   * bosilganda bu N × (lidlar soni) marta ishlardi. 500 lid va 6 bosqichda
+   * bu har bosishda 3000 ta solishtirish — sayt shundan qotardi.
+   */
+  const byStage = useMemo(() => {
+    const m = new Map<string, Lead[]>();
+    for (const l of filteredLeads) {
+      const arr = m.get(l.stageId); if (arr) arr.push(l); else m.set(l.stageId, [l]);
+    }
+    return m;
+  }, [filteredLeads]);
+  const getCol = (stageId: string) => byStage.get(stageId) ?? [];
   const totalByStage = useMemo(() =>
     Object.fromEntries(stages.map((s) => [s.id, leads.filter((l) => l.stageId === s.id).length])),
     [leads, stages]);
@@ -329,7 +364,7 @@ export default function LeadsPage() {
 
       <LeadImportModal open={showImport}
         onClose={() => setShowImport(false)}
-        onDone={() => mutate("/api/leads")} />
+        onDone={() => lidlarniYangila()} />
 
       <StageManagerModal open={showStages} onClose={() => setShowStages(false)} />
 
@@ -338,13 +373,13 @@ export default function LeadsPage() {
           joyida turadi. */}
       <Modal
         open={!!feedTarget}
-        onClose={() => { setFeedTarget(null); mutate("/api/leads"); }}
+        onClose={() => { setFeedTarget(null); lidlarniYangila(); }}
         size="lg"
         title={feedTarget?.name ?? ""}
         subtitle="Tarix va izohlar"
         footer={
           <Button variant="outline" className="h-9 px-4 text-[13px]"
-            onClick={() => { setFeedTarget(null); mutate("/api/leads"); }}>
+            onClick={() => { setFeedTarget(null); lidlarniYangila(); }}>
             Yopish
           </Button>
         }
@@ -679,6 +714,7 @@ export default function LeadsPage() {
           open={showTaqsim}
           onClose={() => setShowTaqsim(false)}
           unassignedIds={leads.filter(l => !(l as any).assignedToId).map(l => l.id)}
+          unassignedTotal={counts?.unassigned}
           visibleIds={filteredLeads.map(l => l.id)}
           onDone={refreshAll}
         />
@@ -711,12 +747,32 @@ export default function LeadsPage() {
             </button>
           </div>
         ) : (
+          <>
+          {/* YUKLANGAN / JAMI — ekrandagi raqam yolg'on gapirmasin.
+              Ilgari server 500 ta bilan cheklardi va foydalanuvchi
+              qolganini bilmasdi ham. */}
+          {jamiLid > leads.length && (
+            <div className="flex flex-wrap items-center gap-3 mb-3 px-3 py-2 rounded-xl
+                            bg-amber-50 dark:bg-amber-900/20">
+              <p className="text-[12px] text-amber-800 dark:text-amber-300">
+                {jamiLid}{" "}tadan {leads.length}{" "}tasi yuklandi.
+              </p>
+              {yanaBor && (
+                <button onClick={yanaYukla}
+                  className="text-[12px] font-semibold px-3 h-7 rounded-lg
+                             bg-amber-600 hover:bg-amber-700 text-white transition-colors">
+                  Yana yuklash
+                </button>
+              )}
+            </div>
+          )}
           <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}
             onDragCancel={() => setActiveLead(null)}>
             <div className="flex gap-3 overflow-x-auto pb-4">
               {stages.map((stage) => (
                 <KanbanColumn key={stage.id} stage={stage} stages={stages}
                   leads={isLoading ? [] : getCol(stage.id)} isLoading={isLoading}
+                  total={counts?.byStage?.[stage.id]}
                   onAdd={() => openCreate(stage.id)}
                   onDelete={l => { setError(""); setDeleteTarget(l); }}
                   onEdit={openEdit} onOpen={setFeedTarget}
@@ -727,6 +783,7 @@ export default function LeadsPage() {
               {activeLead && <LeadCardPreview lead={activeLead} />}
             </DragOverlay>
           </DndContext>
+          </>
         )}
       </div>
       )}

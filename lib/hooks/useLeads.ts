@@ -1,4 +1,5 @@
 import useSWR from "swr";
+import useSWRInfinite from "swr/infinite";
 import useSWRMutation from "swr/mutation";
 import { fetcher } from "@/lib/fetcher";
 
@@ -28,12 +29,57 @@ async function deleter(url: string) {
   return r.json();
 }
 
+/** Bir so'rovda nechta lid — server chegarasi ham shu (1000). */
+const SAHIFA = 500;
+
+/**
+ * LIDLAR — SAHIFALAB YUKLANADI.
+ *
+ * Ilgari bitta so'rov edi va server 500 ta bilan cheklardi. Prodda
+ * oqibati (Juniors Academy, 2026-09-15): 938 lidning 438 tasi ekranda
+ * UMUMAN ko'rinmadi va markaz "import 500 tada to'xtabdi" deb o'yladi.
+ *
+ * Endi sahifalar ketma-ket olinadi va `jami` bilan solishtiriladi —
+ * "yana bormi?" degan savolga javob bor.
+ */
 export function useLeads(params?: { stageId?: string; search?: string }) {
-  const query = new URLSearchParams();
-  if (params?.stageId) query.set("stageId", params.stageId);
-  if (params?.search) query.set("search", params.search);
-  const qs = query.toString();
-  return useSWR(`/api/leads${qs ? `?${qs}` : ""}`, fetcher);
+  const { items, total, isLoading, error, mutate } = useLeadsPaged(params);
+  // Eski chaqiruvchilar massiv kutadi — shakl o'zgarishi ularni buzmasin.
+  return { data: items, total, isLoading, error, mutate };
+}
+
+export function useLeadsPaged(params?: { stageId?: string; search?: string }) {
+  const qs = (skip: number) => {
+    const q = new URLSearchParams();
+    if (params?.stageId) q.set("stageId", params.stageId);
+    if (params?.search)  q.set("q", params.search);
+    q.set("take", String(SAHIFA));
+    q.set("skip", String(skip));
+    return q.toString();
+  };
+
+  const { data, size, setSize, isLoading, error, mutate } = useSWRInfinite<{
+    items: unknown[]; total: number; skip: number; take: number;
+  }>(
+    (index, oldingi) => {
+      // Oldingi sahifa oxirgisi bo'lsa — to'xtaymiz.
+      if (oldingi && oldingi.skip + oldingi.items.length >= oldingi.total) return null;
+      return `/api/leads?${qs(index * SAHIFA)}`;
+    },
+    fetcher,
+    { revalidateFirstPage: false },
+  );
+
+  const sahifalar = data ?? [];
+  const items = sahifalar.flatMap((p) => p?.items ?? []);
+  const total = sahifalar[0]?.total ?? 0;
+
+  return {
+    items, total, isLoading, error, mutate,
+    yuklangan: items.length,
+    yanaBor: items.length < total,
+    yanaYukla: () => setSize(size + 1),
+  };
 }
 
 export function useCreateLead() {

@@ -20,12 +20,17 @@ import { cn } from "@/lib/utils";
  * bosishdan oldin nima bo'lishini biladi.
  */
 export function DistributeModal({
-  open, onClose, unassignedIds, visibleIds, onDone,
+  open, onClose, unassignedIds, visibleIds, unassignedTotal, onDone,
 }: {
   open: boolean;
   onClose: () => void;
   unassignedIds: string[];
   visibleIds: string[];
+  /**
+   * Serverdagi HAQIQIY biriktirilmagan son — brauzerga yuklanganidan
+   * ko'p bo'lishi mumkin.
+   */
+  unassignedTotal?: number;
   onDone: () => void;
 }) {
   const { data: xodimlarRaw } = useLeadAssignees();
@@ -38,7 +43,16 @@ export function DistributeModal({
   const [natija, setNatija] = useState<string>("");
 
   const lidlar = manba === "savat" ? unassignedIds : visibleIds;
-  const nechta = lidlar.length;
+  /**
+   * "SAVAT" SERVERDA TANLANADI, brauzerdagi ro'yxatdan EMAS.
+   *
+   * Prodda (Juniors Academy, 2026-09-15) aynan shu narsa 438 lidni
+   * biriktirilmay qoldirdi: ro'yxat 500 ta bilan cheklangan edi va bu
+   * oyna id'larni o'sha ro'yxatdan olardi, ya'ni "hammasi" aslida
+   * "yuklangani" degani edi. Endi server `filter` bo'yicha o'zi topadi.
+   */
+  const savatServerda = manba === "savat";
+  const nechta = savatServerda ? (unassignedTotal ?? unassignedIds.length) : visibleIds.length;
   const kishi = tanlangan.length;
   const ulush = kishi === 0 ? 0 : Math.floor(nechta / kishi);
   const qoldiq = kishi === 0 ? 0 : nechta % kishi;
@@ -56,7 +70,10 @@ export function DistributeModal({
       const r = await fetch("/api/leads/distribute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadIds: lidlar, userIds: tanlangan }),
+        body: JSON.stringify(
+          savatServerda
+            ? { filter: { unassignedOnly: true }, userIds: tanlangan }
+            : { leadIds: lidlar, userIds: tanlangan }),
       });
       const d = await r.json();
       if (!r.ok) { setXato(d.error ?? "Taqsimlanmadi"); return; }

@@ -52,6 +52,7 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [raw,     setRaw]     = useState("");
   const [rows,    setRows]    = useState<MappedLead[]>([]);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [matched, setMatched] = useState<string[]>([]);
   const [scoreCols, setScoreCols] = useState<string[]>([]);
   const [headerless, setHeaderless] = useState(false);
@@ -91,27 +92,62 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
     }
   }
 
+  /**
+   * BO'LAKLAB YUBORILADI.
+   *
+   * Server bir so'rovda 1000 qatorni qabul qiladi (bu chegara qoladi:
+   * undan kattasi so'rovni ham, tranzaksiyani ham uzoq ushlab turardi).
+   * Ilgari frontend shunchaki `slice(0, 1000)` qilardi va qolganini
+   * TASHLAB KETARDI — 1128 qatorli fayldan 128 tasi hech qayerga
+   * yozilmasdi, foydalanuvchi esa faylni qo'lda bo'lishga majbur edi.
+   *
+   * Bo'laklar KETMA-KET yuboriladi, parallel emas: dublikat tekshiruvi
+   * bazadagi mavjud raqamlarga qaraydi va ikkinchi bo'lak birinchisining
+   * yozganini ko'rishi kerak.
+   */
+  const BOLAK = 1000;
+
   async function submit() {
     if (rows.length === 0) { setErr("Yuborish uchun qator yo'q"); return; }
     if (!source.trim())    { setErr("Manba tanlang"); return; }
     setBusy(true); setErr("");
     try {
-      const res = await fetch("/api/leads/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source: source.trim(), rows: rows.slice(0, 1000) }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setErr(data.error ?? "Xatolik"); return; }
-      setSummary(data.summary ?? data);
-      mutate("/api/leads");
+      // `skipped` — serverdagi `errors` (ismi qisqa yoki bo'sh qatorlar).
+      // Interfeys `skipped` deb kutadi, server esa `errors` deb yuboradi:
+      // shu nomuvofiqlik tufayli "N ta o'tkazib yuborildi" qatori ekranda
+      // HECH QACHON chiqmagan.
+      const jami = { created: 0, duplicates: 0, skipped: 0 };
+      for (let i = 0; i < rows.length; i += BOLAK) {
+        const bolak = rows.slice(i, i + BOLAK);
+        setProgress({ done: i, total: rows.length });
+        const res = await fetch("/api/leads/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ source: source.trim(), rows: bolak }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          // Yarim yo'lda to'xtasa ham OLDINGI bo'laklar yozilgan —
+          // shuni aytmaslik "hech narsa o'tmadi" degan yolg'on bo'lardi.
+          setErr((data.error ?? "Xatolik")
+            + (jami.created ? ` (shu paytgacha ${jami.created} ta yozildi)` : ""));
+          return;
+        }
+        const s2 = data.summary ?? data;
+        jami.created    += s2.created ?? 0;
+        jami.duplicates += s2.duplicates ?? 0;
+        jami.skipped    += s2.errors ?? s2.skipped ?? 0;
+      }
+      setProgress(null);
+      setSummary(jami);
+      mutate((k: string) => typeof k === "string" && k.startsWith("/api/leads"));
       onDone();
     } catch { setErr("Serverga ulanib bo'lmadi"); }
-    finally { setBusy(false); }
+    finally { setBusy(false); setProgress(null); }
   }
 
   const withPhone = rows.filter((r) => (r.phone ?? "").replace(/\D/g, "").length >= 9).length;
-  const capped = rows.length > 1000;
+  const bolaklar = Math.ceil(rows.length / 1000);
 
   return (
     <Modal open={open} onClose={closeAll} size="lg"
@@ -133,7 +169,7 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
             <Button onClick={submit} disabled={busy || rows.length === 0}
               className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-semibold">
               {busy ? "Yuborilmoqda…"
-                    : rows.length > 0 ? `${Math.min(rows.length, 1000)} ta lidni qo'shish`
+                    : rows.length > 0 ? `${rows.length} ta lidni qo'shish`
                                       : "Qo'shish"}
             </Button>
             <Button variant="outline" className="h-10 px-4 text-[13px]" onClick={closeAll}>
@@ -226,14 +262,19 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
                 </div>
               )}
 
-              {capped && (
+              {bolaklar > 1 && (
                 <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20">
                   <CircleAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-px" />
                   <p className="text-[11px] leading-relaxed text-neutral-700 dark:text-neutral-300">
-                    Bir martada 1000 tadan yuboriladi — birinchi 1000 tasi
-                    ketadi, qolganini keyin yana yuklang.
+                    {rows.length}{" "}ta qator {bolaklar}{" "}bo&apos;lakda ketma-ket
+                    yuboriladi. Oyna yopilmasin — hammasi o&apos;tguncha kuting.
                   </p>
                 </div>
+              )}
+              {progress && (
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                  Yuborilmoqda: {progress.done}{" "}/ {progress.total}
+                </p>
               )}
 
               {/* Dastlabki qatorlar */}
