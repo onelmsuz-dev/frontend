@@ -9,13 +9,15 @@ import { Building2, Search, Check, Loader2, Wallet, AlertCircle } from "lucide-r
 /**
  * /admode → TO'LOV REJIMLARI.
  *
- * Platforma egasi har bir markazga qaysi rejimlardan foydalanishga ruxsat
- * berishini shu yerda hal qiladi. Markaz keyin o'ziga ochilganlardan
- * birini tanlaydi.
+ * Ikki amal, ikkalasi ham shu yerda:
+ *   · rejimni markazga OCHISH / YOPISH (pastdagi yorliqlar);
+ *   · markazning JORIY rejimini O'RNATISH (sarlavhadagi ro'yxat).
  *
- * Ikki bosqich ataylab: rejim hisob-kitobni tubdan o'zgartiradi, va markaz
- * uni tushunmasdan yoqib qo'ysa o'quvchilardan noto'g'ri pul olina
- * boshlardi. Avval gaplashiladi, keyin ochiladi.
+ * Ikkinchisi ilgari markazning o'z sozlamalarida edi. Ko'chirildi, chunki
+ * rejim almashtirish hisob-kitobni tubdan o'zgartiradi (`billingModeSince`
+ * suriladi, langar ko'chadi, davr kalitlari boshqacha yasaladi) va markaz
+ * buni "shunchaki sozlama" deb bosardi. Endi markaz murojaat qiladi,
+ * platforma o'zgartiradi.
  */
 
 interface ModeInfo { mode: string; label: string; short: string; ready: boolean }
@@ -57,6 +59,39 @@ export default function AdmodeBillingPage() {
       if (!r.ok) throw new Error(j?.error ?? "Saqlab bo'lmadi");
       setMsg({ ok: true, text:
         `${org.name}: ${mode} ${enabled ? "ochildi" : "yopildi"}` });
+      mutate("/api/admode/billing");
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+    } finally { setBusy(null); }
+  }
+
+  /**
+   * MARKAZNING JORIY REJIMINI O'RNATISH.
+   *
+   * TASDIQ SO'RALADI: bu markazning butun hisob-kitobini o'zgartiradi va
+   * ro'yxatdagi qo'shni markazga xato bosish oson. Tasdiq matnida
+   * markaz nomi ham bor — aynan qaysi biriga tegayotgani ko'rinsin.
+   */
+  async function setMode(org: OrgRow, mode: string) {
+    if (!mode || mode === org.billingMode) return;
+    const nomi = data?.modes.find((m) => m.mode === mode)?.label ?? mode;
+    const eski = data?.modes.find((m) => m.mode === org.billingMode)?.label ?? org.billingMode;
+    if (!confirm(
+      `${org.name}: to'lov usuli «${eski}» → «${nomi}»?\n\n` +
+      `Yangi qoida BUGUNDAN amal qiladi. Allaqachon yozilgan qarzlar ` +
+      `joyida qoladi.`)) return;
+
+    const key = `${org.id}:mode`;
+    setBusy(key); setMsg(null);
+    try {
+      const r = await fetch(`/api/admode/billing/${org.id}/mode`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ billingMode: mode }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error ?? "Saqlab bo'lmadi");
+      setMsg({ ok: true, text: `${org.name}: hozirgi usul — ${nomi}` });
       mutate("/api/admode/billing");
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message });
@@ -142,12 +177,32 @@ export default function AdmodeBillingPage() {
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
-                    {org.subdomain} · hozirgi rejim:{" "}
-                    <span className="font-medium text-blue-600 dark:text-blue-400">
-                      {data?.modes.find((m) => m.mode === org.billingMode)?.label ?? org.billingMode}
-                    </span>
-                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+                      {org.subdomain} · hozirgi usul:
+                    </p>
+                    {/* Ro'yxatda faqat shu markazga OCHILGAN usullar. Oylik
+                        har doim bor — u standart va uni yopib bo'lmaydi. */}
+                    <select
+                      value={org.billingMode}
+                      disabled={busy !== null}
+                      onChange={(e) => setMode(org, e.target.value)}
+                      className="rounded-lg border border-neutral-200 dark:border-neutral-700
+                                 bg-white dark:bg-neutral-800 px-2 py-1 text-xs font-medium
+                                 text-blue-600 dark:text-blue-400 disabled:opacity-60"
+                    >
+                      {(data?.modes ?? [])
+                        .filter((m) => m.mode === "OYLIK_KALENDAR"
+                                    || org.granted.includes(m.mode)
+                                    || m.mode === org.billingMode)
+                        .map((m) => (
+                          <option key={m.mode} value={m.mode}>{m.label}</option>
+                        ))}
+                    </select>
+                    {busy === `${org.id}:mode` && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-500" />
+                    )}
+                  </div>
                 </div>
               </div>
 
