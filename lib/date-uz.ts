@@ -31,8 +31,20 @@ export const UZ_WEEKDAYS_SHORT = ["Yak", "Du", "Se", "Cho", "Pay", "Ju", "Sha"] 
 /** "2026-08-27" yoki Date — ikkalasini ham qabul qiladi. */
 function toDate(v: string | Date): Date {
   if (v instanceof Date) return v;
-  // Sana-satr: kun chegarasi siljib ketmasligi uchun tush payti olinadi.
-  return new Date(/^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v}T12:00:00` : v);
+  // Sana-satr: kun chegarasi siljib ketmasligi uchun tush payti olinadi —
+  // va aynan UTC tushi (`Z`), BRAUZER tushi emas.
+  //
+  // NEGA `Z` SHART. Pastda sana `BUSINESS_TZ` (UTC+5) da chiziladi. `Z`siz
+  // "2026-10-02" brauzer mintaqasidagi tush deb o'qilardi: UTC−7 dagi
+  // noutbukda bu 19:00 UTC, Toshkentda esa allaqachon ERTASI kun — ekranda
+  // 03.10.2026 chiqardi. Xato faqat UTC−7 va undan g'arbda ko'rinadi,
+  // shuning uchun O'zbekistondagi markazlar sezmagan; sayohatdagi yoki
+  // chet eldagi foydalanuvchi esa HAMMA oddiy sanani bir kun keyin ko'rardi
+  // ("keyingi to'lov" sanasi shulardan biri).
+  //
+  // UTC tushi UTC−11 dan UTC+11 gacha bo'lgan har qanday mintaqada o'sha
+  // kunning ichida qoladi.
+  return new Date(/^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v}T12:00:00Z` : v);
 }
 
 /** "27-avgust" */
