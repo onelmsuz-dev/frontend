@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR, { mutate } from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
@@ -9,7 +9,7 @@ import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Percent, Plus, X, Loader2, Users, BookOpen, UserCheck, Globe,
-  Power, Trash2, Info, AlertCircle, Gift,
+  Power, Trash2, Info, AlertCircle, Gift, Pencil,
 } from "lucide-react";
 
 /**
@@ -49,6 +49,8 @@ export function DiscountsSection() {
   const { me } = useMe();
   const { data, error, isLoading } = useSWR<Discount[]>("/api/discounts", fetcher);
   const [open, setOpen] = useState(false);
+  // Tahrirlash — o'sha oynaning o'zi, `editId` bilan.
+  const [editId, setEditId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const canManage = hasPerm(me?.permissions, "discounts.manage");
@@ -201,6 +203,16 @@ export function DiscountsSection() {
                         {/* Sarlavhalar ATAYLAB farq qiladi: ikkalasi ham
                             "O'chirish" bo'lsa, vaqtincha to'xtatmoqchi bo'lgan
                             odam qoidani butunlay o'chirib yuborardi. */}
+                        {/* TAHRIRLASH. Ilgari faqat yoqish/o'chirish bor
+                            edi: "5 ta o'quvchiga oltinchisini qo'shish"
+                            uchun chegirmani o'chirib, qaytadan yaratish
+                            kerak bo'lardi — nomi, muddati, izohi bilan. */}
+                        <button onClick={() => setEditId(d.id)} disabled={busy === d.id}
+                          title="Tahrirlash"
+                          className="rounded-lg p-1.5 text-neutral-400 hover:text-indigo-600
+                                     hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
                         <button onClick={() => toggle(d)} disabled={busy === d.id}
                           title={d.isActive ? "Vaqtincha to'xtatish" : "Yoqish"}
                           className={cn("rounded-lg p-1.5 transition-colors",
@@ -245,17 +257,39 @@ export function DiscountsSection() {
         </div>
       </div>
 
-      {open && <CreateModal onClose={() => setOpen(false)}
-        onDone={(name) => { setMsg({ ok: true, text: `"${name}" yaratildi` }); mutate("/api/discounts"); }} />}
+      {open && <DiscountModal onClose={() => setOpen(false)}
+        onDone={(name: string) => { setMsg({ ok: true, text: `"${name}" yaratildi` }); mutate("/api/discounts"); }} />}
+
+      {editId && <DiscountModal editId={editId} onClose={() => setEditId(null)}
+        onDone={(name: string) => { setMsg({ ok: true, text: `"${name}" saqlandi` }); mutate("/api/discounts"); }} />}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-function CreateModal({ onClose, onDone }: { onClose: () => void; onDone: (n: string) => void }) {
+/**
+ * YARATISH VA TAHRIRLASH — BITTA oyna.
+ *
+ * `editId` berilsa mavjud chegirma yuklanadi va PATCH yuboriladi. Ikkinchi
+ * nusxa yozilmadi ataylab: o'quvchi tanlagichi, muddat, izoh — hammasi bir
+ * xil va ikki joyda turgan forma vaqt o'tib bir-biridan ajralib ketardi.
+ *
+ * TUR va QAMROV tahrirlashda QULFLANADI. Sabab serverda: `updateDiscount`
+ * ularni qabul qilmaydi — qamrovni o'zgartirish "5 ta tanlangan o'quvchi"
+ * qoidasini "butun markaz" ga aylantirib yuborardi va buni tasodifan
+ * bosish oson. Kerak bo'lsa — yangi chegirma yaratiladi.
+ */
+function DiscountModal({ editId, onClose, onDone }: {
+  editId?: string | null;
+  onClose: () => void;
+  onDone: (n: string) => void;
+}) {
   const { data: groups }  = useSWR<any[]>("/api/groups", fetcher);
   const { data: courses } = useSWR<any[]>("/api/courses", fetcher);
   const { data: students } = useSWR<any>("/api/students?limit=1000", fetcher);
+  // Tanlangan o'quvchilar RO'YXAT bilan birga kelmaydi (o'nlab chegirmada
+  // minglab o'quvchi bo'lishi mumkin) — tahrirlashda alohida so'raladi.
+  const { data: mavjud } = useSWR<any>(editId ? `/api/discounts/${editId}` : null, fetcher);
 
   const [name, setName]   = useState("");
   const [type, setType]   = useState<"FOIZ" | "SUMMA">("FOIZ");
@@ -271,25 +305,72 @@ function CreateModal({ onClose, onDone }: { onClose: () => void; onDone: (n: str
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
+  // Yuklangan chegirma bilan formani bir marta to'ldiramiz.
+  const [toldirildi, setToldirildi] = useState(false);
+  useEffect(() => {
+    if (!mavjud || toldirildi) return;
+    setName(mavjud.name ?? "");
+    setType(mavjud.type ?? "FOIZ");
+    setValue(String(mavjud.value ?? ""));
+    setScope(mavjud.scope ?? "HAMMA");
+    setGroupId(mavjud.groupId ?? "");
+    setCourseId(mavjud.courseId ?? "");
+    setPicked(mavjud.studentIds ?? []);
+    setStartsAt(String(mavjud.startsAt ?? "").slice(0, 10));
+    setEndsAt(String(mavjud.endsAt ?? "").slice(0, 10));
+    setNoteText(mavjud.note ?? "");
+    setToldirildi(true);
+  }, [mavjud, toldirildi]);
+
   const list = Array.isArray(students) ? students : (students?.items ?? []);
-  const filtered = q.trim()
-    ? list.filter((s: any) => s.name?.toLowerCase().includes(q.trim().toLowerCase()))
-    : list.slice(0, 40);
+  /**
+   * TANLANGANLAR HAR DOIM TEPADA.
+   *
+   * Qidiruvsiz ro'yxat faqat dastlabki 40 tani ko'rsatadi. Tahrirlashda bu
+   * jiddiy muammo edi: allaqachon tanlangan 5 o'quvchi shu 40 talikka
+   * tushmasa, ular ekranda UMUMAN ko'rinmasdi — foydalanuvchi "tanlov
+   * yo'qolibdi" deb o'ylab, oltinchisini qo'shish o'rniga hammasini
+   * qaytadan belgilardi.
+   */
+  const filtered = (() => {
+    const izlangan = q.trim()
+      ? list.filter((s: any) => s.name?.toLowerCase().includes(q.trim().toLowerCase()))
+      : list;
+    const tanlangan = izlangan.filter((s: any) => picked.includes(s.id));
+    const qolgan = izlangan.filter((s: any) => !picked.includes(s.id));
+    return q.trim() ? [...tanlangan, ...qolgan] : [...tanlangan, ...qolgan.slice(0, 40)];
+  })();
 
   async function save() {
     setSaving(true); setErr("");
     try {
-      const r = await fetch("/api/discounts", {
-        method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          name, type, value: Number(value), scope,
-          ...(scope === "GURUH" ? { groupId } : {}),
-          ...(scope === "KURS"  ? { courseId } : {}),
-          ...(scope === "TANLANGAN" ? { studentIds: picked } : {}),
-          ...(startsAt ? { startsAt } : {}),
-          ...(endsAt   ? { endsAt }   : {}),
-          ...(noteText ? { note: noteText } : {}),
-        }),
+      // TAHRIRLASHDA faqat server qabul qiladigan maydonlar yuboriladi.
+      // `type` va `scope` ataylab YO'Q — ular qulflangan.
+      //
+      // Sana va izoh `null` bilan yuboriladi, bo'sh satr bilan emas:
+      // server uchun `null` = "tozalash", bo'sh satr esa umuman boshqa
+      // narsa. Aks holda muddatni olib tashlab bo'lmasdi.
+      const body = editId
+        ? {
+            name, value: Number(value),
+            startsAt: startsAt || null,
+            endsAt:   endsAt || null,
+            note:     noteText,
+            ...(scope === "TANLANGAN" ? { studentIds: picked } : {}),
+          }
+        : {
+            name, type, value: Number(value), scope,
+            ...(scope === "GURUH" ? { groupId } : {}),
+            ...(scope === "KURS"  ? { courseId } : {}),
+            ...(scope === "TANLANGAN" ? { studentIds: picked } : {}),
+            ...(startsAt ? { startsAt } : {}),
+            ...(endsAt   ? { endsAt }   : {}),
+            ...(noteText ? { note: noteText } : {}),
+          };
+      const r = await fetch(editId ? `/api/discounts/${editId}` : "/api/discounts", {
+        method: editId ? "PATCH" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error ?? "Saqlab bo'lmadi");
@@ -312,7 +393,7 @@ function CreateModal({ onClose, onDone }: { onClose: () => void; onDone: (n: str
                            border-b border-neutral-100 dark:border-neutral-800
                            bg-white dark:bg-neutral-900">
           <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-            Yangi chegirma
+            {editId ? "Chegirmani tahrirlash" : "Yangi chegirma"}
           </h3>
           <button onClick={onClose} className="rounded-lg p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800">
             <X className="h-4 w-4 text-neutral-500" />
@@ -330,8 +411,9 @@ function CreateModal({ onClose, onDone }: { onClose: () => void; onDone: (n: str
             <Field label="Turi">
               <div className="flex gap-1.5">
                 {(["FOIZ", "SUMMA"] as const).map((t) => (
-                  <button key={t} onClick={() => setType(t)}
+                  <button key={t} onClick={() => !editId && setType(t)} disabled={!!editId}
                     className={cn("flex-1 rounded-xl px-3 py-2 text-xs font-medium transition-colors",
+                      editId && "cursor-not-allowed opacity-60",
                       type === t
                         ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                         : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300")}>
@@ -352,8 +434,9 @@ function CreateModal({ onClose, onDone }: { onClose: () => void; onDone: (n: str
               {(Object.keys(SCOPE_UI) as (keyof typeof SCOPE_UI)[]).map((s) => {
                 const Icon = SCOPE_UI[s].icon;
                 return (
-                  <button key={s} onClick={() => setScope(s as any)}
+                  <button key={s} onClick={() => !editId && setScope(s as any)} disabled={!!editId}
                     className={cn("flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors",
+                      editId && "cursor-not-allowed opacity-60",
                       scope === s
                         ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                         : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300")}>
@@ -363,6 +446,14 @@ function CreateModal({ onClose, onDone }: { onClose: () => void; onDone: (n: str
               })}
             </div>
           </Field>
+
+          {editId && (
+            <p className="-mt-2 text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+              Turi va kimga berilishi o&apos;zgartirilmaydi — ular chegirmaning
+              ma&apos;nosini butunlay almashtirardi. Kerak bo&apos;lsa yangi
+              chegirma yarating.
+            </p>
+          )}
 
           {scope === "GURUH" && (
             <Field label="Guruh" required>
