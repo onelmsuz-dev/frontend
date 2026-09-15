@@ -18,6 +18,7 @@ import { useBranch } from "@/lib/contexts/branch-context";
 import { WEEKDAYS, WEEKDAY_SHORT, SCHEDULE_PRESETS, todayStr } from "@/lib/form-constants";
 import { mutate } from "swr";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { guruhNarxi, narxMatni } from "@/lib/group-price";
 import { useFeature } from "@/lib/hooks/useFeatures";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
@@ -60,6 +61,8 @@ export default function GroupsPage() {
   const { me } = useMe();
   const canCreate = hasPerm(me?.permissions, "groups.create");
   const canUpdate = hasPerm(me?.permissions, "groups.update");
+  // Narx — moliyaviy ma'lumot: pul ko'rmaydigan xodimga ko'rsatilmaydi.
+  const canSeeMoney = hasPerm(me?.permissions, "payments.view");
   const canDelete = hasPerm(me?.permissions, "groups.delete");
   // Xona qo'shish Sozlamalar bo'limida — huquqi yo'qni u yerga yubormaymiz.
   const canManageRooms = hasPerm(me?.permissions, "rooms.create");
@@ -536,6 +539,18 @@ export default function GroupsPage() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-[14px] text-neutral-900 dark:text-neutral-100 truncate">{g.name}</h3>
                         <p className="text-[12px] text-blue-600 dark:text-blue-400 mt-0.5">{g.course?.name}</p>
+                        {/* NARX — ro'yxatda ko'rinmasdi, har safar kursni
+                            ochish kerak bo'lardi. Rejim guruh yoki kursdan
+                            olinadi; ikkalasi ham bo'sh bo'lsa markaz
+                            standarti (oylik) — narx maydoni ham o'sha. */}
+                        {canSeeMoney && (() => {
+                          const n = guruhNarxi(g.billingMode ?? g.course?.billingMode, g.course);
+                          return n && (
+                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                              {narxMatni(n)}
+                            </p>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center gap-1 ml-2">
                         <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold shrink-0", cfg.cls)}>{cfg.label}</span>

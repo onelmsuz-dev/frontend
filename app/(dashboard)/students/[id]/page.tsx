@@ -14,6 +14,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { guruhNarxi, narxMatni } from "@/lib/group-price";
 import {
   SELECTABLE_METHODS, methodGridCls, methodLabel,
 } from "@/lib/payment-methods";
@@ -1226,6 +1227,25 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                             {MODE_LABEL[sg.schedule.mode] ?? sg.schedule.mode}
                             {sg.schedule.nextDue && <>{" "}· keyingi: {formatUzDate(sg.schedule.nextDue)}</>}
                           </p>
+                          {/* NARX — "bu guruh qancha turadi?" degan savolga
+                              javob kartochkada yo'q edi, kursni alohida
+                              ochish kerak bo'lardi. Rejim aniq ma'lum
+                              (`schedule.mode` — a'zolik→guruh→kurs→markaz),
+                              shuning uchun yorlig'i ham to'g'ri chiqadi.
+                              Pul ko'rish huquqi yo'q xodimga ko'rsatilmaydi. */}
+                          {canSeeMoney && (() => {
+                            const n = guruhNarxi(sg.schedule.mode, sg.group?.course, sg.priceOverride);
+                            return n && (
+                              <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
+                                {narxMatni(n)}
+                                {n.kelishilgan && (
+                                  <span className="text-indigo-500 dark:text-indigo-400">
+                                    {" "}· kelishilgan narx
+                                  </span>
+                                )}
+                              </p>
+                            );
+                          })()}
                           {sg.schedule.modeSource === "membership" && (
                             <p className="text-[10px] text-amber-600 dark:text-amber-400">
                               Bu o&apos;quvchiga alohida qotirilgan — markaz rejimi
