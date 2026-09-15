@@ -13,13 +13,14 @@ import {
 import {
   TrendingUp, TrendingDown, Wallet, Sparkles,
   Plus, X, CheckCircle, Clock, RefreshCw, BadgeCheck,
-  AlertTriangle, ChevronRight, ReceiptText,
+  AlertTriangle, ChevronRight, ReceiptText, Tags,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   PAYMENT_METHODS, SELECTABLE_METHODS, methodShort, methodCls,
 } from "@/lib/payment-methods";
 import { FinanceInsights } from "@/components/finance/finance-insights";
+import { ExpenseCategoriesModal } from "@/components/finance/expense-categories-modal";
 import Link from "next/link";
 import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
 import { usePayments } from "@/lib/hooks/usePayments";
@@ -76,6 +77,18 @@ export default function FinancePage() {
   const [expErr,       setExpErr]       = useState("");
   const [expSaving,    setExpSaving]    = useState(false);
 
+  // XARAJAT FILTRI — faqat RO'YXAT uchun.
+  //
+  // Yuqoridagi "Xarajatlar" va "Sof foyda" kartalari ALOHIDA so'rovdan
+  // oziqlanadi va oy+filial qamrovida qoladi. Aks holda kategoriya
+  // tanlangan zahoti "Sof foyda" o'sha kategoriyaga qarab o'zgarib
+  // ketardi — ya'ni filtr hisobotni buzardi.
+  const [expCat,   setExpCat]   = useState("");
+  const [expFrom,  setExpFrom]  = useState("");
+  const [expTo,    setExpTo]    = useState("");
+  const [expMonth, setExpMonth] = useState(defaultPayMonth);
+  const [showCatModal, setShowCatModal] = useState(false);
+
   // Oylik
   const now = new Date();
   const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -105,6 +118,23 @@ export default function FinancePage() {
   const expensesQs = useBranchQueryString({ month: payMonth });
   const { data: expensesRaw, isLoading: expensesLoading } =
     useSWR(`/api/expenses${expensesQs}`, fetcher);
+
+  // FILTRLANGAN RO'YXAT. Aniq sanalar tanlansa oy YUBORILMAYDI —
+  // serverda ham oraliq oydan ustun, ikkalasini birga yuborish faqat
+  // chalkashtirardi.
+  const expListQs = useBranchQueryString({
+    month:    expFrom || expTo ? undefined : (expMonth || undefined),
+    from:     expFrom || undefined,
+    to:       expTo || undefined,
+    category: expCat || undefined,
+  });
+  const { data: expListRaw, isLoading: expListLoading } =
+    useSWR(`/api/expenses${expListQs}`, fetcher);
+  // Jami ALOHIDA so'raladi: ro'yxat 500 qator bilan cheklangan, ekrandagi
+  // yig'indi esa undan ko'p xarajati bor markazda yolg'on bo'lardi.
+  const { data: expSum } = useSWR(`/api/expenses/summary${expListQs}`, fetcher);
+  const { data: expCatsRaw }   = useSWR("/api/expenses/categories", fetcher);
+  const { data: expFilterCats } = useSWR<string[]>("/api/expenses/categories/filter", fetcher);
   const { data: studentsRaw, isLoading: studentsLoading } = useStudents();
   // Oylik ham aktiv filial bo'yicha — yonidagi "To'lovlar" tabi allaqachon
   // filialga bog'langan, oylik esa butun markazni ko'rsatib turardi.
@@ -122,6 +152,9 @@ export default function FinancePage() {
   }, [payments]);
   const teachers: any[] = Array.isArray(teachersRaw) ? teachersRaw : [];
   const expenses: any[] = Array.isArray(expensesRaw) ? expensesRaw : [];
+  const expList: any[] = Array.isArray(expListRaw) ? expListRaw : [];
+  const expCats: any[] = Array.isArray(expCatsRaw) ? expCatsRaw : [];
+  const expFiltered = !!(expCat || expFrom || expTo);
   const salaries: any[] = Array.isArray(salariesRaw) ? salariesRaw : [];
   const allStudents: any[] = Array.isArray(studentsRaw) ? studentsRaw : [];
 
@@ -134,6 +167,10 @@ export default function FinancePage() {
   const totalPayments = payments.reduce((s, p) => s + p.amount, 0);
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const profit        = totalPayments - totalExpenses;
+
+  /** Kategoriya ro'yxatini har ikkala joyda (tanlov + filtr) yangilaydi. */
+  const refreshCats = () =>
+    mutate((k: string) => typeof k === "string" && k.startsWith("/api/expenses"));
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "kirim",      label: "To'lovlar (kirim)" },
@@ -263,8 +300,10 @@ export default function FinancePage() {
                   onChange={e => { setExpForm(p => ({...p, category: e.target.value})); setExpErr(""); }}
                   className="w-full h-9 px-3 text-sm rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
                   <option value="">Kategoriyani tanlang...</option>
-                  {["Ijara", "Kommunal", "Maosh", "Reklama", "Ta'mirlash", "Jihozlar", "Maktab buyumlari", "Boshqa"].map(c => (
-                    <option key={c} value={c}>{c}</option>
+                  {/* Ro'yxat MARKAZNIKI — ilgari bu yerda sakkizta qator
+                      qattiq yozilgan edi va o'zinikini qo'shib bo'lmasdi. */}
+                  {expCats.map((c: any) => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
                   ))}
                 </select>
               </div>
@@ -501,7 +540,28 @@ export default function FinancePage() {
         {activeTab === "chiqim" && (
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/50 dark:border-white/10">
-              <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">Xarajatlar ({expenses.length} ta)</p>
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">
+                  Xarajatlar ({expSum?.count ?? expList.length} ta)
+                </p>
+                {/* JAMI — filtr nima uchun qo'yilganiga javob. "Reklama shu
+                    oyda qancha bo'ldi?" degan savol filtrsiz javobsiz
+                    qolardi: ekranda faqat qatorlar bor edi, summa yo'q. */}
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                  Jami:{" "}
+                  <span className="font-semibold text-red-600 dark:text-red-400">
+                    {formatCurrency(expSum?.total ?? 0)}
+                  </span>
+                  {expFiltered && " · filtr bo'yicha"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowCatModal(true)}
+                  className="flex items-center gap-1.5 text-[12.5px] font-semibold px-3 h-9 rounded-xl
+                    border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300
+                    hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
+                  <Tags className="w-4 h-4" /> Kategoriyalar
+                </button>
               {/* Asosiy amal — ko'rinadigan (to'ldirilgan) tugma bo'lishi kerak.
                   Ilgari shaffof fonli, och kulrang matnli edi va deyarli
                   bilinmasdi. */}
@@ -511,7 +571,53 @@ export default function FinancePage() {
                   transition-colors">
                 <Plus className="w-4 h-4" /> Xarajat qo'shish
               </button>
+              </div>
             </div>
+
+            {/* ── FILTR ── */}
+            <div className="flex flex-wrap items-end gap-2 px-5 py-3 border-b border-white/50 dark:border-white/10">
+              <div className="min-w-[150px]">
+                <Label className="text-[11px] font-medium text-neutral-500 mb-1 block">Kategoriya</Label>
+                <select value={expCat} onChange={e => setExpCat(e.target.value)}
+                  className="w-full h-9 px-2.5 text-[13px] rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
+                  <option value="">Hammasi</option>
+                  {/* Ro'yxatda O'CHIRILGAN kategoriyalar ham bor — ular
+                      bilan yozilgan eski xarajatlarni ajratib ko'rish
+                      mumkin bo'lsin. */}
+                  {(expFilterCats ?? []).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="min-w-[130px]">
+                <Label className="text-[11px] font-medium text-neutral-500 mb-1 block">Oy</Label>
+                <input type="month" value={expMonth} disabled={!!(expFrom || expTo)}
+                  onChange={e => setExpMonth(e.target.value)}
+                  className="w-full h-9 px-2.5 text-[13px] rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none disabled:opacity-50" />
+              </div>
+              <div className="min-w-[140px]">
+                <Label className="text-[11px] font-medium text-neutral-500 mb-1 block">Sanadan</Label>
+                <input type="date" value={expFrom} onChange={e => setExpFrom(e.target.value)}
+                  className="w-full h-9 px-2.5 text-[13px] rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none" />
+              </div>
+              <div className="min-w-[140px]">
+                <Label className="text-[11px] font-medium text-neutral-500 mb-1 block">Sanagacha</Label>
+                <input type="date" value={expTo} onChange={e => setExpTo(e.target.value)}
+                  className="w-full h-9 px-2.5 text-[13px] rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none" />
+              </div>
+              {expFiltered && (
+                <button onClick={() => { setExpCat(""); setExpFrom(""); setExpTo(""); }}
+                  className="h-9 px-3 rounded-lg text-[12.5px] font-semibold text-neutral-600 dark:text-neutral-300
+                    hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
+                  Tozalash
+                </button>
+              )}
+              {(expFrom || expTo) && (
+                <p className="text-[11px] text-neutral-400 w-full">
+                  Sana oralig&apos;i tanlangan — &laquo;Oy&raquo; e&apos;tiborga olinmaydi.
+                  Oraliq ikki chetini ham o&apos;z ichiga oladi.
+                </p>
+              )}
+            </div>
+
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -523,7 +629,7 @@ export default function FinancePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expenses.map((e: any) => (
+                {expList.map((e: any) => (
                   <TableRow key={e.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                     <TableCell>
                       <span className="text-[11px] bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-lg font-medium">
@@ -542,9 +648,11 @@ export default function FinancePage() {
               </TableBody>
             </Table>
             </div>
-            {!expensesLoading && expenses.length === 0 && (
+            {!expListLoading && expList.length === 0 && (
               <div className="py-12 flex flex-col items-center gap-3">
-                <p className="text-sm text-neutral-400">Bu oyda xarajat yozilmagan</p>
+                <p className="text-sm text-neutral-400">
+                  {expFiltered ? "Bu filtrga mos xarajat yo'q" : "Bu oyda xarajat yozilmagan"}
+                </p>
                 <button onClick={() => { setExpErr(""); setExpForm({ category: "", description: "", amount: "", date: "" }); setShowExpModal(true); }}
                   className="flex items-center gap-1.5 text-[12.5px] font-semibold px-3.5 h-9 rounded-xl
                     bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm
@@ -833,6 +941,13 @@ export default function FinancePage() {
         open={!!payForStudent}
         onClose={() => setPayForStudent(null)}
         defaultStudentId={payForStudent?.id}
+      />
+
+      <ExpenseCategoriesModal
+        open={showCatModal}
+        onClose={() => setShowCatModal(false)}
+        categories={expCats}
+        onChanged={refreshCats}
       />
 
       <ReceiptModal paymentId={chekId} open={!!chekId}
