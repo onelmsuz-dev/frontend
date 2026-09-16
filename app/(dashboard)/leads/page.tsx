@@ -131,7 +131,7 @@ export default function LeadsPage() {
 
   // SAHIFALAB yuklanadi. Ilgari bitta so'rov edi va server 500 ta bilan
   // cheklardi — 938 lidning 438 tasi ekranda umuman ko'rinmasdi.
-  const { items: raw, total: jamiLid, yanaBor, yanaYukla, isLoading } = useLeadsPaged();
+  const { items: raw, total: jamiLid, yanaBor, qolgaYetdi, yanaYukla, isLoading } = useLeadsPaged();
   const leads: Lead[] = useMemo(() => (raw as Lead[]) ?? [], [raw]);
   // Bosqich sarlavhasidagi son SERVERDAN — yuklanmagan lidlar ham
   // sanaladi, aks holda "12 ta" deb turib, aslida 300 ta bo'lardi.
@@ -755,9 +755,14 @@ export default function LeadsPage() {
             <div className="flex flex-wrap items-center gap-3 mb-3 px-3 py-2 rounded-xl
                             bg-amber-50 dark:bg-amber-900/20">
               <p className="text-[12px] text-amber-800 dark:text-amber-300">
-                {jamiLid}{" "}tadan {leads.length}{" "}tasi yuklandi.
+                {/* Qolgani O'ZI yuklanadi — tugma faqat juda katta bazada
+                    chiqadi. Foydalanuvchi bu qatorni ko'rib turishi kerak,
+                    aks holda "500 tasi ko'rindi, qolgani yo'q" degan
+                    taassurot qaytardi. */}
+                {jamiLid}{" "}tadan {leads.length}{" "}tasi yuklandi
+                {qolgaYetdi ? "." : " — qolgani yuklanmoqda…"}
               </p>
-              {yanaBor && (
+              {qolgaYetdi && yanaBor && (
                 <button onClick={yanaYukla}
                   className="text-[12px] font-semibold px-3 h-7 rounded-lg
                              bg-amber-600 hover:bg-amber-700 text-white transition-colors">

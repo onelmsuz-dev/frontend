@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import useSWRMutation from "swr/mutation";
@@ -31,6 +32,9 @@ async function deleter(url: string) {
 
 /** Bir so'rovda nechta lid — server chegarasi ham shu (1000). */
 const SAHIFA = 500;
+
+/** Avtomatik yuklanadigan yuqori chegara — undan keyin qo'lda. */
+const AVTO_CHEGARA = 5000;
 
 /**
  * LIDLAR — SAHIFALAB YUKLANADI.
@@ -74,10 +78,38 @@ export function useLeadsPaged(params?: { stageId?: string; search?: string }) {
   const items = sahifalar.flatMap((p) => p?.items ?? []);
   const total = sahifalar[0]?.total ?? 0;
 
+  /**
+   * QOLGAN SAHIFALAR O'ZI YUKLANADI.
+   *
+   * Tugmaga qoldirib bo'lmaydi: markaz 1183 ta lid import qilib, ekranda
+   * 500 tasini ko'rsa — tugma yonida tursa ham — "import ishlamadi" deb
+   * o'ylaydi. Aynan shu xabar keldi.
+   *
+   * Xavfsiz, chunki QOTISH kartochkalar sonidan edi, ma'lumot hajmidan
+   * emas: ustun bir vaqtda 40 tadan chizadi (`kanban-column.tsx`).
+   * 1183 ta yengil obyektni xotirada saqlash hech narsa turmaydi.
+   *
+   * Yuqori chegara baribir bor — juda katta bazada cheksiz so'rov
+   * bo'lmasin; undan oshsa qo'lda yuklash tugmasi chiqadi.
+   */
+  const yuklangan = items.length;
+  useEffect(() => {
+    const oxirgi = sahifalar[sahifalar.length - 1];
+    if (!oxirgi) return;
+    // To'liq sahifa qaytgan bo'lsa demak davomi bor. Bu shart aylanishni
+    // ham to'xtatadi: yarim sahifa kelishi — oxiri degani.
+    const toliq = (oxirgi.items?.length ?? 0) >= oxirgi.take;
+    if (toliq && yuklangan < oxirgi.total && yuklangan < AVTO_CHEGARA) {
+      setSize((n) => n + 1);
+    }
+  }, [sahifalar, yuklangan, setSize]);
+
   return {
     items, total, isLoading, error, mutate,
-    yuklangan: items.length,
-    yanaBor: items.length < total,
+    yuklangan,
+    yanaBor: yuklangan < total,
+    /** Avtomatik yuklash chegarasiga yetdi — qolganini qo'lda. */
+    qolgaYetdi: yuklangan >= AVTO_CHEGARA && yuklangan < total,
     yanaYukla: () => setSize(size + 1),
   };
 }
