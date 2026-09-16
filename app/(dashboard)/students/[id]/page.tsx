@@ -6,6 +6,7 @@ import { useStudent } from "@/lib/hooks/useStudents";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { TopHeader } from "@/components/layout/top-header";
 import { GroupDebtBreakdown } from "@/components/students/group-debt-breakdown";
+import { BalanceBreakdown } from "@/components/students/balance-breakdown";
 import { OneTimeDiscount } from "@/components/students/one-time-discount";
 import { PaymentEdit } from "@/components/students/payment-edit";
 import { ReceiptModal } from "@/components/payments/receipt-modal";
@@ -1191,6 +1192,18 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     ledger={(student as any).groupLedger}
                     balance={student.balance ?? 0}
                     fmt={fmt}
+                  />
+                  {/* BALANS NIMADAN IBORAT — qator-qator, pastda jami.
+                      Guruh bo'yicha taqsimot bitta guruhli o'quvchida
+                      o'zini umuman ko'rsatmaydi, ya'ni u yerda kartochka
+                      bo'm-bo'sh qolardi va "−300 000 qayerdan?" degan
+                      savol javobsiz edi. */}
+                  <BalanceBreakdown
+                    charges={student.charges ?? []}
+                    payments={student.payments ?? []}
+                    balance={student.balance ?? 0}
+                    fmt={fmt}
+                    groupName={(id) => (id ? groupNameById.get(id) ?? "O'chirilgan guruh" : "Umumiy")}
                   />
                   {/* CHEGIRMA QOPLAGAN QARZ. Qarz YOZILGAN, chegirma uni
                       to'liq yoki qisman yopgan — ikkala raqam ham ko'rinadi,
