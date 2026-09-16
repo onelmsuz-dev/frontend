@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -9,6 +10,7 @@ import { FullscreenToggle } from "@/components/fullscreen-toggle";
 import {
   LayoutDashboard, Building2, CreditCard, LogOut, ShieldCheck,
   Settings, Users, BarChart3, MessageSquare, Rocket, History, Wallet,
+  Menu, X,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -42,13 +44,35 @@ const SECTIONS = [
 export default function AdmodeLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  /**
+   * MOBILDA YON PANEL YOPIQ.
+   *
+   * Ilgari u `w-56` bilan HAR DOIM ochiq turardi: 375px li telefonda
+   * 224px yon panelga ketib, mazmunga ~150px qolardi va sahifa yonga
+   * suriladigan bo'lib qolardi (admin paneli telefonda amalda
+   * ishlatib bo'lmasdi).
+   */
+  const [menyu, setMenyu] = useState(false);
 
   if (pathname === "/admode/login") return <>{children}</>;
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 flex">
+      {/* Mobil qoplama — panel ochiq bo'lsa fon bosilsa yopiladi. */}
+      {menyu && (
+        <div onClick={() => setMenyu(false)}
+          className="fixed inset-0 z-40 bg-black/40 md:hidden" />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 sticky top-0 h-dvh flex flex-col border-r border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900">
+      <aside className={cn(
+        "w-56 shrink-0 flex flex-col border-r border-neutral-200 dark:border-white/10",
+        "bg-white dark:bg-neutral-900",
+        // Mobil: ustidan chiquvchi panel. Katta ekran: odatdagidek yonida.
+        "fixed inset-y-0 left-0 z-50 h-dvh transition-transform md:transition-none",
+        menyu ? "translate-x-0" : "-translate-x-full",
+        "md:static md:translate-x-0 md:sticky md:top-0",
+      )}>
 
         {/* Logo */}
         <div className="h-14 shrink-0 flex items-center gap-2.5 px-4 border-b border-neutral-200 dark:border-white/10">
@@ -59,6 +83,10 @@ export default function AdmodeLayout({ children }: { children: React.ReactNode }
             <p className="text-[13px] font-bold text-neutral-900 dark:text-white leading-none">OneRoom</p>
             <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-none mt-0.5">Platform Admin</p>
           </div>
+          <button onClick={() => setMenyu(false)} aria-label="Yopish"
+            className="ml-auto md:hidden p-1.5 rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-white/10">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Nav sections */}
@@ -75,6 +103,11 @@ export default function AdmodeLayout({ children }: { children: React.ReactNode }
                     : pathname.startsWith(href);
                   return (
                     <Link key={href} href={href}
+                      // Boshqa sahifaga o'tilganda mobil panel yopiladi.
+                      // Effekt bilan qilinsa React "cascading renders"
+                      // deb ogohlantiradi — bu yerda bosish hodisasi
+                      // aniqroq va soddaroq.
+                      onClick={() => setMenyu(false)}
                       className={cn(
                         "flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors",
                         active
@@ -118,14 +151,20 @@ export default function AdmodeLayout({ children }: { children: React.ReactNode }
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center justify-end gap-1 px-6
+        <header className="sticky top-0 z-30 h-14 shrink-0 flex items-center gap-1 px-4 sm:px-6
           border-b border-neutral-200 dark:border-white/10
           bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md">
+          <button onClick={() => setMenyu(true)} aria-label="Menyu"
+            className="md:hidden p-2 -ml-2 rounded-lg text-neutral-600 dark:text-neutral-300
+                       hover:bg-neutral-100 dark:hover:bg-white/10">
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex-1" />
           <FullscreenToggle />
           <ThemeToggle />
         </header>
 
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 sm:p-6">
           {children}
         </main>
       </div>

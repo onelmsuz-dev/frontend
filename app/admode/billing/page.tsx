@@ -98,7 +98,20 @@ export default function AdmodeBillingPage() {
     } finally { setBusy(null); }
   }
 
-  const modes = (data?.modes ?? []).filter((m) => m.mode !== "OYLIK_KALENDAR");
+  /**
+   * OYLIK HAM RO'YXATDA TURADI.
+   *
+   * Ilgari u chiqarib tashlanardi ("har doim ochiq, yopib bo'lmaydi").
+   * Oqibati: markazning HOZIRGI usuli aynan Oylik bo'lsa, yorliqlar
+   * orasida "HOZIRGI" belgisi UMUMAN ko'rinmasdi — va yonidagi yashil
+   * (ochilgan) yorliq "tanlangan" bo'lib o'qilardi. Demo main'da aynan
+   * shunday bo'ldi: tepada "Oylik (kalendar)", pastda esa yashil
+   * "Individual sana" turardi va ular bir-biriga zid ko'rinardi.
+   *
+   * Endi Oylik ham ko'rinadi, lekin BOSILMAYDI — u standart va uni
+   * yopib bo'lmaydi.
+   */
+  const modes = data?.modes ?? [];
 
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto w-full space-y-4">
@@ -189,7 +202,8 @@ export default function AdmodeBillingPage() {
                       onChange={(e) => setMode(org, e.target.value)}
                       className="rounded-lg border border-neutral-200 dark:border-neutral-700
                                  bg-white dark:bg-neutral-800 px-2 py-1 text-xs font-medium
-                                 text-blue-600 dark:text-blue-400 disabled:opacity-60"
+                                 text-blue-600 dark:text-blue-400 disabled:opacity-60
+                                 max-w-full"
                     >
                       {(data?.modes ?? [])
                         .filter((m) => m.mode === "OYLIK_KALENDAR"
@@ -206,19 +220,30 @@ export default function AdmodeBillingPage() {
                 </div>
               </div>
 
+              {/* YORLIQLAR — TANLOV EMAS, OCHISH/YOPISH.
+                  Sarlavhasiz ular "qaysi usul tanlangan" bo'lib
+                  o'qilardi; hozirgi usul esa yuqoridagi ro'yxatda. */}
+              <p className="text-[10px] font-semibold uppercase tracking-wider
+                            text-neutral-400 dark:text-neutral-500 mb-1.5">
+                Markazga ochilgan usullar
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {modes.map((m) => {
-                  const on = org.granted.includes(m.mode);
+                  // Oylik HAR DOIM ochiq va uni yopib bo'lmaydi.
+                  const standart = m.mode === "OYLIK_KALENDAR";
+                  const on = standart || org.granted.includes(m.mode);
                   const inUse = org.billingMode === m.mode;
                   const key = `${org.id}:${m.mode}`;
                   return (
                     <button key={m.mode}
-                      title={inUse
-                        ? "Markaz HOZIR shu rejimda ishlayapti — yopib bo'lmaydi"
-                        : on ? `Ochilgan (markaz tanlashi mumkin) — ${m.short}`
-                             : m.short}
-                      onClick={() => toggle(org, m.mode, !on)}
-                      disabled={busy !== null || (on && inUse)}
+                      title={standart
+                        ? "Standart usul — har doim ochiq, yopib bo'lmaydi"
+                        : inUse
+                          ? "Markaz HOZIR shu usulda ishlayapti — yopib bo'lmaydi"
+                          : on ? `Ochilgan (markaz ishlatishi mumkin) — ${m.short}`
+                               : m.short}
+                      onClick={() => { if (!standart) toggle(org, m.mode, !on); }}
+                      disabled={busy !== null || standart || (on && inUse)}
                       className={cn(
                         "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5",
                         "text-[11px] font-medium transition-colors disabled:opacity-60",
