@@ -401,6 +401,13 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       ? `/api/student-groups/${groupModal.sg.id}/exit-preview` : null,
     _fetcher);
   const hisob = exitPreview?.settlement ?? null;
+
+  /** Guruh almashtirish tarixi — `findOne` javobida keladi. */
+  const transfers: {
+    id: string; movedAt: string; fromGroupName: string; toGroupName: string;
+    oldPeriod: string; keptAmount: number | null; refundedAmount: number | null;
+    chargedAmount: number | null; note: string | null; actorName: string;
+  }[] = (student as { transfers?: never[] } | undefined)?.transfers ?? [];
   const hisoblanadi = !!hisob && !hisob.reason && hisob.totalLessons > 0;
 
   // ── Guruhga qo'shish / guruhni almashtirish ─────────────────────────────────
@@ -1453,6 +1460,47 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               </div>
             )}
           </div>
+
+        {/* GURUH ALMASHTIRISH TARIXI.
+            Ilgari bu ma'lumot faqat umumiy jurnal tasmasida yotardi:
+            "qaysi guruhdan qaysi guruhga, qachon" degan savolni
+            o'quvchi sahifasidan so'rab bo'lmasdi. */}
+        {transfers.length > 0 && (
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
+            <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">
+              Guruh almashtirish tarixi
+            </h3>
+            <ul className="space-y-2.5">
+              {transfers.map((t) => (
+                <li key={t.id} className="flex items-start gap-2.5">
+                  <Shuffle className="w-3.5 h-3.5 shrink-0 text-indigo-500 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12.5px] text-neutral-800 dark:text-neutral-200">
+                      <span className="font-medium">{t.fromGroupName}</span>
+                      {" → "}
+                      <span className="font-medium">{t.toGroupName}</span>
+                    </p>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      {formatUzDate(t.movedAt)}
+                      {t.actorName ? ` · ${t.actorName}` : ""}
+                    </p>
+                    {/* PUL NATIJASI — "qachon o'tdi" o'z-o'zicha yarim javob;
+                        markazning haqiqiy savoli "o'shanda pul qanday
+                        bo'lindi". Eski yozuvlarda bu saqlanmagan. */}
+                    {canSeeMoney && t.oldPeriod !== "QOLSIN" && (
+                      <p className="text-[11px] text-neutral-600 dark:text-neutral-300 mt-0.5">
+                        {t.oldPeriod === "KECHIRILSIN" ? "Eski davr kechirildi" : "O'tgan darslar bo'yicha"}
+                        {t.keptAmount != null ? ` · qoldi ${fmt(t.keptAmount)}` : ""}
+                        {t.refundedAmount ? ` · qaytarildi ${fmt(t.refundedAmount)}` : ""}
+                        {t.chargedAmount ? ` · yangi guruhga ${fmt(t.chargedAmount)}` : ""}
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Gamifikatsiya — API allaqachon qaytarardi, lekin sahifa ko'rsatmasdi */}
         <StudentPointsCard student={student} />
