@@ -36,7 +36,7 @@ import useSWR, { mutate } from "swr";
 import { fetcher as _fetcher } from "@/lib/fetcher";
 import {
   Phone, Calendar, DollarSign, ArrowLeft, AlertCircle,
-  Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays, Printer
+  Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays, Printer, Users
 } from "lucide-react";
 
 function fmt(v: number) {
@@ -547,6 +547,25 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const groupNameById = new Map<string, string>(
     (student.groups ?? []).map((sg: any) => [sg.groupId, sg.group?.name]),
   );
+
+  /**
+   * TO'LOV QAYSI GURUH UCHUN.
+   *
+   * Ma'lumot ALLAQACHON bazada edi — `Payment.groupId` to'lov qabul
+   * qilishda tanlanadi va `ledgerGroupName` o'sha lahzadagi nom nusxasi.
+   * Ekran esa buni hech qachon ko'rsatmasdi: bir nechta guruhga
+   * qatnaydigan o'quvchida uch qator to'lov bir xil ko'rinardi va
+   * qaysi biri qaysi guruhga tushgani faqat Moliya jadvalidan
+   * bilinardi (2026-09-16, egasining talabi).
+   *
+   * Avval JONLI nom, keyin NUSXA: guruh o'chirilsa `groupId` nullanadi,
+   * `ledgerGroupName` esa joyida qoladi — shuning uchun eski to'lov ham
+   * nomsiz qolmaydi. Ikkalasi ham bo'sh bo'lsa (guruhsiz umumiy to'lov)
+   * hech narsa chiqmaydi — bo'sh yorliq shovqindan boshqa narsa emas.
+   */
+  const tolovGuruhi = (p: { groupId?: string | null; ledgerGroupName?: string | null }) =>
+    (p.groupId ? groupNameById.get(p.groupId) : null) || p.ledgerGroupName || null;
+
   const recentDiscounts: any[] = (student.charges ?? [])
     .filter((c: any) => c.reason === "DISCOUNT")
     .slice(0, 5);
@@ -1543,6 +1562,14 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     <p className="text-[11px] text-neutral-400">
                       {new Date(p.date).toLocaleDateString("uz-UZ")} · {methodLabel(p.method)}
                     </p>
+                    {tolovGuruhi(p) && (
+                      <span className="mt-1 inline-flex items-center gap-1 max-w-full px-1.5 py-0.5 rounded-md
+                        bg-neutral-100 dark:bg-neutral-800 text-[10px] font-medium
+                        text-neutral-600 dark:text-neutral-300">
+                        <Users className="w-2.5 h-2.5 shrink-0" />
+                        <span className="truncate">{tolovGuruhi(p)}</span>
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {p.note && <p className="text-[11px] text-neutral-400 max-w-[120px] text-right truncate">{p.note}</p>}
