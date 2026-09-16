@@ -27,6 +27,8 @@ interface TrashRow {
   id: string; entity: string; entityLabel: string; entityId: string;
   title: string; subtitle: string; rowCount: number;
   actorName: string; deletedAt: string;
+  /** NEGA o'chirilgan — lidda majburiy, qolganlarida hozircha yo'q. */
+  reason?: string | null;
 }
 
 const ICON: Record<string, typeof Users> = {
@@ -186,6 +188,15 @@ export function TrashSection() {
                         <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
                           {row.actorName || "Noma'lum"} · {fmtRelative(row.deletedAt)}
                         </p>
+                        {/* SABAB — "nega o'chirilgan edi?" degan savolga
+                            javob aynan shu yerda kerak: odam korzinkaga
+                            tiklash uchun keladi va qarorni shunga qarab
+                            qabul qiladi. */}
+                        {row.reason && (
+                          <p className="text-[11px] text-neutral-600 dark:text-neutral-300 mt-0.5">
+                            Sabab: {row.reason}
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1 shrink-0">

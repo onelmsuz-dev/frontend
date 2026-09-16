@@ -71,11 +71,17 @@ interface ConfirmDeleteModalProps {
   confirmDisabled?: boolean;
   /** Tugma matni — bloklanganda sababni aytish uchun. */
   confirmLabel?: string;
+  /**
+   * Tavsif ostidagi qo'shimcha joy — masalan majburiy "sabab" maydoni.
+   *
+   * Ixtiyoriy: mavjud chaqiruvchilar o'zgarmasin.
+   */
+  children?: React.ReactNode;
 }
 
 export function ConfirmDeleteModal({
   open, onClose, onConfirm, loading, title, description,
-  confirmDisabled, confirmLabel,
+  confirmDisabled, confirmLabel, children,
 }: ConfirmDeleteModalProps) {
   return (
     <ModalOverlay open={open} onClose={onClose} panelClassName="sm:max-w-sm">
@@ -89,6 +95,7 @@ export function ConfirmDeleteModal({
           <h3 className="font-bold text-[15px] text-neutral-900 dark:text-neutral-100 mb-1">{title}</h3>
           <p className="text-[13px] text-neutral-500 dark:text-neutral-400">{description}</p>
         </div>
+        {children && <div className="text-left">{children}</div>}
         <div className="flex flex-col-reverse sm:flex-row gap-2">
           <button
             type="button"

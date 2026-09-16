@@ -121,8 +121,20 @@ export default function LeadsPage() {
    * bo'yicha moslanadi, aks holda lid qo'shilgandan keyin taxta
    * yangilanmay qolardi.
    */
-  const lidlarniYangila = () =>
-    mutate((k) => typeof k === "string" && k.startsWith("/api/leads"));
+  /** O'chirish sababi — MAJBURIY. */
+  const [ochirishSababi, setOchirishSababi] = useState("");
+
+  const lidlarniYangila = () => {
+    // `useSWRInfinite` ning ASOSIY kaliti `$inf$` bilan boshlanadi
+    // (`INFINITE_PREFIX`), ya'ni "/api/leads" bo'yicha moslash unga
+    // TEGMAYDI. Shu sababli lid qo'shilgandan/o'chirilgandan keyin
+    // taxta yangilanmay, faqat sahifani qayta yuklaganda ko'rinardi.
+    // Hookning O'Z `mutate` i aynan shu kalitni biladi.
+    lidlarniQaytaOl();
+    // Qolgan lid so'rovlari — sonlar, muddati kelganlar.
+    mutate((k) => typeof k === "string"
+      && (k.startsWith("/api/leads") || k.startsWith("$inf$/api/leads")));
+  };
 
   const refreshAll = () => {
     lidlarniYangila();
@@ -131,7 +143,8 @@ export default function LeadsPage() {
 
   // SAHIFALAB yuklanadi. Ilgari bitta so'rov edi va server 500 ta bilan
   // cheklardi — 938 lidning 438 tasi ekranda umuman ko'rinmasdi.
-  const { items: raw, total: jamiLid, yanaBor, qolgaYetdi, yanaYukla, isLoading } = useLeadsPaged();
+  const { items: raw, total: jamiLid, yanaBor, qolgaYetdi, yanaYukla, isLoading,
+          mutate: lidlarniQaytaOl } = useLeadsPaged();
   const leads: Lead[] = useMemo(() => (raw as Lead[]) ?? [], [raw]);
   // Bosqich sarlavhasidagi son SERVERDAN — yuklanmagan lidlar ham
   // sanaladi, aks holda "12 ta" deb turib, aslida 300 ta bo'lardi.
@@ -243,12 +256,20 @@ export default function LeadsPage() {
 
   async function deleteLead() {
     if (!deleteTarget) return;
+    if (ochirishSababi.trim().length < 3) { setError("Sababini yozing"); return; }
     setSaving(true);
     try {
-      const res = await fetch(`/api/leads/${deleteTarget.id}`, { method: "DELETE" });
+      // SABAB MAJBURIY. Server ham shuni talab qiladi — bu yerdagisi
+      // shunchaki tugmani bloklash emas, so'rov ham sababsiz ketmaydi.
+      const res = await fetch(`/api/leads/${deleteTarget.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: ochirishSababi.trim() }),
+      });
       if (!res.ok) { const d = await res.json(); setError(d.error ?? "Xatolik"); setSaving(false); return; }
       lidlarniYangila();
       setDeleteTarget(null);
+      setOchirishSababi("");
     } catch { setError("Xatolik"); }
     finally { setSaving(false); }
   }
@@ -618,14 +639,28 @@ export default function LeadsPage() {
 
       <ConfirmDeleteModal
         open={!!deleteTarget}
-        onClose={() => { setDeleteTarget(null); setError(""); }}
+        onClose={() => { setDeleteTarget(null); setError(""); setOchirishSababi(""); }}
         onConfirm={deleteLead}
         loading={saving}
+        confirmDisabled={ochirishSababi.trim().length < 3}
         title="Lidni o'chirish"
         description={<>
           <span className="font-semibold text-neutral-700 dark:text-neutral-300">{deleteTarget?.name}</span>{" "}o&apos;chirilsinmi?
         </>}
-      />
+      >
+        {/* SABAB MAJBURIY — "o'chirdim" degan amal o'z-o'zicha savol
+            qoldiradi: takror edimi, noto'g'ri raqammi, yoki tugma xato
+            bosildimi. Izoh korzinkada ham, jurnalda ham saqlanadi. */}
+        <FormField label="O'chirish sababi" required>
+          <Input value={ochirishSababi} autoFocus
+            placeholder="Masalan: takroriy lid / noto'g'ri raqam"
+            onChange={(e) => { setOchirishSababi(e.target.value); setError(""); }}
+            className="h-9 text-[13px]" />
+        </FormField>
+        {error && (
+          <p className="text-[12px] text-red-600 dark:text-red-400 mt-1.5">{error}</p>
+        )}
+      </ConfirmDeleteModal>
 
       {metaEnabled && tab === "meta" && (
         <div className="p-5">
