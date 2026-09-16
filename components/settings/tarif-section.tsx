@@ -121,7 +121,11 @@ export function TarifSection() {
                         : "glass-soft text-neutral-600 dark:text-neutral-300"
               )}>
                 <Clock className="w-4 h-4" />
-                <span className="text-[13px] font-semibold">{daysLeft} kun qoldi</span>
+                {/* Tugagan bo'lsa "0 kun qoldi" deb yozish chalkash edi —
+                    "qoldi" so'zi hali vaqt bordek eshitiladi. */}
+                <span className="text-[13px] font-semibold">
+                  {active ? `${daysLeft} kun qoldi` : "Muddati tugagan"}
+                </span>
               </div>
             </div>
           )}
@@ -130,14 +134,15 @@ export function TarifSection() {
             <div className="mt-4 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-xl px-3 py-2.5">
               <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
               <p className="text-[12px] font-medium text-red-700 dark:text-red-400">
-                Panel bloklangan — tarif muddati va imtiyozli davr tugagan. Davom etish uchun to'lov qiling.
+                Tarif muddati tugagan — faqat shu bo&apos;lim ochiq. Davom etish uchun to&apos;lov qiling.
               </p>
             </div>
           ) : warning ? (
             <div className="mt-4 flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/40 rounded-xl px-3 py-2.5">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
               <p className="text-[12px] font-medium text-amber-700 dark:text-amber-400">
-                Tarif muddati tugayapti. To'lovni amalga oshiring — aks holda tizim to'xtatilishi mumkin.
+                Tarif muddati tugayapti — {daysLeft}{" "}kun qoldi. To&apos;lovni amalga
+                oshiring, aks holda muddat tugagach faqat shu bo&apos;lim ochiq qoladi.
               </p>
             </div>
           ) : null}

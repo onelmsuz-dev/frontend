@@ -1,22 +1,39 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, CreditCard } from "lucide-react";
 import { useMe } from "@/lib/hooks/useMe";
 
 /**
- * Tarif muddati + grace-period tugagan bo'lsa, /settings dan boshqa barcha
- * sahifalarni to'liq ekranli ogohlantirish bilan qoplaydi. Backend allaqachon
- * shu holatda API so'rovlarini rad etadi (402) — bu faqat sababni tushunarli
- * qilib ko'rsatadi va to'lov sahifasiga yo'l ko'rsatadi.
+ * Tarif muddati TUGAGAN bo'lsa (imtiyozli davr yo'q), markazni tarif
+ * bo'limiga yo'naltiradi va qolgan sahifalarni qoplaydi.
+ *
+ * Backend allaqachon shu holatda API so'rovlarini 402 bilan rad etadi —
+ * bu qatlam faqat sababni tushunarli qilib ko'rsatadi va to'lovga olib
+ * boradi. Ya'ni bloklash INTERFEYSDA emas, serverda.
  */
 export function SubscriptionGate({ children }: { children: React.ReactNode }) {
   const { me } = useMe();
   const pathname = usePathname();
+  const router = useRouter();
 
   const onSettings = pathname?.startsWith("/settings");
   const blocked = me?.subscriptionBlocked === true;
+
+  /**
+   * TUGAGACH — O'ZI TARIF BO'LIMIGA YO'NALTIRADI.
+   *
+   * Ilgari faqat qoplama va "To'lov qilish" tugmasi chiqardi: markaz
+   * kirardi, ekranni ko'rardi va tugmani bosishi kerak edi. Egasining
+   * talabi (2026-09-16): muddat tugagach markaz KIRSIN, lekin
+   * TO'G'RIDAN-TO'G'RI tarif bo'limiga tushsin va boshqa bo'limlar
+   * ishlamasin. Boshqa bo'limga o'tishga urinish shu yerdan qaytariladi.
+   */
+  useEffect(() => {
+    if (blocked && !onSettings) router.replace("/settings");
+  }, [blocked, onSettings, router]);
 
   if (blocked && !onSettings) {
     return (
@@ -28,13 +45,14 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
           <div>
             <h2 className="text-[16px] font-bold text-neutral-900 dark:text-neutral-100">Tarif muddati tugagan</h2>
             <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-1.5">
-              Markazingiz obunasi tugagan va imtiyozli muddat ham o'tgan. Xizmatdan davom etish uchun to'lovni amalga oshiring.
+              Markazingiz obunasi tugagan. Tarif bo&apos;limiga o&apos;tkazilyapti —
+              xizmatdan davom etish uchun to&apos;lovni amalga oshiring.
             </p>
           </div>
           <Link href="/settings"
             className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-indigo-600 text-white dark:bg-indigo-500 text-[13px] font-semibold hover:opacity-90 transition-opacity">
             <CreditCard className="w-4 h-4" />
-            To'lov qilish
+            To&apos;lov qilish
           </Link>
         </div>
       </div>
