@@ -31,7 +31,8 @@ import {
 } from "@/lib/hooks/useGamification";
 import { levelFromXp } from "@/lib/levels";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
-import { mutate } from "swr";
+import useSWR, { mutate } from "swr";
+import { fetcher as _fetcher } from "@/lib/fetcher";
 import {
   Phone, Calendar, DollarSign, ArrowLeft, AlertCircle,
   Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays, Printer
@@ -157,6 +158,15 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
    * chaqirilishidan OLDIN shu bilan to'ldiriladi va tasdiqlash oynasi
    * ochiladi. `null` — oyna yopiq.
    */
+  /**
+   * ESKI GURUHNING OCHIQ DAVRI bilan nima qilinsin.
+   *
+   * Standart — `QOLSIN`, ya'ni bugungi xulq: davr eski guruhda to'liq
+   * qoladi. Bu ataylab: proratsiya avtomatik yoqilsa markazlarning
+   * raqami o'z-o'zidan o'zgarardi.
+   */
+  const [oldPeriod, setOldPeriod] =
+    useState<"QOLSIN" | "DARSLAR" | "KECHIRILSIN">("QOLSIN");
   const [transferDebtChoice, setTransferDebtChoice] =
     useState<{ replacing: any; groupName: string; debt: number } | null>(null);
 
@@ -377,6 +387,22 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     } finally { setExiting(false); }
   }
 
+  // ALMASHTIRISHDA DAVR HISOBI — oldindan, hech narsa yozmasdan.
+  // Xodim tanlashdan OLDIN raqamni ko'rishi kerak, aks holda uch
+  // tanlovning farqi faqat so'zda qolardi.
+  const { data: exitPreview } = useSWR<{
+    settlement: {
+      charged: number; periodStart: string; periodEnd: string;
+      totalLessons: number; usedLessons: number;
+      suggested: number; reason: string | null;
+    } | null;
+  }>(
+    groupModal?.sg && canSeeMoney
+      ? `/api/student-groups/${groupModal.sg.id}/exit-preview` : null,
+    _fetcher);
+  const hisob = exitPreview?.settlement ?? null;
+  const hisoblanadi = !!hisob && !hisob.reason && hisob.totalLessons > 0;
+
   // ── Guruhga qo'shish / guruhni almashtirish ─────────────────────────────────
   //
   // Ikkalasi bitta oyna: `groupModal.sg` bor bo'lsa — AYNAN o'sha a'zolik
@@ -402,6 +428,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               fromId: replacing.id, groupId: transferGroupId,
               ...(enrollDate ? { joinedAt: enrollDate } : {}),
               ...(waiveOldDebt ? { waiveOldDebt: true } : {}),
+              ...(oldPeriod !== "QOLSIN" ? { oldPeriod } : {}),
             }),
           })
         : await fetch("/api/student-groups", {
@@ -418,6 +445,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       setGroupModal(null);
       setTransferGroupId("");
       setTransferDebtChoice(null);
+      setOldPeriod("QOLSIN");
     } catch { setTransferErr("Serverga ulanib bo'lmadi"); }
     finally { setTransferring(false); }
   }
@@ -928,6 +956,56 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               hint="Haqiqiy sanani kiriting — hisob shundan yuritiladi">
               <DatePicker value={enrollDate} max={todayStr()} onChange={setEnrollDate} />
             </FormField>
+
+            {/* ESKI GURUHNING OCHIQ DAVRI — uch tanlov.
+                "Ketgan" moduli bilan bir xil naqsh: sozlama emas, HAR
+                o'tkazishda qaror. Raqamlar tanlashdan OLDIN ko'rinadi,
+                aks holda uch tanlovning farqi faqat so'zda qolardi. */}
+            {groupModal?.sg && canSeeMoney && hisoblanadi && (
+              <FormField label="Eski guruhdagi ochiq davr">
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-2">
+                  {hisob.periodStart}–{hisob.periodEnd}: {fmt(hisob.charged)} yozilgan.
+                  {" "}Qo&apos;shilganidan beri {hisob.totalLessons}{" "}ta dars,
+                  {" "}{hisob.usedLessons}{" "}tasi o&apos;tgan.
+                </p>
+                <div className="space-y-2">
+                  {([
+                    { v: "QOLSIN" as const, l: "To'liq qolsin",
+                      d: `${fmt(hisob.charged)} eski guruhda qoladi — yangi guruh shu oy uchun yozmaydi` },
+                    { v: "DARSLAR" as const, l: "O'tgan darslar uchun",
+                      d: `${fmt(hisob.suggested)} qoladi, ${fmt(hisob.charged - hisob.suggested)} qaytariladi`
+                       + ` — qolgan ${hisob.totalLessons - hisob.usedLessons} dars yangi guruh narxida yoziladi` },
+                    { v: "KECHIRILSIN" as const, l: "Kechirilsin",
+                      d: `${fmt(hisob.charged)} to'liq qaytariladi — faqat yangi guruh hisoblanadi` },
+                  ]).map(o => (
+                    <button key={o.v} type="button" onClick={() => setOldPeriod(o.v)}
+                      className={cn(
+                        "w-full px-3 py-2.5 rounded-xl border-2 text-left transition-all",
+                        oldPeriod === o.v
+                          ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-400"
+                          : "border-white/60 dark:border-white/10 hover:border-neutral-400",
+                      )}>
+                      <p className={cn("text-[13px] font-semibold",
+                        oldPeriod === o.v
+                          ? "text-indigo-700 dark:text-indigo-300"
+                          : "text-neutral-700 dark:text-neutral-300")}>
+                        {o.l}
+                      </p>
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400">{o.d}</p>
+                    </button>
+                  ))}
+                </div>
+                {/* TO'LIQ KO'CHISH — sana orqaga surilsa bo'linish yo'q. */}
+                {oldPeriod === "DARSLAR" && enrollDate
+                  && enrollDate <= String(groupModal.sg.joinedAt ?? "").slice(0, 10) && (
+                  <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-2">
+                    Sana o&apos;quvchi eski guruhga qo&apos;shilgan kundan oldin —
+                    davr BO&apos;LINMAYDI: eski guruh to&apos;liq qaytaradi, yangi guruh
+                    butun davrni yozadi.
+                  </p>
+                )}
+              </FormField>
+            )}
 
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-4 py-3">
               <p className="text-[12px] text-amber-700 dark:text-amber-400">
