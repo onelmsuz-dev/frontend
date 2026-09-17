@@ -9,6 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ATTENDANCE_GRACE_MINUTES } from "@/lib/form-constants";
 import { businessMinutesOfDay, businessToday } from "@/lib/time";
+import { StudentInfoPopover } from "./student-info-popover";
 
 type Status = "KELDI" | "KELMADI" | "KECH_KELDI" | "SABABLI";
 
@@ -278,8 +279,16 @@ export function GroupAttendanceSection({
               <div key={sg.id}
                 className={cn("flex items-center justify-between gap-3 px-5 py-2.5 flex-wrap transition-colors",
                   isTrial ? "bg-amber-50/40 dark:bg-amber-900/10" : "hover:bg-white/60 dark:hover:bg-white/10")}>
-                {/* Kim */}
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                {/* Kim — ustiga turganda (yoki telefonda uzoq bosganda)
+                    to'liq ma'lumot chiqadi. Oyna FAQAT shu blokka
+                    bog'langan: butun qatorga bog'lansa davomat tugmasini
+                    bosishda ham ochilib, xalaqit berardi. */}
+                <StudentInfoPopover
+                  student={s ?? {}}
+                  membership={sg}
+                  fmtMoney={fmtMoney}
+                  className="flex items-center gap-2.5 min-w-0 flex-1"
+                >
                   <div className={cn(
                     "w-8 h-8 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shrink-0",
                     isTrial
@@ -323,7 +332,7 @@ export function GroupAttendanceSection({
                       </a>
                     )}
                   </div>
-                </div>
+                </StudentInfoPopover>
 
                 {/* Amallar */}
                 <div className="flex items-center gap-1.5 shrink-0">
