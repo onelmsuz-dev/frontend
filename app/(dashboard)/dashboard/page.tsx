@@ -5,7 +5,7 @@ import {
 } from "recharts";
 import {
   GraduationCap, Users, Wallet, Target, UserCheck, TrendingUp,
-  CreditCard, AlertTriangle,
+  CreditCard, AlertTriangle, UserSquare2, Trophy,
 } from "lucide-react";
 import { useChartColors } from "@/hooks/use-chart-colors";
 import { TopHeader } from "@/components/layout/top-header";
@@ -22,6 +22,7 @@ import useSWR from "swr";
 import { OnboardingChecklist } from "@/components/onboarding/onboarding-checklist";
 import { formatCurrency } from "@/lib/money";
 import { formatUzDate } from "@/lib/date-uz";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
 
 const _fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -66,19 +67,40 @@ function OwnerDashboardPage() {
   const payments = Array.isArray(paymentsData) ? paymentsData : [];
   const stagesById = Object.fromEntries((stagesData ?? []).map((s) => [s.id, s]));
 
+  /**
+   * DASHBOARD RUXSATGA QARAB CHIZILADI.
+   *
+   * Ilgari bu sahifada ruxsat UMUMAN tekshirilmasdi: `dashboard.view`
+   * bor har kim markazning daromadini, qarzdorlar sonini,
+   * o'qituvchilar sonini va davomat foizini ko'rardi. Sotuvchi/operator
+   * roli aynan shunday (2026-09-17, egasining xabari).
+   *
+   * Pul maydonlari javob chegarasida allaqachon `null` ga qo'yilardi —
+   * lekin kartochka `?? 0` bilan "0 so'm" deb chizib qo'yardi, ya'ni
+   * markaz daromadi NOL bo'lib ko'rinardi. Bu yashirishdan ham yomon:
+   * yolg'on raqam.
+   */
+  const { me } = useMe();
+  const kor = (p: string) => hasPerm(me?.permissions, p);
+  const pulKor  = kor("payments.view");
+  const lidKor  = kor("leads.view");
+
   const STAT_CARDS = [
     {
+      perm: "students.view",
       title: "Jami o'quvchi", value: statsLoading ? null : stats?.studentCount ?? 0,
       change: statsLoading ? null : stats?.newStudentsThisMonth > 0 ? `+${stats.newStudentsThisMonth} bu oy` : "Bu oy o'zgarish yo'q",
       up: (stats?.newStudentsThisMonth ?? 0) >= 0,
       icon: GraduationCap, bg: "bg-indigo-50 dark:bg-indigo-950/40", text: "text-indigo-600 dark:text-indigo-400",
     },
     {
+      perm: "groups.view",
       title: "Faol guruhlar", value: statsLoading ? null : stats?.groupCount ?? 0,
       change: null, up: true,
       icon: Users, bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-600 dark:text-emerald-400",
     },
     {
+      perm: "payments.view",
       title: "Oylik daromad", value: statsLoading ? null : formatCurrency(stats?.monthlyRevenue ?? 0),
       change: statsLoading ? null : stats?.revenueChange != null
         ? `${stats.revenueChange >= 0 ? "+" : ""}${stats.revenueChange}% o'tgan oyga`
@@ -87,23 +109,41 @@ function OwnerDashboardPage() {
       icon: Wallet, bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-600 dark:text-amber-400",
     },
     {
+      perm: "leads.view",
       title: "Yangi lidlar", value: statsLoading ? null : stats?.leadCount ?? 0,
       change: statsLoading ? null : stats?.newLeadsThisMonth > 0 ? `+${stats.newLeadsThisMonth} bu oy` : null,
       up: (stats?.newLeadsThisMonth ?? 0) >= 0,
       icon: Target, bg: "bg-pink-50 dark:bg-pink-950/40", text: "text-pink-600 dark:text-pink-400",
     },
     {
+      perm: "teachers.view",
       title: "O'qituvchilar", value: statsLoading ? null : stats?.teacherCount ?? 0,
       change: null, up: true,
       icon: TrendingUp, bg: "bg-violet-50 dark:bg-violet-950/40", text: "text-violet-600 dark:text-violet-400",
     },
     {
+      perm: "payments.view",
       title: "Qarzdorlar", value: statsLoading ? null : stats?.debtorCount ?? 0,
       change: (stats?.debtorCount ?? 0) > 0 ? "Nazorat qiling" : null,
       up: false,
       icon: UserCheck, bg: "bg-teal-50 dark:bg-teal-950/40", text: "text-teal-600 dark:text-teal-400",
     },
-  ];
+    /* SOTUVCHI/OPERATOR uchun — markazning umumiy soni emas, O'ZINING
+       natijasi. `leads.view` bor har kimda chiqadi (sotuvchida ham,
+       egasida ham): "mening lidlarim" hammaga ma'noli raqam. */
+    {
+      perm: "leads.view",
+      title: "Menga biriktirilgan", value: statsLoading ? null : stats?.myLeadCount ?? 0,
+      change: null, up: true,
+      icon: UserSquare2, bg: "bg-sky-50 dark:bg-sky-950/40", text: "text-sky-600 dark:text-sky-400",
+    },
+    {
+      perm: "leads.view",
+      title: "Bu oy o'quvchiga aylangan", value: statsLoading ? null : stats?.myWonThisMonth ?? 0,
+      change: null, up: true,
+      icon: Trophy, bg: "bg-lime-50 dark:bg-lime-950/40", text: "text-lime-600 dark:text-lime-400",
+    },
+  ].filter((c) => !c.perm || kor(c.perm));
 
   return (
     <div>
@@ -153,7 +193,7 @@ function OwnerDashboardPage() {
         </div>
 
         {/* Alert: debtors */}
-        {!statsLoading && (stats?.debtorCount ?? 0) > 0 && (
+        {pulKor && !statsLoading && (stats?.debtorCount ?? 0) > 0 && (
           /* Telefonda bir qatorga sig'masdi: matn o'ralib, "Ko'rish"
              havolasi uning ustiga chiqib qolardi. Tor ekranda ustun
              bo'lib joylashadi, `sm` dan boshlab avvalgidek bir qator. */
@@ -172,7 +212,10 @@ function OwnerDashboardPage() {
           </div>
         )}
 
-        {/* Area chart — still uses mock revenue until finance API is ready */}
+        {/* Area chart — still uses mock revenue until finance API is ready.
+            PUL RUXSATI: bu butunlay moliyaviy blok, `payments.view`
+            bo'lmasa chizilmaydi. */}
+        {pulKor && (
         <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -208,11 +251,13 @@ function OwnerDashboardPage() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        )}
 
         {/* 2-col bottom */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-          {/* Leads */}
+          {/* Leads — `leads.view` bo'lsagina */}
+          {lidKor && (
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/50 dark:border-white/10">
               <div className="flex items-center gap-2">
@@ -257,8 +302,12 @@ function OwnerDashboardPage() {
               <div className="py-10 text-center text-sm text-neutral-400">Hali lid yo'q</div>
             )}
           </div>
+          )}
 
-          {/* Payments + attendance */}
+          {/* To'lovlar — `payments.view` bo'lsagina. Pastdagi yashil
+              kartochka guruh sonini ko'rsatadi, ya'ni pulga aloqasi
+              yo'q — u shu blokdan TASHQARIDA qoldi. */}
+          {pulKor && (
           <div className="flex flex-col gap-5">
             <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/50 dark:border-white/10">
@@ -302,11 +351,17 @@ function OwnerDashboardPage() {
                 <div className="py-8 text-center text-sm text-neutral-400">Hali to'lov yo'q</div>
               )}
             </div>
+          </div>
+          )}
 
-            {/* Stats banner */}
-            <div className="bg-teal-600 text-white rounded-2xl p-5 flex items-center gap-4">
+          {/* Jami o'quvchi banneri — PULGA ALOQASI YO'Q, shuning uchun
+              to'lovlar blokidan ajratildi: `students.view` bor xodim
+              (masalan sotuvchi) uni ko'rishi kerak, lekin to'lovlar
+              ro'yxatini ko'rmasligi kerak. */}
+          {kor("students.view") && (
+            <div className="bg-teal-600 text-white rounded-2xl p-5 flex items-center gap-4 h-fit">
               <div className="flex-1">
-                <p className="text-teal-200 text-[11px] font-semibold uppercase tracking-wider">Jami o'quvchi</p>
+                <p className="text-teal-200 text-[11px] font-semibold uppercase tracking-wider">Jami o&apos;quvchi</p>
                 <p className="text-[40px] font-black leading-none mt-1">
                   {statsLoading ? "..." : stats?.studentCount ?? 0}
                 </p>
@@ -316,7 +371,7 @@ function OwnerDashboardPage() {
               </div>
               <UserCheck className="w-14 h-14 text-white/20 shrink-0" />
             </div>
-          </div>
+          )}
         </div>
 
       </div>
