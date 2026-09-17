@@ -12,14 +12,8 @@ import { StudentPicker, type PickedStudent } from "@/components/finance/student-
 import { useStudent } from "@/lib/hooks/useStudents";
 import { cn } from "@/lib/utils";
 import { SELECTABLE_METHODS, methodGridCls } from "@/lib/payment-methods";
+import { formatCurrency } from "@/lib/money";
 
-function formatCurrency(v: number) {
-  return new Intl.NumberFormat("uz-UZ", {
-    style: "currency",
-    currency: "UZS",
-    maximumFractionDigits: 0,
-  }).format(v);
-}
 
 
 

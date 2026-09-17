@@ -30,10 +30,8 @@ import { useStudents } from "@/lib/hooks/useStudents";
 import useSWR, { mutate } from "swr";
 import { useBranch, useBranchQueryString } from "@/lib/contexts/branch-context";
 import { fmtMonthYear } from "@/lib/date-uz";
+import { formatCurrency } from "@/lib/money";
 
-function formatCurrency(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
-}
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;

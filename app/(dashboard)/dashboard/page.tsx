@@ -20,12 +20,10 @@ import { stageHue } from "@/lib/lead-stages";
 import { useBranchQueryString, useBranch } from "@/lib/contexts/branch-context";
 import useSWR from "swr";
 import { OnboardingChecklist } from "@/components/onboarding/onboarding-checklist";
+import { formatCurrency } from "@/lib/money";
 
 const _fetcher = (url: string) => fetch(url).then(r => r.json());
 
-function formatCurrency(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
-}
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -125,13 +123,22 @@ function OwnerDashboardPage() {
             const Icon = s.icon;
             return (
               <div key={s.title}
-                className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
+                className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4
+                  min-w-0 overflow-hidden">
                 <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
                   <Icon className={cn("w-4.5 h-4.5", s.text)} />
                 </div>
                 {s.value === null
                   ? <Skeleton className="h-6 w-12 mb-1" />
-                  : <p className="text-[22px] font-black text-neutral-900 dark:text-neutral-100 leading-none">{s.value}</p>
+                  /* TOR EKRAN. "Oylik daromad" eng uzun qiymat va telefonda
+                     ikki ustunli setkada kartaga sig'mas edi. Uch qatlam
+                     himoya: mobilda kichikroq shrift, `leading-tight` (ikki
+                     qatorga tushsa siqilib ketmasin) va `break-words`
+                     (o'ralishga ruxsat). Raqam ichidagi bo'shliqlar
+                     uzilmas — `lib/money.ts` ga qarang, shuning uchun
+                     "7 500 000" o'rtasidan bo'linmaydi. */
+                  : <p className="text-[18px] sm:text-[22px] font-black text-neutral-900
+                      dark:text-neutral-100 leading-tight break-words">{s.value}</p>
                 }
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{s.title}</p>
                 {s.change && (
@@ -146,12 +153,19 @@ function OwnerDashboardPage() {
 
         {/* Alert: debtors */}
         {!statsLoading && (stats?.debtorCount ?? 0) > 0 && (
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-            <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
-            <p className="text-sm text-red-700 dark:text-red-300">
-              <span className="font-bold">{stats?.debtorCount} ta o'quvchi</span> to'lovni kechiktirmoqda — moliya bo'limiga o'ting
-            </p>
-            <a href="/finance?tab=qarzdorlar" className="ml-auto text-xs font-semibold text-red-600 dark:text-red-400 hover:underline shrink-0">
+          /* Telefonda bir qatorga sig'masdi: matn o'ralib, "Ko'rish"
+             havolasi uning ustiga chiqib qolardi. Tor ekranda ustun
+             bo'lib joylashadi, `sm` dan boshlab avvalgidek bir qator. */
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3
+            rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+            <div className="flex items-start gap-3 min-w-0">
+              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700 dark:text-red-300">
+                <span className="font-bold">{stats?.debtorCount} ta o'quvchi</span> to'lovni kechiktirmoqda — moliya bo'limiga o'ting
+              </p>
+            </div>
+            <a href="/finance?tab=qarzdorlar" className="sm:ml-auto self-start sm:self-auto
+              text-xs font-semibold text-red-600 dark:text-red-400 hover:underline shrink-0">
               Ko'rish →
             </a>
           </div>

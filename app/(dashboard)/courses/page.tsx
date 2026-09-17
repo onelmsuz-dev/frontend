@@ -16,10 +16,8 @@ import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { useFeature } from "@/lib/hooks/useFeatures";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
+import { formatCurrency } from "@/lib/money";
 
-function formatCurrency(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
-}
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
