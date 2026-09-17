@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -56,7 +57,20 @@ function revalidate() {
   mutate((k: string) => typeof k === "string" && k.startsWith("/api/groups"), undefined, { revalidate: true });
 }
 
+/**
+ * `useSearchParams` Suspense chegarasini talab qiladi (sozlamalar
+ * sahifasidagi bilan bir xil naqsh) — shuning uchun asosiy komponent
+ * ichkarida.
+ */
 export default function GroupsPage() {
+  return (
+    <Suspense fallback={null}>
+      <GroupsContent />
+    </Suspense>
+  );
+}
+
+function GroupsContent() {
   // Amal tugmalari ruxsatga bog'landi — ilgari hammaga ko'rinardi va
   // bosilganda backend 403 qaytarardi (o'qituvchida bu ruxsatlar yo'q).
   const { me } = useMe();
@@ -176,6 +190,39 @@ export default function GroupsPage() {
     setShowNewRoom(false); setNewRoomName(""); setNewRoomCapacity(""); setNewRoomErr("");
     setShowModal(true);
   }
+
+  /**
+   * `/groups?edit=<id>` — TASHQARIDAN kelgan "xonani almashtirish".
+   *
+   * O'quvchi sahifasida guruh to'lgani haqida ogohlantirish chiqadi va
+   * xodim "Xonani almashtirish" ni tanlashi mumkin. O'sha yerdan guruh
+   * formasini ochib berishning boshqa yo'li yo'q — bu forma shu
+   * sahifaning ichki holati.
+   *
+   * BIR MARTA ochiladi (`ochildi` bayrog'i) va manzildan parametr
+   * darhol olib tashlanadi: aks holda xodim formani yopib, sahifani
+   * yangilasa yoki orqaga qaytsa forma yana ochilib turardi.
+   */
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const ochildi = useRef(false);
+  useEffect(() => {
+    const id = searchParams.get("edit");
+    if (!id || ochildi.current) return;
+    const g = groups.find((x: { id: string }) => x.id === id);
+    if (!g) return;              // ro'yxat hali kelmagan bo'lishi mumkin
+    ochildi.current = true;
+    // `set-state-in-effect` ATAYLAB o'chirilgan: forma holatini URL dan
+    // olishning boshqa yo'li yo'q (u shu sahifaning ichki holati), va
+    // bu bir marta — `ochildi` bayrog'i takrorlanishni to'sadi.
+    // Sozlamalar sahifasidagi `?tab=` bilan aynan bir xil vaziyat.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    openEdit(g);
+    router.replace("/groups");
+    // `openEdit` va `router` barqaror emas, lekin bayroq qayta ishlashni
+    // to'sadi — shuning uchun ro'yxat va parametr yetarli.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, groups]);
 
   function toggleDay(d: string) {
     setForm(p => ({

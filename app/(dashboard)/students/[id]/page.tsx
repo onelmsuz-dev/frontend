@@ -136,6 +136,21 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   /** null → yopiq; { sg: null } → yangi guruhga QO'SHISH; { sg } → SHU guruhni almashtirish. */
   const [groupModal,      setGroupModal]      = useState<{ sg: any | null } | null>(null);
   const [transferGroupId, setTransferGroupId] = useState("");
+  /**
+   * GURUH TO'LGANI HAQIDA OGOHLANTIRISH.
+   *
+   * Kartochkada "13/12 (108%)" ko'rinardi — ya'ni tizim chegaradan
+   * oshganini BILARDI, lekin qo'shish paytida hech narsa demasdi.
+   * Xodim faqat keyin, ro'yxatga qarab sezardi (egasining talabi,
+   * 2026-09-17).
+   *
+   * Chegara — guruhning O'Z `maxStudents` i (kartochkadagi raqamning
+   * aynan o'zi), xonaning sig'imi emas: xona bir necha guruhga
+   * tegishli bo'lishi mumkin va guruh formasida mos xonalar
+   * allaqachon `maxStudents` bo'yicha filtrlanadi.
+   */
+  const [sigimOgoh, setSigimOgoh] = useState<
+    { groupId: string; groupName: string; cnt: number; max: number } | null>(null);
   const [transferErr,     setTransferErr]     = useState("");
   /** Guruhga qanday holatda qo'shilsin — xodim ataylab tanlaydi. */
   const [enrollAs,        setEnrollAs]        = useState<"SINOV" | "FAOL">("SINOV");
@@ -458,8 +473,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     finally { setTransferring(false); }
   }
 
-  async function submitGroupModal() {
-    if (!transferGroupId) { setTransferErr("Guruhni tanlang"); return; }
+  /**
+   * Sig'im tekshiruvidan KEYINGI qadam — qarz tasdiqlash va o'tkazish.
+   * Ogohlantirishdagi "Ha" tugmasi ham shu yerga tushadi.
+   */
+  async function afterSigim() {
     const replacing = groupModal?.sg ?? null;
 
     // ALMASHTIRISH bo'lsa — eski guruhda qarz bormi tekshiramiz. Bor bo'lsa
@@ -477,6 +495,25 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       }
     }
     await runTransfer(replacing, false);
+  }
+
+  async function submitGroupModal() {
+    if (!transferGroupId) { setTransferErr("Guruhni tanlang"); return; }
+
+    // TO'LGAN GURUH — qo'shishdan OLDIN so'raymiz.
+    //
+    // `_count.students` CHIQIB KETGANLARNI sanamaydi (server shunday
+    // filtrlaydi), ya'ni raqam kartochkadagi bilan aynan bir xil.
+    const nishon = allGroups.find((g: { id: string }) => g.id === transferGroupId) as
+      { id: string; name?: string; maxStudents?: number; _count?: { students?: number } } | undefined;
+    const cnt = nishon?._count?.students ?? 0;
+    const max = nishon?.maxStudents ?? 15;
+    if (nishon && cnt >= max) {
+      setSigimOgoh({ groupId: nishon.id, groupName: nishon.name ?? "", cnt, max });
+      return;
+    }
+
+    await afterSigim();
   }
 
   // ── Loading / Not found ───────────────────────────────────────────────────────
@@ -940,9 +977,18 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 data-tour={TOUR_TARGETS.studentEnrollSelect}
                 className="w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
                 <option value="">Guruhni tanlang...</option>
-                {availableGroups.map((g: any) => (
-                  <option key={g.id} value={g.id}>{g.name} — {g.course?.name}</option>
-                ))}
+                {/* To'lganlik ro'yxatda KO'RINADI — shunda ogohlantirish
+                    kutilmagan bo'lib chiqmaydi va xodim bo'sh guruhni
+                    darhol tanlay oladi. */}
+                {availableGroups.map((g: any) => {
+                  const bor = g._count?.students ?? 0;
+                  const chek = g.maxStudents ?? 15;
+                  return (
+                    <option key={g.id} value={g.id}>
+                      {g.name} — {g.course?.name} ({bor}/{chek}{bor >= chek ? ", to'lgan" : ""})
+                    </option>
+                  );
+                })}
               </select>
             </FormField>
             {/* HOLAT TANLOVI — ro'yxatdagi ommaviy oyna bilan bir xil.
@@ -1054,6 +1100,80 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{transferErr}</p>
           </div>
         )}
+      </Modal>
+
+      {/* GURUH TO'LGAN — uch tanlov.
+          Kartochkadagi "13/12" raqami tizim chegaradan oshganini
+          BILGANINI ko'rsatardi, lekin qo'shish paytida hech narsa
+          demasdi. Endi so'raydi va uchala yo'l ham ochiq qoladi:
+          baribir qo'shish, boshqa guruh tanlash, yoki xonani
+          almashtirishga o'tish. */}
+      <Modal open={!!sigimOgoh} onClose={() => setSigimOgoh(null)}
+        title="Guruh to'lgan"
+        subtitle={sigimOgoh ? sigimOgoh.groupName : ""}
+        footer={
+          <Button variant="outline" className="h-9 px-4 text-[13px] ml-auto"
+            onClick={() => setSigimOgoh(null)}>Bekor</Button>
+        }>
+        <div className="space-y-3">
+          <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl
+            bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-[12.5px] text-amber-800 dark:text-amber-300">
+              Bu guruh <span className="font-bold">{sigimOgoh?.max}</span> kishiga
+              mo&apos;ljallangan, hozir <span className="font-bold">{sigimOgoh?.cnt}</span> ta
+              o&apos;quvchi bor. Davom ettirasizmi?
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            {/* HA — hozirgidek qolaveradi, o'quvchi ortiqcha bo'lib qo'shiladi. */}
+            <button type="button" disabled={transferring}
+              onClick={() => { setSigimOgoh(null); void afterSigim(); }}
+              className="w-full text-left px-3.5 py-2.5 rounded-xl border transition-colors
+                border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/20
+                hover:bg-indigo-100 dark:hover:bg-indigo-900/40 disabled:opacity-50">
+              <p className="text-[13px] font-semibold text-indigo-700 dark:text-indigo-300">
+                {transferring ? "Saqlanmoqda..." : "Ha, davom etish"}
+              </p>
+              <p className="text-[11px] text-indigo-600/80 dark:text-indigo-400/80 mt-0.5">
+                O&apos;quvchi chegaradan ortiq bo&apos;lib qo&apos;shiladi
+              </p>
+            </button>
+
+            {/* YO'Q — guruh tanlash oynasiga QAYTARADI. Tanlangan guruh
+                tozalanadi, aks holda xodim yana o'sha to'lgan guruh
+                tanlangan holatni ko'rardi. */}
+            <button type="button"
+              onClick={() => { setSigimOgoh(null); setTransferGroupId(""); setTransferErr(""); }}
+              className="w-full text-left px-3.5 py-2.5 rounded-xl border transition-colors
+                border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50
+                dark:hover:bg-neutral-800">
+              <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">
+                Yo&apos;q, boshqa guruhga qo&apos;shish
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                Guruh tanlash oynasiga qaytadi
+              </p>
+            </button>
+
+            {/* XONANI ALMASHTIRISH — guruh formasini ochib beradi.
+                Forma guruhlar sahifasining ichki holati, shuning uchun
+                manzil orqali ochiladi (`?edit=<id>`). */}
+            <Link href={`/groups?edit=${sigimOgoh?.groupId ?? ""}`}
+              onClick={() => { setSigimOgoh(null); setGroupModal(null); }}
+              className="block px-3.5 py-2.5 rounded-xl border transition-colors
+                border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50
+                dark:hover:bg-neutral-800">
+              <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">
+                Xonani almashtirish
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                Guruh sozlamasi ochiladi — xona va o&apos;rin sonini o&apos;zgartirish
+              </p>
+            </Link>
+          </div>
+        </div>
       </Modal>
 
       {/* Guruh almashtirishda ESKI guruhdagi qarz — saqlansinmi, kechirilsinmi.
