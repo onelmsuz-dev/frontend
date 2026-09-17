@@ -23,6 +23,7 @@ import {
 } from "@/lib/hooks/useSms";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useTeachers } from "@/lib/hooks/useTeachers";
+import { formatUzDate } from "@/lib/date-uz";
 
 function fmtMoney(v: number) {
   return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
@@ -542,7 +543,7 @@ export default function SmsPage() {
                 <div key={m.id} className="flex items-center justify-between px-4 py-2.5 border-b border-white/50 dark:border-white/10 last:border-0">
                   <div className="min-w-0">
                     <p className="text-[12px] font-medium text-neutral-800 dark:text-neutral-200 truncate">{m.recipientName ?? m.phone}</p>
-                    <p className="text-[11px] text-neutral-400 truncate">{m.phone} · {new Date(m.createdAt).toLocaleDateString("uz-UZ")}</p>
+                    <p className="text-[11px] text-neutral-400 truncate">{m.phone} · {formatUzDate(m.createdAt)}</p>
                   </div>
                   <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0",
                     m.status === "SENT" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
@@ -563,7 +564,7 @@ export default function SmsPage() {
                 <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
                   <div>
                     <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{r.quantity} ta · {fmtMoney(r.amount)}</p>
-                    <p className="text-[11px] text-neutral-400">{new Date(r.createdAt).toLocaleDateString("uz-UZ")}</p>
+                    <p className="text-[11px] text-neutral-400">{formatUzDate(r.createdAt)}</p>
                   </div>
                   <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-semibold", STATUS_COLOR[r.status])}>
                     {STATUS_LABEL[r.status] ?? r.status}

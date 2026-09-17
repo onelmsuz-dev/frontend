@@ -9,6 +9,7 @@ import {
   REASON_LABELS, REASON_COLORS,
 } from "@/lib/hooks/useGamification";
 import { PanelReferral } from "@/components/gamification/panel-referral";
+import { formatUzDate } from "@/lib/date-uz";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-800 rounded-xl", className)} />;
@@ -144,7 +145,7 @@ export function PanelPoints() {
             </span>
             <div className="flex-1 min-w-0">
               {t.note && <p className="text-[12px] text-neutral-600 dark:text-neutral-400 truncate">{t.note}</p>}
-              <p className="text-[10px] text-neutral-400">{new Date(t.createdAt).toLocaleDateString("uz-UZ")}</p>
+              <p className="text-[10px] text-neutral-400">{formatUzDate(t.createdAt)}</p>
             </div>
             <div className="text-right shrink-0">
               {t.xp !== 0 && (

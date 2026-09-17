@@ -14,6 +14,8 @@
  * "15:00 dedi, 17:00 bo'ldi, hali qilinmadi" — o'rtacha yo'l.
  * Backend (`dueToday.overdue`) ham AYNAN shu qoidada.
  */
+
+import { fmtShortDate } from "./date-uz";
 export type DueHolat = "yoq" | "kutilmoqda" | "keldi" | "kechikkan";
 
 /** Belgilangan vaqtdan necha soat o'tgach "kechikkan" — backend bilan bir xil. */
@@ -39,5 +41,5 @@ export function dueMatn(nextContactAt: string, now = new Date()): string {
   if (farq === 0)  return `Bugun ${soat}`;
   if (farq === 1)  return `Ertaga ${soat}`;
   if (farq === -1) return `Kecha ${soat}`;
-  return `${t.toLocaleDateString("uz-UZ", { day: "numeric", month: "short" })} ${soat}`;
+  return `${fmtShortDate(t)} ${soat}`;
 }

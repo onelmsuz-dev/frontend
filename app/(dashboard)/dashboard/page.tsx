@@ -21,6 +21,7 @@ import { useBranchQueryString, useBranch } from "@/lib/contexts/branch-context";
 import useSWR from "swr";
 import { OnboardingChecklist } from "@/components/onboarding/onboarding-checklist";
 import { formatCurrency } from "@/lib/money";
+import { formatUzDate } from "@/lib/date-uz";
 
 const _fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -290,7 +291,7 @@ function OwnerDashboardPage() {
                         </div>
                         <div>
                           <p className="text-[12px] font-semibold text-neutral-900 dark:text-neutral-100">{p.student?.name}</p>
-                          <p className="text-[10px] text-neutral-400">{methodShort(p.method)} · {new Date(p.date).toLocaleDateString("uz-UZ")}</p>
+                          <p className="text-[10px] text-neutral-400">{methodShort(p.method)} · {formatUzDate(p.date)}</p>
                         </div>
                       </div>
                       <p className="text-[13px] font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(p.amount)}</p>

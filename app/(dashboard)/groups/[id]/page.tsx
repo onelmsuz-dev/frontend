@@ -17,6 +17,7 @@ import { FormField } from "@/components/ui/form-field";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GroupAttendanceSection } from "@/components/groups/group-attendance-section";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { formatUzDate } from "@/lib/date-uz";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -165,7 +166,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
               </div>
               <div className="flex items-center gap-2 text-[12px] text-neutral-500">
                 <GraduationCap className="w-3 h-3" />
-                {new Date(group.startDate).toLocaleDateString("uz-UZ")}{" "}
+                {formatUzDate(group.startDate)}{" "}
                 {group.status === "UPCOMING" ? "dan boshlanadi" : "dan boshlangan"}
               </div>
             </div>

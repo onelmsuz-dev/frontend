@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import useSWR, { mutate } from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
-import { formatUzDate } from "@/lib/date-uz";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Percent, Plus, X, Loader2, Users, BookOpen, UserCheck, Globe,
   Power, Trash2, Info, AlertCircle, Gift, Pencil,
 } from "lucide-react";
+import { formatUzDate } from "@/lib/date-uz";
 
 /**
  * SOZLAMALAR → CHEGIRMALAR.

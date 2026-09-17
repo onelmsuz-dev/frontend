@@ -22,6 +22,7 @@ import { guruhNarxi, narxMatni } from "@/lib/group-price";
 import { useFeature } from "@/lib/hooks/useFeatures";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
+import { TimeInput } from "@/components/ui/time-input";
 
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
   ACTIVE:    { label: "Faol",    cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -368,12 +369,12 @@ export default function GroupsPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Boshlanish vaqti" required>
-            <Input type="time" value={form.startTime}
-              onChange={e => setForm(p => ({...p, startTime: e.target.value}))} className="h-10" />
+            <TimeInput value={form.startTime}
+              onChange={v => setForm(p => ({...p, startTime: v}))} className="h-10" />
           </FormField>
           <FormField label="Tugash vaqti" required>
-            <Input type="time" value={form.endTime}
-              onChange={e => setForm(p => ({...p, endTime: e.target.value}))} className="h-10" />
+            <TimeInput value={form.endTime}
+              onChange={v => setForm(p => ({...p, endTime: v}))} className="h-10" />
           </FormField>
         </div>
 

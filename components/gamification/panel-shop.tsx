@@ -14,6 +14,7 @@ import {
   usePanelShop, usePanelRedemptions,
   KIND_LABELS, KIND_COLORS, STATUS_LABELS, STATUS_COLORS,
 } from "@/lib/hooks/useGamification";
+import { formatUzDate } from "@/lib/date-uz";
 
 const fmtSom = (v: number) => new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
 
@@ -227,7 +228,7 @@ export function PanelShop() {
               <span className="text-lg shrink-0">{r.rewardEmoji}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{r.rewardTitle}</p>
-                <p className="text-[10px] text-neutral-400">{new Date(r.createdAt).toLocaleDateString("uz-UZ")}</p>
+                <p className="text-[10px] text-neutral-400">{formatUzDate(r.createdAt)}</p>
                 {r.reviewNote && <p className="text-[11px] text-red-500 truncate">Sabab: {r.reviewNote}</p>}
               </div>
               <div className="text-right shrink-0">

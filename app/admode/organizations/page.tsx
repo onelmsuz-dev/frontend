@@ -7,6 +7,7 @@ import {
   Plus, X, Search, AlertCircle, CheckCircle, XCircle,
   Building2, Users, GraduationCap, TrendingUp, ExternalLink, Trash2, KeyRound, RotateCcw,
 } from "lucide-react";
+import { formatUzDate } from "@/lib/date-uz";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -551,10 +552,10 @@ export default function OrganizationsPage() {
                                   ? (org.subscription?.warning ? "text-amber-600 dark:text-amber-400" : "text-neutral-500")
                                   : "text-red-600 dark:text-red-400")}
                               title={org.subscription?.expiresAt
-                                ? new Date(org.subscription.expiresAt).toLocaleDateString("uz-UZ") + " gacha"
+                                ? formatUzDate(org.subscription.expiresAt) + " gacha"
                                 : undefined}>
                               {!org.subscription?.expiresAt ? "Muddat yo'q"
-                                : `${new Date(org.subscription.expiresAt).toLocaleDateString("uz-UZ")}` +
+                                : `${formatUzDate(org.subscription.expiresAt)}` +
                                   (org.subscription?.active ? ` (${org.subscription.daysLeft} kun)` : " (tugagan)")}
                             </span>
                             <div className="flex items-center gap-1">
@@ -685,7 +686,7 @@ export default function OrganizationsPage() {
                         {/* Date */}
                         <td className="px-4 py-3.5">
                           <span className="text-[11px] text-neutral-500">
-                            {new Date(org.createdAt).toLocaleDateString("uz-UZ")}
+                            {formatUzDate(org.createdAt)}
                           </span>
                         </td>
                         {/* Actions */}

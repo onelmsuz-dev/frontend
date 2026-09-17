@@ -19,7 +19,7 @@ import { PointsBanner } from "@/components/gamification/points-banner";
 import { PanelShop } from "@/components/gamification/panel-shop";
 import { PasswordCard } from "@/components/gamification/panel-password";
 import { payStatusFromBalance, PAY_STATUS_CFG } from "@/lib/payment-status";
-import { fmtDayMonth, fmtShortDate, fmtWeekday, UZ_MONTHS_SHORT, UZ_WEEKDAYS_SHORT } from "@/lib/date-uz";
+import { fmtDayMonth, fmtShortDate, fmtWeekday, formatUzDate, UZ_MONTHS_SHORT, UZ_WEEKDAYS_SHORT } from "@/lib/date-uz";
 
 function fmtMoney(v: number) {
   return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
@@ -288,7 +288,7 @@ export default function StudentPanelPage() {
                 <div>
                   <p className="text-[14px] font-semibold text-green-600 dark:text-green-400">+{fmtMoney(p.amount)}</p>
                   <p className="text-[11px] text-neutral-400">
-                    {new Date(p.date).toLocaleDateString("uz-UZ")}{p.group?.name ? ` · ${p.group.name}` : ""}
+                    {formatUzDate(p.date)}{p.group?.name ? ` · ${p.group.name}` : ""}
                   </p>
                 </div>
                 {/* Ota-onaga XOM qiymat ko'rsatilmaydi. Ilgari bu yerda
@@ -592,7 +592,7 @@ function AttendanceTab({ att }: { att?: StudentAttendance }) {
             <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
               <div className="min-w-0">
                 <p className="text-[13px] font-medium text-neutral-800 dark:text-neutral-200 truncate">{r.group?.name ?? "—"}</p>
-                <p className="text-[11px] text-neutral-400">{new Date(r.date).toLocaleDateString("uz-UZ")}</p>
+                <p className="text-[11px] text-neutral-400">{formatUzDate(r.date)}</p>
                 {r.note && <p className="text-[11px] text-neutral-400 italic truncate">{r.note}</p>}
               </div>
               <span className={cn("flex items-center gap-1.5 text-[12px] font-semibold shrink-0", cfg.cls)}>

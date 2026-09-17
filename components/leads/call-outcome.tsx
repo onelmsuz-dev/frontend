@@ -6,6 +6,7 @@ import { LOST_REASONS, useLeadStages } from "@/lib/hooks/useLeads";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { resolveNextStage } from "@/lib/lead-stages";
 import { Phone, PhoneOff, X, Undo2, Loader2, BookOpen } from "lucide-react";
+import { TimeInput } from "@/components/ui/time-input";
 
 /**
  * QO'NG'IROQ NATIJASI.
@@ -63,10 +64,7 @@ function AniqVaqt({
         className="h-6 px-1.5 rounded-md text-[10px] border border-neutral-200
           dark:border-white/10 bg-white dark:bg-neutral-800
           text-neutral-700 dark:text-neutral-200" />
-      <input type="time" value={soat} onChange={(e) => setSoat(e.target.value)}
-        className="h-6 px-1.5 rounded-md text-[10px] border border-neutral-200
-          dark:border-white/10 bg-white dark:bg-neutral-800
-          text-neutral-700 dark:text-neutral-200" />
+      <TimeInput value={soat} onChange={setSoat} className="h-6 text-[10px]" />
       <button type="button" disabled={band || !kun}
         onClick={() => onPick(soat ? `${kun}T${soat}` : kun)}
         className="h-6 px-2 rounded-md text-[10px] font-semibold

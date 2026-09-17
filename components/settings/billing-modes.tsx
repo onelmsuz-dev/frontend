@@ -4,8 +4,8 @@ import { useState } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
-import { formatUzDate } from "@/lib/date-uz";
 import { Check, Lock, Info, CalendarClock, ShieldCheck } from "lucide-react";
+import { formatUzDate } from "@/lib/date-uz";
 
 /**
  * SOZLAMALAR → TO'LOV USULI — FAQAT KO'RSATADI.

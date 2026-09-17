@@ -13,6 +13,8 @@
  * yo'qoladi: unga tayyor RASM beriladi.
  */
 
+import { formatUzDate } from "./date-uz";
+
 const OYLAR = ["yanvar", "fevral", "mart", "aprel", "may", "iyun",
                "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
 
@@ -47,8 +49,11 @@ export function oyNomi(m: string | null): string {
 }
 
 function sana(v: string): string {
+  // `toLocaleDateString("uz-UZ")` ATAYLAB ishlatilmaydi: o'zbek lokali
+  // yo'q brauzerda u jimgina amerikacha tartibga (oy/kun/yil) tushib
+  // ketardi — chekda esa bu mijoz bilan bahsga olib borishi mumkin.
   const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toLocaleDateString("uz-UZ");
+  return Number.isNaN(d.getTime()) ? v : formatUzDate(d);
 }
 
 /** Chek eni (CSS px). 58 mm termal qog'ozga ham, A4 ga ham mos keladi. */

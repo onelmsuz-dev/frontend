@@ -29,7 +29,7 @@ import { useGroups } from "@/lib/hooks/useGroups";
 import { useStudents } from "@/lib/hooks/useStudents";
 import useSWR, { mutate } from "swr";
 import { useBranch, useBranchQueryString } from "@/lib/contexts/branch-context";
-import { fmtMonthYear } from "@/lib/date-uz";
+import { fmtMonthYear, formatUzDate } from "@/lib/date-uz";
 import { formatCurrency } from "@/lib/money";
 
 
@@ -503,7 +503,7 @@ export default function FinancePage() {
                         </TableCell>
                         <TableCell className="text-[13px] text-neutral-500 dark:text-neutral-400">{p.group?.name ?? "—"}</TableCell>
                         <TableCell className="text-[13px] text-neutral-500 dark:text-neutral-400">
-                          {new Date(p.date).toLocaleDateString("uz-UZ")}
+                          {formatUzDate(p.date)}
                         </TableCell>
                         <TableCell>
                           <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium", methodCls(p.method))}>
@@ -636,7 +636,7 @@ export default function FinancePage() {
                     </TableCell>
                     <TableCell className="text-[13px] text-neutral-700 dark:text-neutral-300">{e.description}</TableCell>
                     <TableCell className="text-[13px] text-neutral-500 dark:text-neutral-400">
-                      {new Date(e.date).toLocaleDateString("uz-UZ")}
+                      {formatUzDate(e.date)}
                     </TableCell>
                     <TableCell className="text-right">
                       <span className="text-[13px] font-bold text-red-600 dark:text-red-400">-{formatCurrency(e.amount)}</span>

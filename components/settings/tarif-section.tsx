@@ -15,6 +15,7 @@ import {
   useSubscription, usePlans, useSubmitSubscriptionRequest, type PlanLimits,
 } from "@/lib/hooks/useSubscription";
 import { CheckCircle2, AlertTriangle, Clock, Users, Building, UserCog, Receipt } from "lucide-react";
+import { formatUzDate } from "@/lib/date-uz";
 
 function fmtMoney(v: number) {
   return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
@@ -211,7 +212,7 @@ export function TarifSection() {
                 <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
                   <div>
                     <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{r.plan} · {fmtMoney(r.amount)}</p>
-                    <p className="text-[11px] text-neutral-400">{new Date(r.createdAt).toLocaleDateString("uz-UZ")} · {r.months} oy</p>
+                    <p className="text-[11px] text-neutral-400">{formatUzDate(r.createdAt)} · {r.months} oy</p>
                   </div>
                   <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-semibold", STATUS_COLOR[r.status])}>
                     {STATUS_LABEL[r.status] ?? r.status}

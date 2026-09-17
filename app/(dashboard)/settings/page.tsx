@@ -33,6 +33,7 @@ import { StaffSection } from "@/components/settings/staff-section";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { useFeatures } from "@/lib/hooks/useFeatures";
 import { mutate } from "swr";
+import { TimeInput } from "@/components/ui/time-input";
 
 /** Markaz ish kunlari — guruh jadvalidagi kalitlar bilan bir xil. */
 const WORK_DAYS = [
@@ -417,16 +418,16 @@ function SettingsContent() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Ish boshlanishi</Label>
-                        <Input type="time"
+                        <TimeInput
                           value={orgForm.workStart || orgData?.workStart || "08:00"}
-                          onChange={e => setOrgForm(p => ({ ...p, workStart: e.target.value }))}
+                          onChange={v => setOrgForm(p => ({ ...p, workStart: v }))}
                           className="h-9 text-sm" />
                       </div>
                       <div>
                         <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Ish tugashi</Label>
-                        <Input type="time"
+                        <TimeInput
                           value={orgForm.workEnd || orgData?.workEnd || "20:00"}
-                          onChange={e => setOrgForm(p => ({ ...p, workEnd: e.target.value }))}
+                          onChange={v => setOrgForm(p => ({ ...p, workEnd: v }))}
                           className="h-9 text-sm" />
                       </div>
                       <p className="col-span-2 text-[11px] text-neutral-400 -mt-1">

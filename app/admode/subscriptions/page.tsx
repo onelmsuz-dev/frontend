@@ -7,6 +7,7 @@ import {
   CheckCircle, XCircle, Building2, CreditCard, TrendingUp, Calendar,
   Receipt, Clock, ExternalLink, Check, X,
 } from "lucide-react";
+import { formatUzDate } from "@/lib/date-uz";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -97,7 +98,7 @@ export default function SubscriptionsPage() {
                       <span className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-300 dark:text-neutral-700 dark:text-neutral-300 font-medium">{PLAN_LABEL[r.plan] ?? r.plan}</span>
                       <span className="font-semibold text-emerald-600 dark:text-emerald-400">{fmtMoney(r.amount)}</span>
                       <span>· {r.months} oy</span>
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(r.createdAt).toLocaleDateString("uz-UZ")}</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatUzDate(r.createdAt)}</span>
                       {r.receiptUrl && (
                         <a href={r.receiptUrl} target="_blank" rel="noopener noreferrer"
                           className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-300">

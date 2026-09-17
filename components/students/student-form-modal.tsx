@@ -20,6 +20,7 @@ import { useBranch } from "@/lib/contexts/branch-context";
 import { SOURCE_OPTIONS, WEEKDAYS, SCHEDULE_PRESETS, todayStr, type Gender } from "@/lib/form-constants";
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
+import { TimeInput } from "@/components/ui/time-input";
 
 const selectCls =
   "w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 " +
@@ -436,8 +437,8 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
                 ))}
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <Input type="time" value={ng.startTime} onChange={e => setNg(p => ({ ...p, startTime: e.target.value }))} className="h-9" />
-                <Input type="time" value={ng.endTime} onChange={e => setNg(p => ({ ...p, endTime: e.target.value }))} className="h-9" />
+                <TimeInput value={ng.startTime} onChange={v => setNg(p => ({ ...p, startTime: v }))} className="h-9" />
+                <TimeInput value={ng.endTime} onChange={v => setNg(p => ({ ...p, endTime: v }))} className="h-9" />
                 <Input type="date" value={ng.startDate} onChange={e => setNg(p => ({ ...p, startDate: e.target.value }))} className="h-9" />
               </div>
               {ngErr && <p className="text-[11px] text-red-500">{ngErr}</p>}

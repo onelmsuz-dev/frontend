@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import {
   SELECTABLE_METHODS, methodGridCls, methodShort,
 } from "@/lib/payment-methods";
+import { formatUzDate } from "@/lib/date-uz";
 
 /**
  * TO'LOVNI TUZATISH VA O'CHIRISH.
@@ -122,7 +123,7 @@ export function PaymentEdit({
             {fmt(payment.amount)}{" "}so&apos;m
           </p>
           <p className="text-[11px] text-neutral-400">
-            {new Date(payment.date).toLocaleDateString("uz-UZ")} ·{" "}
+            {formatUzDate(payment.date)} ·{" "}
             {methodShort(payment.method)}
           </p>
         </div>

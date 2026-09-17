@@ -24,7 +24,6 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { MembershipDateModal } from "@/components/students/membership-date-modal";
 import { FreezeModal } from "@/components/students/freeze-modal";
 import { Snowflake } from "lucide-react";
-import { formatUzDate } from "@/lib/date-uz";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import {
   useGamificationSettings, useStudentPointHistory,
@@ -38,6 +37,7 @@ import {
   Phone, Calendar, DollarSign, ArrowLeft, AlertCircle,
   Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays, Printer, Users
 } from "lucide-react";
+import { formatUzDate } from "@/lib/date-uz";
 
 function fmt(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -1560,7 +1560,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                   <div className="min-w-0">
                     <p className="text-[13px] font-semibold text-green-600 dark:text-green-400">{fmt(p.amount)}</p>
                     <p className="text-[11px] text-neutral-400">
-                      {new Date(p.date).toLocaleDateString("uz-UZ")} · {methodLabel(p.method)}
+                      {formatUzDate(p.date)} · {methodLabel(p.method)}
                     </p>
                     {tolovGuruhi(p) && (
                       <span className="mt-1 inline-flex items-center gap-1 max-w-full px-1.5 py-0.5 rounded-md
@@ -1615,7 +1615,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     <div className="flex items-center gap-2">
                       <div className={cn("w-2 h-2 rounded-full shrink-0", cfg?.dot ?? "bg-neutral-300")} />
                       <p className="text-[13px] text-neutral-700 dark:text-neutral-300">
-                        {new Date(a.date).toLocaleDateString("uz-UZ")}
+                        {formatUzDate(a.date)}
                       </p>
                     </div>
                     <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-semibold", cfg?.cls)}>
@@ -1696,7 +1696,7 @@ function StudentPointsCard({ student }: { student: any }) {
                     {REASON_LABELS[t.reason] ?? t.reason}
                   </span>
                   <span className="text-neutral-400 flex-1 truncate">{t.note}</span>
-                  <span className="text-neutral-400 shrink-0">{new Date(t.createdAt).toLocaleDateString("uz-UZ")}</span>
+                  <span className="text-neutral-400 shrink-0">{formatUzDate(t.createdAt)}</span>
                   {t.coin !== 0 && (
                     <span className={cn("font-bold shrink-0 w-14 text-right",
                       t.coin > 0 ? "text-amber-600 dark:text-amber-400" : "text-red-500")}>

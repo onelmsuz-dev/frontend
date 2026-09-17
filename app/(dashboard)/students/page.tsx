@@ -19,7 +19,6 @@ import {
   UserCheck, Clock, Upload, Download, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatUzDate } from "@/lib/date-uz";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useGroups } from "@/lib/hooks/useGroups";
@@ -28,6 +27,7 @@ import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { payStatusFromBalance, PAY_STATUS_CFG } from "@/lib/payment-status";
 import { toCsv, downloadFile, exportPhone } from "@/lib/csv";
 import { mutate } from "swr";
+import { formatUzDate } from "@/lib/date-uz";
 
 function fmt(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);

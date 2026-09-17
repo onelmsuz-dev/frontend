@@ -20,6 +20,7 @@ import { useRooms } from "@/lib/hooks/useRooms";
 import {
   ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, List, ChevronDown, Plus,
 } from "lucide-react";
+import { TimeInput } from "@/components/ui/time-input";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -762,10 +763,10 @@ export default function SchedulePage() {
         </FormField>
         <div className="grid grid-cols-3 gap-3">
           <FormField label="Boshlanish" required>
-            <Input type="time" value={groupForm.startTime} onChange={e => setGroupForm(p => ({...p, startTime: e.target.value}))} className="h-10" />
+            <TimeInput value={groupForm.startTime} onChange={v => setGroupForm(p => ({...p, startTime: v}))} className="h-10" />
           </FormField>
           <FormField label="Tugash" required>
-            <Input type="time" value={groupForm.endTime} onChange={e => setGroupForm(p => ({...p, endTime: e.target.value}))} className="h-10" />
+            <TimeInput value={groupForm.endTime} onChange={v => setGroupForm(p => ({...p, endTime: v}))} className="h-10" />
           </FormField>
           <FormField label="Max o'quvchi">
             <Input type="number" min="1" max="50" value={groupForm.maxStudents} onChange={e => setGroupForm(p => ({...p, maxStudents: e.target.value}))} className="h-10" />
@@ -852,10 +853,10 @@ export default function SchedulePage() {
         </FormField>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Boshlanish" required>
-            <Input type="time" value={darsForm.startTime} onChange={e => setDarsForm(p => ({...p, startTime: e.target.value}))} className="h-10" />
+            <TimeInput value={darsForm.startTime} onChange={v => setDarsForm(p => ({...p, startTime: v}))} className="h-10" />
           </FormField>
           <FormField label="Tugash" required>
-            <Input type="time" value={darsForm.endTime} onChange={e => setDarsForm(p => ({...p, endTime: e.target.value}))} className="h-10" />
+            <TimeInput value={darsForm.endTime} onChange={v => setDarsForm(p => ({...p, endTime: v}))} className="h-10" />
           </FormField>
         </div>
         <ErrorBox msg={darsError} />

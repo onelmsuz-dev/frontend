@@ -6,10 +6,10 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { DatePicker } from "@/components/ui/date-picker";
-import { formatUzDate } from "@/lib/date-uz";
 import { todayStr } from "@/lib/form-constants";
 import { Input } from "@/components/ui/input";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { formatUzDate } from "@/lib/date-uz";
 
 /**
  * GURUHGA QO'SHILGAN SANANI TUZATISH.

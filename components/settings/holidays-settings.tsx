@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { CalendarOff, Plus, Trash2, Download, Loader2, Info } from "lucide-react";
 import { fetcher } from "@/lib/fetcher";
-import { formatUzDate } from "@/lib/date-uz";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatUzDate } from "@/lib/date-uz";
 
 /**
  * BAYRAM KUNLARI — "bu kuni dars yo'q".

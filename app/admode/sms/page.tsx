@@ -7,6 +7,7 @@ import {
   MessageSquare, Check, X, Package, Plus, Receipt, Clock, Building2,
   FileText, Send, ArrowRight, ShieldCheck,
 } from "lucide-react";
+import { formatUzDate } from "@/lib/date-uz";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -294,7 +295,7 @@ export default function AdmodeSmsPage() {
                   {r.organization?.name} <span className="text-neutral-400 font-normal">· {r.organization?.subdomain}</span>
                 </p>
                 <p className="text-[12px] text-neutral-500">
-                  <strong className="text-neutral-700 dark:text-neutral-300">{r.quantity} ta SMS</strong> · {fmtMoney(r.amount)} · {new Date(r.createdAt).toLocaleDateString("uz-UZ")}
+                  <strong className="text-neutral-700 dark:text-neutral-300">{r.quantity} ta SMS</strong> · {fmtMoney(r.amount)} · {formatUzDate(r.createdAt)}
                 </p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">

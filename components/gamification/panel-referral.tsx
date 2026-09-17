@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { UserPlus, Copy, Check, Clock, Gift } from "lucide-react";
 import { usePanelReferral } from "@/lib/hooks/useGamification";
+import { formatUzDate } from "@/lib/date-uz";
 
 export function PanelReferral() {
   const { data } = usePanelReferral();
@@ -104,7 +105,7 @@ export function PanelReferral() {
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">{f.name}</p>
                     <p className="text-[10px] text-neutral-400">
-                      {new Date(f.createdAt).toLocaleDateString("uz-UZ")}
+                      {formatUzDate(f.createdAt)}
                     </p>
                   </div>
                   {f.rewarded ? (
