@@ -280,3 +280,44 @@ export function useLeadDaily(enabled: boolean, date?: string) {
   const suffix = date ? `?date=${date}` : "";
   return useSWR<DailyReport>(enabled ? `/api/leads/daily${suffix}` : null, fetcher);
 }
+
+// ─── O'CHIRILGAN LIDLAR ─────────────────────────────────────────────────
+
+export interface DeletedLead {
+  /** KORZINKA yozuvining id'si — tiklash aynan shuni talab qiladi. */
+  id: string;
+  title: string;
+  subtitle: string;
+  /** Nega o'chirilgan — o'chirishda MAJBURIY so'raladi. */
+  reason: string | null;
+  actorName: string;
+  deletedAt: string;
+}
+
+/**
+ * Taxtadagi "O'chirilganlar" ustuni.
+ *
+ * Switch O'CHIQ bo'lsa so'rov UMUMAN ketmaydi (`enabled` false → kalit
+ * `null`). Bu muhim: taxta har ochilganda qo'shimcha so'rov yuborilsa,
+ * 1000 lidli markazda birinchi chizilish sekinlashardi va ma'lumot
+ * ko'pchilikka kerak ham emas.
+ */
+export function useDeletedLeads(enabled: boolean) {
+  const { data, isLoading, mutate } = useSWR<{
+    items: DeletedLead[]; nextCursor: string | null;
+  }>(enabled ? "/api/leads/deleted?limit=50" : null, fetcher);
+  return {
+    items: data?.items ?? [],
+    yanaBor: !!data?.nextCursor,
+    isLoading,
+    mutate,
+  };
+}
+
+/** Korzinkadan lidni qaytaradi. `id` — korzinka yozuvining id'si. */
+export async function restoreLead(trashId: string) {
+  const r = await fetch(`/api/leads/deleted/${trashId}/restore`, { method: "POST" });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error ?? "Tiklab bo'lmadi");
+  return data;
+}

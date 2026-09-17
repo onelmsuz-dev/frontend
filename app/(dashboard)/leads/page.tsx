@@ -34,6 +34,7 @@ import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { useFeature } from "@/lib/hooks/useFeatures";
 import { stageHue, defaultStage } from "@/lib/lead-stages";
 import { mutate } from "swr";
+import { DeletedColumn } from "@/components/leads/deleted-column";
 
 interface Course { id: string; name: string }
 
@@ -75,6 +76,19 @@ export default function LeadsPage() {
   const xodimlar = Array.isArray(xodimlarRaw) ? xodimlarRaw : [];
   const taqsimlay = hasPerm(menOzim?.permissions, "leads.assign");
   const [showTaqsim, setShowTaqsim] = useState(false);
+  /**
+   * "O'CHIRILGANLAR" — standart holatda O'CHIQ.
+   *
+   * Yoqilmaguncha so'rov ham ketmaydi: taxta har ochilganda qo'shimcha
+   * so'rov yuborilsa, 1000 lidli markazda birinchi chizilish
+   * sekinlashardi, ma'lumot esa kunda-kun kerak emas.
+   *
+   * Switch faqat O'CHIRISH huquqi bo'lgan xodimga ko'rinadi — tiklash
+   * ham shu ruxsat bilan ishlaydi. Ko'ra olmaydigan odamga tugma
+   * ko'rsatilsa, u bosib 403 olardi.
+   */
+  const ochiraOladi = hasPerm(menOzim?.permissions, "leads.delete");
+  const [ochirilganlar, setOchirilganlar] = useState(false);
   const [showModal,    setShowModal]    = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
   const [form,         setForm]         = useState(EMPTY);
@@ -739,6 +753,24 @@ export default function LeadsPage() {
               <Users className="w-3.5 h-3.5" />{" "}Taqsimlash
             </button>
           )}
+
+          {/* O'CHIRILGANLAR — tugma emas, SWITCH: holat saqlanib turadi
+              va xodim ustunni ochib qo'yib ishlashda davom etadi. */}
+          {ochiraOladi && (
+            <button type="button" role="switch" aria-checked={ochirilganlar}
+              onClick={() => setOchirilganlar(v => !v)}
+              className={cn("flex items-center gap-2 h-9 px-3 rounded-xl text-[12px] font-semibold",
+                "transition-colors shrink-0 border",
+                ochirilganlar
+                  ? "bg-neutral-800 text-white border-neutral-800 dark:bg-white/15 dark:border-white/20"
+                  : "glass-soft text-neutral-600 dark:text-neutral-300 border-white/60 dark:border-white/10 hover:bg-white/70 dark:hover:bg-white/10")}>
+              <span className={cn("w-7 h-4 rounded-full p-0.5 flex transition-colors shrink-0",
+                ochirilganlar ? "bg-emerald-500 justify-end" : "bg-neutral-300 dark:bg-neutral-600 justify-start")}>
+                <span className="w-3 h-3 rounded-full bg-white" />
+              </span>
+              O&apos;chirilganlar
+            </button>
+          )}
         </div>
 
         {/* Sotuvchilar hisoboti — o'zi ruxsatni tekshiradi va yo'q bo'lsa
@@ -818,6 +850,10 @@ export default function LeadsPage() {
                   onEdit={openEdit} onOpen={setFeedTarget}
                   onConvert={setConvertTarget} onRefresh={refreshAll} />
               ))}
+              {/* "Bekor" ning YONIDA — bosqichlar tugagach oxirgi ustun. */}
+              {ochirilganlar && ochiraOladi && (
+                <DeletedColumn onRestored={refreshAll} />
+              )}
             </div>
             <DragOverlay>
               {activeLead && <LeadCardPreview lead={activeLead} />}
