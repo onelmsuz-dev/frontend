@@ -233,6 +233,15 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   // qilmaydi" deb belgilangan o'qituvchida bu huquq yo'q, server ham
   // balansni bermaydi.
   const canSeeMoney = hasPerm(me?.permissions, "payments.view");
+  /**
+   * DAVOMAT — ALOHIDA RUXSAT.
+   *
+   * O'quvchini ko'rish (`students.view`) davomatni ko'rish degani
+   * EMAS. Sotuvchi/operator roli aynan shunday. Backend javobda
+   * maydonni `null` qiladi, bu yerda esa kartochkaning o'zi
+   * chizilmaydi (2026-09-17, egasining xabari).
+   */
+  const canSeeAttendance = hasPerm(me?.permissions, "attendance.view");
   // Guruhni almashtirish/chiqarish — o'quvchini tahrirlash huquqi bilan.
   // O'qituvchida bu huquq yo'q: tugma bosilsa server 403 berardi.
   const canManageGroups = hasPerm(me?.permissions, "students.update");
@@ -1718,7 +1727,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
           )}
 
-          {/* Attendance */}
+          {/* Attendance — `attendance.view` bo'lsagina.
+              Backend javobda maydonni `null` ga qo'yadi (javob
+              chegarasidagi tozalagich), lekin kartochkaning O'ZI
+              chizilib qolardi: sarlavha bor, ichi bo'sh. */}
+          {canSeeAttendance && (
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
             <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-neutral-400" />
@@ -1746,6 +1759,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               })}
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

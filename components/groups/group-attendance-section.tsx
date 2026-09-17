@@ -44,6 +44,18 @@ interface Props {
   /** Ro'yxat o'zgargach guruhni qayta yuklash (faollashtirishdan keyin). */
   onChanged?: () => void;
   canUpdate?: boolean;
+  /**
+   * DAVOMAT BELGILASH RUXSATI (`attendance.mark`).
+   *
+   * Ilgari bu yerda ruxsat UMUMAN tekshirilmasdi: belgilash tugmalari
+   * faqat "dars kunimi va dars vaqti kirdimi" shartiga bog'langan edi.
+   * Natijada `groups.view` bor, lekin `attendance.*` yo'q xodim (masalan
+   * sotuvchi/operator) guruhni ochib davomat bo'limini to'liq ishlaydigan
+   * holatda ko'rardi. Backend har ikki yo'lni 403 bilan to'sadi — ya'ni
+   * ma'lumot chiqmagan va yozilmagan ham — lekin ekran ishlaydigandek
+   * ko'rinib, bosilganda jimgina xato berardi (2026-09-17).
+   */
+  canMarkAttendance?: boolean;
 }
 
 /**
@@ -64,7 +76,7 @@ interface Props {
  */
 export function GroupAttendanceSection({
   groupId, scheduleDays, startTime, startDate, endDate, studentGroups,
-  onChanged, canUpdate = true,
+  onChanged, canUpdate = true, canMarkAttendance = true,
 }: Props) {
   // Toshkent bo'yicha — backend ham aynan shu mintaqada qaror qiladi.
   const today = useMemo(() => businessToday(), []);
@@ -107,7 +119,10 @@ export function GroupAttendanceSection({
   const endStr   = endDate   ? String(endDate).slice(0, 10)   : null;
   const beforeStart = !!startStr && dateStr < startStr;
   const afterEnd    = !!endStr   && dateStr > endStr;
-  const canMark = !!isLessonDay && lessonStarted && !beforeStart && !afterEnd;
+  // RUXSAT + VAQT. Ikkisi ham shart: ruxsati bo'lmagan xodim tugmani
+  // umuman ko'rmasin, ruxsati borga esa faqat dars vaqtida ochiladi.
+  const canMark = canMarkAttendance
+    && !!isLessonDay && lessonStarted && !beforeStart && !afterEnd;
 
   // Tanlangan kun davomatini yuklaydi.
   //

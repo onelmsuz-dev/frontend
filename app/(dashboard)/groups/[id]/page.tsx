@@ -40,6 +40,17 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
   const { data: group, isLoading } = useGroup(id);
   const { me } = useMe();
   const canUpdate = hasPerm(me?.permissions, "students.update");
+  /**
+   * DAVOMAT — ALOHIDA RUXSAT.
+   *
+   * Guruhni ko'rish (`groups.view`) davomatni ko'rish degani EMAS.
+   * Sotuvchi/operator roli aynan shunday: guruhlarni ko'radi, lekin
+   * `attendance.*` yo'q. Ilgari bu bo'lim shartsiz chizilardi va
+   * backend uni 403 bilan to'sardi — ekranda esa ishlaydigan bo'lib
+   * turardi (2026-09-17, egasining xabari).
+   */
+  const canSeeAttendance  = hasPerm(me?.permissions, "attendance.view");
+  const canMarkAttendance = hasPerm(me?.permissions, "attendance.mark");
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ name: "", phone: "", parentPhone: "" });
@@ -222,6 +233,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             Ilgari ikkita alohida blok bo'lib, bir xil o'quvchilar ikki marta
             chizilardi: yuqorida ism/telefon, pastda yana o'sha ismlar davomat
             tugmalari bilan. */}
+        {canSeeAttendance && (
         <GroupAttendanceSection
           groupId={id}
           scheduleDays={group.scheduleDays ?? []}
@@ -231,7 +243,9 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
           studentGroups={group.students ?? []}
           onChanged={() => mutate(`/api/groups/${id}`)}
           canUpdate={canUpdate}
+          canMarkAttendance={canMarkAttendance}
         />
+        )}
       </div>
     </div>
   );
