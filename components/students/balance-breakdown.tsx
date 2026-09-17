@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatUzDate } from "@/lib/date-uz";
 
@@ -22,6 +24,21 @@ import { formatUzDate } from "@/lib/date-uz";
  *     beradi). Shunda farq "Oldingi qoldiq" qatori bilan ochiq
  *     ko'rsatiladi — aks holda pastdagi "Jami" ko'rinadigan qatorlarga
  *     to'g'ri kelmay, ekran yolg'on gapirardi.
+ *
+ *  3. STANDART — IKKI QATOR, qolgani tugma ortida.
+ *     Ilgari ro'yxat ichki aylanuvchi oyna edi (`max-h-56 overflow-y-auto`).
+ *     Amalda u yaxshi ishlamadi: kartochka ichida ikkinchi aylantirish
+ *     chizig'i paydo bo'lardi, sichqoncha ustiga kelganda sahifa
+ *     aylanishi shu oynaga "yopishib" qolardi va telefonda uni ushlash
+ *     qiyin edi. Egasining qarori (2026-09-17): standart holda faqat
+ *     oxirgi ikki qator ko'rinadi, qolgani "Tarixni ko'rish" tugmasi
+ *     ortida — ochilganda hamma qator TO'LIQ chiqadi, ichki aylantirish
+ *     yo'q (sahifaning o'zi aylanadi).
+ *
+ *     "Jami" esa HAR IKKI holatda ham haqiqiy balansni ko'rsatadi —
+ *     u ko'rinadigan qatorlardan hisoblanmaydi. Yopiq holatda qatorlar
+ *     yig'indisi "Jami"ga teng chiqmaydi va bu KUTILGAN: tugmada
+ *     nechta qator yashiringani yozib turadi.
  */
 
 export interface LedgerItem {
@@ -51,6 +68,9 @@ function yorliq(it: LedgerItem, kind: "charge" | "payment",
   return [g, davr].filter(Boolean).join(" · ") || "Hisob";
 }
 
+/** Yopiq holatda nechta qator ko'rinadi. */
+const KORINADIGAN = 2;
+
 /** Izohda davr oralig'i bormi ("07.09.2026–06.10.2026"). */
 const davrBor = (t?: string | null) => !!t && /\d{2}\.\d{2}\.\d{4}\s*[–-]/.test(t);
 
@@ -69,6 +89,10 @@ export function BalanceBreakdown({
   fmt: (v: number) => string;
   groupName: (id?: string | null) => string;
 }) {
+  // DIQQAT: hook pastdagi `return null` dan OLDIN chaqirilishi shart —
+  // aks holda qatorlar bo'sh o'quvchida hooklar tartibi buzilardi.
+  const [ochiq, setOchiq] = useState(false);
+
   const qatorlar = [
     ...charges.map((c) => ({ it: c, kind: "charge" as const })),
     ...payments.map((p) => ({ it: p, kind: "payment" as const })),
@@ -87,14 +111,16 @@ export function BalanceBreakdown({
   // balansga teng bo'lishi kerak.
   const oldingi = Math.round(balance - korinadigan);
 
+  const oldingiBor = oldingi !== 0;
+  const yashiringan = Math.max(qatorlar.length - KORINADIGAN, 0) + (oldingiBor ? 1 : 0);
+  const royxat = ochiq ? qatorlar : qatorlar.slice(0, KORINADIGAN);
+
   return (
     <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10">
       <p className="text-[11px] text-neutral-400 mb-1.5">Nimadan iborat</p>
 
-      {/* Sig'masa AYLANADI — ro'yxat uzun bo'lsa kartochka cho'zilib
-          ketmasin, lekin hamma qator ham yetib borsin. */}
-      <ul className="max-h-56 overflow-y-auto pr-1 space-y-1">
-        {qatorlar.map(({ it, kind, summa }) => (
+      <ul className="space-y-1">
+        {royxat.map(({ it, kind, summa }) => (
           <li key={`${kind}-${it.id}`} className="flex items-start justify-between gap-2">
             <span className={cn("text-[11px] leading-snug min-w-0 flex-1",
               it.voidedAt
@@ -120,7 +146,7 @@ export function BalanceBreakdown({
           </li>
         ))}
 
-        {oldingi !== 0 && (
+        {ochiq && oldingiBor && (
           <li className="flex items-start justify-between gap-2">
             <span className="text-[11px] text-neutral-500 dark:text-neutral-400">
               Oldingi qoldiq
@@ -135,6 +161,20 @@ export function BalanceBreakdown({
           </li>
         )}
       </ul>
+
+      {/* TARIXNI KO'RISH — yashiringan qatorlar bo'lsa. Tugmada NECHTA
+          ekani yoziladi: "yana 8" degan aniq son "..." dan ko'ra ko'proq
+          narsa aytadi va yopiq holatdagi yig'indi farqini izohlaydi. */}
+      {yashiringan > 0 && (
+        <button type="button" onClick={() => setOchiq(!ochiq)}
+          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold
+            text-indigo-600 dark:text-indigo-400 hover:underline">
+          {ochiq
+            ? <ChevronUp className="w-3 h-3" />
+            : <ChevronDown className="w-3 h-3" />}
+          {ochiq ? "Yashirish" : `Tarixni ko'rish — yana ${yashiringan}`}
+        </button>
+      )}
 
       {/* JAMI — pastda, siz so'raganingizdek. Har doim HAQIQIY balans. */}
       <div className="flex items-center justify-between gap-2 mt-2 pt-2
