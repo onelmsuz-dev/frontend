@@ -112,7 +112,7 @@ export function ScheduleDrawer() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 min-h-0 p-3">
               {isLoading && (
                 <p className="text-[12px] text-neutral-400 text-center py-8">Yuklanmoqda...</p>
               )}

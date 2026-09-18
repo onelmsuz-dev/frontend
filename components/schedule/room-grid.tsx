@@ -84,6 +84,16 @@ const DAYS_SHORT: Record<string, string> = {
  */
 const PANJARA = "border-neutral-300 dark:border-neutral-700";
 
+/**
+ * YOPISHIB TURADIGAN QISMLARNING FONI — SHAFFOF BO'LMASLIGI SHART.
+ *
+ * Sarlavha qatori va vaqt ustuni surilganda joyida qoladi, ya'ni
+ * ularning ostidan kartochkalar o'tadi. Fon shaffof bo'lsa (avvalgi
+ * `dark:bg-white/5`) matnlar bir-birining ustiga tushib o'qib
+ * bo'lmasdi.
+ */
+const HOSHIYA = "bg-neutral-50 dark:bg-neutral-800";
+
 /** "09:30" → 570. Noto'g'ri qiymatda `null`. */
 function daqiqa(hhmm: string): number | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
@@ -102,8 +112,9 @@ function HozirChizigi({ yorliq, eniPx }: { yorliq: string; eniPx: number }) {
     <div className="flex items-center" aria-label="Hozirgi vaqt">
       {/* Chap hoshiya vaqt ustuni bilan bir xil fonda — chiziq
           panjaraning ichidan o'tayotgandek ko'rinsin. */}
-      <div className="w-14 shrink-0 pr-1 text-right self-stretch flex items-center
-        justify-end bg-neutral-50 dark:bg-white/5">
+      <div className={cn("w-14 shrink-0 pr-1 text-right self-stretch",
+        "flex items-center justify-end",
+        "sticky left-0 z-10 border-r", PANJARA, HOSHIYA)}>
         <span className="inline-block px-1 py-0.5 rounded text-[9.5px] font-black
           tabular-nums bg-red-500 text-white">
           {yorliq}
@@ -199,15 +210,23 @@ export function RoomTimeGrid({
   if (groups.length === 0) return null;
 
   return (
-    <div className="overflow-x-auto">
+    /* IKKALA O'Q BITTA IDISHDA aylanadi. Ilgari gorizontal aylanish shu
+       yerda, vertikal esa TASHQARIDA (panel/sahifa) edi — `sticky` esa
+       eng yaqin aylanadigan ota-onaga nisbatan ishlaydi, ya'ni
+       sarlavha hech qachon yopishib turolmasdi.
+       `overflow-hidden` ham OLIB TASHLANDI: u ham aylanish konteksti
+       yaratadi va `sticky` ni jimgina o'chirib qo'yardi. Burchak
+       yumaloqligi endi shu tashqi idishda. */
+    <div className={cn("h-full overflow-auto border rounded-lg", PANJARA)}>
       {/* DAFTAR KATAGI. Ilgari chiziqlar `white/50` edi va yorug' fonda
           deyarli ko'rinmasdi — qatorlar bilan ustunlar bir-biriga
-          qo'shilib ketardi. Endi har katak to'liq yopilgan: tashqi
-          ramka, ustunlar orasida chiziq, qatorlar orasida chiziq. */}
-      <div className={cn("min-w-max border rounded-lg overflow-hidden", PANJARA)}>
-        <div className={cn("flex border-b", PANJARA,
-          "bg-neutral-50 dark:bg-white/5")}>
-          <div className="w-14 shrink-0" />
+          qo'shilib ketardi. Endi har katak to'liq yopilgan. */}
+      <div className="min-w-max">
+        {/* SARLAVHA — vertikal surilganda tepada qoladi. */}
+        <div className={cn("flex border-b sticky top-0 z-20", PANJARA, HOSHIYA)}>
+          {/* BURCHAK — ikkala o'q bo'yicha ham qotadi, shuning uchun
+              eng yuqori qatlamda. */}
+          <div className={cn("w-14 shrink-0 sticky left-0 z-30 border-r", PANJARA, HOSHIYA)} />
           {ustunlar.map((r) => (
             <div key={r.id}
               className={cn(eni, "shrink-0 px-3 py-2.5 text-[12px] font-bold",
@@ -224,8 +243,9 @@ export function RoomTimeGrid({
               eniPx={Math.max(ustunlar.length, 1) * eniPx} />
           )}
           <div className={cn("flex border-b last:border-b-0", PANJARA)}>
-            <div className="w-14 shrink-0 px-2 py-3 text-[11px] font-bold tabular-nums
-              text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-white/5">
+            <div className={cn("w-14 shrink-0 px-2 py-3 text-[11px] font-bold tabular-nums",
+              "text-neutral-500 dark:text-neutral-400",
+              "sticky left-0 z-10 border-r", PANJARA, HOSHIYA)}>
               {vaqt}
             </div>
             {ustunlar.map((r) => (
@@ -296,9 +316,14 @@ export function RoomGrid({
     [groups, tab]);
 
   return (
-    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
-      <div className="flex items-center gap-1 px-3 pt-3 pb-2 border-b border-white/50
-        dark:border-white/10 overflow-x-auto">
+    /* `overflow-hidden` OLIB TASHLANDI — u aylanish konteksti yaratib,
+       ichkaridagi `sticky` sarlavhani jimgina o'chirib qo'yardi.
+       Ustun (`flex-col`) qilib olindi: tablar tepada qotadi, panjara
+       esa qolgan balandlikni to'liq egallaydi va o'zi aylanadi. */
+    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl
+      h-full flex flex-col">
+      <div className="shrink-0 flex items-center gap-1 px-3 pt-3 pb-2 border-b
+        border-white/50 dark:border-white/10 overflow-x-auto">
         {(["toq", "juft", "boshqa"] as Tab[]).map((t) => (
           <button key={t} type="button" onClick={() => setTab(t)}
             className={cn("shrink-0 px-3 h-8 rounded-xl text-[12px] font-semibold transition-colors",
@@ -319,7 +344,9 @@ export function RoomGrid({
           Bu kunlarda guruh yo&apos;q
         </p>
       ) : (
-        <RoomTimeGrid groups={korinadi} rooms={rooms} />
+        <div className="flex-1 min-h-0 p-2">
+          <RoomTimeGrid groups={korinadi} rooms={rooms} />
+        </div>
       )}
     </div>
   );
