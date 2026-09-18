@@ -34,9 +34,16 @@ const PRINT_CSS = `
     box-shadow: none !important; border: none !important;
     background: #fff !important;
   }
-  #chek img { width: 80mm !important; height: auto !important; }
+  /* QOG'OZNING BUTUN ENI. Ilgari \`width: 80mm\` qat'iy berilardi va
+     sahifaga 8 mm chekka qo'shilardi — 58 mm li termal apparatda
+     chop etiladigan joy 42 mm ga tushib, rasm o'shanga siqilardi va
+     matn yana kichrayardi. \`100%\` + \`max-width\` esa qanday qog'oz
+     bo'lsa, o'shanga to'liq yoyiladi.
+     CHEKKA 0: chekning o'z ichki hoshiyasi bor (kanvasdagi \`CHET\`),
+     termal apparat esa o'z chetini o'zi qo'yadi. */
+  #chek img { width: 100% !important; max-width: 80mm !important; height: auto !important; }
   .chek-yashir { display: none !important; }
-  @page { margin: 8mm; }
+  @page { margin: 0; }
 }`;
 
 type Holat = "" | "pdf" | "rasm" | "jonat";

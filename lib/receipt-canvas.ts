@@ -62,6 +62,30 @@ const CHET = 26;
 const SCALE = 3;            // qog'ozda va Retina ekranda tiniq chiqsin
 
 /**
+ * MATN MIQYOSI — chekdagi yozuv kattaligi.
+ *
+ * Chek RASM bo'lib chiqadi va qog'oz kengligiga siqiladi. Ya'ni
+ * qog'ozdagi harf balandligi `shrift / EN × qog'oz kengligi` ga teng —
+ * shriftning o'zi emas, uning CHEK KENGLIGIGA NISBATI hal qiladi.
+ *
+ * Eski qiymatda asosiy matn 12px edi: 80 mm qog'ozda 12/380×80 ≈
+ * 2.5 mm, 58 mm da esa atigi 1.8 mm. Odatdagi chek matni 3–3.5 mm,
+ * shuning uchun markaz "boshqa cheklar yaxshi chiqyapti, buniki
+ * ko'rinmayapti" deb xabar berdi (M Bakhtiyarovna, 2026-09-17).
+ *
+ * 1.35 → asosiy matn 16px, 80 mm da ≈ 3.4 mm. Chetlar (`CHET`)
+ * ATAYLAB kattalashtirilmadi: ular o'sha joyda qolsa, o'sgan matn
+ * uchun ko'proq joy qoladi.
+ */
+const K = 1.35;
+
+/** Miqyoslangan shrift o'lchami. */
+const O = (n: number) => Math.round(n * K);
+
+/** Miqyoslangan vertikal qadam — matn kattalashsa qatorlar ham siyraklashadi. */
+const Q = (n: number) => Math.round(n * K);
+
+/**
  * Chekni kanvasga chizadi va kanvasni qaytaradi.
  * `qrDataUrl` — ixtiyoriy; berilmasa QR chizilmaydi, kod matni qoladi.
  */
@@ -75,13 +99,15 @@ export async function drawReceipt(
   // ma'lum bo'lishi kerak, aks holda chizilgan narsa o'chib ketadi.
   const qatorlar = maydonlar(d);
   const davrlar = davrRoyxati(d);
+  // BALANDLIK CHIZISH BILAN BIR XIL MIQYOSDA hisoblanadi — aks holda
+  // matn kattalashib, kanvasning pastidan chiqib ketardi.
   let h = CHET;
-  h += 78;                                   // sarlavha bloki
-  h += qatorlar.length * 22 + 10;            // maydonlar
-  h += 26 + davrlar.length * 20 + 12;        // "qaysi davr uchun"
-  h += 46;                                   // JAMI
-  if (d.note) h += 24;
-  if (d.code) h += qr ? 122 : 40;
+  h += Q(78);                                   // sarlavha bloki
+  h += qatorlar.length * Q(22) + Q(10);         // maydonlar
+  h += Q(26) + davrlar.length * Q(20) + Q(12);  // "qaysi davr uchun"
+  h += Q(46);                                   // JAMI
+  if (d.note) h += Q(24);
+  if (d.code) h += qr ? Q(122) : Q(40);
   h += CHET;
 
   const c = document.createElement("canvas");
@@ -101,84 +127,90 @@ export async function drawReceipt(
 
   // ─── Sarlavha ──────────────────────────────────────────────────────
   g.fillStyle = "#111111";
-  g.font = `bold 16px ${F}`;
+  g.font = `bold ${O(16)}px ${F}`;
   markaz(g, d.organization?.name ?? "", EN / 2, y);
-  y += 22;
+  y += Q(22);
   g.fillStyle = "#777777";
-  g.font = `10px ${F}`;
+  g.font = `${O(10)}px ${F}`;
   markaz(g, "TO'LOV CHEKI", EN / 2, y);
-  y += 16;
+  y += Q(16);
   g.fillStyle = "#111111";
-  g.font = `bold 19px ${F}`;
+  g.font = `bold ${O(19)}px ${F}`;
   markaz(g, d.receiptLabel ?? "—", EN / 2, y);
-  y += 28;
+  y += Q(28);
   punktir(g, CHET, y, EN - CHET);
-  y += 12;
+  y += Q(12);
 
   // ─── Maydonlar ─────────────────────────────────────────────────────
-  g.font = `12px ${F}`;
   for (const [k, v] of qatorlar) {
-    g.fillStyle = "#888888";
-    g.fillText(k, CHET, y);
+    // QIYMAT AVVAL: uning kengligi o'lchanib, yorliqqa qolgan joy
+    // hisoblanadi. Matn kattalashgach yorliq bilan qiymat bir-birining
+    // ustiga chiqib ketishi mumkin edi — chekda bu o'qib bo'lmaydigan
+    // qatorga aylanardi.
+    g.font = `600 ${O(12)}px ${F}`;
+    const vw = g.measureText(v).width;
     g.fillStyle = "#111111";
-    g.font = `600 12px ${F}`;
     ong(g, v, EN - CHET, y);
-    g.font = `12px ${F}`;
-    y += 22;
+
+    g.font = `${O(12)}px ${F}`;
+    g.fillStyle = "#888888";
+    g.fillText(qisqart(g, k, EN - CHET * 2 - vw - Q(8)), CHET, y);
+    y += Q(22);
   }
-  y += 10;
+  y += Q(10);
   punktir(g, CHET, y, EN - CHET);
-  y += 12;
+  y += Q(12);
 
   // ─── Qaysi davr uchun ──────────────────────────────────────────────
   g.fillStyle = "#888888";
-  g.font = `10px ${F}`;
+  g.font = `${O(10)}px ${F}`;
   g.fillText("QAYSI DAVR UCHUN", CHET, y);
-  y += 16;
-  g.font = `12px ${F}`;
+  y += Q(16);
   for (const [nom, summa] of davrlar) {
-    g.fillStyle = "#333333";
-    g.fillText(nom, CHET, y);
+    g.font = `600 ${O(12)}px ${F}`;
+    const sw = g.measureText(summa).width;
     g.fillStyle = "#111111";
-    g.font = `600 12px ${F}`;
     ong(g, summa, EN - CHET, y);
-    g.font = `12px ${F}`;
-    y += 20;
+
+    g.font = `${O(12)}px ${F}`;
+    g.fillStyle = "#333333";
+    g.fillText(qisqart(g, nom, EN - CHET * 2 - sw - Q(8)), CHET, y);
+    y += Q(20);
   }
-  y += 12;
+  y += Q(12);
 
   // ─── JAMI ──────────────────────────────────────────────────────────
   g.strokeStyle = "#111111";
   g.lineWidth = 1.5;
   g.beginPath(); g.moveTo(CHET, y); g.lineTo(EN - CHET, y); g.stroke();
-  y += 10;
+  y += Q(10);
   g.fillStyle = "#111111";
-  g.font = `bold 13px ${F}`;
-  g.fillText("JAMI", CHET, y + 4);
-  g.font = `bold 20px ${F}`;
+  g.font = `bold ${O(13)}px ${F}`;
+  g.fillText("JAMI", CHET, y + Q(4));
+  g.font = `bold ${O(20)}px ${F}`;
   ong(g, pul(d.amount), EN - CHET, y);
-  y += 36;
+  y += Q(36);
 
   if (d.note) {
     g.fillStyle = "#888888";
-    g.font = `10px ${F}`;
+    g.font = `${O(10)}px ${F}`;
     g.fillText(`Izoh: ${qisqart(g, d.note, EN - CHET * 2)}`, CHET, y);
-    y += 24;
+    y += Q(24);
   }
 
   // ─── Originallik kodi ──────────────────────────────────────────────
   if (d.code) {
     if (qr) {
-      const o = 76;
+      const o = Q(76);
       g.drawImage(qr, (EN - o) / 2, y, o, o);
-      y += o + 8;
+      y += o + Q(8);
     }
     g.fillStyle = "#333333";
-    g.font = `11px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    g.font = `${O(11)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
     markaz(g, d.code, EN / 2, y);
-    y += 16;
+    y += Q(16);
     g.fillStyle = "#aaaaaa";
-    g.font = `9px ${F}`;
+    g.font = `${O(9)}px ${F}`;
     markaz(g, "Chek haqiqiyligini shu kod bo'yicha tekshirish mumkin", EN / 2, y);
   }
 
