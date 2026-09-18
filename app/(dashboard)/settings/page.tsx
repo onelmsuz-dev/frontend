@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useMemo, useRef } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -126,7 +126,21 @@ function SettingsContent() {
   const features = useFeatures().data;
   const { me } = useMe();
 
-  const visibleSections = sections.filter((s) => {
+  /**
+   * TARIF TUGAGANDA — FAQAT "Tarif va muddat".
+   *
+   * Ilgari bloklangan markazda faqat BOSHLANG'ICH bo'lim majburan
+   * "tarif" ga qo'yilardi (pastdagi effekt). Lekin chap ro'yxatdagi
+   * qolgan tugmalar joyida qolar va bosilganda bemalol ochilardi:
+   * ichidagi so'rovlar 402 bilan qaytar, ekran esa yarim ishlaydigan
+   * ko'rinishda turardi (Dream Zone, 2026-09-18).
+   *
+   * Endi ro'yxatning O'ZI qisqaradi — bosadigan narsa qolmaydi.
+   */
+  const blocked = me?.subscriptionBlocked === true;
+
+  const visibleSections = useMemo(() => sections.filter((s) => {
+    if (blocked) return s.id === "tarif";
     const key = "feature" in s ? (s.feature as string) : null;
     if (key) {
       const on = key === "onboarding" ? onboardingEnabled : features?.[key];
@@ -136,7 +150,7 @@ function SettingsContent() {
     }
     if ("perm" in s && !hasPerm(me?.permissions, s.perm as string)) return false;
     return true;
-  });
+  }), [blocked, features, onboardingEnabled, me?.permissions]);
 
   // Boshqa sahifadan aniq bo'limga o'tish: /settings?tab=xonalar (masalan
   // guruh kartochkasidagi ogohlantirish yoki yo'l ko'rsatuvchining turi).
@@ -147,20 +161,38 @@ function SettingsContent() {
   // yerda tiqilib qolardi). Bu hook har o'zgarishda qayta ishlaydi va
   // gidratsiya nomuvofiqligi ham bo'lmaydi.
   const searchParams = useSearchParams();
+  /**
+   * BIR MARTA. Ilgari bu effekt HAR RENDERDA ishlardi (`visibleSections`
+   * har safar yangi massiv edi) va `?tab=` manzilda qolgani uchun xodim
+   * boshqa bo'limga o'tmoqchi bo'lsa, effekt uni darhol orqaga qaytarib
+   * qo'yardi — bo'lim tanlash umuman ishlamasdi.
+   */
+  const tabQollandi = useRef("");
   useEffect(() => {
     const tab = searchParams.get("tab");
+    if (!tab || tabQollandi.current === tab) return;
     // Noma'lum qiymat berilsa hech bir bo'lim chizilmay, sahifa bo'sh
     // ko'rinardi — faqat mavjud bo'limlar qabul qilinadi.
     // `visibleSections` — `sections` emas: aks holda bayroq o'chiq yoki
     // ruxsati yo'q foydalanuvchi `?tab=harakatlar` havolasi bilan bo'limni
     // ochib olardi (chap ro'yxatda tugma ko'rinmasa ham).
-    if (tab && visibleSections.some(sec => sec.id === tab)) setActiveSection(tab);
+    if (visibleSections.some(sec => sec.id === tab)) {
+      tabQollandi.current = tab;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveSection(tab);
+    }
   }, [searchParams, visibleSections]);
 
-  // Tarif bloklangan bo'lsa — to'lov bo'limiga to'g'ridan-to'g'ri yo'naltiramiz
+  // Tarif bloklangan bo'lsa — to'lov bo'limiga to'g'ridan-to'g'ri yo'naltiramiz.
+  //
+  // Yuqoridagi `?tab=` effekti ham `visibleSections` ga tayanadi va u
+  // bloklangan holatda faqat "tarif" dan iborat, ya'ni havola orqali
+  // boshqa bo'limni ochib bo'lmaydi.
   useEffect(() => {
-    if (me?.subscriptionBlocked) setActiveSection("tarif");
-  }, [me?.subscriptionBlocked]);
+    // Bir martalik yo'naltirish — `blocked` o'zgargandagina ishlaydi.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (blocked) setActiveSection("tarif");
+  }, [blocked]);
 
   const { data: branchesRaw, isLoading: branchesLoading } = useBranches();
   const branches: Branch[] = Array.isArray(branchesRaw) ? branchesRaw : [];
