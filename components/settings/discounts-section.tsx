@@ -297,6 +297,10 @@ function DiscountModal({ editId, onClose, onDone }: {
   const [scope, setScope] = useState<"HAMMA" | "GURUH" | "KURS" | "TANLANGAN">("HAMMA");
   const [groupId, setGroupId]   = useState("");
   const [courseId, setCourseId] = useState("");
+  /** `TANLANGAN` da — chegirma qaysi kurslarga. Bo'sh = hammasiga. */
+  const [courseIds, setCourseIds] = useState<string[]>([]);
+  /** Chegirma o'qituvchi maosh asosini kamaytiradimi (standart — ha). */
+  const [maoshgaTasir, setMaoshgaTasir] = useState(true);
   const [picked, setPicked] = useState<string[]>([]);
   const [q, setQ] = useState("");
   const [startsAt, setStartsAt] = useState("");
@@ -316,6 +320,8 @@ function DiscountModal({ editId, onClose, onDone }: {
     setGroupId(mavjud.groupId ?? "");
     setCourseId(mavjud.courseId ?? "");
     setPicked(mavjud.studentIds ?? []);
+    setCourseIds(mavjud.courseIds ?? []);
+    setMaoshgaTasir(mavjud.affectsTeacherSalary !== false);
     setStartsAt(String(mavjud.startsAt ?? "").slice(0, 10));
     setEndsAt(String(mavjud.endsAt ?? "").slice(0, 10));
     setNoteText(mavjud.note ?? "");
@@ -505,6 +511,60 @@ function DiscountModal({ editId, onClose, onDone }: {
               </div>
             </Field>
           )}
+
+          {/* QAYSI KURSLARGA — faqat o'quvchi tanlanganda va faqat
+              kerak bo'lsa. Bo'sh qoldirilsa avvalgidek o'quvchining
+              BARCHA guruhlariga tegishli bo'ladi. */}
+          {scope === "TANLANGAN" && (
+            <Field label={`Qaysi kurslarga${courseIds.length ? ` — ${courseIds.length} ta` : " — hammasiga"}`}>
+              <div className="flex flex-wrap gap-1.5">
+                {(courses ?? []).map((c: { id: string; name: string }) => {
+                  const on = courseIds.includes(c.id);
+                  return (
+                    <button key={c.id} type="button"
+                      onClick={() => setCourseIds((p) =>
+                        on ? p.filter((x) => x !== c.id) : [...p, c.id])}
+                      className={cn("px-2.5 h-7 rounded-lg text-[11.5px] font-semibold border transition-colors",
+                        on
+                          ? "bg-neutral-900 text-white border-neutral-900 dark:bg-white dark:text-neutral-900 dark:border-white"
+                          : "border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400")}>
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-neutral-400 mt-1.5">
+                Hech biri tanlanmasa — o&apos;quvchining barcha guruhlariga tegishli.
+                Bir nechta guruhga qatnaydigan o&apos;quvchida kerakli kursni belgilang.
+              </p>
+            </Field>
+          )}
+
+          {/* O'QITUVCHI OYLIGI — chegirma uning foiziga tushsinmi. */}
+          <Field label="O'qituvchi oyligi">
+            <button type="button" onClick={() => setMaoshgaTasir((v) => !v)}
+              className={cn("w-full flex items-start gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-colors",
+                maoshgaTasir
+                  ? "border-neutral-300 dark:border-neutral-700"
+                  : "border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20")}>
+              <span className={cn("h-4 w-4 shrink-0 mt-0.5 rounded border grid place-items-center",
+                !maoshgaTasir
+                  ? "bg-amber-600 border-amber-600"
+                  : "border-neutral-300 dark:border-neutral-600")}>
+                {!maoshgaTasir && <span className="text-white text-[9px]">✓</span>}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-semibold text-neutral-800 dark:text-neutral-200">
+                  Chegirma o&apos;qituvchi oyligidan ayirilmasin
+                </span>
+                <span className="block text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  {maoshgaTasir
+                    ? "Hozir: chegirma foizli o'qituvchining tushumini ham kamaytiradi."
+                    : "Belgilandi: o'qituvchi darsni to'liq bergani uchun to'liq narxdan foiz oladi, chegirmani markaz o'z zimmasiga oladi."}
+                </span>
+              </span>
+            </button>
+          </Field>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Boshlanishi">
