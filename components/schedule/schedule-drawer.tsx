@@ -5,10 +5,11 @@ import Link from "next/link";
 import { CalendarClock, X } from "lucide-react";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useRooms } from "@/lib/hooks/useRooms";
-import { RoomTimeGrid, kunTuri, type Guruh } from "@/components/schedule/room-grid";
+import { RoomTimeGrid, type Guruh } from "@/components/schedule/room-grid";
 import { cn } from "@/lib/utils";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { businessTodayStr } from "@/lib/time";
+import { formatUzDate } from "@/lib/date-uz";
 
 /**
  * YON JADVAL — har sahifadan bir bosishda "bugun nima bor".
@@ -29,40 +30,46 @@ import { businessTodayStr } from "@/lib/time";
  * ortiqcha so'rov bo'lardi.
  */
 
-const KUN_KALIT = ["YAKSHANBA", "DUSHANBA", "SESHANBA", "CHORSHANBA",
-                   "PAYSHANBA", "JUMA", "SHANBA"];
-
 /**
- * PANEL TABLARI.
+ * HAFTA KUNLARI — DUSHANBADAN boshlab.
  *
- * Panel dastlab faqat BUGUNni ko'rsatardi. Amalda esa ikkinchi savol
- * darhol tug'iladi: "ertaga bu xona bo'shmi", "toq kunlarda nima bor".
- * Buning uchun jadval bo'limiga o'tish kerak edi — ya'ni panel yarim
- * yo'lda qoldirardi (egasining talabi, 2026-09-18).
+ * Tablar toq/juft edi, lekin panelda amaliy savol aniqroq: "seshanba
+ * kuni 3-xona bo'shmi". Toq/juft esa HAFTALIK TARH tushunchasi va u
+ * jadval bo'limida o'z joyida qoldi — panelda aniq KUN kerak
+ * (egasining qarori, 2026-09-18).
  *
- * "HAMMASI" — "Boshqa" EMAS. Jadval sahifasida uchinchi tab toq/juftga
- * tushmagan guruhlarni ko'rsatadi; bu yerda esa BUTUN haftalik tarh
- * chiqadi. Sabab: aralash kunli guruh (masalan har kuni) toq tabida
- * ham, juft tabida ham ko'rinmaydi — panelda uni topadigan joy
- * bo'lishi kerak.
+ * Standart holatda BUGUN tanlangan: panel avvalo "hozir nima
+ * bo'lyapti" uchun ochiladi.
  */
-type PanelTab = "bugun" | "toq" | "juft" | "hammasi";
+const KUNLAR = [
+  { kalit: "DUSHANBA",   qisqa: "Du",  toliq: "Dushanba"   },
+  { kalit: "SESHANBA",   qisqa: "Se",  toliq: "Seshanba"   },
+  { kalit: "CHORSHANBA", qisqa: "Ch",  toliq: "Chorshanba" },
+  { kalit: "PAYSHANBA",  qisqa: "Pa",  toliq: "Payshanba"  },
+  { kalit: "JUMA",       qisqa: "Ju",  toliq: "Juma"       },
+  { kalit: "SHANBA",     qisqa: "Sha", toliq: "Shanba"     },
+  { kalit: "YAKSHANBA",  qisqa: "Yak", toliq: "Yakshanba"  },
+] as const;
 
-const TAB_NOMI: Record<PanelTab, string> = {
-  bugun: "Bugun", toq: "Toq", juft: "Juft", hammasi: "Hammasi",
-};
+/** `getDay()` (yakshanba = 0) → `KUNLAR` indeksi (dushanba = 0). */
+const dushanbadan = (getDay: number) => (getDay + 6) % 7;
 
-const SARLAVHA: Record<PanelTab, string> = {
-  bugun:   "Bugungi jadval",
-  toq:     "Toq kunlar",
-  juft:    "Juft kunlar",
-  hammasi: "Haftalik jadval",
+/** "2026-09-18" → o'sha kunning `Date` i (lokal yarim tun). */
+function kunDate(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
+const iso = (d: Date) => {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
 export function ScheduleDrawer() {
   const { me } = useMe();
   const [ochiq, setOchiq] = useState(false);
-  const [tab, setTab] = useState<PanelTab>("bugun");
+  /** Tanlangan hafta kuni (dushanba = 0). `null` — hali bugunga qo'yiladi. */
+  const [kunIdx, setKunIdx] = useState<number | null>(null);
 
   // Faqat ochilganda yuklaymiz.
   const { data: raw, isLoading } = useGroups(
@@ -81,34 +88,38 @@ export function ScheduleDrawer() {
   if (!hasPerm(me?.permissions, "schedule.view")) return null;
 
   const bugun = businessTodayStr();            // "YYYY-MM-DD"
-  const kun = KUN_KALIT[new Date(`${bugun}T12:00:00Z`).getUTCDay()];
+  const bugunIdx = dushanbadan(kunDate(bugun).getDay());
+  const tanlangan = kunIdx ?? bugunIdx;
+  const bugunmi = tanlangan === bugunIdx;
 
   /**
-   * BUGUNGI DARSLAR — hafta kuni mos kelishi YETARLI EMAS: guruh
-   * boshlanmagan yoki allaqachon tugagan bo'lishi mumkin. To'liq
-   * jadvalda ham AYNAN shu qoida.
+   * TANLANGAN KUNNING SHU HAFTADAGI SANASI.
+   *
+   * Kunni tanlash "har payshanba" degani emas — "SHU HAFTANING
+   * payshanbasi". Guruhning boshlanish/tugash sanalari aynan shu
+   * kunga solishtiriladi, aks holda hali boshlanmagan yoki allaqachon
+   * tugagan guruh ham ro'yxatga tushardi.
    */
-  const bugungi = groups
-    .filter((g) => (g.scheduleDays ?? []).includes(kun))
+  const sana = (() => {
+    const d = kunDate(bugun);
+    d.setDate(d.getDate() + (tanlangan - bugunIdx));   // shu haftaning o'sha kuni
+    return iso(d);
+  })();
+
+  /**
+   * TANLANGAN KUN DARSLARI.
+   *
+   * Hafta kuni mos kelishi YETARLI EMAS: guruh o'sha sanada faol
+   * bo'lishi ham kerak. To'liq jadvalda ham AYNAN shu qoida.
+   */
+  const korinadi = groups
+    .filter((g) => (g.scheduleDays ?? []).includes(KUNLAR[tanlangan].kalit))
     .filter((g) => {
-      const bosh = String(g.startDate ?? "").slice(0, 10);
-      const oxir = g.endDate ? String(g.endDate).slice(0, 10) : null;
-      return (!bosh || bosh <= bugun) && (!oxir || oxir >= bugun);
+      const b = String(g.startDate ?? "").slice(0, 10);
+      const o = g.endDate ? String(g.endDate).slice(0, 10) : null;
+      return (!b || b <= sana) && (!o || o >= sana);
     })
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
-
-  /**
-   * TANLANGAN TAB BO'YICHA RO'YXAT.
-   *
-   * Toq/juft/hammasi — HAFTALIK TARH, ya'ni sana bo'yicha filtrlanmaydi:
-   * "toq kunlarda 3-xonada nima bor" degan savolga bugungi sana ta'sir
-   * qilmaydi. Faqat "Bugun" tabi sanaga bog'liq.
-   */
-  const korinadi = tab === "bugun"
-    ? bugungi
-    : groups
-        .filter((g) => tab === "hammasi" || kunTuri(g.scheduleDays) === tab)
-        .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
   return (
     <>
@@ -145,11 +156,18 @@ export function ScheduleDrawer() {
             <div className="shrink-0 flex items-center justify-between px-3 sm:px-4 py-2.5
               border-b border-neutral-100 dark:border-neutral-800">
               <div className="min-w-0">
-                <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">
-                  {SARLAVHA[tab]}
+                <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100 truncate">
+                  {KUNLAR[tanlangan].toliq}
+                  {bugunmi && (
+                    <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded
+                      bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+                      bugun
+                    </span>
+                  )}
                 </p>
                 <p className="text-[11px] text-neutral-400">
-                  {isLoading ? "yuklanmoqda..." : `${korinadi.length} ta dars`}
+                  {formatUzDate(sana)}
+                  {isLoading ? " · yuklanmoqda..." : ` · ${korinadi.length} ta dars`}
                 </p>
               </div>
               <button onClick={() => setOchiq(false)} aria-label="Yopish"
@@ -164,14 +182,21 @@ export function ScheduleDrawer() {
                 yetarli, lekin panelning tepasini yeb qo'ymaydi. */}
             <div className="shrink-0 flex items-center gap-1 px-3 sm:px-4 py-2 overflow-x-auto
               border-b border-neutral-100 dark:border-neutral-800">
-              {(["bugun", "toq", "juft", "hammasi"] as PanelTab[]).map((t) => (
-                <button key={t} type="button" onClick={() => setTab(t)}
-                  className={cn("shrink-0 px-3 h-8 rounded-lg text-[12px] font-semibold",
-                    "transition-colors",
-                    tab === t
+              {KUNLAR.map((k, i) => (
+                <button key={k.kalit} type="button" onClick={() => setKunIdx(i)}
+                  title={k.toliq}
+                  className={cn("shrink-0 px-2.5 h-8 rounded-lg text-[12px] font-semibold",
+                    "transition-colors relative",
+                    tanlangan === i
                       ? "bg-indigo-600 text-white"
                       : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5")}>
-                  {TAB_NOMI[t]}
+                  {k.qisqa}
+                  {/* BUGUN belgisi — tanlanmagan bo'lsa ham ko'rinib
+                      tursin, aks holda boshqa kunga o'tgach "bugun
+                      qaysi biri" degani yo'qolardi. */}
+                  {i === bugunIdx && tanlangan !== i && (
+                    <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                  )}
                 </button>
               ))}
             </div>
@@ -182,12 +207,11 @@ export function ScheduleDrawer() {
               )}
               {!isLoading && korinadi.length === 0 && (
                 <p className="text-[12px] text-neutral-400 text-center py-8">
-                  {tab === "bugun" ? "Bugun dars yo'q" : "Bu kunlarda guruh yo'q"}
+                  {KUNLAR[tanlangan].toliq}{" "}kuni dars yo&apos;q
                 </p>
               )}
               {!isLoading && korinadi.length > 0 && (
-                <RoomTimeGrid groups={korinadi} rooms={rooms} compact
-                  showNow={tab === "bugun"} />
+                <RoomTimeGrid groups={korinadi} rooms={rooms} compact showNow={bugunmi} />
               )}
             </div>
 
