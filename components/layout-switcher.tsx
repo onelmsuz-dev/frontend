@@ -3,6 +3,7 @@ import { BottomNav } from "@/components/navs/bottom-nav";
 import { BranchProvider } from "@/lib/contexts/branch-context";
 import { SubscriptionGate } from "@/components/subscription-gate";
 import { OnboardingMount } from "@/components/onboarding/onboarding-mount";
+import { ScheduleDrawer } from "@/components/schedule/schedule-drawer";
 
 export function LayoutSwitcher({ children }: { children: React.ReactNode }) {
   return (
@@ -22,6 +23,11 @@ export function LayoutSwitcher({ children }: { children: React.ReactNode }) {
             <SubscriptionGate>{children}</SubscriptionGate>
           </main>
           <BottomNav />
+          {/* YON JADVAL — o'ng chekkadagi tugma bilan ochiladi va har
+              sahifada bir xil turadi. Yopiq holatda hech qanday so'rov
+              yubormaydi; `schedule.view` ruxsati yo'q bo'lsa umuman
+              chizilmaydi. */}
+          <ScheduleDrawer />
         </div>
       </OnboardingMount>
     </BranchProvider>

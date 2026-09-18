@@ -17,8 +17,10 @@ import { mutate } from "swr";
 import { businessToday } from "@/lib/time";
 import { useOrganization } from "@/lib/hooks/useOrganization";
 import { useRooms } from "@/lib/hooks/useRooms";
+import { RoomGrid } from "@/components/schedule/room-grid";
 import {
   ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, List, ChevronDown, Plus,
+  DoorOpen,
 } from "lucide-react";
 import { TimeInput } from "@/components/ui/time-input";
 
@@ -102,7 +104,7 @@ const EMPTY_FORM = {
   startDate: todayStr(), status: "ACTIVE",
 };
 
-type ViewMode = "kun" | "hafta" | "oy";
+type ViewMode = "kun" | "hafta" | "oy" | "xona";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -875,6 +877,9 @@ export default function SchedulePage() {
             ["kun",   "Kun",   List],
             ["hafta", "Hafta", LayoutGrid],
             ["oy",    "Oy",    CalendarDays],
+            // XONA — vaqt o'qiga emas, XONAGA qurilgan ko'rinish:
+            // "2-xona bo'shmi" degan savolga javob beradi.
+            ["xona",  "Xonalar", DoorOpen],
           ] as [ViewMode, string, React.ComponentType<{className?:string}>][]).map(([id,label,Icon]) => (
             <button key={id} onClick={() => setView(id)}
               className={cn(
@@ -888,6 +893,11 @@ export default function SchedulePage() {
           ))}
         </div>
 
+        {/* SANA BOSHQARUVI — xona ko'rinishida YO'Q.
+            Xonalar jadvali haftalik takrorlanadigan tarh, bitta
+            kunning hodisalari emas: "oldinga/orqaga" u yerda hech
+            narsani o'zgartirmasdi va faqat chalg'itardi. */}
+        {view !== "xona" && (
         <div className="relative flex items-center gap-1 ml-2">
           <button onClick={onPrev}
             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors">
@@ -922,11 +932,14 @@ export default function SchedulePage() {
             </>
           )}
         </div>
+        )}
 
+        {view !== "xona" && (
         <button onClick={goToday}
           className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
           Bugun
         </button>
+        )}
 
         {/* Two buttons side by side — admin only */}
         {isAdmin && (
@@ -944,6 +957,22 @@ export default function SchedulePage() {
           </div>
         )}
       </div>
+
+      {/* ══ XONALAR VIEW ══════════════════════════════════════════════════════
+           Sana tanlagichga BOG'LIQ EMAS: bu haftalik takrorlanadigan
+           tarh, bitta kunning hodisalari emas. Shuning uchun yuqoridagi
+           "oldinga/orqaga" tugmalari bu yerda ma'no bermaydi. */}
+      {view === "xona" && (
+        <div className="flex-1 overflow-y-auto p-4">
+          <RoomGrid
+            groups={groups}
+            rooms={rooms}
+            blockColor={(g, i) =>
+              courseBlockColor((g.course as { color?: string | null } | null)?.color)
+                ?? GROUP_COLORS[i % GROUP_COLORS.length]}
+          />
+        </div>
+      )}
 
       {/* ══ KUN VIEW ══════════════════════════════════════════════════════════ */}
       {view === "kun" && (

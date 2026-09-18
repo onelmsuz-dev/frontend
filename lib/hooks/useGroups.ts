@@ -29,7 +29,16 @@ async function deleter(url: string) {
   return r.json();
 }
 
-export function useGroups(params?: { courseId?: string; teacherId?: string; status?: string }) {
+/**
+ * `opts.enabled === false` — SO'ROV UMUMAN YUBORILMAYDI (SWR kaliti
+ * `null`). Yopiq holatda turadigan panellar uchun: ular har sahifada
+ * mount bo'ladi va shartsiz so'rov yuborsa, butun ilova bo'ylab har
+ * yuklanishda ortiqcha so'rov bo'lardi.
+ */
+export function useGroups(
+  params?: { courseId?: string; teacherId?: string; status?: string },
+  opts?: { enabled?: boolean },
+) {
   const { activeBranchId } = useBranch();
   const query = new URLSearchParams();
   if (params?.courseId)  query.set("courseId",  params.courseId);
@@ -37,7 +46,8 @@ export function useGroups(params?: { courseId?: string; teacherId?: string; stat
   if (params?.status)    query.set("status",    params.status);
   if (activeBranchId)    query.set("branchId",  activeBranchId);
   const qs = query.toString();
-  return useSWR(`/api/groups${qs ? `?${qs}` : ""}`, fetcher);
+  const kalit = `/api/groups${qs ? `?${qs}` : ""}`;
+  return useSWR(opts?.enabled === false ? null : kalit, fetcher);
 }
 
 export function useGroup(id: string) {

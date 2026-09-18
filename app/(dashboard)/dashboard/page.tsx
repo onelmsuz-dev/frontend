@@ -212,7 +212,10 @@ function OwnerDashboardPage() {
           </div>
         )}
 
-        {/* Area chart — still uses mock revenue until finance API is ready.
+        {/* Kirim/chiqim grafigi — ma'lumot HAQIQIY (`/api/reports` →
+            `reports.service.revenue()`: oy bo'yicha `Payment` va
+            `Expense` yig'indisi). Ilgari bu yerda "mock revenue"
+            deb turgan izoh eskirgan edi.
             PUL RUXSATI: bu butunlay moliyaviy blok, `payments.view`
             bo'lmasa chizilmaydi. */}
         {pulKor && (
