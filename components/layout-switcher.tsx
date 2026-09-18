@@ -2,6 +2,7 @@ import { TorNav } from "@/components/navs/tor-nav";
 import { BottomNav } from "@/components/navs/bottom-nav";
 import { BranchProvider } from "@/lib/contexts/branch-context";
 import { SubscriptionGate } from "@/components/subscription-gate";
+import { SubscriptionBanner } from "@/components/subscription-banner";
 import { OnboardingMount } from "@/components/onboarding/onboarding-mount";
 import { ScheduleDrawer } from "@/components/schedule/schedule-drawer";
 
@@ -20,6 +21,9 @@ export function LayoutSwitcher({ children }: { children: React.ReactNode }) {
         <div className="relative flex min-h-screen gap-3 p-0 lg:gap-4 lg:p-4">
           <TorNav />
           <main className="min-h-screen min-w-0 flex-1 pb-[80px] lg:min-h-0 lg:pb-0">
+            {/* Tarif tugashiga oz qolganda — HAR SAHIFANING tepasida.
+                Sozlamalar ichida chizilmaydi: u yerda batafsil yozuv bor. */}
+            <SubscriptionBanner />
             <SubscriptionGate>{children}</SubscriptionGate>
           </main>
           <BottomNav />

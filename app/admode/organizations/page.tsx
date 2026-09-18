@@ -191,6 +191,39 @@ export default function OrganizationsPage() {
     finally { setDemoId(null); }
   }
 
+  /**
+   * MUDDATNI ANIQ SANAGA QO'YADI.
+   *
+   * ±7/14/30 tugmalari faqat NISBIY siljitadi ("yana 30 kun"), lekin
+   * markaz bilan kelishilgan aniq sana (masalan "31-dekabrgacha
+   * to'ladi") uchun ular noqulay: admin hisoblab, bir necha marta
+   * bosishi kerak edi (egasining talabi, 2026-09-18).
+   *
+   * SANA KUN OXIRIGA qo'yiladi (Toshkent bo'yicha 23:59:59) — aks
+   * holda o'sha kunning o'zida ertalab muddat allaqachon tugagan
+   * bo'lib chiqardi. `subscriptionStatus()` qolgan kunni yuqoriga
+   * yaxlitlaydi, ya'ni tanlangan kun TO'LIQ amal qiladi.
+   */
+  async function setExpiryDate(id: string, kun: string) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(kun)) return;
+    setDemoId(id);
+    try {
+      const planExpiresAt = new Date(`${kun}T23:59:59.999+05:00`).toISOString();
+      const res = await fetch(`/api/admode/organizations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planExpiresAt }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setDeleteErr(d.error ?? "Sanani saqlab bo'lmadi");
+        return;
+      }
+      mutate();
+    } catch { setDeleteErr("Serverga ulanib bo'lmadi"); }
+    finally { setDemoId(null); }
+  }
+
   /** Muddatni N kunga uzaytiradi — joriy muddat (yoki bugun, qaysi biri keyinroq) dan boshlab. */
   async function extendSubscription(id: string, currentExpiresAt: string | null, days: number) {
     setDemoId(id);
@@ -558,6 +591,18 @@ export default function OrganizationsPage() {
                                 : `${formatUzDate(org.subscription.expiresAt)}` +
                                   (org.subscription?.active ? ` (${org.subscription.daysLeft} kun)` : " (tugagan)")}
                             </span>
+                            {/* ANIQ SANA — tugmalardan yuqorida, chunki
+                                kelishilgan sana bo'lsa u asosiy yo'l. */}
+                            <input type="date" disabled={demoId === org.id}
+                              value={org.subscription?.expiresAt
+                                ? String(org.subscription.expiresAt).slice(0, 10) : ""}
+                              onChange={e => setExpiryDate(org.id, e.target.value)}
+                              title="Tugash sanasini qo'lda kiritish"
+                              className="text-[10px] px-1.5 py-1 rounded-md w-fit
+                                border border-neutral-300 dark:border-neutral-700
+                                bg-transparent text-neutral-600 dark:text-neutral-300
+                                outline-none focus:border-amber-500 disabled:opacity-40" />
+
                             <div className="flex items-center gap-1">
                               {[7, 14, 30].map(d => (
                                 <button key={`-${d}`} disabled={demoId === org.id}

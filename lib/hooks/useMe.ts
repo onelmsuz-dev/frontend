@@ -16,6 +16,19 @@ export interface MeData {
   acceptsPayments?: boolean;
   /** Tarif muddati + grace-period tugagan — org resurslari backendda bloklangan. */
   subscriptionBlocked?: boolean;
+  /**
+   * Tarif holati to'liq — panel tepasidagi ogohlantirish uchun.
+   * `null` — o'quvchi yoki platforma admini (ularda tarif tushunchasi yo'q).
+   */
+  subscription?: {
+    active: boolean;
+    daysLeft: number;
+    expiresAt: string | null;
+    /** Muddat TUGAMAGAN, lekin 3 kun yoki kamroq qolgan. */
+    warning: boolean;
+    expired: boolean;
+    blocked: boolean;
+  } | null;
   permissions: string[];
 }
 
