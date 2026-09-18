@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CalendarClock, X, MapPin, User } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { CalendarClock, X } from "lucide-react";
 import { useGroups } from "@/lib/hooks/useGroups";
+import { useRooms } from "@/lib/hooks/useRooms";
+import { RoomTimeGrid, type Guruh } from "@/components/schedule/room-grid";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { businessTodayStr } from "@/lib/time";
 
@@ -16,8 +17,11 @@ import { businessTodayStr } from "@/lib/time";
  * kim dars o'tyapti?". Buning uchun ishni to'xtatib jadval bo'limiga
  * o'tish, keyin qaytib kelish kerak edi (egasining talabi, 2026-09-18).
  *
- * BUGUNGI KUN, VAQT BO'YICHA TARTIBLANGAN. Hafta yoki xona kesimi bu
- * yerda ortiqcha — u uchun to'liq jadval bor; yon panel "hozir" uchun.
+ * BUGUNGI KUN, XONA × VAQT PANJARASI. Avval tekis ro'yxat edi, lekin
+ * amaliy savol ("qaysi xona bo'sh", "bu soatda nechta dars ketyapti")
+ * ro'yxatdan javob olmasdi — xona ustun bo'lgandagina ko'rinadi.
+ * Panjara markupi jadval sahifasi bilan BIR XIL komponentdan
+ * (`RoomTimeGrid`) — ikki ekran bir-biridan uzoqlashmasin.
  *
  * MA'LUMOT FAQAT OCHILGANDA so'raladi: panel har sahifada turadi va
  * yopiq holatda ham so'rov yuborsa, butun ilova bo'ylab har yuklanishda
@@ -27,15 +31,6 @@ import { businessTodayStr } from "@/lib/time";
 const KUN_KALIT = ["YAKSHANBA", "DUSHANBA", "SESHANBA", "CHORSHANBA",
                    "PAYSHANBA", "JUMA", "SHANBA"];
 
-interface Guruh {
-  id: string; name: string; startTime: string; endTime: string;
-  scheduleDays?: string[];
-  startDate?: string | null; endDate?: string | null;
-  room?: { name?: string } | null;
-  course?: { name?: string } | null;
-  teacher?: { user?: { name?: string } | null } | null;
-}
-
 export function ScheduleDrawer() {
   const { me } = useMe();
   const [ochiq, setOchiq] = useState(false);
@@ -44,6 +39,8 @@ export function ScheduleDrawer() {
   const { data: raw, isLoading } = useGroups(
     ochiq ? { status: "ACTIVE" } : undefined, { enabled: ochiq });
   const groups: Guruh[] = Array.isArray(raw) ? raw : [];
+  const { data: roomsRaw } = useRooms();
+  const rooms: { id: string; name: string }[] = Array.isArray(roomsRaw) ? roomsRaw : [];
 
   useEffect(() => {
     if (!ochiq) return;
@@ -91,7 +88,11 @@ export function ScheduleDrawer() {
           <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
             onClick={() => setOchiq(false)} />
 
-          <aside className="fixed right-0 top-0 bottom-0 z-50 w-[min(92vw,340px)]
+          {/* PANJARA KENGLIK TALAB QILADI. Tor panelda xona ustunlari
+              bir-biriga tiqilib, o'qib bo'lmasdi — shuning uchun panel
+              ekranning kattaroq qismini egallaydi va ichida gorizontal
+              aylanadi. Telefonda deyarli to'liq ekran. */}
+          <aside className="fixed right-0 top-0 bottom-0 z-50 w-[min(96vw,900px)]
             bg-white dark:bg-neutral-900 shadow-2xl flex flex-col
             border-l border-neutral-200 dark:border-neutral-800">
             <div className="flex items-center justify-between px-4 py-3
@@ -111,7 +112,7 @@ export function ScheduleDrawer() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <div className="flex-1 overflow-y-auto">
               {isLoading && (
                 <p className="text-[12px] text-neutral-400 text-center py-8">Yuklanmoqda...</p>
               )}
@@ -120,40 +121,15 @@ export function ScheduleDrawer() {
                   Bugun dars yo&apos;q
                 </p>
               )}
-              {bugungi.map((g) => (
-                <Link key={g.id} href={`/groups/${g.id}`} onClick={() => setOchiq(false)}
-                  className="block rounded-xl border border-neutral-200 dark:border-neutral-800
-                    px-3 py-2.5 hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="text-[12.5px] font-bold text-neutral-900 dark:text-neutral-100
-                      truncate">{g.name}</p>
-                    <span className="text-[11px] font-bold tabular-nums shrink-0
-                      text-indigo-600 dark:text-indigo-400">
-                      {g.startTime}
-                    </span>
-                  </div>
-                  {g.course?.name && (
-                    <p className="text-[11px] text-neutral-400 truncate">{g.course.name}</p>
-                  )}
-                  <div className="flex items-center gap-3 mt-1 text-[11px] text-neutral-500
-                    dark:text-neutral-400">
-                    <span className="flex items-center gap-1 min-w-0">
-                      <MapPin className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{g.room?.name ?? "—"}</span>
-                    </span>
-                    <span className="flex items-center gap-1 min-w-0">
-                      <User className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{g.teacher?.user?.name ?? "—"}</span>
-                    </span>
-                  </div>
-                </Link>
-              ))}
+              {!isLoading && bugungi.length > 0 && (
+                <RoomTimeGrid groups={bugungi} rooms={rooms} compact />
+              )}
             </div>
 
             <Link href="/schedule" onClick={() => setOchiq(false)}
-              className={cn("block px-4 py-3 text-center text-[12px] font-semibold",
-                "border-t border-neutral-100 dark:border-neutral-800",
-                "text-indigo-600 dark:text-indigo-400 hover:bg-neutral-50 dark:hover:bg-white/5")}>
+              className="block px-4 py-3 text-center text-[12px] font-semibold
+                border-t border-neutral-100 dark:border-neutral-800
+                text-indigo-600 dark:text-indigo-400 hover:bg-neutral-50 dark:hover:bg-white/5">
               To&apos;liq jadval →
             </Link>
           </aside>
