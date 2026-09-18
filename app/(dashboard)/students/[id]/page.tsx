@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { formatUzDate } from "@/lib/date-uz";
 import { StudentNoteCard } from "@/components/students/student-note-card";
+import { AttendanceStats } from "@/components/students/attendance-stats";
 
 function fmt(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -1751,6 +1752,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               <Calendar className="w-4 h-4 text-neutral-400" />
               <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Davomat tarixi</h3>
             </div>
+            {/* STATISTIKA ro'yxat USTIDA: "nechta kelgan" degan savolga
+                javob birinchi ko'rinsin, qatorlar esa tafsilot bo'lib
+                qolsin. To'liq tarixdan hisoblanadi — pastdagi ro'yxat
+                faqat oxirgi 30 qator. */}
+            <AttendanceStats studentId={student.id} />
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800 max-h-80 overflow-y-auto">
               {student.attendance?.length === 0 && (
                 <p className="text-[12px] text-neutral-400 p-4 text-center">Davomat yo'q</p>
