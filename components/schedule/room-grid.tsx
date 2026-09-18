@@ -1,9 +1,8 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { fmtShortDate } from "@/lib/date-uz";
 import { blockColorFor } from "@/lib/course-colors";
 import { businessMinutesOfDay } from "@/lib/time";
 
@@ -61,10 +60,6 @@ export interface Guruh {
   _count?: { students?: number };
 }
 
-const DAYS_SHORT: Record<string, string> = {
-  DUSHANBA: "Du", SESHANBA: "Se", CHORSHANBA: "Ch",
-  PAYSHANBA: "Pa", JUMA: "Ju", SHANBA: "Sha", YAKSHANBA: "Yak",
-};
 
 /**
  * SOF PANJARA — vaqt (qator) × xona (ustun).
@@ -88,11 +83,13 @@ const PANJARA = "border-neutral-300 dark:border-neutral-700";
  * YOPISHIB TURADIGAN QISMLARNING FONI — SHAFFOF BO'LMASLIGI SHART.
  *
  * Sarlavha qatori va vaqt ustuni surilganda joyida qoladi, ya'ni
- * ularning ostidan kartochkalar o'tadi. Fon shaffof bo'lsa (avvalgi
- * `dark:bg-white/5`) matnlar bir-birining ustiga tushib o'qib
- * bo'lmasdi.
+ * ularning ostidan kartochkalar o'tadi. Fon shaffof bo'lsa matnlar
+ * bir-birining ustiga tushib o'qib bo'lmasdi.
  */
 const HOSHIYA = "bg-neutral-50 dark:bg-neutral-800";
+
+/** Vaqt o'qi qadami — yarim soat. */
+const QADAM = 30;
 
 /** "09:30" → 570. Noto'g'ri qiymatda `null`. */
 function daqiqa(hhmm: string): number | null {
@@ -101,28 +98,32 @@ function daqiqa(hhmm: string): number | null {
   return Number(m[1]) * 60 + Number(m[2]);
 }
 
+/** 570 → "09:30". */
+function soat(min: number): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(Math.floor(min / 60) % 24)}:${p(min % 60)}`;
+}
+
 /**
- * "HOZIR" CHIZIG'I — panjara kengligida, ustunlar bilan aniq tekis.
+ * XONA ICHIDA USTMA-UST TUSHGAN DARSLAR — yonma-yon yo'laklarga.
  *
- * Modul darajasida: render ichida e'lon qilinsa React uni har safar
- * YANGI komponent deb biladi va ostidagi daraxtni qayta yaratadi.
+ * Bir xonada bir vaqtda ikki dars bo'lmasligi kerak va forma buni
+ * tekshiradi, lekin eski ma'lumotda uchraydi. Bloklar bir-birining
+ * ustiga chizilsa, pastdagisi butunlay ko'rinmay qolardi — shuning
+ * uchun kengligi bo'linadi.
  */
-function HozirChizigi({ yorliq, eniPx }: { yorliq: string; eniPx: number }) {
-  return (
-    <div className="flex items-center" aria-label="Hozirgi vaqt">
-      {/* Chap hoshiya vaqt ustuni bilan bir xil fonda — chiziq
-          panjaraning ichidan o'tayotgandek ko'rinsin. */}
-      <div className={cn("w-14 shrink-0 pr-1 text-right self-stretch",
-        "flex items-center justify-end",
-        "sticky left-0 z-10 border-r", PANJARA, HOSHIYA)}>
-        <span className="inline-block px-1 py-0.5 rounded text-[9.5px] font-black
-          tabular-nums bg-red-500 text-white">
-          {yorliq}
-        </span>
-      </div>
-      <div className="h-px bg-red-500 shrink-0" style={{ width: eniPx }} />
-    </div>
-  );
+function yolaklar(list: Guruh[]): { g: Guruh; yolak: number; jami: number }[] {
+  const tartib = [...list].sort((a, b) =>
+    (daqiqa(a.startTime) ?? 0) - (daqiqa(b.startTime) ?? 0));
+  const oxirlar: number[] = [];                     // har yo'lakning tugash daqiqasi
+  const joy = tartib.map((g) => {
+    const b = daqiqa(g.startTime) ?? 0;
+    const o = Math.max(daqiqa(g.endTime) ?? b + QADAM, b + QADAM);
+    let y = oxirlar.findIndex((t) => t <= b);
+    if (y === -1) { y = oxirlar.length; oxirlar.push(o); } else { oxirlar[y] = o; }
+    return { g, yolak: y };
+  });
+  return joy.map((x) => ({ ...x, jami: oxirlar.length }));
 }
 
 export function RoomTimeGrid({
@@ -130,17 +131,27 @@ export function RoomTimeGrid({
 }: {
   groups: Guruh[];
   rooms: { id: string; name: string }[];
-  /** Yon panel uchun torroq ustun va kichikroq matn. */
+  /** Yon panel uchun torroq ustun va pastroq qator. */
   compact?: boolean;
   /**
    * "HOZIR SHU YERDASIZ" CHIZIG'I.
    *
-   * FAQAT BUGUNGI jadval uchun. Jadval sahifasidagi xonalar
-   * ko'rinishi — haftalik takrorlanadigan TARH (toq/juft), u yerda
-   * "hozir" degan tushuncha yo'q va chiziq yolg'on ma'no berardi.
+   * FAQAT BUGUNGI jadval uchun. Haftalik tarhda (toq/juft) "hozir"
+   * degan tushuncha yo'q va chiziq yolg'on ma'no berardi.
    */
   showNow?: boolean;
 }) {
+  /**
+   * DAQIQALIK YANGILANISH — panel ochiq turganda chiziq eskirmasin.
+   * Taymer FAQAT chiziq kerak bo'lganda ishlaydi.
+   */
+  const [tik, setTik] = useState(0);
+  useEffect(() => {
+    if (!showNow) return;
+    const id = setInterval(() => setTik((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, [showNow]);
+
   /**
    * USTUNLAR — faqat BAND xonalar, oxirida "Xonasiz".
    * Bo'sh xonani ustun qilib chizish panjarani kengaytirar, lekin hech
@@ -153,145 +164,171 @@ export function RoomTimeGrid({
     return xonasizBor ? [...list, { id: "__yoq__", name: "Xonasiz" }] : list;
   }, [groups, rooms]);
 
-  /** Qatorlar — guruhlarning haqiqiy boshlanish vaqtlari. */
-  const vaqtlar = useMemo(
-    () => [...new Set(groups.map((g) => g.startTime))].sort(),
-    [groups]);
+  /**
+   * VAQT OYNASI — YARIM SOATLIK, UZLUKSIZ.
+   *
+   * Ilgari qatorlar faqat darslar BOSHLANADIGAN vaqtlar edi (09:00,
+   * 14:00, 15:30) — oradagi soatlar umuman chizilmasdi va jadval
+   * "qaysi vaqt bo'sh" degan savolga javob bermasdi. Endi o'q
+   * uzluksiz: eng erta darsdan eng kech darsgacha har yarim soat
+   * o'z qatoriga ega (egasining talabi, 2026-09-18).
+   */
+  const oyna = useMemo(() => {
+    const boshlar = groups.map((g) => daqiqa(g.startTime)).filter((x): x is number => x !== null);
+    const oxirlar = groups.map((g) => daqiqa(g.endTime)).filter((x): x is number => x !== null);
+    if (boshlar.length === 0) return null;
+    const b = Math.floor(Math.min(...boshlar) / QADAM) * QADAM;
+    const o = Math.max(
+      Math.ceil(Math.max(...oxirlar, Math.min(...boshlar) + QADAM) / QADAM) * QADAM,
+      b + QADAM);
+    return { bosh: b, oxir: o, qator: (o - b) / QADAM };
+  }, [groups]);
 
-  const katak = (vaqt: string, xonaId: string) =>
-    groups.filter((g) => g.startTime === vaqt && (g.room?.id ?? "__yoq__") === xonaId);
+  /** Guruhlar xona bo'yicha, har birida yo'laklar hisoblangan. */
+  const xonaBoyicha = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof yolaklar>>();
+    for (const r of ustunlar) {
+      const ichi = groups.filter((g) => (g.room?.id ?? "__yoq__") === r.id);
+      if (ichi.length) m.set(r.id, yolaklar(ichi));
+    }
+    return m;
+  }, [groups, ustunlar]);
 
-  const eni = compact ? "w-[150px]" : "w-[190px]";
-  const eniPx = compact ? 150 : 190;
+  const eniPx  = compact ? 150 : 190;
+  const qatorH = compact ? 34 : 44;          // yarim soatning balandligi
+  const gutter = compact ? 48 : 56;
+
+  /** Daqiqa → pikselga. */
+  const yPx = (min: number) => ((min - (oyna?.bosh ?? 0)) / QADAM) * qatorH;
 
   /**
-   * CHIZIQ QAYSI IKKI QATOR ORASIGA TUSHADI.
+   * "HOZIR" — endi ANIQ DAQIQADA.
    *
-   * Qatorlar uzluksiz vaqt o'qi EMAS — ular darslarning haqiqiy
-   * boshlanish vaqtlari (09:00, 14:00, 15:30). Shuning uchun chiziqni
-   * "soat 10:15 balandligiga" qo'yib bo'lmaydi: u faqat qatorlar
-   * ORASIDA turishi mumkin. O'tib ketgan oxirgi qatordan keyin,
-   * keyingisidan oldin.
-   *
-   * `null` — chiziq umuman chizilmaydi (bugungi jadval emas).
-   * Barcha darslar tugagan bo'lsa chiziq eng pastda turadi va bu ham
-   * ma'noli: "bugungi darslar tugadi".
+   * O'q uzluksiz bo'lgach chiziqni qatorlar orasiga emas, haqiqiy
+   * balandligiga qo'yish mumkin: 10:15 — 10:00 va 10:30 qatorlari
+   * ORASIDA, aynan yarmida.
    */
-  /**
-   * DAQIQALIK YANGILANISH — panel ochiq turganda chiziq eskirmasin.
-   *
-   * Bir marta hisoblansa, xodim panelni ochib qo'yib ishlashda davom
-   * etsa, chiziq o'z joyida qotib qolardi va "hozir" degan yozuv
-   * jimgina yolg'on bo'lardi. Taymer FAQAT chiziq kerak bo'lganda
-   * ishlaydi.
-   */
-  const [tik, setTik] = useState(0);
-  useEffect(() => {
-    if (!showNow) return;
-    const id = setInterval(() => setTik((n) => n + 1), 60_000);
-    return () => clearInterval(id);
-  }, [showNow]);
+  const hozirY = useMemo(() => {
+    if (!showNow || !oyna) return null;
+    void tik;                                 // taymer qayta hisoblashni qo'zg'atadi
+    const m = businessMinutesOfDay();
+    if (m < oyna.bosh || m > oyna.oxir) return null;
+    return { y: yPx(m), yorliq: soat(m) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showNow, oyna, tik, qatorH]);
 
-  const hoziroq = useMemo(() => {
-    if (!showNow) return null;
-    void tik;                     // taymer qayta hisoblashni qo'zg'atadi
-    const hozir = businessMinutesOfDay();
-    const idx = vaqtlar.findIndex((v) => {
-      const d = daqiqa(v);
-      return d !== null && d > hozir;
-    });
-    const p = (n: number) => String(n).padStart(2, "0");
-    return {
-      oldin: idx === -1 ? vaqtlar.length : idx,
-      yorliq: `${p(Math.floor(hozir / 60))}:${p(hozir % 60)}`,
-    };
-  }, [showNow, vaqtlar, tik]);
+  if (groups.length === 0 || !oyna) return null;
 
-  if (groups.length === 0) return null;
+  const jadvalH = oyna.qator * qatorH;
 
   return (
-    /* IKKALA O'Q BITTA IDISHDA aylanadi. Ilgari gorizontal aylanish shu
-       yerda, vertikal esa TASHQARIDA (panel/sahifa) edi — `sticky` esa
-       eng yaqin aylanadigan ota-onaga nisbatan ishlaydi, ya'ni
-       sarlavha hech qachon yopishib turolmasdi.
-       `overflow-hidden` ham OLIB TASHLANDI: u ham aylanish konteksti
-       yaratadi va `sticky` ni jimgina o'chirib qo'yardi. Burchak
-       yumaloqligi endi shu tashqi idishda. */
+    /* IKKALA O'Q BITTA IDISHDA aylanadi. `sticky` eng yaqin aylanadigan
+       ota-onaga nisbatan ishlaydi — vertikal aylanish tashqarida bo'lsa
+       sarlavha yopishib turolmasdi. `overflow-hidden` ham aylanish
+       konteksti yaratadi, shuning uchun bu yerda YO'Q. */
     <div className={cn("h-full overflow-auto border rounded-lg", PANJARA)}>
-      {/* DAFTAR KATAGI. Ilgari chiziqlar `white/50` edi va yorug' fonda
-          deyarli ko'rinmasdi — qatorlar bilan ustunlar bir-biriga
-          qo'shilib ketardi. Endi har katak to'liq yopilgan. */}
       <div className="min-w-max">
-        {/* SARLAVHA — vertikal surilganda tepada qoladi. */}
+        {/* ─── SARLAVHA: xonalar, tepada qotadi ─────────────────────── */}
         <div className={cn("flex border-b sticky top-0 z-20", PANJARA, HOSHIYA)}>
-          {/* BURCHAK — ikkala o'q bo'yicha ham qotadi, shuning uchun
-              eng yuqori qatlamda. */}
-          <div className={cn("w-14 shrink-0 sticky left-0 z-30 border-r", PANJARA, HOSHIYA)} />
+          <div className={cn("shrink-0 sticky left-0 z-30 border-r", PANJARA, HOSHIYA)}
+            style={{ width: gutter }} />
           {ustunlar.map((r) => (
             <div key={r.id}
-              className={cn(eni, "shrink-0 px-3 py-2.5 text-[12px] font-bold",
-                "text-neutral-600 dark:text-neutral-300", "border-l", PANJARA)}>
+              className={cn("shrink-0 px-2 py-2 text-[11.5px] font-bold truncate",
+                "text-neutral-600 dark:text-neutral-300", "border-l", PANJARA)}
+              style={{ width: eniPx }}>
               {r.name}
             </div>
           ))}
         </div>
 
-        {vaqtlar.map((vaqt, qi) => (
-          <Fragment key={vaqt}>
-          {hoziroq && hoziroq.oldin === qi && (
-            <HozirChizigi yorliq={hoziroq.yorliq}
-              eniPx={Math.max(ustunlar.length, 1) * eniPx} />
-          )}
-          <div className={cn("flex border-b last:border-b-0", PANJARA)}>
-            <div className={cn("w-14 shrink-0 px-2 py-3 text-[11px] font-bold tabular-nums",
-              "text-neutral-500 dark:text-neutral-400",
-              "sticky left-0 z-10 border-r", PANJARA, HOSHIYA)}>
-              {vaqt}
-            </div>
-            {ustunlar.map((r) => (
-              <div key={r.id}
-                className={cn(eni, "shrink-0 p-1.5 space-y-1.5", "border-l", PANJARA)}>
-                {katak(vaqt, r.id).map((g, i) => (
+        {/* ─── TANA: chapda vaqt ustuni, o'ngda xonalar ─────────────── */}
+        <div className="flex relative">
+          {/* VAQT USTUNI — chapda qotadi */}
+          <div className={cn("shrink-0 sticky left-0 z-10 border-r", PANJARA, HOSHIYA)}
+            style={{ width: gutter, height: jadvalH }}>
+            {Array.from({ length: oyna.qator }, (_, i) => {
+              const min = oyna.bosh + i * QADAM;
+              const butunSoat = min % 60 === 0;
+              return (
+                <div key={min}
+                  className={cn("flex items-start justify-end pr-1.5",
+                    "text-[10px] tabular-nums border-b", PANJARA,
+                    butunSoat
+                      ? "font-bold text-neutral-600 dark:text-neutral-300"
+                      : "text-neutral-400 dark:text-neutral-500")}
+                  style={{ height: qatorH }}>
+                  {soat(min)}
+                </div>
+              );
+            })}
+          </div>
+
+          {ustunlar.map((r) => (
+            <div key={r.id}
+              className={cn("shrink-0 relative border-l", PANJARA)}
+              style={{ width: eniPx, height: jadvalH }}>
+              {/* Yarim soatlik chiziqlar — daftar katagi */}
+              {Array.from({ length: oyna.qator }, (_, i) => (
+                <div key={i}
+                  className={cn("absolute inset-x-0 border-b", PANJARA,
+                    (oyna.bosh + i * QADAM) % 60 === 0 ? "" : "border-dashed")}
+                  style={{ top: i * qatorH, height: qatorH }} />
+              ))}
+
+              {/* BLOKLAR — davomiyligi bo'yicha cho'ziladi */}
+              {(xonaBoyicha.get(r.id) ?? []).map(({ g, yolak, jami }, i) => {
+                const b = daqiqa(g.startTime) ?? oyna.bosh;
+                const o = Math.max(daqiqa(g.endTime) ?? b + QADAM, b + QADAM);
+                const h = Math.max(yPx(o) - yPx(b), 18);
+                const w = 100 / jami;
+                return (
                   <Link key={g.id} href={`/groups/${g.id}`}
-                    className={cn("block rounded-lg border-l-4 px-2 py-1.5",
-                      "transition-opacity hover:opacity-80", blockColorFor(g, i))}>
-                    {g.course?.name && (
-                      <span className="inline-block text-[9.5px] font-bold px-1 py-0.5 rounded
-                        bg-white/70 dark:bg-black/30 mb-0.5">
-                        {g.course.name}
-                      </span>
-                    )}
-                    <p className="text-[12px] font-bold leading-tight break-words">{g.name}</p>
-                    <p className="text-[10.5px] opacity-80 leading-tight break-words">
-                      {g.teacher?.user?.name ?? "—"}
-                    </p>
-                    <p className="text-[9.5px] opacity-70 mt-0.5">
-                      {g.startTime}&ndash;{g.endTime}
-                      {!compact && (g.scheduleDays ?? []).length > 0 && (
-                        <>{" · "}{(g.scheduleDays ?? []).map((d) => DAYS_SHORT[d] ?? d).join(", ")}</>
-                      )}
-                    </p>
-                    {!compact && g.startDate && (
-                      <p className="text-[9.5px] opacity-70">
-                        {fmtShortDate(g.startDate)}
-                        {g.endDate ? ` — ${fmtShortDate(g.endDate)}` : ""}
+                    className={cn("absolute rounded-md border-l-4 px-1.5 py-1",
+                      "overflow-hidden transition-opacity hover:opacity-80",
+                      blockColorFor(g, i))}
+                    style={{
+                      top: yPx(b) + 1, height: h - 2,
+                      left: `calc(${yolak * w}% + 2px)`,
+                      width: `calc(${w}% - 4px)`,
+                    }}>
+                    <p className="text-[11px] font-bold leading-tight truncate">{g.name}</p>
+                    {/* Matn BLOK BALANDLIGIGA qarab qo'shiladi: qisqa
+                        darsda hammasi sig'maydi va qirqilgan yozuv
+                        bo'lmagandan yomonroq. */}
+                    {h >= 44 && (
+                      <p className="text-[9.5px] opacity-80 leading-tight truncate">
+                        {g.teacher?.user?.name ?? "—"}
                       </p>
                     )}
-                    <p className="text-[9.5px] font-bold opacity-90 mt-0.5">
-                      {g._count?.students ?? 0}{" / "}{g.maxStudents ?? 15}{" "}o&apos;quvchi
-                    </p>
+                    {h >= 62 && (
+                      <p className="text-[9px] opacity-70 leading-tight">
+                        {g.startTime}&ndash;{g.endTime}
+                      </p>
+                    )}
+                    {h >= 78 && (
+                      <p className="text-[9px] font-bold opacity-90 leading-tight">
+                        {g._count?.students ?? 0}{" / "}{g.maxStudents ?? 15}
+                      </p>
+                    )}
                   </Link>
-                ))}
-              </div>
-            ))}
-          </div>
-          </Fragment>
-        ))}
-        {/* Hamma dars o'tib bo'lgan bo'lsa — chiziq eng pastda. */}
-        {hoziroq && hoziroq.oldin >= vaqtlar.length && (
-          <HozirChizigi yorliq={hoziroq.yorliq}
-            eniPx={Math.max(ustunlar.length, 1) * eniPx} />
-        )}
+                );
+              })}
+            </div>
+          ))}
+
+          {/* ─── "HOZIR" CHIZIG'I — butun kenglik bo'ylab ──────────── */}
+          {hozirY && (
+            <div className="absolute left-0 right-0 pointer-events-none z-[15]"
+              style={{ top: hozirY.y }} aria-label="Hozirgi vaqt">
+              <div className="h-px bg-red-500" />
+              <span className="absolute -top-2 left-0 px-1 py-0.5 rounded
+                text-[9px] font-black tabular-nums bg-red-500 text-white">
+                {hozirY.yorliq}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
