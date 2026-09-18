@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { fmtShortDate } from "@/lib/date-uz";
 import { blockColorFor } from "@/lib/course-colors";
+import { businessMinutesOfDay } from "@/lib/time";
 
 /**
  * XONALAR BO'YICHA JADVAL — vaqt (qator) × xona (ustun).
@@ -72,13 +73,48 @@ const DAYS_SHORT: Record<string, string> = {
  * sahifasi unga toq/juft bo'yicha, yon panel esa BUGUNGI kun bo'yicha
  * saralangan ro'yxat beradi — panjara markupi ikki joyda takrorlanmasin.
  */
+/** "09:30" → 570. Noto'g'ri qiymatda `null`. */
+function daqiqa(hhmm: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+/**
+ * "HOZIR" CHIZIG'I — panjara kengligida, ustunlar bilan aniq tekis.
+ *
+ * Modul darajasida: render ichida e'lon qilinsa React uni har safar
+ * YANGI komponent deb biladi va ostidagi daraxtni qayta yaratadi.
+ */
+function HozirChizigi({ yorliq, eniPx }: { yorliq: string; eniPx: number }) {
+  return (
+    <div className="flex items-center" aria-label="Hozirgi vaqt">
+      <div className="w-14 shrink-0 pr-1 text-right">
+        <span className="inline-block px-1 py-0.5 rounded text-[9.5px] font-black
+          tabular-nums bg-red-500 text-white">
+          {yorliq}
+        </span>
+      </div>
+      <div className="h-px bg-red-500 shrink-0" style={{ width: eniPx }} />
+    </div>
+  );
+}
+
 export function RoomTimeGrid({
-  groups, rooms, compact = false,
+  groups, rooms, compact = false, showNow = false,
 }: {
   groups: Guruh[];
   rooms: { id: string; name: string }[];
   /** Yon panel uchun torroq ustun va kichikroq matn. */
   compact?: boolean;
+  /**
+   * "HOZIR SHU YERDASIZ" CHIZIG'I.
+   *
+   * FAQAT BUGUNGI jadval uchun. Jadval sahifasidagi xonalar
+   * ko'rinishi — haftalik takrorlanadigan TARH (toq/juft), u yerda
+   * "hozir" degan tushuncha yo'q va chiziq yolg'on ma'no berardi.
+   */
+  showNow?: boolean;
 }) {
   /**
    * USTUNLAR — faqat BAND xonalar, oxirida "Xonasiz".
@@ -101,6 +137,50 @@ export function RoomTimeGrid({
     groups.filter((g) => g.startTime === vaqt && (g.room?.id ?? "__yoq__") === xonaId);
 
   const eni = compact ? "w-[150px]" : "w-[190px]";
+  const eniPx = compact ? 150 : 190;
+
+  /**
+   * CHIZIQ QAYSI IKKI QATOR ORASIGA TUSHADI.
+   *
+   * Qatorlar uzluksiz vaqt o'qi EMAS — ular darslarning haqiqiy
+   * boshlanish vaqtlari (09:00, 14:00, 15:30). Shuning uchun chiziqni
+   * "soat 10:15 balandligiga" qo'yib bo'lmaydi: u faqat qatorlar
+   * ORASIDA turishi mumkin. O'tib ketgan oxirgi qatordan keyin,
+   * keyingisidan oldin.
+   *
+   * `null` — chiziq umuman chizilmaydi (bugungi jadval emas).
+   * Barcha darslar tugagan bo'lsa chiziq eng pastda turadi va bu ham
+   * ma'noli: "bugungi darslar tugadi".
+   */
+  /**
+   * DAQIQALIK YANGILANISH — panel ochiq turganda chiziq eskirmasin.
+   *
+   * Bir marta hisoblansa, xodim panelni ochib qo'yib ishlashda davom
+   * etsa, chiziq o'z joyida qotib qolardi va "hozir" degan yozuv
+   * jimgina yolg'on bo'lardi. Taymer FAQAT chiziq kerak bo'lganda
+   * ishlaydi.
+   */
+  const [tik, setTik] = useState(0);
+  useEffect(() => {
+    if (!showNow) return;
+    const id = setInterval(() => setTik((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, [showNow]);
+
+  const hoziroq = useMemo(() => {
+    if (!showNow) return null;
+    void tik;                     // taymer qayta hisoblashni qo'zg'atadi
+    const hozir = businessMinutesOfDay();
+    const idx = vaqtlar.findIndex((v) => {
+      const d = daqiqa(v);
+      return d !== null && d > hozir;
+    });
+    const p = (n: number) => String(n).padStart(2, "0");
+    return {
+      oldin: idx === -1 ? vaqtlar.length : idx,
+      yorliq: `${p(Math.floor(hozir / 60))}:${p(hozir % 60)}`,
+    };
+  }, [showNow, vaqtlar, tik]);
 
   if (groups.length === 0) return null;
 
@@ -119,8 +199,13 @@ export function RoomTimeGrid({
           ))}
         </div>
 
-        {vaqtlar.map((vaqt) => (
-          <div key={vaqt} className="flex border-b border-white/50 dark:border-white/10 last:border-0">
+        {vaqtlar.map((vaqt, qi) => (
+          <Fragment key={vaqt}>
+          {hoziroq && hoziroq.oldin === qi && (
+            <HozirChizigi yorliq={hoziroq.yorliq}
+              eniPx={Math.max(ustunlar.length, 1) * eniPx} />
+          )}
+          <div className="flex border-b border-white/50 dark:border-white/10 last:border-0">
             <div className="w-14 shrink-0 px-2 py-3 text-[11px] font-bold tabular-nums
               text-neutral-500 dark:text-neutral-400">
               {vaqt}
@@ -163,7 +248,13 @@ export function RoomTimeGrid({
               </div>
             ))}
           </div>
+          </Fragment>
         ))}
+        {/* Hamma dars o'tib bo'lgan bo'lsa — chiziq eng pastda. */}
+        {hoziroq && hoziroq.oldin >= vaqtlar.length && (
+          <HozirChizigi yorliq={hoziroq.yorliq}
+            eniPx={Math.max(ustunlar.length, 1) * eniPx} />
+        )}
       </div>
     </div>
   );

@@ -122,7 +122,7 @@ export function ScheduleDrawer() {
                 </p>
               )}
               {!isLoading && bugungi.length > 0 && (
-                <RoomTimeGrid groups={bugungi} rooms={rooms} compact />
+                <RoomTimeGrid groups={bugungi} rooms={rooms} compact showNow />
               )}
             </div>
 
