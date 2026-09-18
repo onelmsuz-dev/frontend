@@ -35,11 +35,13 @@ import useSWR, { mutate } from "swr";
 import { fetcher as _fetcher } from "@/lib/fetcher";
 import {
   Phone, Calendar, DollarSign, ArrowLeft, AlertCircle,
-  Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays, Printer, Users
+  Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays, Printer, Users,
+  Check, Info,
 } from "lucide-react";
 import { formatUzDate } from "@/lib/date-uz";
 import { StudentNoteCard } from "@/components/students/student-note-card";
 import { AttendanceStats } from "@/components/students/attendance-stats";
+import { StudentMaterials } from "@/components/students/student-materials";
 
 function fmt(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -112,6 +114,23 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
   // Payment modal
   const [showPayModal, setShowPayModal] = useState(false);
+  /**
+   * QO'SHIMCHA TO'LOV REJIMI — kitob, forma, sertifikat.
+   *
+   * Bitta oyna, ikki rejim: belgilansa forma o'quv materiali sotuviga
+   * aylanadi. Alohida tugma qo'yilmadi — kassir uchun bu AYNI ish
+   * (o'quvchidan pul olish) va ikkita tugma tanlash yuki bo'lardi
+   * (egasining taklifi, 2026-09-18).
+   */
+  const [material, setMaterial] = useState(false);
+  const [materialKat, setMaterialKat] = useState("");
+  const [materialQarzga, setMaterialQarzga] = useState(false);
+  const [infoOchiq, setInfoOchiq] = useState(false);
+
+  /** Qo'shimcha to'lov kategoriyalari — oyna ochilgandagina yuklanadi. */
+  const { data: matKatRaw } = useSWR<{ id: string; name: string }[]>(
+    showPayModal ? "/api/materials/categories" : null, _fetcher);
+  const matKat = Array.isArray(matKatRaw) ? matKatRaw : [];
   const [payForm,      setPayForm]      = useState({ amount: "", method: "NAQD", note: "", groupId: "" });
   const [payErr,       setPayErr]       = useState("");
   const [paying,       setPaying]       = useState(false);
@@ -320,9 +339,35 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     finally { setPreviewLoading(false); }
   }
 
+  /** Qo'shimcha to'lov — BOSHQA jurnalga yoziladi, balansga tegmaydi. */
+  async function submitMaterial(amount: number) {
+    if (!materialKat) { setPayErr("Nima uchun ekanini tanlang"); return; }
+    setPaying(true); setPayErr("");
+    try {
+      const res = await fetch("/api/materials", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          studentId: id, category: materialKat, amount,
+          method: payForm.method, note: payForm.note || undefined,
+          paidNow: !materialQarzga,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setPayErr(data.error ?? "Xatolik"); return; }
+      revalidateAll();
+      mutate(`/api/materials/student/${id}`);
+      setShowPayModal(false);
+      setMaterial(false); setMaterialKat(""); setMaterialQarzga(false);
+      setPayForm({ amount: "", method: "NAQD", note: "", groupId: "" });
+    } catch { setPayErr("Serverga ulanib bo'lmadi"); }
+    finally { setPaying(false); }
+  }
+
   async function submitPayment() {
     const amount = parseFloat(payForm.amount.replace(/\s/g, ""));
     if (!amount || amount <= 0) { setPayErr("Summa to'g'ri kiriting"); return; }
+    // QO'SHIMCHA TO'LOV — boshqa yo'l: guruh ham, qarz ham tekshirilmaydi.
+    if (material) return submitMaterial(amount);
     if (payableGroups.length > 1 && !selectedPayGroupId) {
       setPayErr("Qaysi guruh uchun to'lov ekanini tanlang"); return;
     }
@@ -654,17 +699,22 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
       {/* Payment modal */}
       <Modal open={showPayModal} onClose={() => setShowPayModal(false)}
-        title="To'lov qabul qilish" subtitle={student.name}
+        title={material ? "Qo'shimcha to'lov" : "To'lov qabul qilish"}
+        subtitle={student.name}
         footer={
           <>
             <Button onClick={submitPayment} disabled={paying}
  className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
-              {paying ? "Saqlanmoqda..." : "Qabul qilish"}
+              {paying ? "Saqlanmoqda..."
+                : material ? (materialQarzga ? "Qarzga yozish" : "Qabul qilish")
+                : "Qabul qilish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowPayModal(false)}>Bekor</Button>
           </>
         }>
-        {payableGroups.length > 1 && (
+        {/* GURUH TANLASH — faqat KURS to'lovida. Qo'shimcha to'lov
+            guruhga bog'lanmaydi: u o'qituvchi foiziga kirmaydi. */}
+        {!material && payableGroups.length > 1 && (
           <FormField label="Qaysi guruh uchun" required>
             <select
               value={selectedPayGroupId}
@@ -685,6 +735,85 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             onChange={e => { setPayForm(p => ({...p, amount: e.target.value})); setPayErr(""); }}
             className="h-10 text-[14px] font-semibold" />
         </FormField>
+
+        {/* ─── QO'SHIMCHA TO'LOV — summa TAGIDA, egasining taklifiday ─── */}
+        <div className={cn("rounded-xl border transition-colors",
+          material
+            ? "border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20"
+            : "border-white/60 dark:border-white/10")}>
+          <div className="flex items-center gap-2 px-3 py-2.5">
+            <button type="button"
+              onClick={() => { setMaterial(v => !v); setPayErr(""); }}
+              className="flex items-center gap-2 min-w-0 flex-1 text-left">
+              <span className={cn("h-4 w-4 shrink-0 rounded border grid place-items-center",
+                material
+                  ? "bg-amber-600 border-amber-600"
+                  : "border-neutral-300 dark:border-neutral-600")}>
+                {material && <Check className="w-3 h-3 text-white" />}
+              </span>
+              <span className={cn("text-[13px] font-semibold truncate",
+                material
+                  ? "text-amber-800 dark:text-amber-300"
+                  : "text-neutral-700 dark:text-neutral-300")}>
+                O&apos;quv materiallari uchun
+              </span>
+            </button>
+            <button type="button" onClick={() => setInfoOchiq(v => !v)}
+              aria-label="Bu qanaqa to'lov"
+              className="w-7 h-7 shrink-0 flex items-center justify-center rounded-lg
+                text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50
+                dark:hover:bg-indigo-950/30 transition-colors">
+              <Info className="w-4 h-4" />
+            </button>
+          </div>
+
+          {infoOchiq && (
+            <p className="px-3 pb-2.5 text-[11.5px] text-neutral-500 dark:text-neutral-400">
+              {"Kitob, ish daftari, forma, sertifikat kabi to'lovlar. "}
+              {"Bu to'lov o'quvchining "}<b>kurs qarziga tegmaydi</b>
+              {" va o'qituvchi foiziga "}<b>kirmaydi</b>
+              {" — markazning qo'shimcha daromadi sifatida hisobotda alohida ko'rinadi."}
+            </p>
+          )}
+
+          {material && (
+            <div className="px-3 pb-3 space-y-2.5">
+              <div>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-1.5">
+                  Nima uchun <span className="text-red-500">*</span>
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {matKat.map((k) => (
+                    <button key={k.id} type="button"
+                      onClick={() => { setMaterialKat(k.name); setPayErr(""); }}
+                      className={cn("px-2.5 h-8 rounded-lg text-[12px] font-semibold border transition-colors",
+                        materialKat === k.name
+                          ? "bg-amber-600 text-white border-amber-600"
+                          : "border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-amber-400")}>
+                      {k.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* QARZGA BERISH — kitob berildi, puli keyin olinadi. */}
+              <button type="button" onClick={() => setMaterialQarzga(v => !v)}
+                className="flex items-center gap-2 text-left">
+                <span className={cn("h-4 w-4 shrink-0 rounded border grid place-items-center",
+                  materialQarzga
+                    ? "bg-amber-600 border-amber-600"
+                    : "border-neutral-300 dark:border-neutral-600")}>
+                  {materialQarzga && <Check className="w-3 h-3 text-white" />}
+                </span>
+                <span className="text-[12px] text-neutral-600 dark:text-neutral-300">
+                  Hozir to&apos;lanmadi — qarz sifatida yozilsin
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+        {/* To'lov usuli — qarzga berilganda ma'nosiz (pul olinmadi). */}
+        {!(material && materialQarzga) && (
         <FormField label="To'lov usuli">
           <div className={cn("grid gap-2", methodGridCls(SELECTABLE_METHODS.length))}>
             {SELECTABLE_METHODS.map(({ value: m, label }) => (
@@ -698,6 +827,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             ))}
           </div>
         </FormField>
+        )}
         <FormField label="Izoh" hint="Ixtiyoriy">
           <Input placeholder="Iyul oyi uchun..." value={payForm.note}
             onChange={e => setPayForm(p => ({...p, note: e.target.value}))} className="h-10" />
@@ -1305,6 +1435,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             canEdit={hasPerm(me?.permissions, "students.update")}
             onSaved={revalidateAll}
           />
+
+          {/* QO'SHIMCHA TO'LOVLAR — Moliyadan KEYIN, alohida kartochka.
+              To'lovlar ro'yxatiga qo'shilmaydi: bu pul kurs qarziga
+              tegmaydi va aralashtirilsa qarz to'lovi deb o'qilardi. */}
+          {canSeeMoney && <StudentMaterials studentId={student.id} fmt={fmt} />}
 
           {/* Finance */}
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">

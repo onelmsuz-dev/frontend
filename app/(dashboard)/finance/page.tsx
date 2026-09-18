@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { AcceptPaymentModal } from "@/components/finance/accept-payment-modal";
+import { MaterialsReport } from "@/components/finance/materials-report";
 import { ReceiptModal } from "@/components/payments/receipt-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import {
 import {
   TrendingUp, TrendingDown, Wallet, Sparkles,
   Plus, X, CheckCircle, Clock, RefreshCw, BadgeCheck,
-  AlertTriangle, ChevronRight, ReceiptText, Tags,
+  AlertTriangle, ChevronRight, ReceiptText, Tags, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -38,7 +39,7 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 
-type Tab = "kirim" | "chiqim" | "oylik" | "qarzdorlar";
+type Tab = "kirim" | "chiqim" | "materiallar" | "oylik" | "qarzdorlar";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -164,7 +165,21 @@ export default function FinancePage() {
 
   const totalPayments = payments.reduce((s, p) => s + p.amount, 0);
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const profit        = totalPayments - totalExpenses;
+  /**
+   * QO'SHIMCHA DAROMAD — kitob, forma, sertifikat.
+   *
+   * "Jami tushum" ga ATAYLAB QO'SHILMAYDI: aralashtirilsa kurs
+   * to'lovlarining yig'ilish darajasi buziladi va "rejani bajardikmi"
+   * degan savolga javob yolg'on bo'lardi. Alohida karta, lekin SOF
+   * FOYDAGA kiradi — u markazga haqiqatan kirgan pul.
+   */
+  const matQs = useBranchQueryString({ month: payMonth });
+  const { data: matRep } = useSWR<{
+    total: number; count: number; debt: number;
+    byCategory: { category: string; amount: number; count: number }[];
+  }>(`/api/materials/report${matQs}`, fetcher);
+  const qoshimcha = matRep?.total ?? 0;
+  const profit        = totalPayments + qoshimcha - totalExpenses;
 
   /** Kategoriya ro'yxatini har ikkala joyda (tanlov + filtr) yangilaydi. */
   const refreshCats = () =>
@@ -173,6 +188,7 @@ export default function FinancePage() {
   const TABS: { id: Tab; label: string }[] = [
     { id: "kirim",      label: "To'lovlar (kirim)" },
     { id: "chiqim",     label: "Xarajatlar (chiqim)" },
+    { id: "materiallar", label: "Qo'shimcha to'lovlar" },
     { id: "oylik",      label: "Oylik hisoblash" },
     { id: "qarzdorlar", label: `Qarzdorlar${debtors.length ? ` (${debtors.length})` : ""}` },
   ];
@@ -342,12 +358,14 @@ export default function FinancePage() {
       <div className="p-5 space-y-5">
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
-            { label: "Jami tushum",       value: formatCurrency(totalPayments), icon: TrendingUp,  bg: "bg-emerald-50 dark:bg-emerald-950/40",  text: "text-emerald-600 dark:text-emerald-400" },
-            { label: "Xarajatlar",        value: formatCurrency(totalExpenses), icon: TrendingDown, bg: "bg-red-50 dark:bg-red-950/40",           text: "text-red-600 dark:text-red-400" },
-            { label: "Sof foyda",         value: formatCurrency(profit),        icon: Sparkles,    bg: "bg-violet-50 dark:bg-violet-950/40",     text: "text-violet-600 dark:text-violet-400" },
-            { label: "To'lovlar soni",    value: payments.length,               icon: Wallet,      bg: "bg-blue-50 dark:bg-blue-950/40",         text: "text-blue-600 dark:text-blue-400" },
+            { label: "Jami tushum",       value: formatCurrency(totalPayments), icon: TrendingUp,  bg: "bg-emerald-50 dark:bg-emerald-950/40",  text: "text-emerald-600 dark:text-emerald-400", hint: undefined as string | undefined },
+            { label: "Xarajatlar",        value: formatCurrency(totalExpenses), icon: TrendingDown, bg: "bg-red-50 dark:bg-red-950/40",           text: "text-red-600 dark:text-red-400", hint: undefined as string | undefined },
+            { label: "Sof foyda",         value: formatCurrency(profit),        icon: Sparkles,    bg: "bg-violet-50 dark:bg-violet-950/40",     text: "text-violet-600 dark:text-violet-400", hint: undefined as string | undefined },
+            { label: "Qo'shimcha daromad", value: formatCurrency(qoshimcha),    icon: Package,     bg: "bg-amber-50 dark:bg-amber-950/40",       text: "text-amber-600 dark:text-amber-400",
+              hint: matRep?.debt ? `qarz ${formatCurrency(matRep.debt)}` : undefined },
+            { label: "To'lovlar soni",    value: payments.length,               icon: Wallet,      bg: "bg-blue-50 dark:bg-blue-950/40",         text: "text-blue-600 dark:text-blue-400", hint: undefined as string | undefined },
           ].map(s => {
             const Icon = s.icon;
             return (
@@ -361,6 +379,9 @@ export default function FinancePage() {
                   : <p className="text-[18px] font-black text-neutral-900 dark:text-neutral-100 leading-none">{s.value}</p>
                 }
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{s.label}</p>
+                {s.hint && (
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-0.5">{s.hint}</p>
+                )}
               </div>
             );
           })}
@@ -663,6 +684,10 @@ export default function FinancePage() {
         )}
 
         {/* Oylik */}
+        {activeTab === "materiallar" && (
+          <MaterialsReport month={payMonth} onMonth={setPayMonth} />
+        )}
+
         {activeTab === "oylik" && (
           <div className="space-y-4">
             {/* Month picker + generate */}
