@@ -38,6 +38,7 @@ import {
   Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays, Printer, Users
 } from "lucide-react";
 import { formatUzDate } from "@/lib/date-uz";
+import { StudentNoteCard } from "@/components/students/student-note-card";
 
 function fmt(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -1290,6 +1291,19 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               )}
             </div>
           </div>
+
+          {/* IZOH — profil bilan Moliya orasida.
+              Maydon allaqachon bor edi, lekin bu sahifada hech qayerda
+              ko'rinmasdi: o'qish ham, yozish ham faqat "Tahrirlash"
+              oynasini ochib formani aylanib chiqish orqali mumkin edi. */}
+          <StudentNoteCard
+            studentId={student.id}
+            note={student.note}
+            authorName={student.noteByName}
+            noteAt={student.noteAt}
+            canEdit={hasPerm(me?.permissions, "students.update")}
+            onSaved={revalidateAll}
+          />
 
           {/* Finance */}
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
