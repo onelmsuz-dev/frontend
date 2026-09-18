@@ -73,6 +73,17 @@ const DAYS_SHORT: Record<string, string> = {
  * sahifasi unga toq/juft bo'yicha, yon panel esa BUGUNGI kun bo'yicha
  * saralangan ro'yxat beradi — panjara markupi ikki joyda takrorlanmasin.
  */
+/**
+ * PANJARA CHIZIG'I — daftar katagidek ko'rinishi uchun.
+ *
+ * `border-white/50` (avvalgi qiymat) shisha panel ustida chiroyli
+ * ko'rinardi, lekin OQ fonda oq chiziq deyarli ko'rinmaydi: qatorlar
+ * bilan ustunlar bir-biriga qo'shilib ketardi va "qaysi dars qaysi
+ * xonada" degani ko'z bilan ajratilmasdi (egasining xabari,
+ * 2026-09-18).
+ */
+const PANJARA = "border-neutral-300 dark:border-neutral-700";
+
 /** "09:30" → 570. Noto'g'ri qiymatda `null`. */
 function daqiqa(hhmm: string): number | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm);
@@ -89,7 +100,10 @@ function daqiqa(hhmm: string): number | null {
 function HozirChizigi({ yorliq, eniPx }: { yorliq: string; eniPx: number }) {
   return (
     <div className="flex items-center" aria-label="Hozirgi vaqt">
-      <div className="w-14 shrink-0 pr-1 text-right">
+      {/* Chap hoshiya vaqt ustuni bilan bir xil fonda — chiziq
+          panjaraning ichidan o'tayotgandek ko'rinsin. */}
+      <div className="w-14 shrink-0 pr-1 text-right self-stretch flex items-center
+        justify-end bg-neutral-50 dark:bg-white/5">
         <span className="inline-block px-1 py-0.5 rounded text-[9.5px] font-black
           tabular-nums bg-red-500 text-white">
           {yorliq}
@@ -186,14 +200,18 @@ export function RoomTimeGrid({
 
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-max">
-        <div className="flex border-b border-white/50 dark:border-white/10">
+      {/* DAFTAR KATAGI. Ilgari chiziqlar `white/50` edi va yorug' fonda
+          deyarli ko'rinmasdi — qatorlar bilan ustunlar bir-biriga
+          qo'shilib ketardi. Endi har katak to'liq yopilgan: tashqi
+          ramka, ustunlar orasida chiziq, qatorlar orasida chiziq. */}
+      <div className={cn("min-w-max border rounded-lg overflow-hidden", PANJARA)}>
+        <div className={cn("flex border-b", PANJARA,
+          "bg-neutral-50 dark:bg-white/5")}>
           <div className="w-14 shrink-0" />
           {ustunlar.map((r) => (
             <div key={r.id}
               className={cn(eni, "shrink-0 px-3 py-2.5 text-[12px] font-bold",
-                "text-neutral-600 dark:text-neutral-300",
-                "border-l border-white/50 dark:border-white/10")}>
+                "text-neutral-600 dark:text-neutral-300", "border-l", PANJARA)}>
               {r.name}
             </div>
           ))}
@@ -205,15 +223,14 @@ export function RoomTimeGrid({
             <HozirChizigi yorliq={hoziroq.yorliq}
               eniPx={Math.max(ustunlar.length, 1) * eniPx} />
           )}
-          <div className="flex border-b border-white/50 dark:border-white/10 last:border-0">
+          <div className={cn("flex border-b last:border-b-0", PANJARA)}>
             <div className="w-14 shrink-0 px-2 py-3 text-[11px] font-bold tabular-nums
-              text-neutral-500 dark:text-neutral-400">
+              text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-white/5">
               {vaqt}
             </div>
             {ustunlar.map((r) => (
               <div key={r.id}
-                className={cn(eni, "shrink-0 p-1.5 space-y-1.5",
-                  "border-l border-white/50 dark:border-white/10")}>
+                className={cn(eni, "shrink-0 p-1.5 space-y-1.5", "border-l", PANJARA)}>
                 {katak(vaqt, r.id).map((g, i) => (
                   <Link key={g.id} href={`/groups/${g.id}`}
                     className={cn("block rounded-lg border-l-4 px-2 py-1.5",
