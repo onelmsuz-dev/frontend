@@ -5,6 +5,10 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { blockColorFor } from "@/lib/course-colors";
 import { businessMinutesOfDay } from "@/lib/time";
+import {
+  ScheduleTabs, filtrla, bugungiIndeks, KUNLAR,
+  type JadvalTab,
+} from "@/components/schedule/schedule-tabs";
 
 /**
  * XONALAR BO'YICHA JADVAL — vaqt (qator) × xona (ustun).
@@ -26,24 +30,6 @@ import { businessMinutesOfDay } from "@/lib/time";
  * markazlarda dars 08:00 va 09:30 da boshlanishi mumkin va qat'iy
  * soatlik panjara ularning yarmini noto'g'ri qatorga qo'yardi.
  */
-
-const TOQ  = ["DUSHANBA", "CHORSHANBA", "JUMA"];
-const JUFT = ["SESHANBA", "PAYSHANBA", "SHANBA"];
-
-type Tab = "toq" | "juft" | "boshqa";
-
-const TAB_NOMI: Record<Tab, string> = {
-  toq: "Toq kunlar", juft: "Juft kunlar", boshqa: "Boshqa",
-};
-
-/** Guruh qaysi turkumga tushadi. */
-export function kunTuri(days: string[] | undefined): Tab {
-  const d = days ?? [];
-  if (d.length === 0) return "boshqa";
-  if (d.every((x) => TOQ.includes(x)))  return "toq";
-  if (d.every((x) => JUFT.includes(x))) return "juft";
-  return "boshqa";
-}
 
 export interface Guruh {
   id: string;
@@ -340,49 +326,31 @@ export function RoomGrid({
   groups: Guruh[];
   rooms: { id: string; name: string }[];
 }) {
-  const [tab, setTab] = useState<Tab>("toq");
-
-  const sanoq = useMemo(() => {
-    const s: Record<Tab, number> = { toq: 0, juft: 0, boshqa: 0 };
-    for (const g of groups) s[kunTuri(g.scheduleDays)]++;
-    return s;
-  }, [groups]);
+  const [tab, setTab] = useState<JadvalTab>("toq");
+  const [kunIdx, setKunIdx] = useState(() => bugungiIndeks());
 
   const korinadi = useMemo(
-    () => groups.filter((g) => kunTuri(g.scheduleDays) === tab),
-    [groups, tab]);
+    () => filtrla(groups, tab, kunIdx), [groups, tab, kunIdx]);
 
   return (
-    /* `overflow-hidden` OLIB TASHLANDI — u aylanish konteksti yaratib,
-       ichkaridagi `sticky` sarlavhani jimgina o'chirib qo'yardi.
-       Ustun (`flex-col`) qilib olindi: tablar tepada qotadi, panjara
-       esa qolgan balandlikni to'liq egallaydi va o'zi aylanadi. */
+    /* `overflow-hidden` YO'Q — u aylanish konteksti yaratib,
+       ichkaridagi yopishgan sarlavhani o'chirib qo'yardi. */
     <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl
       h-full flex flex-col">
-      <div className="shrink-0 flex items-center gap-1 px-3 pt-3 pb-2 border-b
-        border-white/50 dark:border-white/10 overflow-x-auto">
-        {(["toq", "juft", "boshqa"] as Tab[]).map((t) => (
-          <button key={t} type="button" onClick={() => setTab(t)}
-            className={cn("shrink-0 px-3 h-8 rounded-xl text-[12px] font-semibold transition-colors",
-              tab === t
-                ? "bg-indigo-600 text-white"
-                : "text-neutral-500 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10")}>
-            {TAB_NOMI[t]}
-            <span className={cn("ml-1.5 text-[11px] font-black",
-              tab === t ? "text-white/70" : "text-neutral-400")}>
-              {sanoq[t]}
-            </span>
-          </button>
-        ))}
+      <div className="border-b border-white/50 dark:border-white/10">
+        <ScheduleTabs tab={tab} onTab={setTab} kunIdx={kunIdx} onKun={setKunIdx} />
       </div>
 
       {korinadi.length === 0 ? (
         <p className="text-[12.5px] text-neutral-400 text-center py-12">
-          Bu kunlarda guruh yo&apos;q
+          {tab === "boshqa"
+            ? `${KUNLAR[kunIdx].toliq} kuni dars yo'q`
+            : "Bu kunlarda guruh yo'q"}
         </p>
       ) : (
         <div className="flex-1 min-h-0 p-2">
-          <RoomTimeGrid groups={korinadi} rooms={rooms} />
+          <RoomTimeGrid groups={korinadi} rooms={rooms}
+            showNow={tab === "boshqa" && kunIdx === bugungiIndeks()} />
         </div>
       )}
     </div>
