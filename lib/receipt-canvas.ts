@@ -79,6 +79,26 @@ const SCALE = 3;            // qog'ozda va Retina ekranda tiniq chiqsin
  */
 const K = 1.35;
 
+/**
+ * CHEKDA FAQAT IKKI RANG — SOF QORA VA SOF OQ.
+ *
+ * Termal apparat kulrangni CHOP ETA OLMAYDI: uning boshida faqat
+ * "nuqtani kuydir yoki kuydirma" degan tanlov bor. Kulrang piksel
+ * kelganda drayver uni siyrak nuqtalar to'riga (dither) aylantiradi
+ * — ekranda chiroyli ko'ringan #888888 qog'ozda yarim ko'rinadigan
+ * to'rga aylanadi.
+ *
+ * Aynan shu sabab bilan chek xira chiqqan edi: yorliqlar (#888888),
+ * sarlavha osti (#777777), izoh (#aaaaaa) va ajratuvchi chiziqlar
+ * (#d8d8d8) — matnning yarmi kulrang edi (Proton School, 2026-09-19).
+ *
+ * Shuning uchun bu yerda BOSHQA RANG YO'Q. Ierarxiya rang bilan emas,
+ * SHRIFT QALINLIGI va O'LCHAMI bilan beriladi — ular qog'ozda ham
+ * ishlaydi. `verify:chek` faylda boshqa rang paydo bo'lsa yiqiladi.
+ */
+const QORA = "#000000";
+const OQ   = "#ffffff";
+
 /** Miqyoslangan shrift o'lchami. */
 const O = (n: number) => Math.round(n * K);
 
@@ -102,10 +122,14 @@ export async function drawReceipt(
   // BALANDLIK CHIZISH BILAN BIR XIL MIQYOSDA hisoblanadi — aks holda
   // matn kattalashib, kanvasning pastidan chiqib ketardi.
   let h = CHET;
-  h += Q(78);                                   // sarlavha bloki
-  h += qatorlar.length * Q(22) + Q(10);         // maydonlar
-  h += Q(26) + davrlar.length * Q(20) + Q(12);  // "qaysi davr uchun"
-  h += Q(46);                                   // JAMI
+  h += Q(34) + Q(12);                           // qora sarlavha paneli
+  h += Q(16) + Q(28);                           // "TO'LOV CHEKI" + raqam
+  // Q(14) = chiziq oldidagi Q(8) + oxiridagi Q(6). Chizish bilan
+  // AYNAN mos bo'lishi shart: kam bo'lsa pastki yozuv qirqiladi,
+  // ko'p bo'lsa chek oxirida bo'sh oq joy qolib, qog'oz behuda ketadi.
+  h += qatorlar.length * Q(24) + Q(14);         // maydonlar (chiziqli)
+  h += Q(18) + davrlar.length * Q(21) + Q(12);  // "qaysi davr uchun"
+  h += Q(40) + Q(12);                           // qora JAMI paneli
   if (d.note) h += Q(24);
   if (d.code) h += qr ? Q(122) : Q(40);
   h += CHET;
@@ -118,82 +142,89 @@ export async function drawReceipt(
   g.scale(SCALE, SCALE);
 
   // Chek HAR DOIM oq fonda — qorong'i rejim qog'ozga ko'chmasin.
-  g.fillStyle = "#ffffff";
+  g.fillStyle = OQ;
   g.fillRect(0, 0, EN, h);
   g.textBaseline = "top";
 
   const F = "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif";
   let y = CHET;
 
-  // ─── Sarlavha ──────────────────────────────────────────────────────
-  g.fillStyle = "#111111";
+  // ─── Sarlavha — TESKARI PANEL ──────────────────────────────────────
+  // Qora fonda oq yozuv termal qog'ozda eng aniq chiqadigan narsa:
+  // katta to'liq bo'yalgan maydon dither'ga bo'linmaydi. Qo'shimcha
+  // foyda — chek boshi bir qarashda ko'zga tashlanadi.
+  const panelEn = EN - CHET * 2;
+  g.fillStyle = QORA;
+  g.fillRect(CHET, y, panelEn, Q(34));
+  g.fillStyle = OQ;
   g.font = `bold ${O(16)}px ${F}`;
-  markaz(g, d.organization?.name ?? "", EN / 2, y);
-  y += Q(22);
-  g.fillStyle = "#777777";
-  g.font = `${O(10)}px ${F}`;
+  markaz(g, qisqart(g, d.organization?.name ?? "", panelEn - Q(16)), EN / 2, y + Q(9));
+  y += Q(34) + Q(12);
+
+  g.fillStyle = QORA;
+  g.font = `600 ${O(10)}px ${F}`;
   markaz(g, "TO'LOV CHEKI", EN / 2, y);
   y += Q(16);
-  g.fillStyle = "#111111";
   g.font = `bold ${O(19)}px ${F}`;
   markaz(g, d.receiptLabel ?? "—", EN / 2, y);
   y += Q(28);
-  punktir(g, CHET, y, EN - CHET);
-  y += Q(12);
 
   // ─── Maydonlar ─────────────────────────────────────────────────────
+  // Har qator ostida chiziq: yorliq chapda, qiymat o'ngda turadi va
+  // orasi bo'sh — chiziqsiz ko'z ikkisini bog'lay olmaydi. Qo'shni
+  // markazning cheki ham aynan shunday jadval ko'rinishida.
+  chiziq(g, CHET, y, EN - CHET);
+  y += Q(8);
   for (const [k, v] of qatorlar) {
     // QIYMAT AVVAL: uning kengligi o'lchanib, yorliqqa qolgan joy
     // hisoblanadi. Matn kattalashgach yorliq bilan qiymat bir-birining
     // ustiga chiqib ketishi mumkin edi — chekda bu o'qib bo'lmaydigan
     // qatorga aylanardi.
-    g.font = `600 ${O(12)}px ${F}`;
+    g.fillStyle = QORA;
+    g.font = `bold ${O(12)}px ${F}`;
     const vw = g.measureText(v).width;
-    g.fillStyle = "#111111";
     ong(g, v, EN - CHET, y);
 
-    g.font = `${O(12)}px ${F}`;
-    g.fillStyle = "#888888";
+    // Yorliq ham QORA, lekin yupqaroq — ierarxiya rang bilan emas,
+    // qalinlik bilan beriladi (kulrang qog'ozda yo'qoladi).
+    g.font = `500 ${O(12)}px ${F}`;
     g.fillText(qisqart(g, k, EN - CHET * 2 - vw - Q(8)), CHET, y);
-    y += Q(22);
+    y += Q(24);
+    chiziq(g, CHET, y - Q(6), EN - CHET);
   }
-  y += Q(10);
-  punktir(g, CHET, y, EN - CHET);
-  y += Q(12);
+  y += Q(6);
 
   // ─── Qaysi davr uchun ──────────────────────────────────────────────
-  g.fillStyle = "#888888";
-  g.font = `${O(10)}px ${F}`;
+  g.fillStyle = QORA;
+  g.font = `bold ${O(10)}px ${F}`;
   g.fillText("QAYSI DAVR UCHUN", CHET, y);
-  y += Q(16);
+  y += Q(18);
   for (const [nom, summa] of davrlar) {
-    g.font = `600 ${O(12)}px ${F}`;
+    g.font = `bold ${O(12)}px ${F}`;
     const sw = g.measureText(summa).width;
-    g.fillStyle = "#111111";
     ong(g, summa, EN - CHET, y);
 
-    g.font = `${O(12)}px ${F}`;
-    g.fillStyle = "#333333";
+    g.font = `500 ${O(12)}px ${F}`;
     g.fillText(qisqart(g, nom, EN - CHET * 2 - sw - Q(8)), CHET, y);
-    y += Q(20);
+    y += Q(21);
   }
   y += Q(12);
 
-  // ─── JAMI ──────────────────────────────────────────────────────────
-  g.strokeStyle = "#111111";
-  g.lineWidth = 1.5;
-  g.beginPath(); g.moveTo(CHET, y); g.lineTo(EN - CHET, y); g.stroke();
-  y += Q(10);
-  g.fillStyle = "#111111";
+  // ─── JAMI — TESKARI PANEL ──────────────────────────────────────────
+  // Chekdagi eng muhim raqam. Qora panelda oq yozuv bilan u eng
+  // xira apparatda ham o'qiladi.
+  g.fillStyle = QORA;
+  g.fillRect(CHET, y, panelEn, Q(40));
+  g.fillStyle = OQ;
   g.font = `bold ${O(13)}px ${F}`;
-  g.fillText("JAMI", CHET, y + Q(4));
+  g.fillText("JAMI", CHET + Q(10), y + Q(14));
   g.font = `bold ${O(20)}px ${F}`;
-  ong(g, pul(d.amount), EN - CHET, y);
-  y += Q(36);
+  ong(g, pul(d.amount), EN - CHET - Q(10), y + Q(9));
+  y += Q(40) + Q(12);
 
   if (d.note) {
-    g.fillStyle = "#888888";
-    g.font = `${O(10)}px ${F}`;
+    g.fillStyle = QORA;
+    g.font = `500 ${O(10)}px ${F}`;
     g.fillText(`Izoh: ${qisqart(g, d.note, EN - CHET * 2)}`, CHET, y);
     y += Q(24);
   }
@@ -205,12 +236,11 @@ export async function drawReceipt(
       g.drawImage(qr, (EN - o) / 2, y, o, o);
       y += o + Q(8);
     }
-    g.fillStyle = "#333333";
-    g.font = `${O(11)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    g.fillStyle = QORA;
+    g.font = `bold ${O(11)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
     markaz(g, d.code, EN / 2, y);
     y += Q(16);
-    g.fillStyle = "#aaaaaa";
-    g.font = `${O(9)}px ${F}`;
+    g.font = `500 ${O(9)}px ${F}`;
     markaz(g, "Chek haqiqiyligini shu kod bo'yicha tekshirish mumkin", EN / 2, y);
   }
 
@@ -256,12 +286,21 @@ function qisqart(g: CanvasRenderingContext2D, t: string, max: number): string {
   return `${s}…`;
 }
 
-function punktir(g: CanvasRenderingContext2D, x1: number, y: number, x2: number) {
-  g.strokeStyle = "#d8d8d8";
+/**
+ * Ajratuvchi chiziq — TO'LIQ, PUNKTIR EMAS.
+ *
+ * Ilgari 1px punktir `#d8d8d8` edi: termal apparatda undan qog'ozda
+ * deyarli hech nima qolmasdi. Sof qora to'liq chiziq esa ishonchli
+ * chiqadi. `0.5` siljish — chiziq piksel chegarasiga tushib xiralashib
+ * qolmasligi uchun.
+ */
+function chiziq(g: CanvasRenderingContext2D, x1: number, y: number, x2: number) {
+  g.strokeStyle = QORA;
   g.lineWidth = 1;
-  g.setLineDash([3, 3]);
-  g.beginPath(); g.moveTo(x1, y); g.lineTo(x2, y); g.stroke();
-  g.setLineDash([]);
+  g.beginPath();
+  g.moveTo(x1, Math.round(y) + 0.5);
+  g.lineTo(x2, Math.round(y) + 0.5);
+  g.stroke();
 }
 
 function rasmYukla(src: string): Promise<HTMLImageElement> {

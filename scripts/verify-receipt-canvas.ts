@@ -7,6 +7,7 @@
  * qog'oz yutadi va xatoni keyin tuzatib bo'lmaydi — shuning uchun
  * taqsimot mantig'i alohida qotiriladi.
  */
+import { readFileSync } from "node:fs";
 import { maydonlar, davrRoyxati, oyNomi } from "../lib/receipt-canvas";
 
 let pass = 0, fail = 0;
@@ -80,6 +81,28 @@ check("Click o'zbekchada", m.find((x) => x[0] === "To'lov usuli")![1] === "Click
 check("noma'lum usul o'z nomi bilan qoladi",
   maydonlar({ ...asos, amount: 1, method: "YANGI", student: { name: "A" } })
     .find((x) => x[0] === "To'lov usuli")![1] === "YANGI");
+
+console.log("\n━━━ QOG'OZ: FAQAT SOF QORA VA OQ ━━━\n");
+
+// Termal apparat kulrangni chop eta olmaydi — u nuqtalar to'riga
+// (dither) aylanadi va qog'ozda xira chiqadi. 2026-09-19 gacha
+// chekning yarmi kulrang edi (#888888 yorliqlar, #d8d8d8 chiziqlar)
+// va markaz "sizniki ko'rinmayapti" deb shikoyat qildi.
+//
+// Bu tekshiruv chizish faylini O'QIYDI: kelajakda kimdir "biroz
+// och qilaylik" deb kulrang qo'shsa, shu yerda ushlanadi.
+const manba = readFileSync(
+  new URL("../lib/receipt-canvas.ts", import.meta.url), "utf8");
+const kod = manba
+  .replace(/\/\*\*[\s\S]*?\*\//g, "")   // blok izohlar
+  .replace(/\/\/.*$/gm, "");             // qator izohlar
+const ranglar = [...kod.matchAll(/#[0-9a-fA-F]{3,8}/g)].map((m) => m[0]);
+const begona = ranglar.filter((c) => c !== "#000000" && c !== "#ffffff");
+check("chizishda kulrang qolmadi", begona.length === 0, begona.join(", "));
+check("qora va oq doimiylari bor",
+  /const QORA = "#000000"/.test(manba) && /const OQ\s*=\s*"#ffffff"/.test(manba));
+check("punktir chiziq ishlatilmaydi (qog'ozda yo'qoladi)",
+  !/setLineDash\(\[/.test(kod));
 
 console.log(`\n${fail === 0 ? "✅" : "❌"} Jami: ${pass} o'tdi, ${fail} yiqildi\n`);
 process.exit(fail === 0 ? 0 : 1);
