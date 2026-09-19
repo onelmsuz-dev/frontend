@@ -15,7 +15,7 @@ export interface MeData {
   orgSubdomain: string | null;
   acceptsPayments?: boolean;
   /** Markaz tanlagan shrift o'lchami — `<html data-font>` shundan qo'yiladi. */
-  uiFontScale?: "STANDART" | "ORTA" | "KATTA";
+  uiFontScale?: "STANDART" | "ORTA" | "KATTA" | "JUDA_KATTA";
   /** Tarif muddati + grace-period tugagan — org resurslari backendda bloklangan. */
   subscriptionBlocked?: boolean;
   /**

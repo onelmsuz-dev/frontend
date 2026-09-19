@@ -57,5 +57,12 @@ const ikki = run("a{font-size:calc(11px * var(--font-scale, 1))}");
 check("IKKI MARTA ko'paytirilmaydi",
   ikki.match(/font-scale/g).length === 1, ikki);
 
+// Pastki mobil menyu — ko'paytirgich CHEGARALANGAN.
+// U 5 ta teng ustun; to'liq kattalashtirilsa "O'quvchilar" katakni
+// kengaytirib menyuni yorib chiqardi (375px da har katak ~62px).
+const menyu = run(".bottom-nav-label{font-size:calc(10px * min(var(--font-scale, 1), 1.15))}");
+check("pastki menyu chegarasiga TEGILMAYDI (tayyor calc)",
+  !menyu.includes("--font-scale, 1))  *"), menyu);
+
 console.log(`\n${fail === 0 ? "✅" : "❌"} ${pass}/${pass + fail}\n`);
 process.exit(fail === 0 ? 0 : 1);

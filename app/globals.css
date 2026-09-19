@@ -140,6 +140,7 @@
 :root            { --font-scale: 1; }
 html[data-font="ORTA"]  { --font-scale: 1.12; }
 html[data-font="KATTA"] { --font-scale: 1.25; }
+html[data-font="JUDA_KATTA"] { --font-scale: 1.4; }
 
 /* YON MENYU shrift bilan birga kengayadi.
  *
@@ -150,6 +151,23 @@ html[data-font="KATTA"] { --font-scale: 1.25; }
  *
  * Yig'ilgan (76px) holatga TEGILMAYDI: u faqat ikonkalardan iborat. */
 html[data-font] .rail-wide { width: calc(220px * var(--font-scale, 1)); }
+
+/* PASTKI MOBIL MENYU — shriftni to'liq kattalashtirib bo'lmaydi.
+ *
+ * U 5 ta TENG ustundan iborat va 375px lik telefonda har biriga
+ * ~62px joy tegadi. "O'quvchilar" 10px da sig'adi, 14px da esa
+ * yo'q — `flex` elementi matnga qarab kengayib, butun menyu
+ * gorizontal chiqib ketardi.
+ *
+ * Shuning uchun bu yerda ko'paytirgich 1.15 da CHEGARALANADI:
+ * yozuv biroz kattalashadi, lekin menyu buzilmaydi. Ma'noni
+ * asosan ikonka tashiydi, va yozuv baribir qisqa.
+ *
+ * `truncate` (komponentda) — ikkinchi himoya qatlami: kelajakda
+ * uzunroq yozuv qo'shilsa ham menyu yorilmaydi, kesiladi. */
+html[data-font] .bottom-nav-label {
+  font-size: calc(10px * min(var(--font-scale, 1), 1.15));
+}
 
 
 @layer base {

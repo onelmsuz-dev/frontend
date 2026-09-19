@@ -146,6 +146,63 @@ export function BillingSettings({
         </div>
       </div>
 
+      {/* ── Birinchi oy ──────────────────────────────────────────────
+          2026-09-15 da `a97133e` bilan TASODIFAN o'chib ketgan edi: o'sha
+          commit "to'lov vaqti" dan uchinchi kartani olib tashlagan, lekin
+          bu blok ham shu bilan birga ketgan va commit xabarida u haqda
+          hech nima yozilmagan. Sozlama BAZADA va dvigatelda joyida
+          turaverdi (`billing.ts:90`) — faqat ekranda yo'q edi, ya'ni uni
+          o'zgartirib ham, ko'rib ham bo'lmasdi. */}
+      <div className="glass-panel rounded-2xl border border-white/60 dark:border-white/10 p-5">
+        <p className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100">
+          Birinchi (to&apos;liq bo&apos;lmagan) oy
+        </p>
+        <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+          Oy o&apos;rtasida qo&apos;shilgan o&apos;quvchidan qancha olinadi
+        </p>
+
+        <div className="grid sm:grid-cols-3 gap-2.5 mt-4">
+          {([
+            {
+              v: false,
+              l: "To'liq oylik narx",
+              d: "Oyning 28-kunida qo'shilgan ham butun oy uchun to'laydi.",
+            },
+            {
+              v: true,
+              l: "Qolgan kunlarga mutanosib",
+              d: "Oyning yarmidan qo'shilsa — taxminan yarmini to'laydi.",
+            },
+          ]).map(o => (
+            <button key={String(o.v)} type="button" onClick={() => setProrate(o.v)}
+              className={cn(
+                "text-left px-4 py-3 rounded-2xl border-2 transition-all",
+                prorate === o.v
+                  ? "border-indigo-600 bg-indigo-50/70 dark:bg-indigo-900/20 dark:border-indigo-400"
+                  : "border-white/60 dark:border-white/10 hover:border-neutral-400",
+              )}>
+              <p className={cn("text-[13px] font-bold",
+                prorate === o.v ? "text-indigo-700 dark:text-indigo-300" : "text-neutral-800 dark:text-neutral-200")}>
+                {o.l}
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                {o.d}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        {!prorate && (
+          <div className="flex items-start gap-2 mt-3 text-[11px] text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <p>
+              Oy oxirida qo&apos;shilgan o&apos;quvchi bir necha kunlik o&apos;qish uchun
+              to&apos;liq oylik to&apos;laydi, 1-sanada esa yangi oy yoziladi.
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* ── "Ketgan" deb belgilanganda qarz ──────────────────────────── */}
       <div className="glass-panel rounded-2xl border border-white/60 dark:border-white/10 p-5">
         <div className="flex items-start gap-3">
@@ -229,9 +286,18 @@ export function BillingSettings({
         </div>
       </div>
 
+      {/* SAQLASH MA'LUMOT KELGUNCHA O'CHIQ.
+          Forma holati standart qiymatlar bilan boshlanadi va serverdan
+          kelganda ustiga yoziladi. Ya'ni `/api/organization` sekin kelsa
+          yoki xato bersa, o'sha paytda bosilgan "Saqlash" markazning
+          BUTUN to'lov sozlamasini standartga qaytarib yuborardi —
+          mutanosib hisob, sinov darslari soni, to'lov vaqti, ketganda
+          qarz siyosati. Faqat bitta markaz (Jahon Center) mutanosib
+          hisoblaydi va uni shu yo'l bilan jimgina yo'qotish mumkin edi. */}
       <div className="flex items-center gap-3">
-        <Button onClick={save} disabled={saving} className="h-10 text-[13px]">
-          {saving ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saqlanmoqda...</> : "Saqlash"}
+        <Button onClick={save} disabled={saving || !org} className="h-10 text-[13px]">
+          {saving ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saqlanmoqda...</>
+            : !org ? "Yuklanmoqda..." : "Saqlash"}
         </Button>
         {msg && (
           <span className={cn("text-[12px] font-semibold flex items-center gap-1.5",

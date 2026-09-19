@@ -52,7 +52,8 @@ export default function RootLayout({
         */}
         <script dangerouslySetInnerHTML={{ __html:
           `try{var f=localStorage.getItem("oneroom-font");`
-          + `if(f==="ORTA"||f==="KATTA")document.documentElement.dataset.font=f;}catch(e){}` }} />
+          + `if(f==="ORTA"||f==="KATTA"||f==="JUDA_KATTA")`
+          + `document.documentElement.dataset.font=f;}catch(e){}` }} />
       </head>
       <body className="min-h-full font-[var(--font-jakarta)]">
           <Providers>{children}</Providers>

@@ -118,7 +118,10 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 transition-colors",
+                // `min-w-0` SHART: flex elementining standart eng kichik
+                // kengligi matn kengligi, ya'ni usiz uzun yozuv katakni
+                // kengaytirib butun menyuni yorib chiqardi.
+                "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 py-2 px-1 transition-colors",
                 isActive
                   ? "text-indigo-600 dark:text-indigo-300"
                   : "text-neutral-400 dark:text-neutral-500"
@@ -130,7 +133,8 @@ export function BottomNav() {
               )}>
                 <Icon className={cn("w-[18px] h-[18px]", isActive && "stroke-[2.5]")} />
               </div>
-              <span className="text-[10px] font-medium leading-none">{item.label}</span>
+              <span className="bottom-nav-label text-[10px] font-medium leading-none
+                w-full text-center truncate">{item.label}</span>
             </Link>
           );
         })}
@@ -138,7 +142,7 @@ export function BottomNav() {
         <button
           onClick={() => setShowMore(v => !v)}
           className={cn(
-            "flex-1 flex flex-col items-center justify-center gap-1 py-2 px-1 transition-colors",
+            "flex-1 min-w-0 flex flex-col items-center justify-center gap-1 py-2 px-1 transition-colors",
             showMore ? "text-indigo-600 dark:text-indigo-300" : "text-neutral-400 dark:text-neutral-500"
           )}
         >
@@ -148,7 +152,7 @@ export function BottomNav() {
           )}>
             <MoreHorizontal className={cn("w-[18px] h-[18px]", showMore && "stroke-[2.5]")} />
           </div>
-          <span className="text-[10px] font-medium leading-none">Ko'proq</span>
+          <span className="bottom-nav-label w-full text-center truncate text-[10px] font-medium leading-none">Ko'proq</span>
         </button>
       </nav>
     </>

@@ -6,7 +6,7 @@
  * faqat shu uchta satr orqali tegadi.
  */
 
-export type FontScale = "STANDART" | "ORTA" | "KATTA";
+export type FontScale = "STANDART" | "ORTA" | "KATTA" | "JUDA_KATTA";
 
 export const FONT_KEY = "oneroom-font";
 
@@ -14,6 +14,7 @@ export const FONT_OPTIONS: { v: FontScale; label: string; hint: string }[] = [
   { v: "STANDART", label: "Standart", hint: "Hozirgi ko'rinish" },
   { v: "ORTA",     label: "O'rta",    hint: "12% kattaroq" },
   { v: "KATTA",    label: "Katta",    hint: "25% kattaroq" },
+  { v: "JUDA_KATTA", label: "Juda katta", hint: "40% kattaroq" },
 ];
 
 /**

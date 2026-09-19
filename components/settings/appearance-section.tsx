@@ -85,7 +85,7 @@ export function AppearanceSection({ canEdit }: { canEdit: boolean }) {
               Butun platformaga qo&apos;llanadi — sahifalar, jadvallar, tugmalar va menyu
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mt-4">
               {FONT_OPTIONS.map(o => {
                 const on = tanlov === o.v;
                 return (
