@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR, { mutate } from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
@@ -297,8 +297,8 @@ function DiscountModal({ editId, onClose, onDone }: {
   const [scope, setScope] = useState<"HAMMA" | "GURUH" | "KURS" | "TANLANGAN">("HAMMA");
   const [groupId, setGroupId]   = useState("");
   const [courseId, setCourseId] = useState("");
-  /** `TANLANGAN` da — chegirma qaysi kurslarga. Bo'sh = hammasiga. */
-  const [courseIds, setCourseIds] = useState<string[]>([]);
+  /** `TANLANGAN` da — chegirma qaysi GURUHLARGA. Bo'sh = hammasiga. */
+  const [groupIds, setGroupIds] = useState<string[]>([]);
   /** Chegirma o'qituvchi maosh asosini kamaytiradimi (standart — ha). */
   const [maoshgaTasir, setMaoshgaTasir] = useState(true);
   const [picked, setPicked] = useState<string[]>([]);
@@ -320,7 +320,7 @@ function DiscountModal({ editId, onClose, onDone }: {
     setGroupId(mavjud.groupId ?? "");
     setCourseId(mavjud.courseId ?? "");
     setPicked(mavjud.studentIds ?? []);
-    setCourseIds(mavjud.courseIds ?? []);
+    setGroupIds(mavjud.groupIds ?? []);
     setMaoshgaTasir(mavjud.affectsTeacherSalary !== false);
     setStartsAt(String(mavjud.startsAt ?? "").slice(0, 10));
     setEndsAt(String(mavjud.endsAt ?? "").slice(0, 10));
@@ -329,6 +329,43 @@ function DiscountModal({ editId, onClose, onDone }: {
   }, [mavjud, toldirildi]);
 
   const list = Array.isArray(students) ? students : (students?.items ?? []);
+
+  /**
+   * TANLANGAN O'QUVCHILARNING GURUHLARI — qo'shimcha so'rovsiz.
+   *
+   * Ilgari bu yerda MARKAZNING BARCHA KURSLARI chiqardi: o'quvchi
+   * bormaydigan kurslar ham ro'yxatda turardi va tanlash mumkin edi
+   * (egasi ko'rsatdi, 2026-09-19). Endi faqat o'sha o'quvchi(lar)
+   * haqiqatan qatnaydigan guruhlar.
+   *
+   * KURS EMAS, GURUH: o'quvchi bir xil kursning ikki guruhiga
+   * qatnashi mumkin (ertalabki va kechki ingliz tili) va chegirma
+   * faqat bittasiga tegishli bo'lishi kerak.
+   *
+   * Ma'lumot `/api/students` javobida allaqachon bor — u a'zoliklarni
+   * guruh va kurs nomi bilan qaytaradi.
+   */
+  const tanlanganGuruhlar = useMemo(() => {
+    type Azolik = {
+      enrollmentStatus?: string;
+      group?: { id: string; name: string; course?: { name?: string } | null } | null;
+    };
+    type Oquvchi = { id: string; groups?: Azolik[] };
+
+    const m = new Map<string, { id: string; name: string; kurs: string }>();
+    for (const st of list as Oquvchi[]) {
+      if (!picked.includes(st.id)) continue;
+      for (const a of (st.groups ?? [])) {
+        // Chiqib ketgan a'zolikka chegirma berishning ma'nosi yo'q.
+        if (a.enrollmentStatus === "CHIQIB_KETGAN") continue;
+        const g = a.group;
+        if (g && !m.has(g.id)) {
+          m.set(g.id, { id: g.id, name: g.name, kurs: g.course?.name ?? "" });
+        }
+      }
+    }
+    return [...m.values()];
+  }, [list, picked]);
   /**
    * TANLANGANLAR HAR DOIM TEPADA.
    *
@@ -350,6 +387,14 @@ function DiscountModal({ editId, onClose, onDone }: {
   async function save() {
     setSaving(true); setErr("");
     try {
+      /**
+       * GURUH CHEKLOVI TOZALANADI — o'quvchi ro'yxatidan chiqarilgan
+       * odamning guruhi qolib ketmasin. Tanlov o'zgarganda `groupIds`
+       * eski qiymatni saqlab turardi va u jimgina saqlanib ketardi.
+       */
+      const tozaGuruhlar = groupIds.filter(
+        (id) => tanlanganGuruhlar.some((g) => g.id === id));
+
       // TAHRIRLASHDA faqat server qabul qiladigan maydonlar yuboriladi.
       // `type` va `scope` ataylab YO'Q — ular qulflangan.
       //
@@ -362,13 +407,15 @@ function DiscountModal({ editId, onClose, onDone }: {
             startsAt: startsAt || null,
             endsAt:   endsAt || null,
             note:     noteText,
-            ...(scope === "TANLANGAN" ? { studentIds: picked } : {}),
+            ...(scope === "TANLANGAN" ? { studentIds: picked, groupIds: tozaGuruhlar } : {}),
+            affectsTeacherSalary: maoshgaTasir,
           }
         : {
             name, type, value: Number(value), scope,
             ...(scope === "GURUH" ? { groupId } : {}),
             ...(scope === "KURS"  ? { courseId } : {}),
-            ...(scope === "TANLANGAN" ? { studentIds: picked } : {}),
+            ...(scope === "TANLANGAN" ? { studentIds: picked, groupIds: tozaGuruhlar } : {}),
+            affectsTeacherSalary: maoshgaTasir,
             ...(startsAt ? { startsAt } : {}),
             ...(endsAt   ? { endsAt }   : {}),
             ...(noteText ? { note: noteText } : {}),
@@ -512,30 +559,38 @@ function DiscountModal({ editId, onClose, onDone }: {
             </Field>
           )}
 
-          {/* QAYSI KURSLARGA — faqat o'quvchi tanlanganda va faqat
-              kerak bo'lsa. Bo'sh qoldirilsa avvalgidek o'quvchining
-              BARCHA guruhlariga tegishli bo'ladi. */}
-          {scope === "TANLANGAN" && (
-            <Field label={`Qaysi kurslarga${courseIds.length ? ` — ${courseIds.length} ta` : " — hammasiga"}`}>
+          {/* QAYSI GURUHLARGA — faqat o'quvchi BIR NECHTA guruhga
+              qatnaganda. Bitta guruhda tanlaydigan narsa yo'q va blok
+              ekranda ortiqcha savol bo'lib turardi (egasining talabi:
+              "bunda 1 dan ortiq guruhga borganda"). */}
+          {scope === "TANLANGAN" && tanlanganGuruhlar.length > 1 && (
+            <Field label={`Qaysi guruhlarga${groupIds.length ? ` — ${groupIds.length} ta` : " — hammasiga"}`}>
               <div className="flex flex-wrap gap-1.5">
-                {(courses ?? []).map((c: { id: string; name: string }) => {
-                  const on = courseIds.includes(c.id);
+                {tanlanganGuruhlar.map((g) => {
+                  const on = groupIds.includes(g.id);
                   return (
-                    <button key={c.id} type="button"
-                      onClick={() => setCourseIds((p) =>
-                        on ? p.filter((x) => x !== c.id) : [...p, c.id])}
-                      className={cn("px-2.5 h-7 rounded-lg text-[11.5px] font-semibold border transition-colors",
+                    <button key={g.id} type="button"
+                      onClick={() => setGroupIds((p) =>
+                        on ? p.filter((x) => x !== g.id) : [...p, g.id])}
+                      className={cn("px-2.5 py-1 rounded-lg text-[11.5px] font-semibold border transition-colors text-left",
                         on
                           ? "bg-neutral-900 text-white border-neutral-900 dark:bg-white dark:text-neutral-900 dark:border-white"
                           : "border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400")}>
-                      {c.name}
+                      {g.name}
+                      {/* Kurs nomi yonida: bir xil kursning ikki guruhi
+                          bo'lganda qaysi biri ekani shundan bilinadi. */}
+                      {g.kurs && (
+                        <span className={cn("ml-1 font-normal",
+                          on ? "opacity-70" : "text-neutral-400")}>
+                          · {g.kurs}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
               <p className="text-[11px] text-neutral-400 mt-1.5">
                 Hech biri tanlanmasa — o&apos;quvchining barcha guruhlariga tegishli.
-                Bir nechta guruhga qatnaydigan o&apos;quvchida kerakli kursni belgilang.
               </p>
             </Field>
           )}
