@@ -9,6 +9,7 @@ import {
   drawReceipt, canvasBlob, receiptPdf, saqla, type ReceiptData,
 } from "@/lib/receipt-canvas";
 import { cn } from "@/lib/utils";
+import { ModalOverlay } from "@/components/ui/modal-overlay";
 
 /**
  * TO'LOV CHEKI — ko'rish, chop etish, yuklash, jo'natish.
@@ -151,17 +152,50 @@ export function ReceiptModal({
     } finally { setBand(""); }
   }
 
-  if (!open) return null;
-
+  // `ModalOverlay` ochilish/yopilish animatsiyasini o'zi boshqaradi va
+  // yopiq holatda hech nima chizmaydi — shuning uchun bu yerda erta
+  // `return null` KERAK EMAS. Aksincha, u animatsiyani yo'q qilardi.
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />
+      {/*
+        FAQAT OCHIQ TURGANDA. `PRINT_CSS` ichida
+        `body * { visibility: hidden }` bor va uni `#chek` qaytarib
+        ko'rsatadi. Agar bu uslub oyna yopiq turganda ham sahifada
+        qolsa, `#chek` mavjud bo'lmaydi va foydalanuvchi ISTALGAN
+        sahifani chop etganda OQ VARAQ chiqardi.
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-        onClick={onClose}>
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-[420px]
-          max-h-[92vh] flex flex-col overflow-hidden"
-          onClick={(e) => e.stopPropagation()}>
+        Ilgari butun komponent `if (!open) return null` bilan
+        chizilmasdi, ya'ni bu o'z-o'zidan hal bo'lardi; endi oynani
+        `ModalOverlay` boshqaradi va shart shu yerga ko'chdi.
+      */}
+      {open && <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />}
+
+      {/*
+        UMUMIY `ModalOverlay` — ilgari bu oyna O'ZI yozilgan
+        `fixed inset-0` edi va ikki narsa buzilardi:
+
+        1. MARKAZDA OCHILMASDI. `fixed` ota elementda `transform`,
+           `filter` yoki `backdrop-filter` bo'lsa EKRANGA emas, o'sha
+           ota elementga nisbatan joylashadi. Ilovada `glass-panel`,
+           `glass-strong` va shadcn `Card` larning hammasida
+           `backdrop-filter: blur()` bor — ya'ni chek qaysi joydan
+           ochilishiga qarab ekranning tepasiga tushib qolardi
+           (egasi xabar berdi, 2026-09-19). `ModalOverlay` esa
+           `document.body` ga PORTAL qiladi va ota elementlar unga
+           umuman ta'sir qilmaydi.
+
+        2. QATLAM PAST EDI. Bu oyna `z-50` da, boshqa oynalar esa
+           `z-[100]` da turadi — to'lov oynasidan chek ochilganda u
+           ortda qolardi. Mobil pastki menyu (`z-[60]`) ham chekning
+           ustiga chiqardi.
+
+        Yon foyda: telefonda pastdan ko'tariladigan varaq, tananing
+        orqa fondagi aylanishini to'xtatish va animatsiya — hammasi
+        boshqa oynalar bilan bir xil.
+      */}
+      <ModalOverlay open={open} onClose={onClose} panelClassName="sm:max-w-[420px]">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full
+          flex flex-col max-h-full min-h-0 overflow-hidden">
 
           <div className="chek-yashir flex items-center justify-between px-4 py-3 shrink-0
             border-b border-neutral-200 dark:border-white/10">
@@ -228,7 +262,7 @@ export function ReceiptModal({
             </div>
           )}
         </div>
-      </div>
+      </ModalOverlay>
     </>
   );
 }
