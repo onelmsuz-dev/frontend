@@ -12,11 +12,17 @@ import { useGroups } from "@/lib/hooks/useGroups";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { WEEKDAY_SHORT, ATTENDANCE_GRACE_MINUTES } from "@/lib/form-constants";
 import { businessMinutesOfDay, businessToday } from "@/lib/time";
+import {
+  ScheduleTabs, filtrla, dushanbadan, type JadvalTab,
+} from "@/components/schedule/schedule-tabs";
 
 const UZ_MONTHS = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
 const UZ_DAYS   = ["Yakshanba","Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba"];
 // getDay() (0=Yak..6=Sha) → guruh scheduleDays value
 const DOW_TO_VALUE = ["YAKSHANBA","DUSHANBA","SESHANBA","CHORSHANBA","PAYSHANBA","JUMA","SHANBA"];
+/** Bo'sh ro'yxat uchun O'ZGARMAS havola — har chizishda yangi `[]`
+ *  yasalsa, unga bog'langan `useMemo` hech qachon keshlanmasdi. */
+const BOSH: any[] = [];
 
 type Status = "KELDI" | "KELMADI" | "KECH_KELDI" | "SABABLI";
 
@@ -58,7 +64,33 @@ export default function AttendancePage() {
   const [saveErr,       setSaveErr]       = useState("");
 
   const { data: groupsRaw, isLoading: groupsLoading } = useGroups({ status: "ACTIVE" });
-  const groups: any[] = Array.isArray(groupsRaw) ? groupsRaw : [];
+  const hammaGuruh: any[] = Array.isArray(groupsRaw) ? groupsRaw : BOSH;
+
+  /**
+   * GURUH RO'YXATI FILTRI — jadval bo'limidagi bilan AYNAN BIR XIL
+   * komponentdan (`ScheduleTabs`). Ko'p guruhli markazda tugmalar
+   * ro'yxati ekranga sig'masdi va kerakli guruhni topish qiyin edi
+   * (egasining talabi, 2026-09-20).
+   *
+   * KUN — ALOHIDA HOLAT EMAS: u `currentDate` dan hisoblanadi va
+   * kun tugmasi bosilganda SANANING O'ZI suriladi. Ikki alohida
+   * holat bo'lsa ular bir-biridan uzoqlashib ketardi — foydalanuvchi
+   * "Payshanba" ni tanlab, chorshanba davomatini belgilagan bo'lardi.
+   */
+  const [tab, setTab] = useState<JadvalTab>("boshqa");
+  const kunIdx = dushanbadan(currentDate.getDay());
+
+  /** Tanlangan kunga SHU HAFTA ichida suriladi (o'sha hafta qoladi). */
+  function kunniTanla(i: number) {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + (i - dushanbadan(d.getDay())));
+    setCurrentDate(d);
+  }
+
+  const groups = useMemo(
+    () => filtrla(hammaGuruh, tab, kunIdx, toDateStr(currentDate)),
+    [hammaGuruh, tab, kunIdx, currentDate],
+  );
 
   // Tanlangan guruh ro'yxatdan chiqib ketishi mumkin (holati o'zgardi, filial
   // almashtirildi). Ilgari `selectedGroup` eski id bilan qolib ketardi:
@@ -244,7 +276,25 @@ export default function AttendancePage() {
 
         {/* Group selector */}
         <div>
-          <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-2">Guruhni tanlang</p>
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+            <p className="text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+              Guruhni tanlang
+            </p>
+            {!groupsLoading && hammaGuruh.length > 0 && (
+              <span className="text-[11px] text-neutral-400">
+                {groups.length} / {hammaGuruh.length}
+              </span>
+            )}
+          </div>
+
+          {/* Filtr — jadval bo'limidagi komponentning o'zi.
+              `-mx-3` : komponent o'z ichki chekkasini qo'yadi, bu yerda
+              esa u kartochka chetiga tekis tushishi kerak. */}
+          <div className="-mx-3 mb-1">
+            <ScheduleTabs tab={tab} onTab={setTab}
+              kunIdx={kunIdx} onKun={kunniTanla} compact hammasiBilan />
+          </div>
+
           <div className="flex gap-1.5 flex-wrap">
             {groupsLoading
               ? Array.from({length:3}).map((_,i) => <Skeleton key={i} className="h-9 w-28" />)
@@ -261,9 +311,17 @@ export default function AttendancePage() {
                   </button>
                 ))
             }
-            {!groupsLoading && groups.length === 0 && (
+            {/* IKKI XIL BO'SHLIK — ikki xil sabab. "Filtrda yo'q" bilan
+                "umuman yo'q" ni bir xil yozuv bilan ko'rsatish foydalanuvchini
+                guruhlar bo'limiga behuda yuborardi. */}
+            {!groupsLoading && groups.length === 0 && hammaGuruh.length > 0 && (
               <p className="text-sm text-neutral-400">
-                Faol guruh yo'q — davomat faqat boshlangan guruhlarda belgilanadi.{" "}
+                Bu filtrda guruh yo&apos;q — boshqa kunni yoki toq/juftni tanlang.
+              </p>
+            )}
+            {!groupsLoading && hammaGuruh.length === 0 && (
+              <p className="text-sm text-neutral-400">
+                Faol guruh yo&apos;q — davomat faqat boshlangan guruhlarda belgilanadi.{" "}
                 <Link href="/groups" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
                   Guruhlar
                 </Link>

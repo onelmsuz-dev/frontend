@@ -21,7 +21,15 @@ import { businessTodayStr } from "@/lib/time";
  * Nusxa ko'chirilsa ular vaqt o'tib bir-biridan uzoqlashardi.
  */
 
-export type JadvalTab = "toq" | "juft" | "boshqa";
+/**
+ * `hamma` — FILTRSIZ, barcha guruh.
+ *
+ * Jadval sahifalarida ishlatilmaydi (u yerda savol har doim "qaysi
+ * kunda nima bor"), faqat davomat bo'limida `hammasiBilan` bayrog'i
+ * bilan chiqariladi: o'sha yerda guruh o'z kunida bo'lmasa ham unga
+ * davomat belgilash kerak bo'lishi mumkin (qo'shimcha dars).
+ */
+export type JadvalTab = "toq" | "juft" | "boshqa" | "hamma";
 
 const TOQ  = ["DUSHANBA", "CHORSHANBA", "JUMA"];
 const JUFT = ["SESHANBA", "PAYSHANBA", "SHANBA"];
@@ -37,7 +45,7 @@ export const KUNLAR = [
 ] as const;
 
 const TAB_NOMI: Record<JadvalTab, string> = {
-  toq: "Toq kunlar", juft: "Juft kunlar", boshqa: "Boshqa",
+  toq: "Toq kunlar", juft: "Juft kunlar", boshqa: "Boshqa", hamma: "Hammasi",
 };
 
 /** `getDay()` (yakshanba = 0) → `KUNLAR` indeksi (dushanba = 0). */
@@ -89,8 +97,19 @@ interface Filtrlanadigan {
  */
 export function filtrla<T extends Filtrlanadigan>(
   groups: T[], tab: JadvalTab, kunIdx: number,
+  /**
+   * "Boshqa" da guruhning boshlanish/tugash sanasi SHU sanaga
+   * solishtiriladi. Standart — shu haftaning o'sha kuni.
+   *
+   * Davomat bo'limi buni ANIQ beradi: u yerda foydalanuvchi o'tgan
+   * haftaning davomatini ham belgilashi mumkin, va o'sha kuni hali
+   * boshlanmagan guruh ro'yxatda turmasligi kerak.
+   */
+  sanaParam?: string,
 ): T[] {
   const tartib = (a: T, b: T) => a.startTime.localeCompare(b.startTime);
+
+  if (tab === "hamma") return [...groups].sort(tartib);
 
   if (tab !== "boshqa") {
     const ruxsat = tab === "toq" ? TOQ : JUFT;
@@ -102,7 +121,7 @@ export function filtrla<T extends Filtrlanadigan>(
       .sort(tartib);
   }
 
-  const sana = haftaSanasi(kunIdx);
+  const sana = sanaParam ?? haftaSanasi(kunIdx);
   return groups
     .filter((g) => (g.scheduleDays ?? []).includes(KUNLAR[kunIdx].kalit))
     .filter((g) => {
@@ -114,13 +133,15 @@ export function filtrla<T extends Filtrlanadigan>(
 }
 
 export function ScheduleTabs({
-  tab, onTab, kunIdx, onKun, compact = false,
+  tab, onTab, kunIdx, onKun, compact = false, hammasiBilan = false,
 }: {
   tab: JadvalTab;
   onTab: (t: JadvalTab) => void;
   kunIdx: number;
   onKun: (i: number) => void;
   compact?: boolean;
+  /** "Hammasi" tugmasini ham chiqarish — faqat davomat bo'limida. */
+  hammasiBilan?: boolean;
 }) {
   const bugunIdx = bugungiIndeks();
 
@@ -128,7 +149,9 @@ export function ScheduleTabs({
     <div className="shrink-0">
       <div className={cn("flex items-center gap-1 overflow-x-auto",
         compact ? "px-3 pt-2 pb-1.5" : "px-3 pt-3 pb-2")}>
-        {(["toq", "juft", "boshqa"] as JadvalTab[]).map((t) => (
+        {((hammasiBilan
+            ? ["hamma", "toq", "juft", "boshqa"]
+            : ["toq", "juft", "boshqa"]) as JadvalTab[]).map((t) => (
           <button key={t} type="button" onClick={() => onTab(t)}
             className={cn("shrink-0 px-3 h-8 rounded-xl text-[12px] font-semibold transition-colors",
               tab === t
