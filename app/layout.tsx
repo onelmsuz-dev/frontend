@@ -36,6 +36,24 @@ export default function RootLayout({
     // ogohlantirishi bilan to'lib, HAQIQIY xatolar ko'rinmay qolardi.
     <html lang="uz" suppressHydrationWarning
           className={`${jakarta.variable} h-full antialiased`}>
+      <head>
+        {/*
+          SHRIFT O'LCHAMI — CHIZISHDAN OLDIN.
+
+          Markaz tanlagan o'lcham serverdan `/api/me` bilan keladi, lekin
+          u birinchi chizilishdan KEYIN yetib boradi: foydalanuvchi avval
+          kichik matnni ko'rib, keyin butun sahifa sakrab kattalashardi.
+          Shuning uchun oxirgi tanlov `localStorage` da ham turadi va shu
+          yerda, hech qanday React ishga tushishidan oldin qo'llanadi.
+
+          `try/catch` SHART: private rejimda yoki sayt ma'lumotlari
+          o'chirilgan brauzerda `localStorage` ga murojaatning O'ZI xato
+          tashlaydi va u butun skriptni to'xtatardi.
+        */}
+        <script dangerouslySetInnerHTML={{ __html:
+          `try{var f=localStorage.getItem("oneroom-font");`
+          + `if(f==="ORTA"||f==="KATTA")document.documentElement.dataset.font=f;}catch(e){}` }} />
+      </head>
       <body className="min-h-full font-[var(--font-jakarta)]">
           <Providers>{children}</Providers>
         </body>

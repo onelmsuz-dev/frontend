@@ -118,6 +118,40 @@
   --sidebar-ring: oklch(0.5 0 0);
 }
 
+/* ─── SHRIFT O'LCHAMI — markaz sozlamasi ──────────────────────────────────
+ *
+ * Talab (2026-09-19): "yozuvlar kichik, ma'lumot o'qish qiyin" — har
+ * markaz o'zi tanlasin.
+ *
+ * QANDAY ISHLAYDI: `scripts/postcss-font-scale.mjs` kompilyatsiya
+ * paytida HAR BIR `font-size` ni `calc(... * var(--font-scale))` ga
+ * aylantiradi. Ya'ni bu yerdagi bitta son butun platformaga —
+ * tugmalar, navbar, jadvallar, ko'rsatkichlarga — birdek tegadi, va
+ * kelajakda yoziladigan yangi kod ham avtomatik bo'ysunadi.
+ *
+ * QIYMATLAR EHTIYOTKORONA tanlangan: eng ko'p ishlatiladigan o'lcham
+ * 11px, `KATTA` da u ~13.8px bo'ladi. Bundan yuqorisi kartochkalar va
+ * jadval kataklarini yorib chiqa boshlaydi (ichki bo'shliqlar px'da
+ * qolgani uchun) — shuning uchun 1.25 dan oshirilmadi.
+ *
+ * `intervaqt` bosqichi YO'Q: o'zgarish bir zumda bo'lsin, aks holda
+ * sozlamani sinab ko'rayotgan odam natijani ko'rmay ikkinchi marta
+ * bosadi. */
+:root            { --font-scale: 1; }
+html[data-font="ORTA"]  { --font-scale: 1.12; }
+html[data-font="KATTA"] { --font-scale: 1.25; }
+
+/* YON MENYU shrift bilan birga kengayadi.
+ *
+ * Ichki bo'shliqlar px'da qolgani uchun faqat matn o'sadi — va
+ * 220px lik menyuda "O'qituvchilar" kabi uzun yozuv `whitespace-nowrap`
+ * + `overflow-hidden` ostida oxiridan kesilardi. Kenglik ham o'sha
+ * nisbatda o'ssa, yozuv qanday bo'lsa shunday qoladi.
+ *
+ * Yig'ilgan (76px) holatga TEGILMAYDI: u faqat ikonkalardan iborat. */
+html[data-font] .rail-wide { width: calc(220px * var(--font-scale, 1)); }
+
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

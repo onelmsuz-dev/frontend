@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { SWRConfig } from "swr";
 import { SessionWatcher } from "@/components/auth/session-watcher";
+import { FontScaleSync } from "@/components/font-scale-sync";
 import type { ApiError } from "@/lib/fetcher";
 
 /**
@@ -45,6 +46,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         }}
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <FontScaleSync />
           {children}
         </ThemeProvider>
       </SWRConfig>

@@ -53,7 +53,10 @@ export function TorNav() {
   return (
     <aside className={cn(
       "rail-sidebar glass-panel sticky top-4 z-40 hidden h-[calc(100dvh-32px)] shrink-0 flex-col overflow-hidden rounded-3xl border border-white/60 dark:border-white/10 lg:flex",
-      open ? "w-[220px]" : "w-[76px]"
+      // `rail-wide` — shrift kattalashtirilganda menyu ham kengaysin
+      // (globals.css). Busiz "O'qituvchilar" kabi uzun yozuvlar
+      // 220px ga sig'may, `overflow-hidden` ostida kesilib qolardi.
+      open ? "rail-wide w-[220px]" : "w-[76px]"
     )}>
 
       {/* Logo */}

@@ -17,10 +17,11 @@ import { BillingModes } from "@/components/settings/billing-modes";
 import { DiscountsSection } from "@/components/settings/discounts-section";
 import { ActivitySection } from "@/components/settings/activity-section";
 import { TrashSection } from "@/components/settings/trash-section";
+import { AppearanceSection } from "@/components/settings/appearance-section";
 import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
 import type { Branch, Room } from "@/types";
 import {
-  Plus, Trash2, Users, Building, Bell,
+  Plus, Trash2, Users, Building, Bell, Type,
   MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket, Wallet, History, Percent,
   CalendarOff,
 } from "lucide-react";
@@ -82,6 +83,9 @@ const sections = [
   { id: "tarif",         label: "Tarif va muddat", icon: CreditCard, group: "obuna" },
 
   // ─ Tizim ─
+  // Ko'rinish BILDIRISHNOMADAN OLDIN: "yozuv kichik" shikoyati bilan
+  // kelgan odam uni birinchi ko'rishi kerak, pastga qidirib emas.
+  { id: "korinish",      label: "Ko'rinish", icon: Type, group: "tizim" },
   { id: "bildirishnoma", label: "Bildirishnomalar", icon: Bell, group: "tizim" },
   // Yo'l ko'rsatuvchi bayrog'i o'chiq markazda bu tab ko'rsatilmaydi
   // (quyida `visibleSections` da filtrlanadi).
@@ -517,6 +521,10 @@ function SettingsContent() {
           {activeSection === "harakatlar" && <ActivitySection />}
 
           {activeSection === "korzinka" && <TrashSection />}
+
+          {activeSection === "korinish" && (
+            <AppearanceSection canEdit={hasPerm(me?.permissions, "settings.view")} />
+          )}
 
           {/* ── Filliallar ── */}
           {activeSection === "filliallar" && (

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { mutate } from "swr";
-import { CreditCard, X } from "lucide-react";
+import useSWR, { mutate } from "swr";
+import { CreditCard, Info, Receipt, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import { useStudent } from "@/lib/hooks/useStudents";
 import { cn } from "@/lib/utils";
 import { SELECTABLE_METHODS, methodGridCls } from "@/lib/payment-methods";
 import { formatCurrency } from "@/lib/money";
+import { fetcher } from "@/lib/fetcher";
 
 
 
@@ -51,6 +52,24 @@ export function AcceptPaymentModal({
   // kerak bo'ladi. Yopish bir bosishda, ya'ni chek kerak bo'lmasa xalaqit
   // qilmaydi.
   const [chekId, setChekId] = useState<string | null>(null);
+
+  /**
+   * QO'SHIMCHA TO'LOV — kitob, forma, sertifikat.
+   *
+   * Belgilanganda oyna `Payment` EMAS, `MaterialEntry` yaratadi.
+   * Bu ataylab: `Payment` ga bayroq qo'yilsa, uni o'qiydigan 30 ta
+   * joyning har biri filtrlashi kerak bo'lardi va bittasi unutilsa
+   * (masalan o'qituvchi foizi) raqam jimgina noto'g'ri bo'lardi.
+   * Kassir uchun farq yo'q — summa, usul va izoh o'sha joyda qoladi.
+   */
+  const [forMaterials, setForMaterials] = useState(false);
+  const [category, setCategory] = useState("");
+  const [infoOpen, setInfoOpen] = useState(false);
+
+  const { data: categories } = useSWR<{ id: string; name: string }[]>(
+    open && forMaterials ? "/api/materials/categories" : null,
+    fetcher,
+  );
 
   /**
    * Tanlangan o'quvchi — endi ro'yxatdan emas, qidiruvdan keladi.
@@ -96,18 +115,64 @@ export function AcceptPaymentModal({
   function handleClose() {
     setPayForm(EMPTY_FORM);
     setPayFormErr("");
+    setForMaterials(false);
+    setCategory("");
+    setInfoOpen(false);
     onClose();
+  }
+
+  /**
+   * Qo'shimcha to'lov — sotuv va uning to'lovi bitta amalda.
+   *
+   * `paidNow` server tarafda ikkalasini bitta tranzaksiyada yozadi:
+   * qarz yozilib to'lovi yozilmay qolsa, o'quvchida sababsiz qarz
+   * paydo bo'lardi.
+   */
+  async function submitMaterials() {
+    const res = await fetch("/api/materials", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        studentId: payForm.studentId,
+        category: category.trim(),
+        amount: Number(payForm.amount),
+        method: payForm.method,
+        note: payForm.note || undefined,
+        paidNow: true,
+      }),
+    });
+
+    if (!res.ok) {
+      const xato = await res.json().catch(() => null);
+      setPayFormErr(xato?.error ?? "Xatolik yuz berdi");
+      return;
+    }
+
+    void mutate(key => typeof key === "string" && key.startsWith("/api/materials"));
+    void mutate(key => typeof key === "string" && key.startsWith("/api/dashboard"));
+    void mutate(key => typeof key === "string" && key.startsWith("/api/reports"));
+    // Chek ochilmaydi: bu kurs to'lovi emas va `ReceiptModal`
+    // `Payment` id sini kutadi.
+    handleClose();
   }
 
   async function submitPayment() {
     if (!payForm.studentId) { setPayFormErr("O'quvchini tanlang"); return; }
     if (!payForm.amount || Number(payForm.amount) <= 0) { setPayFormErr("Summani kiriting"); return; }
-    if (payableGroups.length > 1 && !selectedGroupId) {
+    if (!forMaterials && payableGroups.length > 1 && !selectedGroupId) {
       setPayFormErr("Qaysi guruh uchun to'lov ekanini tanlang"); return;
+    }
+    if (forMaterials && !category.trim()) {
+      setPayFormErr("Nima uchun to'lov ekanini tanlang"); return;
     }
     setPayFormErr("");
     setSaving(true);
     try {
+      if (forMaterials) {
+        await submitMaterials();
+        return;
+      }
+
       const groupId = selectedGroupId || payableGroups[0]?.groupId;
       const res = await fetch("/api/payments", {
         method: "POST",
@@ -173,7 +238,10 @@ export function AcceptPaymentModal({
             />
           </div>
 
-          {payableGroups.length > 1 && (
+          {/* Qo'shimcha to'lovda guruh SO'RALMAYDI: kitob puli birorta
+              guruhga bog'lanmaydi va tanlov javobsiz savol bo'lib
+              qolardi (o'quvchi kartochkasidagi oyna ham shunday). */}
+          {!forMaterials && payableGroups.length > 1 && (
             <div>
               <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">
                 Qaysi guruh uchun
@@ -218,6 +286,85 @@ export function AcceptPaymentModal({
               onChange={e => setPayForm(p => ({ ...p, amount: e.target.value }))}
               className="h-10 sm:h-9 text-sm"
             />
+          </div>
+
+          {/* QO'SHIMCHA TO'LOV. Kassir kitob yoki forma pulini shu yerda
+              yozadi — o'quvchi kartochkasiga o'tmasdan. Belgilanganda
+              yozuv boshqa jurnalga tushadi: o'quvchi balansi va
+              o'qituvchi foizi tegilmaydi. */}
+          <div className="rounded-xl border border-white/60 dark:border-white/10 px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setForMaterials(v => !v)}
+                className="flex items-center gap-2 flex-1 text-left"
+              >
+                <span className={cn(
+                  "w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors",
+                  forMaterials
+                    ? "bg-indigo-600 border-indigo-600 dark:bg-indigo-500"
+                    : "border-neutral-300 dark:border-white/20",
+                )}>
+                  <Receipt className={cn("w-3 h-3", forMaterials ? "text-white" : "text-neutral-400")} />
+                </span>
+                <span className="text-[12px] font-medium text-neutral-600 dark:text-neutral-300">
+                  O&apos;quv materiallari uchun
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setInfoOpen(v => !v)}
+                aria-label="Bu qanaqa to'lov"
+                className="p-1 rounded-lg text-neutral-400 hover:text-indigo-600
+                  dark:hover:text-indigo-400 transition-colors"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+            </div>
+
+            {infoOpen && (
+              <p className="mt-2 text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+                Kitob, ish daftari, forma, sertifikat kabi to&apos;lovlar.
+                O&apos;quvchining kurs qarziga ta&apos;sir qilmaydi va
+                o&apos;qituvchi foiziga kirmaydi, lekin markaz daromadida
+                hamda &laquo;Qo&apos;shimcha to&apos;lovlar&raquo; hisobotida
+                ko&apos;rinadi.
+              </p>
+            )}
+
+            {forMaterials && (
+              <div className="mt-2.5">
+                <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">
+                  Nima uchun
+                </Label>
+                {categories === undefined ? (
+                  <p className="text-[11px] text-neutral-400">Yuklanmoqda...</p>
+                ) : categories.length === 0 ? (
+                  <p className="text-[11px] text-neutral-400">
+                    Kategoriya yo&apos;q — sozlamalardan qo&apos;shing.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {categories.map(k => (
+                      <button
+                        key={k.id}
+                        type="button"
+                        onClick={() => setCategory(k.name)}
+                        className={cn(
+                          "px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors",
+                          category === k.name
+                            ? "bg-indigo-600 text-white dark:bg-indigo-500 border-indigo-600"
+                            : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10",
+                        )}
+                      >
+                        {k.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
@@ -268,7 +415,9 @@ export function AcceptPaymentModal({
             disabled={saving}
             onClick={submitPayment}
           >
-            {saving ? "Saqlanmoqda..." : "To'lovni qabul qilish"}
+            {saving
+              ? "Saqlanmoqda..."
+              : forMaterials ? "Qo'shimcha to'lovni yozish" : "To'lovni qabul qilish"}
           </Button>
           <Button variant="outline" className="h-10 sm:px-4" onClick={handleClose}>
             Bekor
