@@ -331,41 +331,52 @@ function DiscountModal({ editId, onClose, onDone }: {
   const list = Array.isArray(students) ? students : (students?.items ?? []);
 
   /**
-   * TANLANGAN O'QUVCHILARNING GURUHLARI — qo'shimcha so'rovsiz.
+   * TANLANGAN O'QUVCHILAR VA ULARNING GURUHLARI — qo'shimcha so'rovsiz.
    *
-   * Ilgari bu yerda MARKAZNING BARCHA KURSLARI chiqardi: o'quvchi
-   * bormaydigan kurslar ham ro'yxatda turardi va tanlash mumkin edi
-   * (egasi ko'rsatdi, 2026-09-19). Endi faqat o'sha o'quvchi(lar)
-   * haqiqatan qatnaydigan guruhlar.
+   * Ma'lumot `/api/students` javobida allaqachon bor: u a'zoliklarni
+   * guruh va kurs nomi bilan qaytaradi.
    *
    * KURS EMAS, GURUH: o'quvchi bir xil kursning ikki guruhiga
    * qatnashi mumkin (ertalabki va kechki ingliz tili) va chegirma
    * faqat bittasiga tegishli bo'lishi kerak.
-   *
-   * Ma'lumot `/api/students` javobida allaqachon bor — u a'zoliklarni
-   * guruh va kurs nomi bilan qaytaradi.
    */
-  const tanlanganGuruhlar = useMemo(() => {
+  const tanlanganlar = useMemo(() => {
     type Azolik = {
       enrollmentStatus?: string;
       group?: { id: string; name: string; course?: { name?: string } | null } | null;
     };
-    type Oquvchi = { id: string; groups?: Azolik[] };
+    type Oquvchi = { id: string; name?: string; groups?: Azolik[] };
 
-    const m = new Map<string, { id: string; name: string; kurs: string }>();
+    const out: { id: string; nom: string; guruhlar: { id: string; nom: string; kurs: string }[] }[] = [];
     for (const st of list as Oquvchi[]) {
       if (!picked.includes(st.id)) continue;
+      const m = new Map<string, { id: string; nom: string; kurs: string }>();
       for (const a of (st.groups ?? [])) {
         // Chiqib ketgan a'zolikka chegirma berishning ma'nosi yo'q.
         if (a.enrollmentStatus === "CHIQIB_KETGAN") continue;
         const g = a.group;
         if (g && !m.has(g.id)) {
-          m.set(g.id, { id: g.id, name: g.name, kurs: g.course?.name ?? "" });
+          m.set(g.id, { id: g.id, nom: g.name, kurs: g.course?.name ?? "" });
         }
       }
+      out.push({ id: st.id, nom: st.name ?? "—", guruhlar: [...m.values()] });
     }
-    return [...m.values()];
+    return out;
   }, [list, picked]);
+
+  /**
+   * TANLASH FAQAT BIR NECHTA GURUHGA QATNAYDIGANLAR UCHUN.
+   *
+   * Bitta guruhi bor o'quvchida tanlaydigan narsa yo'q — uning guruhi
+   * ro'yxatda turgani faqat chalg'itardi (egasining talabi,
+   * 2026-09-20). Va guruhlar bir uyum bo'lib emas, O'QUVCHI BO'YICHA
+   * guruhlanadi: ikki o'quvchi tanlanganda qaysi guruh kimniki ekanini
+   * bilishning boshqa yo'li yo'q edi.
+   */
+  const kopGuruhli = useMemo(
+    () => tanlanganlar.filter((x) => x.guruhlar.length > 1),
+    [tanlanganlar]);
+
   /**
    * TANLANGANLAR HAR DOIM TEPADA.
    *
@@ -387,14 +398,6 @@ function DiscountModal({ editId, onClose, onDone }: {
   async function save() {
     setSaving(true); setErr("");
     try {
-      /**
-       * GURUH CHEKLOVI TOZALANADI — o'quvchi ro'yxatidan chiqarilgan
-       * odamning guruhi qolib ketmasin. Tanlov o'zgarganda `groupIds`
-       * eski qiymatni saqlab turardi va u jimgina saqlanib ketardi.
-       */
-      const tozaGuruhlar = groupIds.filter(
-        (id) => tanlanganGuruhlar.some((g) => g.id === id));
-
       // TAHRIRLASHDA faqat server qabul qiladigan maydonlar yuboriladi.
       // `type` va `scope` ataylab YO'Q — ular qulflangan.
       //
@@ -407,14 +410,14 @@ function DiscountModal({ editId, onClose, onDone }: {
             startsAt: startsAt || null,
             endsAt:   endsAt || null,
             note:     noteText,
-            ...(scope === "TANLANGAN" ? { studentIds: picked, groupIds: tozaGuruhlar } : {}),
+            ...(scope === "TANLANGAN" ? { studentIds: picked, groupIds } : {}),
             affectsTeacherSalary: maoshgaTasir,
           }
         : {
             name, type, value: Number(value), scope,
             ...(scope === "GURUH" ? { groupId } : {}),
             ...(scope === "KURS"  ? { courseId } : {}),
-            ...(scope === "TANLANGAN" ? { studentIds: picked, groupIds: tozaGuruhlar } : {}),
+            ...(scope === "TANLANGAN" ? { studentIds: picked, groupIds } : {}),
             affectsTeacherSalary: maoshgaTasir,
             ...(startsAt ? { startsAt } : {}),
             ...(endsAt   ? { endsAt }   : {}),
@@ -559,38 +562,55 @@ function DiscountModal({ editId, onClose, onDone }: {
             </Field>
           )}
 
-          {/* QAYSI GURUHLARGA — faqat o'quvchi BIR NECHTA guruhga
-              qatnaganda. Bitta guruhda tanlaydigan narsa yo'q va blok
-              ekranda ortiqcha savol bo'lib turardi (egasining talabi:
-              "bunda 1 dan ortiq guruhga borganda"). */}
-          {scope === "TANLANGAN" && tanlanganGuruhlar.length > 1 && (
+          {/* QAYSI GURUHLARGA — O'QUVCHI BO'YICHA guruhlangan.
+              Faqat bir nechta guruhga qatnaydiganlar: bittasi borda
+              tanlaydigan narsa yo'q. */}
+          {scope === "TANLANGAN" && kopGuruhli.length > 0 && (
             <Field label={`Qaysi guruhlarga${groupIds.length ? ` — ${groupIds.length} ta` : " — hammasiga"}`}>
-              <div className="flex flex-wrap gap-1.5">
-                {tanlanganGuruhlar.map((g) => {
-                  const on = groupIds.includes(g.id);
-                  return (
-                    <button key={g.id} type="button"
-                      onClick={() => setGroupIds((p) =>
-                        on ? p.filter((x) => x !== g.id) : [...p, g.id])}
-                      className={cn("px-2.5 py-1 rounded-lg text-[11.5px] font-semibold border transition-colors text-left",
-                        on
-                          ? "bg-neutral-900 text-white border-neutral-900 dark:bg-white dark:text-neutral-900 dark:border-white"
-                          : "border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400")}>
-                      {g.name}
-                      {/* Kurs nomi yonida: bir xil kursning ikki guruhi
-                          bo'lganda qaysi biri ekani shundan bilinadi. */}
-                      {g.kurs && (
-                        <span className={cn("ml-1 font-normal",
-                          on ? "opacity-70" : "text-neutral-400")}>
-                          · {g.kurs}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
+              <div className="space-y-2.5">
+                {kopGuruhli.map((st) => (
+                  <div key={st.id}>
+                    {/* ISM — guruh ustida. Ikki o'quvchi tanlanganda
+                        qaysi guruh kimniki ekanini bilishning boshqa
+                        yo'li yo'q edi. */}
+                    <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 mb-1">
+                      {st.nom}
+                      <span className="font-normal text-neutral-400">
+                        {" · "}{st.guruhlar.length} ta guruh
+                      </span>
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {st.guruhlar.map((g) => {
+                        const on = groupIds.includes(g.id);
+                        return (
+                          <button key={g.id} type="button"
+                            onClick={() => setGroupIds((p) =>
+                              on ? p.filter((x) => x !== g.id) : [...p, g.id])}
+                            className={cn("px-2.5 py-1 rounded-lg text-[11.5px] font-semibold border transition-colors text-left",
+                              on
+                                ? "bg-neutral-900 text-white border-neutral-900 dark:bg-white dark:text-neutral-900 dark:border-white"
+                                : "border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400")}>
+                            {g.nom}
+                            {/* Kurs nomi yonida: bir xil kursning ikki
+                                guruhi bo'lganda qaysi biri ekani shundan
+                                bilinadi. */}
+                            {g.kurs && (
+                              <span className={cn("ml-1 font-normal",
+                                on ? "opacity-70" : "text-neutral-400")}>
+                                · {g.kurs}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <p className="text-[11px] text-neutral-400 mt-1.5">
-                Hech biri tanlanmasa — o&apos;quvchining barcha guruhlariga tegishli.
+              <p className="text-[11px] text-neutral-400 mt-2">
+                Faqat bir nechta guruhga qatnaydiganlar ko&apos;rsatilgan — qolganlarga
+                chegirma baribir tegadi. Kimningdir guruhi belgilanmasa, unga
+                barcha guruhi bo&apos;yicha tegadi.
               </p>
             </Field>
           )}
