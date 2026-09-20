@@ -1,20 +1,13 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId } from "react";
 import { Send, Check, AlertCircle, Loader2, MessageCircle } from "lucide-react";
-import { extractNationalDigits, toDisplayPhone, caretForDigits } from "@/lib/phone-format";
+import { useLeadForm, type ContactTopic } from "./use-lead-form";
 
 /**
- * Cluster landing sahifalaridagi qisqa ariza formasi.
- *
- * `components/landing/contact-section.tsx` bilan bir xil `/api/contact`
- * endpointiga yuboradi (backend o'zgarmaydi). Farqi: bu yerda `topic` fixed
- * (sahifa propsidan) va qaysi sahifadan kelgani `message` maydoni ichiga
- * "Sahifa: ..." qatori sifatida qo'shiladi — backend sxemasida alohida
- * "source" maydoni yo'q, shu sabab mavjud ixtiyoriy `message`dan foydalaniladi.
+ * Klaster landing sahifalaridagi qisqa ariza formasi.
+ * Mantiq `use-lead-form.ts` da; ariza modali va bosh sahifadagi ariza bloki esa `apply-form.tsx` dizaynida.
  */
-
-type ContactTopic = "demo" | "narx" | "kochirish" | "hamkorlik" | "boshqa";
 
 interface LeadFormProps {
   /** Telegramga boradigan xabarda ko'rinadigan manba yorlig'i, masalan "Davomat sahifasi". */
@@ -31,8 +24,6 @@ interface LeadFormProps {
   bare?: boolean;
 }
 
-const REQUEST_TIMEOUT_MS = 15_000;
-
 const inputBase =
   "w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-slate-900 " +
   "placeholder:text-slate-500 outline-none transition-colors " +
@@ -44,7 +35,7 @@ export function LeadForm({
   source,
   topic = "demo",
   heading = "Bepul konsultatsiya oling",
-  description = "Ism va telefon raqamingizni qoldiring — ish vaqtida 30 daqiqa ichida qo'ng'iroq qilamiz.",
+  description = "Ism va telefon raqamingizni qoldiring — siz bilan bog'lanamiz.",
   ctaLabel = "Ariza yuborish",
   notePlaceholder = "Markazingiz haqida qisqacha (ixtiyoriy)",
   className = "",
@@ -52,131 +43,12 @@ export function LeadForm({
   bare = false,
 }: LeadFormProps) {
   const uid = useId();
-  const [name, setName] = useState("");
-  const [digits, setDigits] = useState("");
-  const [center, setCenter] = useState("");
-  const [note, setNote] = useState("");
-  // Honeypot — nomi ataylab "website"/"url" emas, ko'ring `contact-section.tsx`dagi izohni.
-  const [trap, setTrap] = useState("");
-
-  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
-  const [error, setError] = useState("");
-  const [touched, setTouched] = useState(false);
-
-  const nameRef = useRef<HTMLInputElement>(null);
-  const phoneRef = useRef<HTMLInputElement>(null);
-  const centerRef = useRef<HTMLInputElement>(null);
-  const successRef = useRef<HTMLDivElement>(null);
-
-  const nameOk = name.trim().length >= 2;
-  const phoneOk = digits.length === 9;
-  const centerOk = !askCenter || center.trim().length >= 2;
-  const valid = nameOk && phoneOk && centerOk;
-
-  function onPhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const el = e.target;
-    const caret = el.selectionStart ?? el.value.length;
-    const digitsBefore = el.value.slice(0, caret).replace(/\D/g, "").length;
-    const next = extractNationalDigits(el.value);
-    setDigits(next);
-    requestAnimationFrame(() => {
-      const pos = caretForDigits(toDisplayPhone(next), digitsBefore);
-      el.setSelectionRange(pos, pos);
-    });
-  }
-
-  function onPhoneKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Backspace") return;
-    const el = e.currentTarget;
-    const caret = el.selectionStart ?? 0;
-    if (caret === 0 || el.selectionStart !== el.selectionEnd) return;
-    if (/\d/.test(el.value[caret - 1])) return;
-
-    e.preventDefault();
-    const before = el.value.slice(0, caret).replace(/\D/g, "");
-    const kept = before.slice(0, -1) + el.value.slice(caret).replace(/\D/g, "");
-    const next = kept.slice(0, 9);
-    setDigits(next);
-    requestAnimationFrame(() => {
-      const pos = caretForDigits(toDisplayPhone(next), Math.max(0, before.length - 1));
-      el.setSelectionRange(pos, pos);
-    });
-  }
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setTouched(true);
-
-    if (!valid) {
-      (!nameOk ? nameRef : !phoneOk ? phoneRef : centerRef).current?.focus();
-      return;
-    }
-    if (status === "sending") return;
-
-    setStatus("sending");
-    setError("");
-
-    // Backend sxemasida alohida "markaz" maydoni yo'q — shu sabab mavjud `message`
-    // ichiga qator sifatida qo'shiladi va Telegramda "Izoh" ostida ko'rinadi.
-    const message =
-      (askCenter ? `Markaz: ${center.trim()}\n` : "") +
-      `Sahifa: ${source}` +
-      (note.trim() ? `\n\n${note.trim()}` : "");
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    try {
-      const res = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          name: name.trim(),
-          phone: `+998${digits}`,
-          topic,
-          message,
-          ...(trap ? { contact_ref: trap } : {}),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(
-          res.status === 429
-            ? "Juda ko'p urinish bo'ldi. Bir necha daqiqadan so'ng qayta urining yoki Telegram orqali yozing."
-            : (data.error ?? "Ariza yuborilmadi. Birozdan keyin urinib ko'ring."),
-        );
-        setStatus("idle");
-        return;
-      }
-      setStatus("sent");
-      requestAnimationFrame(() => successRef.current?.focus());
-    } catch (err) {
-      setError(
-        err instanceof Error && err.name === "AbortError"
-          ? "So'rov juda uzoq davom etdi. Aloqani tekshirib, qayta urining."
-          : "Internetga ulanib bo'lmadi. Aloqani tekshirib, qayta urining.",
-      );
-      setStatus("idle");
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  function reset() {
-    setName("");
-    setDigits("");
-    setCenter("");
-    setNote("");
-    setTrap("");
-    setTouched(false);
-    setError("");
-    setStatus("idle");
-    requestAnimationFrame(() => nameRef.current?.focus());
-  }
-
-  const showNameErr = touched && !nameOk;
-  const showPhoneErr = touched && !phoneOk;
-  const showCenterErr = touched && !centerOk;
+  const f = useLeadForm({ source, topic, askCenter });
+  const {
+    name, setName, center, setCenter, note, setNote, trap, setTrap, phoneDisplay,
+    status, error, showNameErr, showPhoneErr, showCenterErr,
+    nameRef, phoneRef, centerRef, successRef, onPhoneChange, onPhoneKeyDown, submit, reset,
+  } = f;
 
   return (
     <div
@@ -277,7 +149,7 @@ export function LeadForm({
                   autoComplete="tel-national"
                   required
                   aria-required="true"
-                  value={toDisplayPhone(digits)}
+                  value={phoneDisplay}
                   onChange={onPhoneChange}
                   onKeyDown={onPhoneKeyDown}
                   placeholder="90 123 45 67"

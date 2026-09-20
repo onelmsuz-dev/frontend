@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, Phone } from "lucide-react";
 import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
 import { ApplyButton } from "./apply-dialog";
+import { CONTACT_PHONE, CONTACT_PHONE_DISPLAY } from "@/lib/seo/site";
 
 // `/#features` (bosh sahifaga yo'naltirib, keyin scroll qiladi) — shunda
 // bu havolalar cluster landinglardan ham ishlaydi, faqat bosh sahifadan emas.
@@ -47,7 +48,7 @@ export function LandingHeader() {
 
           {/* Logo */}
           <Link
-            href="/"
+            href="/#hero"
             className="flex shrink-0 items-center gap-2.5"
             aria-label="OneRoom bosh sahifa"
           >
@@ -66,7 +67,7 @@ export function LandingHeader() {
 
           {/* Desktop nav */}
           <nav
-            className="hidden md:flex items-center gap-1"
+            className="hidden lg:flex items-center gap-1"
             aria-label="Asosiy menyu"
           >
             {/* Yechimlar — dropdown, cluster landinglarga ichki havolalar */}
@@ -80,7 +81,7 @@ export function LandingHeader() {
                 onClick={() => setSolutionsOpen((v) => !v)}
                 aria-expanded={solutionsOpen}
                 aria-haspopup="true"
-                className="flex items-center gap-1 rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                className="flex items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 xl:px-3.5"
               >
                 Yechimlar
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${solutionsOpen ? "rotate-180" : ""}`} aria-hidden="true" />
@@ -108,7 +109,7 @@ export function LandingHeader() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 xl:px-3.5"
               >
                 {link.label}
               </Link>
@@ -116,31 +117,55 @@ export function LandingHeader() {
           </nav>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-2.5">
+          <div className="hidden lg:flex items-center gap-2.5">
+            {/* Telefon: keng ekranda raqam bilan, o'rtacha ekranda faqat ikonka (joy yetmaydi) */}
+            <a
+              href={`tel:${CONTACT_PHONE}`}
+              className="hidden xl:inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100"
+            >
+              <Phone className="h-4 w-4 text-blue-600" aria-hidden="true" />
+              {CONTACT_PHONE_DISPLAY}
+            </a>
+            <a
+              href={`tel:${CONTACT_PHONE}`}
+              aria-label={`Qo'ng'iroq qilish: ${CONTACT_PHONE_DISPLAY}`}
+              className="xl:hidden flex h-9 w-9 items-center justify-center rounded-lg text-blue-600 transition-colors hover:bg-slate-100"
+            >
+              <Phone className="h-4 w-4" aria-hidden="true" />
+            </a>
             <Link
               href="/login"
-              className="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+              className="whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 xl:px-3.5"
             >
               Kirish
             </Link>
             <ApplyButton
               where="Header"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+              className="whitespace-nowrap rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
             >
               Ariza qoldirish
             </ApplyButton>
           </div>
 
-          {/* Mobile burger */}
-          <button
-            className="md:hidden flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100"
-            onClick={() => setOpen(!open)}
-            aria-expanded={open}
-            aria-controls="mobile-menu"
-            aria-label={open ? "Menyuni yopish" : "Menyuni ochish"}
-          >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          {/* Mobile: telefon + burger */}
+          <div className="flex items-center gap-1 lg:hidden">
+            <a
+              href={`tel:${CONTACT_PHONE}`}
+              aria-label={`Qo'ng'iroq qilish: ${CONTACT_PHONE_DISPLAY}`}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-blue-600 transition-colors hover:bg-slate-100"
+            >
+              <Phone className="h-5 w-5" aria-hidden="true" />
+            </a>
+            <button
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100"
+              onClick={() => setOpen(!open)}
+              aria-expanded={open}
+              aria-controls="mobile-menu"
+              aria-label={open ? "Menyuni yopish" : "Menyuni ochish"}
+            >
+              {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -148,7 +173,7 @@ export function LandingHeader() {
       {open && (
         <div
           id="mobile-menu"
-          className="md:hidden border-t border-slate-100 bg-white px-4 pb-5 pt-3 shadow-lg"
+          className="lg:hidden border-t border-slate-100 bg-white px-4 pb-5 pt-3 shadow-lg"
         >
           <nav className="flex flex-col gap-0.5" aria-label="Mobil menyu">
             <p className="px-3 pt-1.5 pb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
@@ -177,6 +202,13 @@ export function LandingHeader() {
             ))}
           </nav>
           <div className="mt-4 flex flex-col gap-2.5 border-t border-slate-100 pt-4">
+            <a
+              href={`tel:${CONTACT_PHONE}`}
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-50 py-2.5 text-sm font-semibold text-slate-900"
+            >
+              <Phone className="h-4 w-4 text-blue-600" aria-hidden="true" />
+              {CONTACT_PHONE_DISPLAY}
+            </a>
             <Link
               href="/login"
               onClick={() => setOpen(false)}

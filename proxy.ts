@@ -37,6 +37,7 @@ function loginGa(target: string | URL, muddatTugadi: boolean): Response {
  */
 const PUBLIC_MARKETING_PATHS = new Set<string>([
   ...CLUSTER_PAGES.map((p) => p.href),
+  "/testgpt",
   "/robots.txt",
   "/sitemap.xml",
   "/opengraph-image",

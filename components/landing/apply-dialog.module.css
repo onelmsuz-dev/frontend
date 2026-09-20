@@ -1,0 +1,172 @@
+/*
+ * Ariza modali: konteyner va animatsiyalar.
+ * Kompyuterda — markazda, yumshoq "pop"; mobilda (<=767px) — pastdan chiqadigan "sheet".
+ * `<dialog>` o'zi shaffof, ko'rinadigan karta (.card) ichkarida: animatsiya kartani harakatlantiradi,
+ * orqa fonni bosish (dialog'ning o'ziga tushgan click) esa modalni yopadi.
+ */
+
+.dialog {
+  width: min(920px, calc(100% - 32px));
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  color: inherit;
+}
+
+.dialog:focus {
+  outline: none;
+}
+
+.dialog::backdrop {
+  background: rgb(2 6 23 / .55);
+  backdrop-filter: blur(6px);
+}
+
+.dialog[open]::backdrop {
+  animation: backdrop-in .25s ease-out both;
+}
+
+.dialog[open] .card {
+  animation: card-pop .3s cubic-bezier(.2, .8, .2, 1) backwards;
+}
+
+/*
+ * Forma o'lchamlari (`apply-form.tsx` shularni o'qiydi). Ekran balandligi pasayganda bosqichma-bosqich
+ * qisqaradi, shunda karta scroll talab qilmaydi. Tartib muhim: pastroq ekran qoidasi keyin turadi.
+ * --f-*: maydonlar, --m-*: karta (chap/o'ng bo'shliqlar, sarlavha ostidagi masofa, kompyuterdagi balandlik).
+ */
+.card {
+  --f-box: 3rem;
+  --f-gap: 1rem;
+  --f-note: 4.25rem;
+  --f-chip: 2.25rem;
+  --f-cta: 3.25rem;
+  --m-pt: 1.25rem;
+  --m-pb: 2rem;
+  --m-head-gap: 1.25rem;
+  --m-h: 660px;
+}
+
+@media (min-width: 768px) {
+  .card { --m-pt: 2.25rem; }
+}
+
+@media (max-height: 720px) {
+  .card {
+    --f-box: 2.75rem;
+    --f-gap: .75rem;
+    --f-note: 4rem;
+    --f-cta: 2.75rem;
+    --m-pt: 1rem;
+    --m-pb: 1.5rem;
+    --m-head-gap: .75rem;
+    --m-h: 590px;
+  }
+
+  @media (min-width: 768px) {
+    .card { --m-pt: 1.5rem; }
+  }
+}
+
+@media (max-height: 640px) {
+  .card {
+    --f-box: 2.5rem;
+    --f-gap: .625rem;
+    --f-note: 3.5rem;
+    --f-chip: 2rem;
+    --f-cta: 2.5rem;
+    --m-pb: 1.25rem;
+    --m-head-gap: .625rem;
+    --m-h: 545px;
+  }
+
+  @media (min-width: 768px) {
+    .card { --m-pt: 1.25rem; }
+  }
+}
+
+@media (max-height: 580px) {
+  .card {
+    --f-gap: .375rem;
+    --f-note: 3rem;
+    --f-chip: 1.75rem;
+    --m-pt: 1rem;
+    --m-pb: 1rem;
+    --m-head-gap: .5rem;
+    --m-h: 480px;
+  }
+
+  @media (min-width: 768px) {
+    .card { --m-pt: 1rem; }
+  }
+}
+
+@media (max-width: 767px) {
+  .dialog {
+    width: 100%;
+    margin: auto 0 0;
+  }
+
+  .dialog[open] .card {
+    animation: card-sheet .35s cubic-bezier(.2, .8, .2, 1) backwards;
+  }
+}
+
+/* Muvaffaqiyat belgisi: halqa va "galochka" chiziladi. */
+.checkRing {
+  stroke-dasharray: 176;
+  stroke-dashoffset: 176;
+  animation: draw .6s ease-out .1s forwards;
+}
+
+.checkMark {
+  stroke-dasharray: 44;
+  stroke-dashoffset: 44;
+  animation: draw .35s ease-out .55s forwards;
+}
+
+.pulseDot {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes card-pop {
+  from { opacity: 0; transform: translateY(14px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes card-sheet {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(37 99 235 / .35); }
+  50% { box-shadow: 0 0 0 6px rgb(37 99 235 / 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open]::backdrop,
+  .dialog[open] .card,
+  .pulseDot {
+    animation: none;
+  }
+
+  .checkRing,
+  .checkMark {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

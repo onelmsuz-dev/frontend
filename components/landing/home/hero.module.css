@@ -1,0 +1,469 @@
+.hero {
+  color: #0f172a;
+  font-size: 14px;
+  line-height: 1.6;
+  --blue: #2563eb;
+  --muted: #68758a;
+  --line: #e7ebf2;
+}
+
+.hero * {
+  box-sizing: border-box;
+}
+
+.hero h1,
+.hero h3,
+.hero p {
+  margin: 0;
+}
+
+.hero a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hero button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.hero button,
+.hero a {
+  touch-action: manipulation;
+}
+
+.hero :focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: 5px;
+}
+
+.hero h1>span {
+  color: var(--blue);
+}
+
+.editorialCopy>p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.85;
+  margin-top: 27px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: 29px;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 27px;
+  padding: 15px 20px;
+  border-radius: 7px;
+  font-size: 12px!important;
+  font-weight: 600!important;
+  border: 1px solid transparent;
+  transition: background .2s;
+}
+
+.primary {
+  background: #2563eb;
+  color: white;
+  box-shadow: 0 5px 12px #2563eb15;
+}
+
+.primary:hover {
+  background: #1d4ed8;
+}
+
+.secondary {
+  background: transparent;
+  color: #334155;
+  gap: 9px;
+  border-color: #e2e8f0;
+}
+
+.secondary:hover {
+  background: #f8fafc;
+}
+
+.editorial {
+  max-width: 1320px;
+  margin: auto;
+  padding: 34px 54px 55px;
+}
+
+.editorial h1 {
+  font-size: clamp(62px,6.85vw,96px);
+  line-height: 1.03;
+  letter-spacing: -5.7px;
+  font-weight: 650;
+  position: relative;
+}
+
+.shortLine {
+  display: block;
+  width: 33px;
+  height: 2px;
+  background: #2563eb;
+}
+
+.editorialCopy>p {
+  margin-top: 18px;
+}
+
+@media(min-width:1500px) {
+  .editorial {
+    padding-top: 55px;
+    padding-bottom: 70px;
+  }
+}
+
+@media(max-width:1250px) {
+  .editorial h1 {
+    font-size: 81px;
+  }
+}
+
+@media(max-width:950px) {
+  .actions {
+    gap: 8px;
+  }
+  .primary,
+  .secondary {
+    padding: 13px 15px;
+    font-size: 11px!important;
+    gap: 13px;
+  }
+  .editorial {
+    padding: 30px;
+  }
+  .editorial h1 {
+    font-size: 68px;
+    letter-spacing: -4px;
+  }
+}
+
+@media(max-width:700px) {
+  .actions {
+    margin-top: 24px;
+    gap: 10px;
+  }
+  .primary,
+  .secondary {
+    padding: 14px 17px;
+    font-size: 11px!important;
+    gap: 18px;
+  }
+  .editorial {
+    padding: 27px 23px 29px;
+  }
+  .editorial h1 {
+    font-size: clamp(39px,10vw,64px);
+    line-height: 1.1;
+    letter-spacing: -2.4px;
+  }
+  .editorialCopy>p {
+    font-size: 12px;
+    margin-top: 18px;
+  }
+  .shortLine {
+    width: 26px;
+  }
+}
+
+@media(max-width:360px) {
+  .editorial {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .primary,
+  .secondary {
+    gap: 10px;
+    padding: 13px;
+  }
+  .editorial h1 {
+    font-size: 36px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .hero * {
+    transition: none!important;
+  }
+}
+
+.editorialWithArt {
+  padding-top: 28px;
+  padding-bottom: 48px;
+}
+
+.perspectiveGrid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  align-items: center;
+  gap: 20px;
+}
+
+.editorialWithArt h1 {
+  font-size: clamp(58px,5.55vw,78px);
+  letter-spacing: -4.4px;
+  line-height: 1.04;
+}
+
+.perspectiveCopy {
+  position: relative;
+  z-index: 1;
+  padding: 24px 0;
+}
+
+.perspectiveCopy .editorialCopy {
+  margin-top: 28px;
+}
+
+.perspectiveCopy .editorialCopy>p {
+  font-size: 13px;
+  margin-top: 17px;
+}
+
+.perspectiveArt {
+  margin: 0;
+  min-width: 0;
+  align-self: center;
+  position: relative;
+}
+
+.perspectiveImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  mix-blend-mode: multiply;
+}
+
+@media(max-width:950px) {
+  .editorialWithArt h1 {
+    font-size: 57px;
+    letter-spacing: -3.3px;
+  }
+  .perspectiveGrid {
+    gap: 10px;
+  }
+  .perspectiveCopy .editorialCopy>p {
+    font-size: 12px;
+  }
+}
+
+@media(max-width:700px) {
+  .editorialWithArt {
+    padding-top: 25px;
+    padding-bottom: 24px;
+  }
+  .perspectiveGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .perspectiveCopy {
+    padding: 0;
+  }
+  .editorialWithArt h1 {
+    font-size: clamp(49px,13vw,76px);
+    letter-spacing: -3.2px;
+    line-height: 1.02;
+  }
+  .perspectiveCopy .editorialCopy {
+    margin-top: 24px;
+  }
+  .perspectiveArt {
+    width: 100%;
+    max-width: 420px;
+    justify-self: center;
+  }
+  .perspectiveImage {
+    width: 100%;
+  }
+  .perspectiveCopy .editorialCopy>p {
+    line-height: 1.85;
+  }
+}
+
+@media(max-width:360px) {
+  .editorialWithArt h1 {
+    font-size: 45px;
+    letter-spacing: -2.7px;
+  }
+}
+
+.editorialWithArt {
+  padding-top: 48px;
+  padding-bottom: 64px;
+}
+
+.perspectiveGrid {
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+}
+
+.perspectiveCopy {
+  min-width: 0;
+  padding: 30px 0;
+}
+
+.editorialWithArt .headline {
+  font-size: clamp(58px,6.1vw,86px);
+  line-height: 1.1;
+  letter-spacing: -.055em;
+  font-weight: 700;
+}
+
+.headline .headlineRow {
+  display: block;
+  white-space: nowrap;
+  color: #0f172a;
+}
+
+.headline em {
+  font-style: normal;
+  color: #2563eb;
+}
+
+.perspectiveCopy .editorialCopy {
+  margin-top: 32px;
+}
+
+.perspectiveCopy .editorialCopy>p {
+  font-size: 18px;
+  line-height: 1.75;
+  max-width: 500px;
+  margin-top: 21px;
+  text-wrap: pretty;
+}
+
+.perspectiveCopy .primary,
+.perspectiveCopy .secondary {
+  font-size: 14px!important;
+  padding: 16px 22px;
+}
+
+@media(max-width:1100px) and (min-width:701px) {
+  .editorialWithArt .headline {
+    font-size: clamp(46px,6vw,66px);
+  }
+  .perspectiveCopy .editorialCopy>p {
+    font-size: 16px;
+  }
+  .perspectiveCopy .primary,
+  .perspectiveCopy .secondary {
+    font-size: 12px!important;
+    padding: 14px 16px;
+  }
+}
+
+@media(max-width:700px) {
+  .editorialWithArt {
+    padding-top: 32px;
+    padding-bottom: 30px;
+  }
+  .perspectiveGrid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .perspectiveCopy {
+    padding: 0;
+  }
+  .editorialWithArt .headline {
+    font-size: clamp(38px,10.3vw,68px);
+    line-height: 1.13;
+    letter-spacing: -.055em;
+  }
+  .perspectiveCopy .editorialCopy {
+    margin-top: 26px;
+  }
+  .perspectiveCopy .editorialCopy>p {
+    font-size: 16px;
+    line-height: 1.75;
+    max-width: 410px;
+    margin-top: 19px;
+  }
+  .perspectiveCopy .primary,
+  .perspectiveCopy .secondary {
+    font-size: 12px!important;
+    padding: 15px 17px;
+  }
+}
+
+@media(max-width:360px) {
+  .editorialWithArt .headline {
+    font-size: 35px;
+  }
+  .perspectiveCopy .primary,
+  .perspectiveCopy .secondary {
+    padding: 13px;
+    font-size: 11px!important;
+  }
+  .perspectiveCopy .editorialCopy>p {
+    font-size: 15px;
+  }
+}
+
+.perspectiveCopy .editorialCopy>p strong {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.hero .secondary {
+  color: #334155;
+}
+
+
+
+/*
+ * HERO TUGMALARI: ikkalasi bir xil o'lchamda (220x56) va HAR QANDAY ekranda o'sha o'lchamda —
+ * qisilib kichrayib ketmaydi (`flex: none`). Keng ekranda yonma-yon; ustun ikkita tugmaga
+ * sig'maydigan (<=920px) ekranda ketma-ket; mobilda (<=700px) ketma-ket va o'rtada.
+ * Fayl oxirida turadi — yuqoridagi media qoidalarini bosib ketishi shart.
+ */
+.perspectiveCopy .actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.perspectiveCopy .primary,
+.perspectiveCopy .secondary {
+  box-sizing: border-box;
+  flex: none;
+  width: 220px;
+  height: 56px;
+  padding: 0 22px;
+  font-size: 14px!important;
+}
+
+@media(max-width:920px) {
+  .perspectiveCopy .actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media(max-width:700px) {
+  .perspectiveCopy .actions {
+    align-items: center;
+  }
+  /* Mobilda tugmalar 30% kengroq: 220px * 1.3 = 286px. Juda tor ekranda ustundan chiqib ketmasin. */
+  .perspectiveCopy .primary,
+  .perspectiveCopy .secondary {
+    width: 286px;
+    max-width: 100%;
+  }
+  /* Mobilda tartib almashadi: "Ariza qoldirish" tepada, "Imkoniyatlar" pastda. DOM tartibi (va desktop) o'zgarmagan. */
+  .perspectiveCopy .primary {
+    order: 1;
+  }
+  .perspectiveCopy .secondary {
+    order: 2;
+  }
+}

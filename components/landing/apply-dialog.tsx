@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { X } from "lucide-react";
-import { LeadForm } from "./lead-form";
+import { ApplyModalCard } from "./apply-modal";
+import styles from "./apply-dialog.module.css";
 
 /**
  * "Boshlash" tugmalari → ariza modali.
@@ -10,13 +10,15 @@ import { LeadForm } from "./lead-form";
  * Ilgari bu tugmalar to'g'ridan-to'g'ri `/login` ga olib borardi: hali hech
  * qanday hisobi yo'q tashrifchi kirish ekraniga tushib, ketib qolardi. Endi
  * hammasi bitta modalni ochadi (ism, telefon, o'quv markaz nomi, ixtiyoriy izoh)
- * va ariza `/api/contact` orqali Telegram botga tushadi.
+ * va ariza `/api/contact` orqali Telegram botga tushadi. Modalning ko'rinishi va
+ * mantiqi: `apply-modal.tsx` (dizayn), `use-lead-form.ts` (mantiq), `.module.css` (animatsiya).
  *
  * `ApplyProvider` sahifa bo'yicha BIR marta o'raladi; `ApplyButton` esa
  * server komponentlar (hero, narxlar...) ichida ham ishlatilaveradi.
  *
- * Modal — brauzerning native `<dialog>` elementi: fokus qopqoni, Escape va
- * orqa fonni bloklashni brauzerning o'zi bajaradi.
+ * Modal — brauzerning native `<dialog>` elementi: fokus qopqoni va orqa fonni bloklashni
+ * brauzerning o'zi bajaradi. Yopish esa FAQAT modaldagi `X` tugmasi orqali: Escape va orqa fonni
+ * bosish e'tiborga olinmaydi.
  */
 
 interface ApplyContextValue {
@@ -46,7 +48,14 @@ export function ApplyProvider({
   useEffect(() => {
     const d = dialogRef.current;
     if (!d) return;
-    if (isOpen && !d.open) d.showModal();
+    if (isOpen && !d.open) {
+      d.showModal();
+      // Telefonda ism maydoniga avtomatik fokus klaviaturani ochib, "sheet"ning yarmini yopib qo'yadi.
+      if (window.matchMedia("(pointer: coarse)").matches) {
+        (document.activeElement as HTMLElement | null)?.blur();
+        d.focus();
+      }
+    }
     if (!isOpen && d.open) d.close();
   }, [isOpen]);
 
@@ -58,39 +67,24 @@ export function ApplyProvider({
         ref={dialogRef}
         data-apply
         aria-label="Ariza qoldirish"
-        // Escape yoki `close()` da brauzer `close` hodisasini yuboradi — holatni shunga moslaymiz.
-        onClose={close}
-        // `<dialog>` ning o'zi bosilsa (ya'ni orqa fon) — yopamiz. Ichki qobiq
-        // butun maydonni egallagani uchun ichidagi bosishlar bu yerga yetmaydi.
-        onClick={(e) => {
-          if (e.target === e.currentTarget) close();
+        tabIndex={-1}
+        // Escape: `cancel` hodisasini to'xtatamiz. Chrome faydalanuvchi harakatisiz ikkinchi marta
+        // bosilgan Escape'da `cancel`ni to'xtatib bo'lmaydigan qilib qo'yadi — shuning uchun
+        // `keydown` ham to'xtatiladi.
+        onCancel={(e) => e.preventDefault()}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") e.preventDefault();
         }}
-        className="m-auto max-h-[92dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl bg-white p-0 shadow-2xl backdrop:bg-slate-950/60 backdrop:backdrop-blur-sm"
+        // Brauzer modalni o'zi yopib qo'ysa (masalan, Android "orqaga" imo-ishorasi) — X bosilmagan
+        // bo'lsa, holat hamon "ochiq": modalni qayta ochamiz. X bosilganda holat allaqachon "yopiq".
+        onClose={() => {
+          const d = dialogRef.current;
+          if (d && isOpen && !d.open) d.showModal();
+        }}
+        className={styles.dialog}
       >
-        {/* Forma faqat ochiq paytda o'rnatiladi — har ochilganda toza holatda boshlanadi. */}
-        {isOpen && (
-          <div className="relative p-5 sm:p-7">
-            <LeadForm
-              bare
-              askCenter
-              source={`${page} › ${where}`}
-              heading="Ariza qoldiring"
-              description="Ma'lumotlaringizni qoldiring — ish vaqtida 30 daqiqa ichida bog'lanib, 7 kunlik bepul sinovni ochib beramiz."
-              ctaLabel="Ariza yuborish"
-              notePlaceholder="Nechta o'quvchi bor, hozir nimadan foydalanasiz? (ixtiyoriy)"
-            />
-            {/* DOM tartibida OXIRIDA: `showModal()` birinchi fokuslanadigan elementga
-                (ism maydoni) fokus beradi, "Yopish" tugmasiga emas. */}
-            <button
-              type="button"
-              onClick={close}
-              aria-label="Yopish"
-              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
-        )}
+        {/* Karta faqat ochiq paytda o'rnatiladi — har ochilganda toza holatda boshlanadi. */}
+        {isOpen && <ApplyModalCard source={`${page} › ${where}`} onClose={close} />}
       </dialog>
     </ApplyContext.Provider>
   );

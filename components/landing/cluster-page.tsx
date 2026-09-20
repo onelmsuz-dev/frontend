@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, AlertTriangle, MessageCircle, type LucideIcon } from "lucide-react";
-import { LandingHeader } from "./landing-header";
+import { HomeHeader } from "./home/home-header";
 import { LandingFooter } from "./landing-footer";
 import { FaqAccordion, type FaqEntry } from "./faq-accordion";
 import { LeadForm } from "./lead-form";
@@ -52,11 +52,11 @@ export function ClusterPage(c: ClusterPageContent) {
   return (
     <ApplyProvider page={c.leadSource}>
     <div className="min-h-screen overflow-x-hidden bg-white">
-      <LandingHeader />
+      <HomeHeader />
 
       <main id="main-content">
         {/* Breadcrumb */}
-        <div className="border-b border-slate-100 bg-white pt-16">
+        <div className="border-b border-slate-100 bg-white">
           <nav aria-label="Yo'lni ko'rsatish" className="mx-auto max-w-7xl px-4 py-3 text-xs text-slate-500 sm:px-6 lg:px-8">
             <Link href="/" className="hover:text-blue-600">Bosh sahifa</Link>
             <span className="mx-1.5" aria-hidden="true">/</span>

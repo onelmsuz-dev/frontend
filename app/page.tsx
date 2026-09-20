@@ -1,20 +1,9 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { SITE_URL, ORG_ID, WEBSITE_ID } from "@/lib/seo/site";
+import { SITE_URL, ORG_ID, WEBSITE_ID, CONTACT_PHONE } from "@/lib/seo/site";
 import { ApplyProvider } from "@/components/landing/apply-dialog";
-import { LandingHeader } from "@/components/landing/landing-header";
-import { HeroSection } from "@/components/landing/hero-section";
-import { StatsSection } from "@/components/landing/stats-section";
-import { FeaturesSection } from "@/components/landing/features-section";
-import { SolutionsSection } from "@/components/landing/solutions-section";
-import { HowItWorksSection } from "@/components/landing/how-it-works-section";
-import { PricingSection } from "@/components/landing/pricing-section";
-import { TestimonialsSection } from "@/components/landing/testimonials-section";
-import { FaqSection } from "@/components/landing/faq-section";
+import { HomeLanding } from "@/components/landing/home/home-landing";
 import { faqItems } from "@/components/landing/faq-data";
-import { CtaSection } from "@/components/landing/cta-section";
-import { ContactSection } from "@/components/landing/contact-section";
-import { LandingFooter } from "@/components/landing/landing-footer";
 
 // ─── SEO Metadata ──────────────────────────────────────────────────────────────
 export const metadata: Metadata = {
@@ -102,7 +91,7 @@ const organizationSchema = {
   contactPoint: [
     {
       "@type": "ContactPoint",
-      telephone: "+998-91-561-05-86",
+      telephone: CONTACT_PHONE,
       contactType: "customer service",
       availableLanguage: ["Uzbek", "Russian"],
     },
@@ -115,7 +104,6 @@ const organizationSchema = {
   sameAs: [
     "https://t.me/oneroomuz",
     "https://instagram.com/oneroom.uz",
-    "https://youtube.com/@oneroomuz",
   ],
   knowsAbout: [
     "Learning Management System",
@@ -262,22 +250,7 @@ export default function LandingPage() {
       />
 
       <ApplyProvider page="Bosh sahifa">
-      <div className="min-h-screen overflow-x-hidden bg-white">
-        <LandingHeader />
-        <main id="main-content">
-          <HeroSection />
-          <StatsSection />
-          <FeaturesSection />
-          <SolutionsSection />
-          <HowItWorksSection />
-          <PricingSection />
-          <TestimonialsSection />
-          <FaqSection />
-          <CtaSection />
-          <ContactSection />
-        </main>
-        <LandingFooter />
-      </div>
+        <HomeLanding />
       </ApplyProvider>
     </>
   );

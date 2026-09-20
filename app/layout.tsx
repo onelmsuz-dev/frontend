@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ViewTransition } from "react";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { SITE_URL } from "@/lib/seo/site";
@@ -56,8 +57,10 @@ export default function RootLayout({
           + `document.documentElement.dataset.font=f;}catch(e){}` }} />
       </head>
       <body className="min-h-full font-[var(--font-jakarta)]">
+        <ViewTransition name="page-content" default="page-swap">
           <Providers>{children}</Providers>
-        </body>
+        </ViewTransition>
+      </body>
     </html>
   );
 }
