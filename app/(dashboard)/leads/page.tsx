@@ -12,12 +12,13 @@ import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormField } from "@/components/ui/form-field";
 import {
-  Search, Plus, ChevronRight, AlertCircle, Upload, LayoutGrid, Radio, Settings2, Users,
+  Search, Plus, ChevronRight, AlertCircle, Upload, LayoutGrid, Radio, Target, Settings2, Users,
 } from "lucide-react";
 import useSWR from "swr";
 import { fetcher as _fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 import { useLeadsPaged, useLeadAssignees, useLeadStages } from "@/lib/hooks/useLeads";
+import { TargetLeads } from "@/components/leads/target-leads";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { SourcePicker } from "@/components/leads/source-picker";
 import { LeadImportModal } from "@/components/leads/lead-import-modal";
@@ -56,7 +57,8 @@ export default function LeadsPage() {
    * Bir sahifada ikkalasi aralashsa, kanban holatini yo'qotmasdan
    * integratsiya sozlamalariga kirib-chiqish qulay bo'lmasdi.
    */
-  const [tab, setTab] = useState<"board" | "meta">("board");
+  const [tab, setTab] = useState<"board" | "meta" | "target">("board");
+
   // Bosqichma-bosqich chiqarish (/admode/features): standart OFF, avval
   // demo markazda, App Review yakunlangach hammaga. `undefined` = hali
   // yuklanmoqda — shu payt HAM tab yashirin turadi, keyin miltillamasin.
@@ -372,26 +374,34 @@ export default function LeadsPage() {
         action={tab === "board" ? { label: "Yangi lid", onClick: () => openCreate() } : undefined}
       />
 
-      {/* Bayroq o'chiq bo'lsa tab qatori umuman ko'rsatilmaydi — hozircha
-          ILGARIGIDEK bitta taxta sahifasi, boshqa markazlarga TEGMAYDI. */}
-      {metaEnabled && (
-        <div className="px-5 pt-4 flex gap-1 border-b border-white/60 dark:border-white/10">
+      {/* TAB QATORI. "Target" bayroqsiz — u Meta'ga umuman bog'liq
+          emas va har markazda ishlaydi. Facebook/Instagram tabi esa
+          `meta-lead-ads` bayrog'i ortida qoladi. */}
+      <div className="px-5 pt-4 flex gap-1 border-b border-white/60 dark:border-white/10 overflow-x-auto">
           <button onClick={() => setTab("board")}
-            className={cn("flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
+            className={cn("shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
               tab === "board"
                 ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
                 : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
             <LayoutGrid className="w-3.5 h-3.5" /> Taxta
           </button>
-          <button onClick={() => setTab("meta")}
-            className={cn("flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
-              tab === "meta"
+          <button onClick={() => setTab("target")}
+            className={cn("shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
+              tab === "target"
                 ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
                 : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
-            <Radio className="w-3.5 h-3.5" /> Facebook/Instagram
+            <Target className="w-3.5 h-3.5" /> Target
           </button>
+          {metaEnabled && (
+            <button onClick={() => setTab("meta")}
+              className={cn("shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
+                tab === "meta"
+                  ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+              <Radio className="w-3.5 h-3.5" /> Facebook/Instagram
+            </button>
+          )}
         </div>
-      )}
 
       <ConvertModal lead={convertTarget}
         onClose={() => setConvertTarget(null)}
@@ -675,6 +685,8 @@ export default function LeadsPage() {
           <p className="text-[12px] text-red-600 dark:text-red-400 mt-1.5">{error}</p>
         )}
       </ConfirmDeleteModal>
+
+      {tab === "target" && <TargetLeads />}
 
       {metaEnabled && tab === "meta" && (
         <div className="p-5">
