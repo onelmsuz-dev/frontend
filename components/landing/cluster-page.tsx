@@ -4,6 +4,7 @@ import { LandingHeader } from "./landing-header";
 import { LandingFooter } from "./landing-footer";
 import { FaqAccordion, type FaqEntry } from "./faq-accordion";
 import { LeadForm } from "./lead-form";
+import { ApplyProvider } from "./apply-dialog";
 import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
 
 export interface PainPoint {
@@ -49,6 +50,7 @@ export function ClusterPage(c: ClusterPageContent) {
   const related = CLUSTER_PAGES.filter((p) => p.href !== c.href).slice(0, 6);
 
   return (
+    <ApplyProvider page={c.leadSource}>
     <div className="min-h-screen overflow-x-hidden bg-white">
       <LandingHeader />
 
@@ -253,5 +255,6 @@ export function ClusterPage(c: ClusterPageContent) {
 
       <LandingFooter />
     </div>
+    </ApplyProvider>
   );
 }

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ApplyButton } from "./apply-dialog";
 import { Check, Zap, Phone } from "lucide-react";
 
 const plans = [
@@ -23,8 +23,7 @@ const plans = [
       "Tizim yangilanishlari",
       "Ish vaqtida texnik yordam",
     ],
-    cta: "Bepul sinab ko'ring",
-    href: "/login",
+    cta: "Ariza qoldirish",
     highlight: false,
   },
   {
@@ -49,8 +48,7 @@ const plans = [
       "Tizim yangilanishlari",
       "Ustuvor texnik yordam",
     ],
-    cta: "7 kun bepul sinab ko'ring",
-    href: "/login",
+    cta: "Ariza qoldirish",
     highlight: true,
     badge: "Eng mashhur",
   },
@@ -76,8 +74,7 @@ const plans = [
       "Tizim yangilanishlari",
       "24/7 texnik yordam",
     ],
-    cta: "Bepul sinab ko'ring",
-    href: "/login",
+    cta: "Ariza qoldirish",
     highlight: false,
   },
 ];
@@ -229,8 +226,8 @@ export function PricingSection() {
 
               {/* CTA */}
               <div className="p-6 sm:p-7 pt-0">
-                <Link
-                  href={plan.href}
+                <ApplyButton
+                  where={`Narxlar — ${plan.name} tarifi`}
                   className={`block w-full rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
                     plan.highlight
                       ? "bg-white text-blue-600 hover:bg-blue-50"
@@ -238,7 +235,7 @@ export function PricingSection() {
                   }`}
                 >
                   {plan.cta}
-                </Link>
+                </ApplyButton>
               </div>
             </article>
           ))}

@@ -140,8 +140,8 @@ export function LandingFooter() {
               <a href="mailto:info@oneroom.uz" className="hover:text-slate-300 transition-colors">
                 info@oneroom.uz
               </a>
-              <a href="tel:+998712345678" className="hover:text-slate-300 transition-colors">
-                +998 71 234-56-78
+              <a href="tel:+998915610586" className="hover:text-slate-300 transition-colors">
+                +998 91 561 05 86
               </a>
             </address>
           </div>

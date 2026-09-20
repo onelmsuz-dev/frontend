@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { SITE_URL, ORG_ID, WEBSITE_ID } from "@/lib/seo/site";
+import { ApplyProvider } from "@/components/landing/apply-dialog";
 import { LandingHeader } from "@/components/landing/landing-header";
 import { HeroSection } from "@/components/landing/hero-section";
 import { StatsSection } from "@/components/landing/stats-section";
@@ -101,7 +102,7 @@ const organizationSchema = {
   contactPoint: [
     {
       "@type": "ContactPoint",
-      telephone: "+998-71-234-56-78",
+      telephone: "+998-91-561-05-86",
       contactType: "customer service",
       availableLanguage: ["Uzbek", "Russian"],
     },
@@ -260,6 +261,7 @@ export default function LandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
 
+      <ApplyProvider page="Bosh sahifa">
       <div className="min-h-screen overflow-x-hidden bg-white">
         <LandingHeader />
         <main id="main-content">
@@ -276,6 +278,7 @@ export default function LandingPage() {
         </main>
         <LandingFooter />
       </div>
+      </ApplyProvider>
     </>
   );
 }

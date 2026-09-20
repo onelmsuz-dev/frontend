@@ -25,6 +25,10 @@ interface LeadFormProps {
   ctaLabel?: string;
   notePlaceholder?: string;
   className?: string;
+  /** O'quv markaz nomini majburiy maydon sifatida so'raydi (Telegramga "Markaz: ..." bo'lib boradi). */
+  askCenter?: boolean;
+  /** Karta ramkasisiz — modal ichida ishlatilganda tashqi qobiq modalning o'zida. */
+  bare?: boolean;
 }
 
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -44,10 +48,13 @@ export function LeadForm({
   ctaLabel = "Ariza yuborish",
   notePlaceholder = "Markazingiz haqida qisqacha (ixtiyoriy)",
   className = "",
+  askCenter = false,
+  bare = false,
 }: LeadFormProps) {
   const uid = useId();
   const [name, setName] = useState("");
   const [digits, setDigits] = useState("");
+  const [center, setCenter] = useState("");
   const [note, setNote] = useState("");
   // Honeypot — nomi ataylab "website"/"url" emas, ko'ring `contact-section.tsx`dagi izohni.
   const [trap, setTrap] = useState("");
@@ -58,11 +65,13 @@ export function LeadForm({
 
   const nameRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
+  const centerRef = useRef<HTMLInputElement>(null);
   const successRef = useRef<HTMLDivElement>(null);
 
   const nameOk = name.trim().length >= 2;
   const phoneOk = digits.length === 9;
-  const valid = nameOk && phoneOk;
+  const centerOk = !askCenter || center.trim().length >= 2;
+  const valid = nameOk && phoneOk && centerOk;
 
   function onPhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
     const el = e.target;
@@ -99,7 +108,7 @@ export function LeadForm({
     setTouched(true);
 
     if (!valid) {
-      (!nameOk ? nameRef : phoneRef).current?.focus();
+      (!nameOk ? nameRef : !phoneOk ? phoneRef : centerRef).current?.focus();
       return;
     }
     if (status === "sending") return;
@@ -107,7 +116,12 @@ export function LeadForm({
     setStatus("sending");
     setError("");
 
-    const message = `Sahifa: ${source}` + (note.trim() ? `\n\n${note.trim()}` : "");
+    // Backend sxemasida alohida "markaz" maydoni yo'q — shu sabab mavjud `message`
+    // ichiga qator sifatida qo'shiladi va Telegramda "Izoh" ostida ko'rinadi.
+    const message =
+      (askCenter ? `Markaz: ${center.trim()}\n` : "") +
+      `Sahifa: ${source}` +
+      (note.trim() ? `\n\n${note.trim()}` : "");
 
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -151,6 +165,7 @@ export function LeadForm({
   function reset() {
     setName("");
     setDigits("");
+    setCenter("");
     setNote("");
     setTrap("");
     setTouched(false);
@@ -161,10 +176,13 @@ export function LeadForm({
 
   const showNameErr = touched && !nameOk;
   const showPhoneErr = touched && !phoneOk;
+  const showCenterErr = touched && !centerOk;
 
   return (
     <div
-      className={`rounded-2xl border border-slate-100 bg-white p-5 shadow-xl shadow-slate-900/5 sm:p-7 ${className}`}
+      className={`${
+        bare ? "" : "rounded-2xl border border-slate-100 bg-white p-5 shadow-xl shadow-slate-900/5 sm:p-7"
+      } ${className}`}
     >
       {status === "sent" ? (
         <div ref={successRef} tabIndex={-1} role="status" aria-live="polite" className="py-6 text-center outline-none">
@@ -196,7 +214,7 @@ export function LeadForm({
         </div>
       ) : (
         <>
-          <h3 className="text-lg font-bold text-slate-900 sm:text-xl">{heading}</h3>
+          <h3 className={`text-lg font-bold text-slate-900 sm:text-xl ${bare ? "pr-8" : ""}`}>{heading}</h3>
           <p className="mt-1.5 text-sm leading-relaxed text-slate-600">{description}</p>
 
           <form onSubmit={submit} noValidate className="mt-5 space-y-3.5">
@@ -270,6 +288,31 @@ export function LeadForm({
               </div>
               {showPhoneErr && <p className="mt-1.5 text-xs font-medium text-red-700">To&apos;liq 9 ta raqam kiriting</p>}
             </div>
+
+            {askCenter && (
+              <div>
+                <label htmlFor={`lf-center-${uid}`} className="mb-1.5 block text-sm font-medium text-slate-700">
+                  O&apos;quv markaz nomi <span className="text-red-600">*</span>
+                </label>
+                <input
+                  ref={centerRef}
+                  id={`lf-center-${uid}`}
+                  name="center"
+                  type="text"
+                  autoComplete="organization"
+                  maxLength={120}
+                  required
+                  aria-required="true"
+                  value={center}
+                  onChange={(e) => setCenter(e.target.value)}
+                  placeholder="Masalan: Bilim Plus o'quv markazi"
+                  disabled={status === "sending"}
+                  aria-invalid={showCenterErr}
+                  className={showCenterErr ? inputBad : inputOk}
+                />
+                {showCenterErr && <p className="mt-1.5 text-xs font-medium text-red-700">O&apos;quv markaz nomini kiriting</p>}
+              </div>
+            )}
 
             <div>
               <label htmlFor={`lf-note-${uid}`} className="mb-1.5 block text-sm font-medium text-slate-700">

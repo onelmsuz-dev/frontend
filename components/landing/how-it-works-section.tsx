@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ApplyButton } from "./apply-dialog";
 import { ArrowRight } from "lucide-react";
 
 const steps = [
@@ -104,13 +104,13 @@ export function HowItWorksSection() {
 
         {/* CTA */}
         <div className="mt-12 sm:mt-14 text-center">
-          <Link
-            href="/login"
+          <ApplyButton
+            where="Qanday ishlaydi"
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition-all hover:bg-blue-700 sm:text-base"
           >
-            Hoziroq boshlang — bepul
+            Ariza qoldiring — 7 kun bepul
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          </ApplyButton>
           <p className="mt-3 text-xs text-slate-400 sm:text-sm">
             7 kunlik bepul sinov · Karta kerak emas · Istalgan vaqt bekor qilish mumkin
           </p>

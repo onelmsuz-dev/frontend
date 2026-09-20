@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
+import { ApplyButton } from "./apply-dialog";
 
 // `/#features` (bosh sahifaga yo'naltirib, keyin scroll qiladi) — shunda
 // bu havolalar cluster landinglardan ham ishlaydi, faqat bosh sahifadan emas.
@@ -122,12 +123,12 @@ export function LandingHeader() {
             >
               Kirish
             </Link>
-            <Link
-              href="/login"
+            <ApplyButton
+              where="Header"
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
             >
-              Bepul boshlash
-            </Link>
+              Ariza qoldirish
+            </ApplyButton>
           </div>
 
           {/* Mobile burger */}
@@ -183,13 +184,13 @@ export function LandingHeader() {
             >
               Kirish
             </Link>
-            <Link
-              href="/login"
+            <ApplyButton
+              where="Header (mobil menyu)"
               onClick={() => setOpen(false)}
               className="w-full rounded-xl bg-blue-600 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-blue-700"
             >
-              Bepul boshlash
-            </Link>
+              Ariza qoldirish
+            </ApplyButton>
           </div>
         </div>
       )}

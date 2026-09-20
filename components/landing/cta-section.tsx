@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ApplyButton } from "./apply-dialog";
 import { ArrowRight, ShieldCheck, Clock3, Headphones } from "lucide-react";
 
 const guarantees = [
@@ -61,13 +61,13 @@ export function CtaSection() {
 
         {/* Buttons */}
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link
-            href="/login"
+          <ApplyButton
+            where="Pastki CTA bo'limi"
             className="group inline-flex w-full sm:w-auto items-center justify-center gap-2.5 rounded-2xl bg-blue-600 px-8 py-4 text-sm font-bold text-white shadow-lg shadow-blue-700/30 transition-all hover:bg-blue-500 hover:shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98]"
           >
-            Bepul boshlash — hoziroq
+            Ariza qoldirish — hoziroq
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-          </Link>
+          </ApplyButton>
           <a
             href="mailto:sales@oneroom.uz"
             className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-8 py-4 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/25"

@@ -545,3 +545,9 @@ main[data-tour-active="1"] { padding-bottom: 210px; }
   .onb-pulse { display: none; }
   .onb-fill { width: var(--onb-to); }
 }
+
+/* Landing "Ariza qoldirish" modali ochiq bo'lganda orqa sahifa aylanmasin
+   (native <dialog> buni o'zi qilmaydi). */
+html:has(dialog[data-apply][open]) {
+  overflow: hidden;
+}
