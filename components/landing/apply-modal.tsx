@@ -12,7 +12,7 @@ import styles from "./apply-dialog.module.css";
  * ariza bloki bilan umumiy).
  *
  * Kompyuterda ikki qism: chapda yorug' panel (hero'dagi 3D "eshik" bilan bir obraz), o'ngda forma.
- * Mobilda faqat forma, pastdan chiqadigan "sheet" ko'rinishida.
+ * Mobilda faqat forma, ekran markazidagi ixcham dialog ko'rinishida.
  *
  * O'LCHAM: izoh maydoni doim ochiq; kartaning balandligi forma va "rahmat" ko'rinishida bir xil
  * (`--m-h`). Forma oddiy ekranlarda (kompyuter, telefon) scroll talab qilmaydi: balandlik <=720px va
@@ -26,11 +26,13 @@ import styles from "./apply-dialog.module.css";
 export function ApplyModalCard({ source, onClose }: { source: string; onClose: () => void }) {
   return (
     <div
-      className={`${styles.card} relative grid max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain rounded-t-[1.75rem] bg-white shadow-2xl shadow-slate-950/30 md:min-h-[var(--m-h)] md:max-h-[calc(100dvh-2rem)] md:grid-cols-[5fr_6fr] md:rounded-[2rem]`}
+      className={`${styles.card} relative grid max-h-[calc(100dvh-1rem)] overflow-y-auto overscroll-contain rounded-[1.75rem] bg-white shadow-[0_28px_80px_-24px_rgba(15,23,42,0.48)] ring-1 ring-white/80 md:min-h-[var(--m-h)] md:max-h-[calc(100dvh-2rem)] md:grid-cols-[5fr_6fr] md:rounded-[2rem]`}
     >
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_68%)] md:hidden" />
+
       {/* FORMA — DOM'da birinchi, shuning uchun modal ochilganda fokus ism maydoniga tushadi. */}
-      <div className="order-2 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[var(--m-pt)] md:px-9 md:pb-[var(--m-pb)]">
-        <ApplyPanel source={source} variant="modal" />
+      <div className="relative order-2 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[var(--m-pt)] md:px-9 md:pb-[var(--m-pb)]">
+        <ApplyPanel source={source} variant="modal" heading="Bepul sinovni boshlang" />
       </div>
 
       {/* CHAP PANEL (faqat kompyuterda): 3D "eshik" — hero bilan bir obraz. */}
@@ -68,7 +70,7 @@ export function ApplyModalCard({ source, onClose }: { source: string; onClose: (
         type="button"
         onClick={onClose}
         aria-label="Yopish"
-        className="absolute right-3.5 top-3.5 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 max-md:right-4 max-md:top-4"
+        className="absolute right-3.5 top-3.5 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 max-md:right-4 max-md:top-5 max-md:h-9 max-md:w-9"
       >
         <X className="h-[18px] w-[18px]" aria-hidden />
       </button>

@@ -1,8 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { AlertCircle, Building2, Check, Loader2, MessageCircle, MessageSquareText, Send, User } from "lucide-react";
-import { CONTACT_PHONE, CONTACT_PHONE_DISPLAY } from "@/lib/seo/site";
+import { AlertCircle, Building2, Check, Loader2, MessageCircle, MessageSquareText, Send, Sparkles, User } from "lucide-react";
 import { useLeadForm, type ContactTopic } from "./use-lead-form";
 import styles from "./apply-dialog.module.css";
 
@@ -26,12 +25,12 @@ const TOPICS: { value: ContactTopic; label: string }[] = [
 ];
 
 /** Maydon qutisi: yumshoq to'ldirilgan fon + ingichka ichki ramka; fokusda oq fon va ko'k ramka. */
-const BOX_BASE = "group relative flex h-[var(--f-box,3rem)] items-center rounded-xl bg-slate-50 ring-1 ring-inset transition-all duration-150 focus-within:bg-white focus-within:ring-2";
-const BOX_OK = "ring-slate-200 hover:ring-slate-300 focus-within:ring-blue-600 focus-within:shadow-[0_0_0_4px_rgb(37_99_235/0.10)]";
+const BOX_BASE = "group relative flex h-[var(--f-box,3rem)] items-center gap-2 rounded-[0.9rem] bg-slate-50/90 ring-1 ring-inset transition-[background-color,box-shadow] duration-200 focus-within:bg-white focus-within:ring-2";
+const BOX_OK = "ring-slate-200 hover:bg-white hover:ring-slate-300 focus-within:ring-blue-600 focus-within:shadow-[0_0_0_4px_rgb(37_99_235/0.10)]";
 const BOX_BAD = "bg-red-50/50 ring-2 ring-red-400 focus-within:ring-red-500 focus-within:shadow-[0_0_0_4px_rgb(239_68_68/0.10)]";
 // 16px: iOS'da maydonga fokus berilganda sahifa kattalashib ketmasligi uchun.
 const INPUT = "h-full min-w-0 flex-1 bg-transparent pr-10 text-base text-slate-900 outline-none placeholder:text-slate-500 disabled:text-slate-500";
-const ICON = "flex w-11 shrink-0 items-center justify-center text-slate-400 transition-colors";
+const ICON = "ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-[0.65rem] bg-white text-slate-400 shadow-[0_1px_3px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/80 transition-colors";
 
 /** Maydon: yorliq + ikonkali quti + xato matni. To'g'ri to'ldirilsa o'ngda kichik yashil belgi chiqadi. */
 function Field({
@@ -47,7 +46,7 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-[13px] font-semibold text-slate-700">{label}</label>
+      <label htmlFor={id} className="mb-1.5 block text-[12px] font-bold tracking-[-0.01em] text-slate-700 sm:text-[13px]">{label}</label>
       <div className={`${BOX_BASE} ${error ? BOX_BAD : BOX_OK}`}>
         <span className={`${ICON} group-focus-within:text-blue-600`} aria-hidden>
           {icon}
@@ -146,7 +145,15 @@ export function ApplyPanel({
   return (
     <>
       {modal ? (
-        <h2 className={`pr-12 ${titleClass}`}>{heading}</h2>
+        <div className="pr-12">
+          <p className="mb-3 inline-flex items-center gap-1.5 md:[@media(max-height:720px)]:mb-1.5 md:[@media(max-height:640px)]:hidden rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-blue-700 ring-1 ring-blue-100 md:text-[11px]">
+            <Sparkles className="h-3 w-3" aria-hidden /> 7 kun bepul
+          </p>
+          <h2 className={titleClass}>{heading}</h2>
+          <p className="mt-2 max-w-sm text-sm font-medium leading-relaxed text-slate-500 md:text-[15px] md:[@media(max-height:720px)]:hidden [@media(max-height:600px)]:hidden">
+            Ma&apos;lumotlaringizni qoldiring — tez orada bog&apos;lanamiz.
+          </p>
+        </div>
       ) : (
         <h3 className={titleClass}>{heading}</h3>
       )}
@@ -158,7 +165,7 @@ export function ApplyPanel({
         </div>
 
         {/* Nima qiziqtiradi? — ixtiyoriy; Telegramda "Maqsad" qatori bo'lib boradi */}
-        <fieldset className={compact ? "hidden" : undefined}>
+        <fieldset className={compact ? "hidden" : modal ? "max-md:hidden" : undefined}>
           <legend className="mb-1.5 text-[13px] font-semibold text-slate-700">Nima qiziqtiradi?</legend>
           <div role="radiogroup" aria-label="Nima qiziqtiradi?" className="flex flex-wrap gap-1.5">
             {TOPICS.map((t) => {
@@ -203,8 +210,8 @@ export function ApplyPanel({
         </Field>
 
         <Field id={`${uid}-phone`} label="Telefon raqamingiz" icon={<span className="text-base">🇺🇿</span>} ok={phoneOk} showOk={digits.length > 0} error={showPhoneErr ? "9 ta raqam kiriting" : undefined}>
-          <span className="-ml-1 shrink-0 text-base font-semibold text-slate-700">+998</span>
-          <span className="mx-2.5 h-5 w-px shrink-0 bg-slate-300" aria-hidden />
+          <span className="shrink-0 text-base font-semibold text-slate-700">+998</span>
+          <span className="mx-1 h-5 w-px shrink-0 bg-slate-300" aria-hidden />
           <input
             ref={phoneRef}
             id={`${uid}-phone`}
@@ -244,7 +251,7 @@ export function ApplyPanel({
         </Field>
 
         {/* Izoh — doim ochiq (ixtiyoriy). Ikonka boshqa maydonlar bilan bir xil ustunda, matn ham shu chiziqdan boshlanadi. */}
-        <div className={compact ? "hidden" : undefined}>
+        <div className={compact ? "hidden" : modal ? "max-md:hidden" : undefined}>
           <label htmlFor={`${uid}-note`} className="mb-1.5 block text-[13px] font-semibold text-slate-700">
             Izoh <span className="font-normal text-slate-500">— ixtiyoriy</span>
           </label>
@@ -257,9 +264,9 @@ export function ApplyPanel({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Savolingiz yoki qo'shimcha ma'lumot"
-              className={`peer block w-full resize-none rounded-xl bg-slate-50 py-3 pl-11 pr-3.5 text-base leading-snug text-slate-900 outline-none ring-1 ring-inset ring-slate-200 transition-all duration-150 placeholder:text-slate-500 hover:ring-slate-300 focus:bg-white focus:shadow-[0_0_0_4px_rgb(37_99_235/0.10)] focus:ring-2 focus:ring-blue-600 h-[var(--f-note,4.25rem)]`}
+              className={`peer block w-full resize-none rounded-[0.9rem] bg-slate-50/90 py-3 pl-12 pr-3.5 text-base leading-snug text-slate-900 outline-none ring-1 ring-inset ring-slate-200 transition-all duration-150 placeholder:text-slate-500 hover:ring-slate-300 focus:bg-white focus:shadow-[0_0_0_4px_rgb(37_99_235/0.10)] focus:ring-2 focus:ring-blue-600 h-[var(--f-note,4.25rem)]`}
             />
-            <span className={`${ICON} pointer-events-none absolute left-0 top-0 h-12 peer-focus:text-blue-600`} aria-hidden>
+            <span className={`${ICON} pointer-events-none absolute left-0 top-2 peer-focus:text-blue-600`} aria-hidden>
               <MessageSquareText className="h-[18px] w-[18px]" />
             </span>
           </div>
@@ -277,7 +284,7 @@ export function ApplyPanel({
         <button
           type="submit"
           disabled={sending}
-          className="group inline-flex h-[var(--f-cta,3.25rem)] w-full items-center justify-center gap-2.5 rounded-xl bg-blue-600 text-base font-bold text-white shadow-lg shadow-blue-600/25 transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:opacity-80"
+          className="group inline-flex h-[var(--f-cta,3.25rem)] w-full items-center justify-center gap-2.5 rounded-[0.9rem] bg-gradient-to-b from-blue-500 to-blue-600 text-[15px] font-bold text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,0.75),inset_0_1px_0_rgba(255,255,255,0.25)] transition-[box-shadow,filter] hover:brightness-[1.03] hover:shadow-[0_14px_28px_-10px_rgba(37,99,235,0.8)] disabled:cursor-wait disabled:opacity-80"
         >
           {sending ? (
             <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Yuborilmoqda…</>
@@ -286,11 +293,8 @@ export function ApplyPanel({
           )}
         </button>
 
-        <p className="text-center text-xs leading-relaxed text-slate-500">
-          Yuborish orqali bog&apos;lanishimizga rozilik bildirasiz.
-          {modal && (
-            <span className="md:hidden"> Yoki qo&apos;ng&apos;iroq qiling: <a href={`tel:${CONTACT_PHONE}`} className="font-semibold text-slate-700 underline">{CONTACT_PHONE_DISPLAY}</a></span>
-          )}
+        <p className="text-center text-[11px] leading-relaxed text-slate-500 sm:text-xs">
+          Yuborish orqali bog&apos;lanishga rozilik bildirasiz.
         </p>
       </form>
     </>

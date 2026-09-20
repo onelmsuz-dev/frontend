@@ -1,6 +1,6 @@
 /*
  * Ariza modali: konteyner va animatsiyalar.
- * Kompyuterda — markazda, yumshoq "pop"; mobilda (<=767px) — pastdan chiqadigan "sheet".
+ * Kompyuterda ham, mobilda ham ekran markazida yumshoq "pop" animatsiyasi bilan ochiladi.
  * `<dialog>` o'zi shaffof, ko'rinadigan karta (.card) ichkarida: animatsiya kartani harakatlantiradi,
  * orqa fonni bosish (dialog'ning o'ziga tushgan click) esa modalni yopadi.
  */
@@ -107,12 +107,20 @@
 
 @media (max-width: 767px) {
   .dialog {
-    width: 100%;
-    margin: auto 0 0;
+    width: calc(100% - 24px);
+    margin: auto;
+  }
+
+  .card {
+    --f-box: 3.25rem;
+    --f-gap: .875rem;
+    --f-cta: 3.25rem;
+    --m-pt: 1.75rem;
+    --m-head-gap: 1.25rem;
   }
 
   .dialog[open] .card {
-    animation: card-sheet .35s cubic-bezier(.2, .8, .2, 1) backwards;
+    animation: card-pop-mobile .32s cubic-bezier(.2, .8, .2, 1) backwards;
   }
 }
 
@@ -143,8 +151,8 @@
   to { opacity: 1; transform: none; }
 }
 
-@keyframes card-sheet {
-  from { transform: translateY(100%); }
+@keyframes card-pop-mobile {
+  from { opacity: 0; transform: translateY(12px) scale(.965); }
   to { transform: none; }
 }
 
