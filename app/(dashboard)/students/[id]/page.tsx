@@ -131,6 +131,25 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const { data: matKatRaw } = useSWR<{ id: string; name: string }[]>(
     showPayModal ? "/api/materials/categories" : null, _fetcher);
   const matKat = Array.isArray(matKatRaw) ? matKatRaw : [];
+
+  /**
+   * QARZNI YOPISH REJIMI.
+   *
+   * Ilgari qo'shimcha to'lov qarzini yopishning YO'LI YO'Q EDI:
+   * modal har doim YANGI SOTUV yaratardi. Qarzi bor o'quvchiga
+   * "to'lov" qilingan deb 60 000 kiritilsa, tizim 60 000 lik yangi
+   * kitob sotib, uni darhol to'langan deb yozardi — qarz esa
+   * tegilmay qolardi (egasi 2026-09-20 da shunga duch keldi:
+   * "sotilgan 110 000, qarz hamon 50 000").
+   *
+   * Server tomonda `POST /api/materials/pay` allaqachon bor edi va
+   * qarzdan ortiq to'lovni rad etardi — shunchaki hech kim uni
+   * chaqirmasdi.
+   */
+  const [qarzYopish, setQarzYopish] = useState(false);
+  const { data: matHolat } = useSWR<{ debt: number }>(
+    showPayModal ? `/api/materials/student/${id}` : null, _fetcher);
+  const matQarz = matHolat?.debt ?? 0;
   const [payForm,      setPayForm]      = useState({ amount: "", method: "NAQD", note: "", groupId: "" });
   const [payErr,       setPayErr]       = useState("");
   const [paying,       setPaying]       = useState(false);
@@ -341,16 +360,33 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
   /** Qo'shimcha to'lov — BOSHQA jurnalga yoziladi, balansga tegmaydi. */
   async function submitMaterial(amount: number) {
-    if (!materialKat) { setPayErr("Nima uchun ekanini tanlang"); return; }
+    const yopish = qarzYopish && matQarz > 0;
+    if (!yopish && !materialKat) { setPayErr("Nima uchun ekanini tanlang"); return; }
+    /**
+     * QARZDAN KO'P TO'LAB BO'LMAYDI.
+     *
+     * Ortib qolgan pulni boshqa narsaga ishlatib bo'lmaydi: bu jurnal
+     * kurs balansidan butunlay ajratilgan va "ortiqcha" tushuncha
+     * yo'q (egasining qarori). Server ham rad etadi — bu yerdagi
+     * tekshiruv xatoni so'rovsiz, joyida aytish uchun.
+     */
+    if (yopish && amount > matQarz) {
+      setPayErr(`Qarzdan ko'p: ${fmt(matQarz)} qarz bor`); return;
+    }
     setPaying(true); setPayErr("");
     try {
-      const res = await fetch("/api/materials", {
+      const res = await fetch(yopish ? "/api/materials/pay" : "/api/materials", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          studentId: id, category: materialKat, amount,
-          method: payForm.method, note: payForm.note || undefined,
-          paidNow: !materialQarzga,
-        }),
+        body: JSON.stringify(yopish
+          ? {
+              studentId: id, amount,
+              method: payForm.method, note: payForm.note || undefined,
+            }
+          : {
+              studentId: id, category: materialKat, amount,
+              method: payForm.method, note: payForm.note || undefined,
+              paidNow: !materialQarzga,
+            }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setPayErr(data.error ?? "Xatolik"); return; }
@@ -358,6 +394,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       mutate(`/api/materials/student/${id}`);
       setShowPayModal(false);
       setMaterial(false); setMaterialKat(""); setMaterialQarzga(false);
+      setQarzYopish(false);
       setPayForm({ amount: "", method: "NAQD", note: "", groupId: "" });
     } catch { setPayErr("Serverga ulanib bo'lmadi"); }
     finally { setPaying(false); }
@@ -706,7 +743,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             <Button onClick={submitPayment} disabled={paying}
  className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {paying ? "Saqlanmoqda..."
-                : material ? (materialQarzga ? "Qarzga yozish" : "Qabul qilish")
+                : material
+                  ? (qarzYopish ? "Qarzni yopish"
+                    : materialQarzga ? "Qarzga yozish" : "Qabul qilish")
                 : "Qabul qilish"}
             </Button>
             <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowPayModal(false)}>Bekor</Button>
@@ -776,7 +815,48 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             </p>
           )}
 
-          {material && (
+          {material && matQarz > 0 && (
+            /* REJIM TANLOVI — faqat qarzi bor o'quvchida.
+               Qarzsiz o'quvchida tanlaydigan narsa yo'q va ikki tugma
+               ortiqcha savol bo'lib turardi. */
+            <div className="px-3 pb-2.5">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span className="text-[12px] font-semibold text-amber-800 dark:text-amber-300">
+                  Qarz: {fmt(matQarz)}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { v: true,  l: "Qarzni yopish" },
+                  { v: false, l: "Yangi sotuv" },
+                ].map(o => (
+                  <button key={String(o.v)} type="button"
+                    onClick={() => {
+                      setQarzYopish(o.v); setPayErr("");
+                      // "Qarzga yozilsin" qarz yopishda ma'nosiz — pul
+                      // aynan hozir olinyapti. Qolib ketsa to'lov usuli
+                      // bloki yashirinib, kassir usulni tanlay olmasdi.
+                      if (o.v) setMaterialQarzga(false);
+                    }}
+                    className={cn("h-8 rounded-lg text-[12px] font-semibold border transition-colors",
+                      qarzYopish === o.v
+                        ? "bg-amber-600 text-white border-amber-600"
+                        : "border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-amber-400")}>
+                    {o.l}
+                  </button>
+                ))}
+              </div>
+              {qarzYopish && (
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1.5">
+                  Ko&apos;pi bilan {fmt(matQarz)}. Kamroq to&apos;lasangiz —
+                  qolgani qarzda qoladi.
+                </p>
+              )}
+            </div>
+          )}
+
+          {material && !qarzYopish && (
             <div className="px-3 pb-3 space-y-2.5">
               <div>
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-1.5">
@@ -813,7 +893,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           )}
         </div>
         {/* To'lov usuli — qarzga berilganda ma'nosiz (pul olinmadi). */}
-        {!(material && materialQarzga) && (
+        {!(material && materialQarzga && !qarzYopish) && (
         <FormField label="To'lov usuli">
           <div className={cn("grid gap-2", methodGridCls(SELECTABLE_METHODS.length))}>
             {SELECTABLE_METHODS.map(({ value: m, label }) => (

@@ -72,6 +72,22 @@ export function AcceptPaymentModal({
   );
 
   /**
+   * QARZNI YOPISH — o'quvchi kartochkasidagi oyna bilan bir xil.
+   *
+   * Busiz kassir qarzni yopa olmasdi: oyna har doim YANGI SOTUV
+   * yaratardi va qarz tegilmay qolardi (egasi 2026-09-20 da duch
+   * keldi). Server tomonda `POST /api/materials/pay` bor edi,
+   * shunchaki hech kim chaqirmasdi.
+   */
+  const [qarzYopish, setQarzYopish] = useState(false);
+  const { data: matHolat } = useSWR<{ debt: number }>(
+    open && forMaterials && payForm.studentId
+      ? `/api/materials/student/${payForm.studentId}` : null,
+    fetcher,
+  );
+  const matQarz = matHolat?.debt ?? 0;
+
+  /**
    * Tanlangan o'quvchi — endi ro'yxatdan emas, qidiruvdan keladi.
    *
    * `undefined` = "kassir hali tanlamadi" (standart o'quvchi ishlatiladi),
@@ -116,6 +132,7 @@ export function AcceptPaymentModal({
     setPayForm(EMPTY_FORM);
     setPayFormErr("");
     setForMaterials(false);
+    setQarzYopish(false);
     setCategory("");
     setInfoOpen(false);
     onClose();
@@ -129,17 +146,25 @@ export function AcceptPaymentModal({
    * paydo bo'lardi.
    */
   async function submitMaterials() {
-    const res = await fetch("/api/materials", {
+    const yopish = qarzYopish && matQarz > 0;
+    const res = await fetch(yopish ? "/api/materials/pay" : "/api/materials", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        studentId: payForm.studentId,
-        category: category.trim(),
-        amount: Number(payForm.amount),
-        method: payForm.method,
-        note: payForm.note || undefined,
-        paidNow: true,
-      }),
+      body: JSON.stringify(yopish
+        ? {
+            studentId: payForm.studentId,
+            amount: Number(payForm.amount),
+            method: payForm.method,
+            note: payForm.note || undefined,
+          }
+        : {
+            studentId: payForm.studentId,
+            category: category.trim(),
+            amount: Number(payForm.amount),
+            method: payForm.method,
+            note: payForm.note || undefined,
+            paidNow: true,
+          }),
     });
 
     if (!res.ok) {
@@ -162,8 +187,13 @@ export function AcceptPaymentModal({
     if (!forMaterials && payableGroups.length > 1 && !selectedGroupId) {
       setPayFormErr("Qaysi guruh uchun to'lov ekanini tanlang"); return;
     }
-    if (forMaterials && !category.trim()) {
+    if (forMaterials && !qarzYopish && !category.trim()) {
       setPayFormErr("Nima uchun to'lov ekanini tanlang"); return;
+    }
+    // Qarzdan ko'p to'lab bo'lmaydi — ortiqcha pulni bu jurnalda
+    // ishlatib bo'lmaydi (server ham rad etadi).
+    if (forMaterials && qarzYopish && Number(payForm.amount) > matQarz) {
+      setPayFormErr(`Qarzdan ko'p: ${formatCurrency(matQarz)} qarz bor`); return;
     }
     setPayFormErr("");
     setSaving(true);
@@ -333,7 +363,37 @@ export function AcceptPaymentModal({
               </p>
             )}
 
-            {forMaterials && (
+            {forMaterials && matQarz > 0 && (
+              /* REJIM — faqat qarzi bor o'quvchida. */
+              <div className="mt-2.5">
+                <p className="text-[12px] font-semibold text-amber-700 dark:text-amber-400 mb-1.5">
+                  Qarz: {formatCurrency(matQarz)}
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { v: true,  l: "Qarzni yopish" },
+                    { v: false, l: "Yangi sotuv" },
+                  ].map(o => (
+                    <button key={String(o.v)} type="button"
+                      onClick={() => { setQarzYopish(o.v); setPayFormErr(""); }}
+                      className={cn("h-8 rounded-lg text-[12px] font-semibold border transition-colors",
+                        qarzYopish === o.v
+                          ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-500"
+                          : "border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 hover:border-indigo-400")}>
+                      {o.l}
+                    </button>
+                  ))}
+                </div>
+                {qarzYopish && (
+                  <p className="text-[11px] text-neutral-400 mt-1.5">
+                    Ko&apos;pi bilan {formatCurrency(matQarz)}. Kamroq to&apos;lasangiz —
+                    qolgani qarzda qoladi.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {forMaterials && !qarzYopish && (
               <div className="mt-2.5">
                 <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">
                   Nima uchun
@@ -417,7 +477,9 @@ export function AcceptPaymentModal({
           >
             {saving
               ? "Saqlanmoqda..."
-              : forMaterials ? "Qo'shimcha to'lovni yozish" : "To'lovni qabul qilish"}
+              : forMaterials
+                ? (qarzYopish ? "Qarzni yopish" : "Qo'shimcha to'lovni yozish")
+                : "To'lovni qabul qilish"}
           </Button>
           <Button variant="outline" className="h-10 sm:px-4" onClick={handleClose}>
             Bekor
