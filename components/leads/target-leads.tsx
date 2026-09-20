@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
 import { formatUzDate } from "@/lib/date-uz";
+import { TargetGuide } from "@/components/leads/target-guide";
 
 /**
  * TARGET LIDLARI — `markaz.oneroom.uz/target` sahifasidan kelganlar.
@@ -213,6 +214,11 @@ export function TargetLeads() {
           </div>
         </div>
       </div>
+
+      {/* ── YO'RIQNOMA — havoladan KEYIN, ro'yxatdan OLDIN.
+             Yig'ilgan holatda turadi, ya'ni har kungi ishga xalaqit
+             bermaydi, lekin birinchi marta ochgan odam uni ko'radi. */}
+      <TargetGuide />
 
       {/* ── QIDIRUV + AMALLAR ── */}
       <div className="flex items-center gap-2 flex-wrap">

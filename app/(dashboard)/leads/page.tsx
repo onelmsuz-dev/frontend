@@ -19,6 +19,18 @@ import { fetcher as _fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 import { useLeadsPaged, useLeadAssignees, useLeadStages } from "@/lib/hooks/useLeads";
 import { TargetLeads } from "@/components/leads/target-leads";
+
+/**
+ * FACEBOOK/INSTAGRAM TABI VAQTINCHA YASHIRILGAN (egasining qarori,
+ * 2026-09-20): avval "Target" yo'li ishga tushsin, Meta esa App
+ * Review'dan o'tgandan keyin ochiladi.
+ *
+ * Kod o'chirilmadi — bayroq (`meta-lead-ads`) va butun integratsiya
+ * joyida. Qayta ochish uchun shu qiymatni `true` qilish kifoya;
+ * bayroq baribir tekshiriladi, ya'ni tab faqat unga ruxsat berilgan
+ * markazlarda chiqadi.
+ */
+const META_TABI_KORINSIN = false;
 import { useCourses } from "@/lib/hooks/useCourses";
 import { SourcePicker } from "@/components/leads/source-picker";
 import { LeadImportModal } from "@/components/leads/lead-import-modal";
@@ -392,7 +404,7 @@ export default function LeadsPage() {
                 : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
             <Target className="w-3.5 h-3.5" /> Target
           </button>
-          {metaEnabled && (
+          {META_TABI_KORINSIN && metaEnabled && (
             <button onClick={() => setTab("meta")}
               className={cn("shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
                 tab === "meta"
@@ -688,7 +700,7 @@ export default function LeadsPage() {
 
       {tab === "target" && <TargetLeads />}
 
-      {metaEnabled && tab === "meta" && (
+      {META_TABI_KORINSIN && metaEnabled && tab === "meta" && (
         <div className="p-5">
           <MetaIntegrationPanel />
         </div>
