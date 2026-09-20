@@ -125,6 +125,12 @@ export default function TargetPage() {
     return (
       <main className="min-h-dvh grid place-items-center p-6 bg-neutral-50 dark:bg-neutral-950">
         <div className="text-center">
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <Image src="/logo.png" alt="OneRoom" width={24} height={24} className="rounded-lg" />
+            <span className="text-[13px] font-bold text-neutral-600 dark:text-neutral-400">
+              One<span className="text-indigo-600 dark:text-indigo-400">Room</span>
+            </span>
+          </div>
           <AlertCircle className="w-10 h-10 mx-auto text-neutral-300 mb-3" />
           <p className="text-[14px] font-semibold text-neutral-700 dark:text-neutral-200">
             Sahifa topilmadi
@@ -153,6 +159,19 @@ export default function TargetPage() {
       </div>
 
       <div className="w-full max-w-[420px] mx-auto">
+
+        {/* ONEROOM LOGOSI — eng tepada.
+            Markaz brendidan KICHIKROQ va xiraroq: bu sahifaning egasi
+            markaz, OneRoom esa uni olib boruvchi platforma. Teng
+            o'lchamda bo'lsa mijoz qaysi biriga ariza qoldirayotganini
+            tushunmay qolardi. */}
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <Image src="/logo.png" alt="OneRoom" width={26} height={26}
+            priority className="rounded-lg" />
+          <span className="text-[14px] font-bold text-neutral-700 dark:text-neutral-300">
+            One<span className="text-indigo-600 dark:text-indigo-400">Room</span>
+          </span>
+        </div>
 
         {/* MARKAZ BRANDI — tepada. Odam reklamani bosib kelganda
             "to'g'ri joyga tushdimmi" degan savolga darhol javob
@@ -269,10 +288,9 @@ export default function TargetPage() {
           </form>
         )}
 
-        <div className="flex items-center justify-center gap-1.5 mt-7 opacity-60">
-          <Image src="/logo.png" alt="" width={16} height={16} className="rounded" />
-          <span className="text-[11px] text-neutral-400">OneRoom</span>
-        </div>
+        {/* Pastda logo TAKRORLANMAYDI — u endi tepada turibdi.
+            Bir sahifada ikki marta ko'rinsa e'tiborni markaz nomidan
+            tortib olardi. */}
       </div>
     </main>
   );
