@@ -36,13 +36,17 @@ export function ScheduleDrawer() {
   const { me } = useMe();
   const [ochiq, setOchiq] = useState(false);
   /**
-   * PANEL "BOSHQA" DAN BOSHLANADI — ya'ni ANIQ KUN, bugun tanlangan.
+   * PANEL "HAMMASI" DAN BOSHLANADI.
    *
-   * Panelning maqsadi "hozir nima bo'lyapti": u ochilganda darhol
-   * bugungi jadval turishi kerak. Toq/juft esa haftalik tarh va u
-   * bir bosishda yetib boradi.
+   * Ilgari u bugungi kundan boshlanardi — "hozir nima bo'lyapti"
+   * degan savol uchun. Lekin darssiz kunda (yakshanba, bayram)
+   * panel BO'SH ochilib, buzilgandek ko'rinardi (egasi xabar berdi,
+   * 2026-09-20). Bo'sh ekran hech qanday savolga javob bermaydi.
+   *
+   * Bugungi kun bir bosishda: "Boshqa" → kun allaqachon bugunga
+   * qo'yilgan.
    */
-  const [tab, setTab] = useState<JadvalTab>("boshqa");
+  const [tab, setTab] = useState<JadvalTab>("hamma");
   const [kunIdx, setKunIdx] = useState(() => bugungiIndeks());
 
   // Faqat ochilganda yuklaymiz.
@@ -105,6 +109,7 @@ export function ScheduleDrawer() {
               <div className="min-w-0">
                 <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100 truncate">
                   {kunmi ? KUNLAR[kunIdx].toliq
+                    : tab === "hamma" ? "Barcha guruhlar"
                     : tab === "toq" ? "Toq kunlar" : "Juft kunlar"}
                   {bugunmi && (
                     <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded
@@ -117,7 +122,11 @@ export function ScheduleDrawer() {
                   {/* Sana faqat ANIQ KUN tanlanganda ma'noli — toq/juft
                       haftalik tarh va unga bitta sana tegishli emas. */}
                   {kunmi ? `${formatUzDate(sana)} · ` : ""}
-                  {isLoading ? "yuklanmoqda..." : `${korinadi.length} ta dars`}
+                  {/* "Hammasi" da bular bir kunning darslari EMAS — butun
+                      haftaning guruhlari. "15 ta dars" deb yozish xodimni
+                      chalg'itardi. */}
+                  {isLoading ? "yuklanmoqda..."
+                    : `${korinadi.length} ta ${tab === "hamma" ? "guruh" : "dars"}`}
                 </p>
               </div>
               <button onClick={() => setOchiq(false)} aria-label="Yopish"
@@ -129,7 +138,7 @@ export function ScheduleDrawer() {
 
             <div className="border-b border-neutral-100 dark:border-neutral-800">
               <ScheduleTabs tab={tab} onTab={setTab}
-                kunIdx={kunIdx} onKun={setKunIdx} compact />
+                kunIdx={kunIdx} onKun={setKunIdx} compact hammasiBilan />
             </div>
 
             <div className="flex-1 min-h-0 p-2 sm:p-3">
@@ -140,6 +149,7 @@ export function ScheduleDrawer() {
                 <p className="text-[12px] text-neutral-400 text-center py-8">
                   {kunmi
                     ? `${KUNLAR[kunIdx].toliq} kuni dars yo'q`
+                    : tab === "hamma" ? "Faol guruh yo'q"
                     : "Bu kunlarda guruh yo'q"}
                 </p>
               )}

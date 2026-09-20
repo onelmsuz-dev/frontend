@@ -77,7 +77,18 @@ export default function AttendancePage() {
    * holat bo'lsa ular bir-biridan uzoqlashib ketardi — foydalanuvchi
    * "Payshanba" ni tanlab, chorshanba davomatini belgilagan bo'lardi.
    */
-  const [tab, setTab] = useState<JadvalTab>("boshqa");
+  /**
+   * STANDART — "HAMMASI", kun emas.
+   *
+   * Ilgari bu yerda "boshqa" (ya'ni bugungi kun) turardi va yakshanba
+   * kuni sahifa BO'SH ochilardi: "Bu filtrda guruh yo'q, 0/15" —
+   * ekran buzilgandek ko'rinardi (BePro, 2026-09-20). Dam olish kuni,
+   * bayram yoki shunchaki darssiz kun kamdan-kam emas.
+   *
+   * Filtr — QIDIRUVNI QISQARTIRISH vositasi, ro'yxatni yashirish
+   * emas. Shuning uchun u ochiq holatdan boshlanadi.
+   */
+  const [tab, setTab] = useState<JadvalTab>("hamma");
   const kunIdx = dushanbadan(currentDate.getDay());
 
   /** Tanlangan kunga SHU HAFTA ichida suriladi (o'sha hafta qoladi). */
