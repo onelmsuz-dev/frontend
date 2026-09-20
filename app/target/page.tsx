@@ -145,19 +145,6 @@ export default function TargetPage() {
 
       <div className="w-full max-w-[420px] mx-auto">
 
-        {/* ONEROOM LOGOSI — eng tepada.
-            Markaz brendidan KICHIKROQ va xiraroq: bu sahifaning egasi
-            markaz, OneRoom esa uni olib boruvchi platforma. Teng
-            o'lchamda bo'lsa mijoz qaysi biriga ariza qoldirayotganini
-            tushunmay qolardi. */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <Image src="/logo.png" alt="OneRoom" width={26} height={26}
-            priority className="rounded-lg" />
-          <span className="text-[14px] font-bold text-neutral-700 dark:text-neutral-300">
-            One<span className="text-indigo-600 dark:text-indigo-400">Room</span>
-          </span>
-        </div>
-
         {/* MARKAZ BRANDI — tepada. Odam reklamani bosib kelganda
             "to'g'ri joyga tushdimmi" degan savolga darhol javob
             olishi kerak, aks holda formani to'ldirmaydi. */}
@@ -260,9 +247,17 @@ export default function TargetPage() {
           </form>
         )}
 
-        {/* Pastda logo TAKRORLANMAYDI — u endi tepada turibdi.
-            Bir sahifada ikki marta ko'rinsa e'tiborni markaz nomidan
-            tortib olardi. */}
+        {/* ONEROOM LOGOSI — PASTDA (egasining qarori).
+            Tepada markaz nomi yolg'iz turadi: mijoz reklamani bosib
+            kelganda birinchi ko'rishi kerak bo'lgan narsa — markaz
+            nomi, platforma emas. */}
+        <div className="flex items-center justify-center gap-2 mt-8">
+          <Image src="/logo.png" alt="OneRoom" width={20} height={20}
+            className="rounded-md opacity-70" />
+          <span className="text-[12px] font-semibold text-neutral-400 dark:text-neutral-500">
+            One<span className="text-indigo-500/70">Room</span>
+          </span>
+        </div>
       </div>
     </main>
   );
