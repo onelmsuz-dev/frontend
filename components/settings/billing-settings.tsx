@@ -96,6 +96,75 @@ export function BillingSettings({
           </div>
         </div>
 
+        {/* HISOB QAYSI SANADAN — `billingStart`.
+
+            2026-09-15 da `a97133e` bilan TASODIFAN o'chgan edi: o'sha
+            commit "to'lov vaqti" dan uchinchi kartani olib tashlagan,
+            lekin bu tanlov ham birga ketgan va uning O'RNIGA shu
+            sarlavha ostiga TO'LOV VAQTI tugmalari tushib qolgan —
+            ya'ni sarlavha bir narsani aytib, tugmalar boshqa narsani
+            o'zgartirardi. Sozlama bazada va dvigatelda joyida
+            turaverdi, faqat uni ko'rib ham, o'zgartirib ham
+            bo'lmasdi (egasi ko'rsatdi, 2026-09-20). */}
+        <div className="grid sm:grid-cols-2 gap-2.5 mt-4">
+          {([
+            {
+              v: "ACTIVATION" as const,
+              l: "Faol qilingan sanadan",
+              d: "Sinov kunlari bepul. Pul faqat «Faol» qilingandan keyin hisoblanadi.",
+            },
+            {
+              v: "JOIN" as const,
+              l: "Guruhga qo'shilgan sanadan",
+              d: "Sinov kunlari ham darsga kiradi va o'sha kunlar uchun ham pul olinadi.",
+            },
+          ]).map(o => (
+            <button key={o.v} type="button" onClick={() => setStart(o.v)}
+              className={cn(
+                "text-left px-4 py-3 rounded-2xl border-2 transition-all",
+                start === o.v
+                  ? "border-indigo-600 bg-indigo-50/70 dark:bg-indigo-900/20 dark:border-indigo-400"
+                  : "border-white/60 dark:border-white/10 hover:border-neutral-400",
+              )}>
+              <p className={cn("text-[13px] font-bold",
+                start === o.v ? "text-indigo-700 dark:text-indigo-300" : "text-neutral-800 dark:text-neutral-200")}>
+                {o.l}
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                {o.d}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-start gap-2 mt-3 text-[11px] text-neutral-500 dark:text-neutral-400">
+          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <p>
+            O&apos;zgarish faqat BUNDAN KEYINGI faollashtirishlarga ta&apos;sir qiladi —
+            allaqachon yozilgan qarzlar qayta hisoblanmaydi.
+          </p>
+        </div>
+      </div>
+
+      {/* ── To'lov vaqti ────────────────────────────────────────────────
+          O'Z KARTOCHKASI. Sarlavhasi `a97133e` da yo'qolib, tugmalari
+          yuqoridagi "Sinov darslari uchun to'lov" ichiga tushib qolgan
+          edi. */}
+      <div className="glass-panel rounded-2xl border border-white/60 dark:border-white/10 p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-2xl shrink-0 grid place-items-center bg-indigo-100/70 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-300">
+            <Hourglass className="w-4.5 h-4.5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100">
+              To&apos;lov vaqti
+            </p>
+            <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Qarz davr (oy yoki sikl) boshida yoziladimi, tugagachmi — barcha rejimlarda
+            </p>
+          </div>
+        </div>
+
         {/* IKKI TANLOV. Uchinchi karta ("3 kun oldin") olib tashlandi —
             u alohida rejim emas, "oldindan"ning mayda sozlamasi edi va
             foydalanuvchini chalg'itardi (2026-09-15).

@@ -10,11 +10,12 @@
     "verify:xlsx": "node scripts/verify-xlsx.mjs",
     "verify:leadmap": "node scripts/verify-leadmap.mjs",
     "verify:jsx": "node scripts/verify-jsx-space.mjs",
-    "verify": "npm run verify:xlsx && npm run verify:leadmap && npm run verify:jsx && npm run verify:font",
+    "verify": "npm run verify:xlsx && npm run verify:leadmap && npm run verify:jsx && npm run verify:font && npm run verify:fields",
     "verify:chek": "npx tsx scripts/verify-receipt-canvas.ts",
     "verify:lid": "npx tsx scripts/verify-lead-due.ts",
     "verify:narx": "npx tsx scripts/verify-group-price.ts",
-    "verify:font": "node scripts/verify-font-scale.mjs"
+    "verify:font": "node scripts/verify-font-scale.mjs",
+    "verify:fields": "node scripts/verify-form-fields.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
