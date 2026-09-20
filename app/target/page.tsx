@@ -30,21 +30,6 @@ function subdomen(): string {
 }
 
 /**
- * MARKAZ BELGISI — nom harflaridan.
- *
- * Bazada logo maydoni yo'q, va uni shoshib qo'shish noto'g'ri
- * bo'lardi: har markaz fayl yuklashi, uni saqlash, o'lcham va
- * format tekshiruvi kerak. Ikki harf esa bugun ishlaydi va
- * sahifaga "tayyor" ko'rinish beradi.
- */
-function harflar(nom: string): string {
-  const s = nom.trim().split(/\s+/).filter(Boolean);
-  if (s.length === 0) return "?";
-  if (s.length === 1) return s[0].slice(0, 2).toUpperCase();
-  return (s[0][0] + s[1][0]).toUpperCase();
-}
-
-/**
  * TELEFON — faqat raqam, va aynan 9 ta.
  *
  * `+998` maydonning O'ZIDA qotirilgan, kiritish mumkin emas: odam
@@ -178,26 +163,13 @@ export default function TargetPage() {
             olishi kerak, aks holda formani to'ldirmaydi. */}
         <div className="text-center mb-8">
           {markaz === null ? (
-            <>
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-neutral-200
-                dark:bg-neutral-800 animate-pulse" />
-              <div className="h-7 w-48 mx-auto mt-4 rounded-lg bg-neutral-200
-                dark:bg-neutral-800 animate-pulse" />
-            </>
+            <div className="h-8 w-52 mx-auto rounded-lg bg-neutral-200
+              dark:bg-neutral-800 animate-pulse" />
           ) : (
-            <>
-              <div className="w-16 h-16 mx-auto rounded-2xl grid place-items-center
-                bg-gradient-to-br from-indigo-500 to-violet-600
-                shadow-lg shadow-indigo-500/25">
-                <span className="text-white text-[22px] font-black tracking-tight">
-                  {harflar(markaz)}
-                </span>
-              </div>
-              <h1 className="text-[25px] sm:text-[29px] font-black text-neutral-900
-                dark:text-neutral-50 leading-tight tracking-tight mt-4">
-                {markaz}
-              </h1>
-            </>
+            <h1 className="text-[27px] sm:text-[32px] font-black text-neutral-900
+              dark:text-neutral-50 leading-tight tracking-tight">
+              {markaz}
+            </h1>
           )}
           <p className="text-[13.5px] text-neutral-500 dark:text-neutral-400 mt-2.5">
             Ariza qoldiring — tez orada siz bilan bog&apos;lanamiz
