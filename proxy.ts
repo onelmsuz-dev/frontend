@@ -107,6 +107,22 @@ export const proxy = auth((req) => {
   if (pathname === "/ads") return NextResponse.next();
 
   /**
+   * `/target` — markazning OCHIQ ARIZA SAHIFASI.
+   *
+   * Instagram reklamasi aynan shu manzilga olib keladi, ya'ni unga
+   * login qilmagan begona odam kiradi. Istisno berilmasa sahifa
+   * `/login` ga yo'naltiriladi va REKLAMA BUDJETI behuda ketadi —
+   * odam login oynasini ko'rib darhol chiqib ketadi.
+   *
+   * Prodda birinchi sinovda aynan shunday bo'ldi: backend to'g'ri
+   * javob berdi, sahifa esa 307 bilan login'ga ketdi (2026-09-20).
+   *
+   * Markaz subdomendan aniqlanadi, shuning uchun host sharti yo'q:
+   * `markaz.oneroom.uz/target` har qanday markaz uchun ishlaydi.
+   */
+  if (pathname === "/target") return NextResponse.next();
+
+  /**
    * BFF proxy — `/api/*` HECH QACHON sahifaga yo'naltirilmaydi.
    *
    * DIQQAT, bu jiddiy xato edi: quyidagi subdomen shoxobchasi `/api/*` ni ham
