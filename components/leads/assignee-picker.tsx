@@ -9,13 +9,15 @@ import { cn } from "@/lib/utils";
 /**
  * LID MAS'ULI — kartochkadan biriktirish.
  *
- * Ikki xil odam, ikki xil imkoniyat:
+ * FAQAT `leads.assign` bor xodim (ROP, administrator) o'zgartiradi:
+ * xohlagan xodimga beradi, qaytarib oladi, biriktirishni bekor
+ * qiladi.
  *
- *  • BOSHLIQ (`leads.assign`) — xohlagan xodimga beradi, qaytarib
- *    oladi, savatga qaytaradi.
- *  • SOTUVCHI — faqat BIRIKTIRILMAGAN lidni O'ZIGA ola oladi. Bu
- *    "umumiy savat" qoidasining ko'rinadigan qismi: savatdagi lidni
- *    ko'rib turib ola olmasa, qoidaning ma'nosi qolmasdi.
+ * ILGARI SOTUVCHI HAM biriktirilmagan lidni O'ZIGA ola olardi —
+ * "umumiy savat" qoidasining ko'rinadigan qismi edi. Savat
+ * 2026-09-21 da bekor qilindi (egasining qarori): sotuvchi endi
+ * biriktirilmagan lidni KO'RMAYDI ham, demak "o'zimga olish"
+ * tugmasi hech qachon ishlamas edi.
  *
  * Ruxsat baribir serverda tekshiriladi (`canAssign`); bu yerdagi
  * tekshiruv faqat ishlamaydigan tugmani ko'rsatmaslik uchun.
@@ -33,10 +35,12 @@ export function AssigneePicker({
   const [saqlanmoqda, setSaqlanmoqda] = useState(false);
 
   const taqsimlay = hasPerm(me?.permissions, "leads.assign");
-  const savatda   = !current?.id;
-  // Sotuvchi uchun yagona amal — savatdagini o'ziga olish.
-  const korsat = taqsimlay || savatda;
-  if (!korsat && !current?.name) return null;
+  /** Hali hech kimga biriktirilmagan. */
+  const biriktirilmagan = !current?.id;
+
+  // Biriktira olmaydigan xodimga tanlov ko'rsatilmaydi — faqat
+  // mas'ul nomi (agar bor bo'lsa) o'qiladigan matn sifatida qoladi.
+  if (!taqsimlay && !current?.name) return null;
 
   async function biriktir(userId: string | null) {
     setSaqlanmoqda(true);
@@ -52,7 +56,7 @@ export function AssigneePicker({
     }
   }
 
-  if (!korsat) {
+  if (!taqsimlay) {
     return (
       <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-2 truncate">
         👤 {current?.name}
@@ -66,11 +70,11 @@ export function AssigneePicker({
         onClick={(e) => { e.stopPropagation(); setOchiq(v => !v); }}
         className={cn(
           "w-full flex items-center gap-1 text-[10px] rounded-md px-1.5 py-1 transition-colors",
-          savatda
+          biriktirilmagan
             ? "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-950/50"
             : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/10",
         )}>
-        {savatda
+        {biriktirilmagan
           ? <><UserPlus className="w-3 h-3 shrink-0" /> Biriktirilmagan</>
           : <><span className="shrink-0">👤</span> <span className="truncate">{current?.name}</span></>}
       </button>
@@ -88,21 +92,13 @@ export function AssigneePicker({
               </div>
             )}
 
-            {!saqlanmoqda && !taqsimlay && (
-              <button type="button" onClick={() => biriktir(me?.id ?? null)}
-                className="w-full text-left px-2.5 py-1.5 text-[11px] font-medium
-                  text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40">
-                O&apos;zimga olish
-              </button>
-            )}
-
             {!saqlanmoqda && taqsimlay && (
               <>
                 <button type="button" onClick={() => biriktir(null)}
                   className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px]
                     text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10">
                   Biriktirilmagan
-                  {savatda && <Check className="w-3 h-3 text-indigo-600" />}
+                  {biriktirilmagan && <Check className="w-3 h-3 text-indigo-600" />}
                 </button>
                 {(xodimlar ?? []).map(x => (
                   <button key={x.id} type="button" onClick={() => biriktir(x.id)}
