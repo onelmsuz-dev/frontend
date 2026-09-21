@@ -222,15 +222,6 @@ export const plans = [
   },
 ];
 
-export const navLinks = [
-  { label: "Imkoniyatlar", href: "#features" },
-  { label: "Yechimlar", href: "#solutions" },
-  { label: "Qanday ishlaydi", href: "#how-it-works" },
-  { label: "Narxlar", href: "#pricing" },
-  { label: "Blog", href: "/blog" },
-  { label: "Bog'lanish", href: "#contact" },
-];
-
 export const hero = {
   titleLine1: "Kamroq ish.",
   titleLine2: "Ko‘proq",

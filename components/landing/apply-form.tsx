@@ -2,6 +2,9 @@
 
 import { useId } from "react";
 import { AlertCircle, Building2, Check, Loader2, MessageCircle, MessageSquareText, Send, Sparkles, User } from "lucide-react";
+import { useLocale } from "@/lib/i18n/use-locale";
+import { getUi } from "@/lib/i18n/ui";
+import { Flag } from "./flags";
 import { useLeadForm, type ContactTopic } from "./use-lead-form";
 import styles from "./apply-dialog.module.css";
 
@@ -17,12 +20,8 @@ import styles from "./apply-dialog.module.css";
  * Sahifa ichidagi blokda o'zgaruvchilar yo'q — `var(--f-box, 3rem)` dagi oddiy qiymat ishlaydi.
  */
 
-const TOPICS: { value: ContactTopic; label: string }[] = [
-  { value: "demo", label: "Demo" },
-  { value: "narx", label: "Narxlar" },
-  { value: "kochirish", label: "Ko'chirish" },
-  { value: "boshqa", label: "Boshqa" },
-];
+// Yorliqlari tilga qarab `lib/i18n/ui.ts` da (`apply.topics`); qiymatlar backend `CONTACT_TOPICS` bilan bir xil.
+const TOPIC_VALUES: Extract<ContactTopic, "demo" | "narx" | "kochirish" | "boshqa">[] = ["demo", "narx", "kochirish", "boshqa"];
 
 /** Maydon qutisi: yumshoq to'ldirilgan fon + ingichka ichki ramka; fokusda oq fon va ko'k ramka. */
 const BOX_BASE = "group relative flex h-[var(--f-box,3rem)] items-center gap-2 rounded-[0.9rem] bg-slate-50/90 ring-1 ring-inset transition-[background-color,box-shadow] duration-200 focus-within:bg-white focus-within:ring-2";
@@ -70,7 +69,7 @@ function Field({
  * `compact` — "Nima qiziqtiradi?" va izohni yashiradi (ular sukut bo'yicha yuboriladi).
  */
 export function ApplyPanel({
-  source, variant, heading = "Ariza qoldiring", compact = false, ctaLabel = "Ariza yuborish",
+  source, variant, heading, compact = false, ctaLabel,
 }: {
   source: string;
   variant: "modal" | "inline";
@@ -79,20 +78,19 @@ export function ApplyPanel({
   /** Yuborish tugmasidagi matn (klaster sahifalarda sahifaga xos: "Bepul sinab ko'rish"). */
   ctaLabel?: string;
 }) {
+  const locale = useLocale();
+  const tx = getUi(locale).apply;
   const {
     name, setName, digits, center, setCenter, note, setNote, topic, setTopic, trap, setTrap, phoneDisplay,
     status, error, nameOk, phoneOk, centerOk, showNameErr, showPhoneErr, showCenterErr,
     nameRef, phoneRef, centerRef, successRef, onPhoneChange, onPhoneKeyDown, submit, reset,
-  } = useLeadForm({ source, askCenter: true });
+  } = useLeadForm({ source, askCenter: true, locale });
   const uid = useId();
   const modal = variant === "modal";
   const sending = status === "sending";
 
-  const steps = [
-    { t: "Ariza yuborildi", state: "done" },
-    { t: "Biz sizga qo'ng'iroq qilamiz", state: "now" },
-    { t: "Bepul sinov boshlanadi", state: "next" },
-  ];
+  const states = ["done", "now", "next"] as const;
+  const steps = tx.steps.map((t, i) => ({ t, state: states[i] }));
 
   if (status === "sent") {
     return (
@@ -101,7 +99,7 @@ export function ApplyPanel({
           <circle cx="32" cy="32" r="28" className={`${styles.checkRing} stroke-emerald-500`} strokeWidth="3.5" strokeLinecap="round" transform="rotate(-90 32 32)" />
           <path d="M21 33l8 8 15-17" className={`${styles.checkMark} stroke-emerald-600`} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <h2 className="mt-5 text-2xl font-bold tracking-[-0.03em] text-slate-900">Rahmat! Arizangiz qabul qilindi</h2>
+        <h2 className="mt-5 text-2xl font-bold tracking-[-0.03em] text-slate-900">{tx.successTitle}</h2>
 
         <ol className="mx-auto mt-7 w-full max-w-xs space-y-3 text-left">
           {steps.map((step) => (
@@ -126,7 +124,7 @@ export function ApplyPanel({
             className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-[15px] font-bold text-white transition-colors hover:bg-blue-700"
           >
             <MessageCircle className="h-4 w-4" aria-hidden />
-            Telegramda yozish
+            {tx.telegramWrite}
           </a>
           {!modal && (
             <button
@@ -134,7 +132,7 @@ export function ApplyPanel({
               onClick={reset}
               className="inline-flex h-12 items-center justify-center rounded-xl px-5 text-[15px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
             >
-              Yana ariza yuborish
+              {tx.again}
             </button>
           )}
         </div>
@@ -149,15 +147,15 @@ export function ApplyPanel({
       {modal ? (
         <div className="pr-12">
           <p className="mb-3 inline-flex items-center gap-1.5 md:[@media(max-height:720px)]:mb-1.5 md:[@media(max-height:640px)]:hidden rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-blue-700 ring-1 ring-blue-100 md:text-[11px]">
-            <Sparkles className="h-3 w-3" aria-hidden /> 7 kun bepul
+            <Sparkles className="h-3 w-3" aria-hidden /> {tx.modalPill}
           </p>
-          <h2 className={titleClass}>{heading}</h2>
+          <h2 className={titleClass}>{heading ?? tx.defaultHeading}</h2>
           <p className="mt-2 max-w-sm text-sm font-medium leading-relaxed text-slate-500 md:text-[15px] md:[@media(max-height:720px)]:hidden [@media(max-height:600px)]:hidden">
-            Ma&apos;lumotlaringizni qoldiring — tez orada bog&apos;lanamiz.
+            {tx.modalSubtitle}
           </p>
         </div>
       ) : (
-        <h3 className={titleClass}>{heading}</h3>
+        <h3 className={titleClass}>{heading ?? tx.defaultHeading}</h3>
       )}
       <form onSubmit={submit} noValidate className="mt-[var(--m-head-gap,1.25rem)] flex flex-col gap-[var(--f-gap,1rem)]">
         {/* Honeypot: odamga ko'rinmaydi, botlar to'ldiradi */}
@@ -168,31 +166,31 @@ export function ApplyPanel({
 
         {/* Nima qiziqtiradi? — ixtiyoriy; Telegramda "Maqsad" qatori bo'lib boradi */}
         <fieldset className={compact ? "hidden" : modal ? "max-md:hidden" : undefined}>
-          <legend className="mb-1.5 text-[13px] font-semibold text-slate-700">Nima qiziqtiradi?</legend>
-          <div role="radiogroup" aria-label="Nima qiziqtiradi?" className="flex flex-wrap gap-1.5">
-            {TOPICS.map((t) => {
-              const active = topic === t.value;
+          <legend className="mb-1.5 text-[13px] font-semibold text-slate-700">{tx.topicsLegend}</legend>
+          <div role="radiogroup" aria-label={tx.topicsLegend} className="flex flex-wrap gap-1.5">
+            {TOPIC_VALUES.map((value) => {
+              const active = topic === value;
               return (
                 <button
-                  key={t.value}
+                  key={value}
                   type="button"
                   role="radio"
                   aria-checked={active}
-                  onClick={() => setTopic(t.value)}
+                  onClick={() => setTopic(value)}
                   className={`h-[var(--f-chip,2.25rem)] rounded-full px-3.5 text-[13px] font-semibold transition-all duration-150 ${
                     active
                       ? "bg-blue-600 text-white shadow-sm shadow-blue-600/25"
                       : "bg-slate-50 text-slate-700 ring-1 ring-inset ring-slate-200 hover:ring-slate-300"
                   }`}
                 >
-                  {t.label}
+                  {tx.topics[value]}
                 </button>
               );
             })}
           </div>
         </fieldset>
 
-        <Field id={`${uid}-name`} label="Ismingiz" icon={<User className="h-[18px] w-[18px]" />} ok={nameOk} showOk={name.length > 0} error={showNameErr ? "Ismingizni kiriting" : undefined}>
+        <Field id={`${uid}-name`} label={tx.nameLabel} icon={<User className="h-[18px] w-[18px]" />} ok={nameOk} showOk={name.length > 0} error={showNameErr ? tx.nameError : undefined}>
           <input
             ref={nameRef}
             id={`${uid}-name`}
@@ -206,12 +204,12 @@ export function ApplyPanel({
             disabled={sending}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Alisher Karimov"
+            placeholder={tx.namePlaceholder}
             className={INPUT}
           />
         </Field>
 
-        <Field id={`${uid}-phone`} label="Telefon raqamingiz" icon={<span className="text-base">🇺🇿</span>} ok={phoneOk} showOk={digits.length > 0} error={showPhoneErr ? "9 ta raqam kiriting" : undefined}>
+        <Field id={`${uid}-phone`} label={tx.phoneLabel} icon={<Flag locale="uz" />} ok={phoneOk} showOk={digits.length > 0} error={showPhoneErr ? tx.phoneError : undefined}>
           <span className="shrink-0 text-base font-semibold text-slate-700">+998</span>
           <span className="mx-1 h-5 w-px shrink-0 bg-slate-300" aria-hidden />
           <input
@@ -233,7 +231,7 @@ export function ApplyPanel({
           />
         </Field>
 
-        <Field id={`${uid}-center`} label="O'quv markaz nomi" icon={<Building2 className="h-[18px] w-[18px]" />} ok={centerOk} showOk={center.length > 0} error={showCenterErr ? "Markaz nomini kiriting" : undefined}>
+        <Field id={`${uid}-center`} label={tx.centerLabel} icon={<Building2 className="h-[18px] w-[18px]" />} ok={centerOk} showOk={center.length > 0} error={showCenterErr ? tx.centerError : undefined}>
           <input
             ref={centerRef}
             id={`${uid}-center`}
@@ -247,7 +245,7 @@ export function ApplyPanel({
             disabled={sending}
             value={center}
             onChange={(e) => setCenter(e.target.value)}
-            placeholder="Masalan: Bilim Plus"
+            placeholder={tx.centerPlaceholder}
             className={INPUT}
           />
         </Field>
@@ -255,7 +253,7 @@ export function ApplyPanel({
         {/* Izoh — doim ochiq (ixtiyoriy). Ikonka boshqa maydonlar bilan bir xil ustunda, matn ham shu chiziqdan boshlanadi. */}
         <div className={compact ? "hidden" : modal ? "max-md:hidden" : undefined}>
           <label htmlFor={`${uid}-note`} className="mb-1.5 block text-[13px] font-semibold text-slate-700">
-            Izoh <span className="font-normal text-slate-500">— ixtiyoriy</span>
+            {tx.noteLabel} <span className="font-normal text-slate-500">{tx.optional}</span>
           </label>
           <div className="relative">
             <textarea
@@ -265,7 +263,7 @@ export function ApplyPanel({
               disabled={sending}
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Savolingiz yoki qo'shimcha ma'lumot"
+              placeholder={tx.notePlaceholder}
               className={`peer block w-full resize-none rounded-[0.9rem] bg-slate-50/90 py-3 pl-12 pr-3.5 text-base leading-snug text-slate-900 outline-none ring-1 ring-inset ring-slate-200 transition-all duration-150 placeholder:text-slate-500 hover:ring-slate-300 focus:bg-white focus:shadow-[0_0_0_4px_rgb(37_99_235/0.10)] focus:ring-2 focus:ring-blue-600 h-[var(--f-note,4.25rem)]`}
             />
             <span className={`${ICON} pointer-events-none absolute left-0 top-2 peer-focus:text-blue-600`} aria-hidden>
@@ -289,14 +287,14 @@ export function ApplyPanel({
           className="group inline-flex h-[var(--f-cta,3.25rem)] w-full items-center justify-center gap-2.5 rounded-[0.9rem] bg-gradient-to-b from-blue-500 to-blue-600 text-[15px] font-bold text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,0.75),inset_0_1px_0_rgba(255,255,255,0.25)] transition-[box-shadow,filter] hover:brightness-[1.03] hover:shadow-[0_14px_28px_-10px_rgba(37,99,235,0.8)] disabled:cursor-wait disabled:opacity-80"
         >
           {sending ? (
-            <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Yuborilmoqda…</>
+            <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {tx.sending}</>
           ) : (
-            <>{ctaLabel} <Send className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden /></>
+            <>{ctaLabel ?? tx.submit} <Send className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden /></>
           )}
         </button>
 
         <p className="text-center text-[11px] leading-relaxed text-slate-500 sm:text-xs">
-          Yuborish orqali bog&apos;lanishga rozilik bildirasiz.
+          {tx.consent}
         </p>
       </form>
     </>

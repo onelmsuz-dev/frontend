@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Target, GraduationCap, Layers, Wallet, ClipboardCheck, BarChart3 } from "lucide-react";
 import { ClusterPage, type ClusterPageContent } from "@/components/landing/cluster-page";
 import { SITE_URL, ORG_ID } from "@/lib/seo/site";
+import { alternatesFor } from "@/lib/i18n/config";
 
 const PATH = "/oquv-markaz-crm";
 const TITLE = "O'quv Markazi uchun CRM — To'liq Boshqaruv Tizimi | OneRoom";
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
     "o'quv markaz CRM narxi",
     "o'quv markaz uchun eng yaxshi CRM",
   ],
-  alternates: { canonical: `${SITE_URL}${PATH}` },
+  alternates: alternatesFor(PATH),
   openGraph: {
     type: "website",
     locale: "uz_UZ",

@@ -11,10 +11,11 @@ import { PricingPlans } from "./pricing-plans";
 import { Reveal } from "./reveal";
 import { HomeKeyframes } from "./ui";
 import { HomeFaqAccordion } from "./home-faq-accordion";
-import {
-  CLUSTER_PAGES, CONTACT_PHONE, CONTACT_PHONE_DISPLAY, contactCopy, faqCopy, faqItems,
-  firstCopy, links, pillars, solutionsCopy,
-} from "./content";
+import { CONTACT_PHONE, CONTACT_PHONE_DISPLAY, links } from "./content";
+import { getHomeContent, type HomeContent } from "./content-i18n";
+import { DEFAULT_LOCALE, localizePath, type Locale } from "@/lib/i18n/config";
+import { getClusterMeta } from "@/lib/i18n/cluster-meta";
+import { getUi, type Ui } from "@/lib/i18n/ui";
 import { CONTAINER, DISPLAY, EYEBROW, EYEBROW_DARK, H2, LEAD } from "./style";
 
 /**
@@ -30,9 +31,9 @@ import { CONTAINER, DISPLAY, EYEBROW, EYEBROW_DARK, H2, LEAD } from "./style";
  */
 
 /* ────────────────────────── Afzalliklar ────────────────────────── */
-function Pillars() {
+function Pillars({ pillars, aria }: { pillars: HomeContent["pillars"]; aria: string }) {
   return (
-    <section className="bg-white px-5 pb-16 pt-10 sm:pb-20 sm:pt-16" aria-label="OneRoom afzalliklari">
+    <section className="bg-white px-5 pb-16 pt-10 sm:pb-20 sm:pt-16" aria-label={aria}>
       <div className={`${CONTAINER} grid gap-3 sm:grid-cols-2 lg:grid-cols-4`}>
         {pillars.map((p, i) => (
           <Reveal
@@ -71,7 +72,8 @@ const SOLUTION_ART = [
   "/landing/solutions/automation-transparent.png",
 ] as const;
 
-function Solutions() {
+function Solutions({ copy: solutionsCopy, locale, ui }: { copy: HomeContent["solutionsCopy"]; locale: Locale; ui: Ui }) {
+  const clusters = getClusterMeta(locale);
   return (
     <section id="solutions" className="scroll-mt-20 bg-slate-50 px-5 py-24 sm:py-32" aria-labelledby="solutions-heading">
       <div className={CONTAINER}>
@@ -81,15 +83,15 @@ function Solutions() {
           <p className={`mx-auto mt-5 max-w-2xl ${LEAD}`}>{solutionsCopy.lead}</p>
         </Reveal>
         <div className="mt-14 grid gap-3 sm:mt-16 sm:grid-cols-2">
-          {CLUSTER_PAGES.map((p, index) => (
+          {clusters.map((p, index) => (
             <Link
               key={p.href}
-              href={p.href}
+              href={localizePath(p.href, locale)}
               className="group relative isolate flex min-h-[19rem] flex-col overflow-hidden rounded-3xl border border-blue-100/80 bg-blue-50/70 p-6 shadow-[0_1px_0_rgba(15,23,42,0.03)] transition-[background-color,border-color,box-shadow] duration-300 hover:border-blue-200 hover:bg-white hover:shadow-[0_18px_45px_-32px_rgba(37,99,235,0.35)] sm:block sm:min-h-[15rem] sm:p-7"
             >
               <span className="relative z-10 block sm:max-w-[17rem]">
                 <span className="mb-3 block text-[10px] font-extrabold uppercase tracking-[0.16em] text-blue-600">
-                  Yechim {String(index + 1).padStart(2, "0")}
+                  {ui.home.solutionLabel} {String(index + 1).padStart(2, "0")}
                 </span>
                 <span className="block text-[1.35rem] font-extrabold leading-[1.2] tracking-[-0.035em] text-slate-950 sm:text-[1.45rem]">{p.navLabel}</span>
                 <span className="mt-2.5 block text-[14px] font-semibold leading-[1.55] tracking-[-0.01em] text-slate-600 sm:text-[15px]">{p.blurb}</span>
@@ -116,22 +118,22 @@ function Solutions() {
 }
 
 /* ────────────────────────── Birinchi bo'ling / FAQ / Ariza ────────────────────────── */
-function First() {
+function First({ copy: firstCopy, ui }: { copy: HomeContent["firstCopy"]; ui: Ui }) {
   return (
     <section className="bg-white px-4 py-16 sm:px-5 sm:py-24" aria-labelledby="first-heading">
       <Reveal className={`${CONTAINER} relative overflow-hidden rounded-[2rem] bg-blue-600 px-6 py-8 text-white shadow-[0_30px_80px_-45px_rgba(37,99,235,0.75)] sm:rounded-[2.5rem] sm:px-10 sm:py-11 lg:flex lg:items-center lg:justify-between lg:gap-12 lg:px-14`}>
         <span aria-hidden className="pointer-events-none absolute -right-20 -top-28 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
         <div className="relative max-w-2xl">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-100 sm:text-xs">7 kun bepul</p>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-blue-100 sm:text-xs">{ui.home.firstEyebrow}</p>
           <h2 id="first-heading" className={`mt-3 text-[2rem] leading-[1.08] sm:text-5xl ${DISPLAY}`}>{firstCopy.title}</h2>
           <p className="mt-4 max-w-xl text-[15px] font-medium leading-relaxed text-blue-50/90 sm:text-lg">{firstCopy.body}</p>
         </div>
         <div className="relative mt-7 grid w-full gap-3 sm:w-auto sm:grid-cols-2 lg:mt-0 lg:shrink-0 lg:grid-cols-1 xl:grid-cols-2">
           <ApplyButton where="Bepul sinov CTA" className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-white px-6 py-3 text-[15px] font-bold text-blue-700 shadow-[0_10px_25px_-12px_rgba(15,23,42,0.45)] transition-colors hover:bg-blue-50 sm:w-auto">
-            Ariza qoldirish
+            {ui.home.apply}
           </ApplyButton>
           <a href={links.telegram} target="_blank" rel="noopener noreferrer" className="group inline-flex min-h-12 w-full items-center justify-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-[15px] font-bold text-white transition-colors hover:bg-white/15 sm:w-auto">
-            Telegramda yozish <ChevronRight className="h-4 w-4" aria-hidden />
+            {ui.home.firstTelegram} <ChevronRight className="h-4 w-4" aria-hidden />
           </a>
         </div>
       </Reveal>
@@ -139,7 +141,7 @@ function First() {
   );
 }
 
-function Faq() {
+function Faq({ copy: faqCopy, items }: { copy: HomeContent["faqCopy"]; items: HomeContent["faqItems"] }) {
   return (
     <section id="faq" className="scroll-mt-20 bg-white px-5 pb-24 pt-5 sm:pb-32 sm:pt-8" aria-labelledby="faq-heading">
       <div className="mx-auto max-w-[860px]">
@@ -148,13 +150,13 @@ function Faq() {
           <h2 id="faq-heading" className={`mt-4 ${H2}`}>{faqCopy.title}</h2>
           <p className={`mx-auto mt-5 max-w-xl ${LEAD}`}>{faqCopy.lead}</p>
         </Reveal>
-        <div className="mt-10 sm:mt-14"><HomeFaqAccordion items={faqItems} /></div>
+        <div className="mt-10 sm:mt-14"><HomeFaqAccordion items={items} /></div>
       </div>
     </section>
   );
 }
 
-function Contact() {
+function Contact({ copy: contactCopy, ui }: { copy: HomeContent["contactCopy"]; ui: Ui }) {
   return (
     <section id="contact" className="scroll-mt-20 bg-white px-4 pb-20 sm:px-5 sm:pb-28" aria-labelledby="contact-heading">
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-7 overflow-hidden rounded-[1.75rem] bg-slate-950 p-5 text-white sm:gap-10 sm:rounded-[2.5rem] sm:p-10 lg:grid-cols-2 lg:gap-16 lg:p-14">
@@ -168,59 +170,66 @@ function Contact() {
           </div>
         </div>
         <div className="min-w-0 rounded-[1.4rem] bg-white p-4 text-slate-900 sm:rounded-3xl sm:p-7">
-          <ApplyInline source="Bosh sahifa › Ariza bo'limi" heading="Ma'lumotlaringiz" compact />
+          <ApplyInline source="Bosh sahifa › Ariza bo'limi" heading={ui.home.contactFormHeading} compact />
         </div>
       </div>
     </section>
   );
 }
 
-function Footer() {
+function Footer({ locale, ui }: { locale: Locale; ui: Ui }) {
+  const clusters = getClusterMeta(locale);
   return (
-    <footer className="border-t border-slate-200 bg-slate-50 px-5 py-14 text-sm text-slate-600" aria-label="Sayt altbilgisi">
+    <footer className="border-t border-slate-200 bg-slate-50 px-5 py-14 text-sm text-slate-600" aria-label={ui.footer.aria}>
       <div className={`${CONTAINER} grid gap-10 lg:grid-cols-[1.2fr_2fr_1fr]`}>
         <div>
           <p className="text-base font-bold tracking-[-0.03em] text-slate-900">OneRoom</p>
-          <p className="mt-2 max-w-xs leading-relaxed">O&apos;quv markazlar uchun zamonaviy LMS va CRM tizimi. O&apos;zbekistonda ishlab chiqilgan.</p>
+          <p className="mt-2 max-w-xs leading-relaxed">{ui.footer.tagline}</p>
         </div>
         <div>
-          <p className="font-bold text-slate-900">Yechimlar</p>
+          <p className="font-bold text-slate-900">{ui.footer.solutions}</p>
           <ul className="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-2">
-            {CLUSTER_PAGES.map((p) => <li key={p.href}><Link href={p.href} className="hover:text-slate-900">{p.navLabel}</Link></li>)}
+            {clusters.map((p) => <li key={p.href}><Link href={localizePath(p.href, locale)} className="hover:text-slate-900">{p.navLabel}</Link></li>)}
           </ul>
         </div>
         <div>
-          <p className="font-bold text-slate-900">Aloqa</p>
+          <p className="font-bold text-slate-900">{ui.footer.contact}</p>
           <ul className="mt-3 space-y-2">
             <li><a href={`tel:${CONTACT_PHONE}`} className="hover:text-slate-900">{CONTACT_PHONE_DISPLAY}</a></li>
             <li><a href={links.telegram} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900">{links.telegramHandle}</a></li>
             <li><a href={`mailto:${links.email}`} className="hover:text-slate-900">{links.email}</a></li>
-            <li><Link href="/login" className="hover:text-slate-900">Kirish</Link></li>
+            <li><Link href="/login" className="hover:text-slate-900">{ui.footer.login}</Link></li>
           </ul>
         </div>
       </div>
-      <p className={`${CONTAINER} mt-10 border-t border-slate-200 pt-5 text-xs`}>© {new Date().getFullYear()} OneRoom. Barcha huquqlar himoyalangan.</p>
+      <p className={`${CONTAINER} mt-10 border-t border-slate-200 pt-5 text-xs`}>© {new Date().getFullYear()} OneRoom. {ui.footer.rights}</p>
     </footer>
   );
 }
 
-export function HomeLanding() {
+export function HomeLanding({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
+  const c = getHomeContent(locale);
+  const ui = getUi(locale);
   return (
     <div data-landing-light="white" className="min-h-screen overflow-x-hidden bg-white text-slate-900 antialiased">
       <HomeKeyframes />
       <HomeHeader />
       <main id="main-content">
-        <Hero />
-        <Pillars />
-        <FeaturesTabs />
-        <Solutions />
-        <HowSteps />
-        <PricingPlans />
-        <First />
-        <Faq />
-        <Contact />
+        <Hero content={c.hero} labels={{ features: ui.home.heroFeatures, apply: ui.home.apply }} lang={locale} />
+        <Pillars pillars={c.pillars} aria={ui.home.pillarsAria} />
+        {/* Ikonka (funksiya) brauzer komponentiga prop bo'la olmaydi — faqat matn va ranglar uzatiladi. */}
+        <FeaturesTabs
+          items={c.features.map(({ title, description, color, bg, border }) => ({ title, description, color, bg, border }))}
+          copy={c.featuresCopy}
+        />
+        <Solutions copy={c.solutionsCopy} locale={locale} ui={ui} />
+        <HowSteps howCopy={c.howCopy} steps={c.steps} />
+        <PricingPlans pricingCopy={c.pricingCopy} plans={c.plans} />
+        <First copy={c.firstCopy} ui={ui} />
+        <Faq copy={c.faqCopy} items={c.faqItems} />
+        <Contact copy={c.contactCopy} ui={ui} />
       </main>
-      <Footer />
+      <Footer locale={locale} ui={ui} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import Script from "next/script";
 import { ClipboardCheck, Wallet, CalendarDays, BarChart3, Bot, Banknote } from "lucide-react";
 import { ClusterPage, type ClusterPageContent } from "@/components/landing/cluster-page";
 import { SITE_URL, ORG_ID } from "@/lib/seo/site";
+import { alternatesFor } from "@/lib/i18n/config";
 
 const PATH = "/oquv-markazini-avtomatlashtirish";
 const TITLE = "O'quv Markazini Avtomatlashtirish — Excel O'rniga Yagona Tizim | OneRoom";
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
     "Excel o'rniga CRM",
     "o'quv markaz CRM kerakmi",
   ],
-  alternates: { canonical: `${SITE_URL}${PATH}` },
+  alternates: alternatesFor(PATH),
   openGraph: {
     type: "website",
     locale: "uz_UZ",

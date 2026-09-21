@@ -29,6 +29,13 @@ console.log("Ochiq yo'llar:");
 for (const p of ["/", "/ads", "/target", "/blog", "/blog/birinchi-maqola", "/davomat/", "/robots.txt", "/sitemap.xml"])
   t(p, isPublicPath(p), true);
 
+console.log("Ruscha va inglizcha sayt (/ru, /en):");
+for (const p of ["/ru", "/en", "/ru/", "/ru/davomat", "/en/tolovlar", "/ru/blog", "/en/blog/oquv-markazi-crm-tanlash"]) t(p, isPublicPath(p), true);
+for (const c of CLUSTER_PAGES) {
+  t(`/ru${c.href}`, isPublicPath(`/ru${c.href}`), true);
+  t(`/en${c.href}`, isPublicPath(`/en${c.href}`), true);
+}
+
 console.log("Klaster sahifalar:");
 for (const c of CLUSTER_PAGES) t(c.href, isPublicPath(c.href), true);
 
@@ -40,7 +47,7 @@ for (const p of [
   t(p, isPublicPath(p), false);
 
 console.log("Prefiks ortiqcha ushlamasligi:");
-for (const p of ["/blogger", "/davomatx", "/targetx", "/adsx"]) t(p, isPublicPath(p), false);
+for (const p of ["/blogger", "/davomatx", "/targetx", "/adsx", "/rux", "/english", "/ru-dashboard", "/uz"]) t(p, isPublicPath(p), false);
 
 console.log("Yagona manba:");
 for (const f of ["proxy.ts", "components/auth/session-watcher.tsx"]) {

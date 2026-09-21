@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Percent, Banknote, Clock, Users } from "lucide-react";
 import { ClusterPage, type ClusterPageContent } from "@/components/landing/cluster-page";
 import { SITE_URL, ORG_ID } from "@/lib/seo/site";
+import { alternatesFor } from "@/lib/i18n/config";
 
 const PATH = "/oqituvchi-oyligi";
 const TITLE = "O'qituvchilar Oyligini Hisoblash Dasturi — 4 xil usul | OneRoom";
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     "o'qituvchi maoshi dasturi",
     "o'quv markazida o'qituvchilar oylikini hisoblash",
   ],
-  alternates: { canonical: `${SITE_URL}${PATH}` },
+  alternates: alternatesFor(PATH),
   openGraph: {
     type: "website",
     locale: "uz_UZ",

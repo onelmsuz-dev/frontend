@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Bot, Zap, FileText, ShieldCheck } from "lucide-react";
 import { ClusterPage, type ClusterPageContent } from "@/components/landing/cluster-page";
 import { SITE_URL, ORG_ID } from "@/lib/seo/site";
+import { alternatesFor } from "@/lib/i18n/config";
 
 const PATH = "/telegram-bot";
 const TITLE = "O'quv Markazi uchun Telegram Bot va SMS Xabarnoma | OneRoom";
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
     "to'lov haqida SMS",
     "ota-onaga davomat xabari",
   ],
-  alternates: { canonical: `${SITE_URL}${PATH}` },
+  alternates: alternatesFor(PATH),
   openGraph: {
     type: "website",
     locale: "uz_UZ",

@@ -467,3 +467,27 @@
     order: 2;
   }
 }
+
+/* Ruscha sarlavha uzunroq ("Больше образования." — 19 belgi; o'zbekcha "Ko'proq ta'lim." — 15), qatori
+   `nowrap` bo'lgani uchun shrift kamaytiriladi — aks holda mobilda o'ngdan kesilib qoladi. */
+.hero[data-lang="ru"] .editorialWithArt .headline {
+  font-size: clamp(46px,4.9vw,70px);
+}
+
+@media(max-width:1100px) and (min-width:701px) {
+  .hero[data-lang="ru"] .editorialWithArt .headline {
+    font-size: clamp(37px,4.8vw,53px);
+  }
+}
+
+@media(max-width:700px) {
+  .hero[data-lang="ru"] .editorialWithArt .headline {
+    font-size: clamp(30px,8.3vw,54px);
+  }
+}
+
+@media(max-width:360px) {
+  .hero[data-lang="ru"] .editorialWithArt .headline {
+    font-size: 27px;
+  }
+}

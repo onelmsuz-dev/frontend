@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { extractNationalDigits, toDisplayPhone, caretForDigits } from "@/lib/phone-format";
+import { getUi } from "@/lib/i18n/ui";
+import type { Locale } from "@/lib/i18n/config";
 
 /**
  * Ariza formasi mantig'i (holat, tekshiruv, telefon formati, yuborish) — ko'rinishsiz.
@@ -23,9 +25,12 @@ interface Options {
   topic?: ContactTopic;
   /** O'quv markaz nomini majburiy qiladi. */
   askCenter?: boolean;
+  /** Sahifa tili: xato matnlari shu tilda; o'zbekcha bo'lmasa Telegram xabariga "Til: RU" qatori qo'shiladi. */
+  locale?: Locale;
 }
 
-export function useLeadForm({ source, topic: initialTopic = "demo", askCenter = false }: Options) {
+export function useLeadForm({ source, topic: initialTopic = "demo", askCenter = false, locale = "uz" }: Options) {
+  const errors = getUi(locale).errors;
   const [name, setName] = useState("");
   const [digits, setDigits] = useState("");
   const [center, setCenter] = useState("");
@@ -94,6 +99,7 @@ export function useLeadForm({ source, topic: initialTopic = "demo", askCenter = 
     const message =
       (askCenter ? `Markaz: ${center.trim()}\n` : "") +
       `Sahifa: ${source}` +
+      (locale !== "uz" ? `\nTil: ${locale.toUpperCase()}` : "") +
       (note.trim() ? `\n\n${note.trim()}` : "");
 
     const controller = new AbortController();
@@ -115,8 +121,9 @@ export function useLeadForm({ source, topic: initialTopic = "demo", askCenter = 
       if (!res.ok) {
         setError(
           res.status === 429
-            ? "Juda ko'p urinish bo'ldi. Bir necha daqiqadan so'ng qayta urining yoki Telegram orqali yozing."
-            : (data.error ?? "Ariza yuborilmadi. Birozdan keyin urinib ko'ring."),
+            ? errors.tooMany
+            // Server xabari o'zbekcha: boshqa tilda umumiy (tarjima qilingan) matn ko'rsatiladi.
+            : (locale === "uz" ? data.error : undefined) ?? errors.generic,
         );
         setStatus("idle");
         return;
@@ -126,8 +133,8 @@ export function useLeadForm({ source, topic: initialTopic = "demo", askCenter = 
     } catch (err) {
       setError(
         err instanceof Error && err.name === "AbortError"
-          ? "So'rov juda uzoq davom etdi. Aloqani tekshirib, qayta urining."
-          : "Internetga ulanib bo'lmadi. Aloqani tekshirib, qayta urining.",
+          ? errors.timeout
+          : errors.offline,
       );
       setStatus("idle");
     } finally {

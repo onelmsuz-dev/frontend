@@ -10,7 +10,11 @@ import {
   CreditCard, Phone, Send, Sparkles, Users, UsersRound, Wallet,
 } from "lucide-react";
 import { ApplyButton } from "@/components/landing/apply-dialog";
-import { CLUSTER_PAGES, CONTACT_PHONE, CONTACT_PHONE_DISPLAY, navLinks } from "./content";
+import { LanguageSwitcher } from "@/components/landing/language-switcher";
+import { localeFromPathname, localizePath, stripLocale, type Locale } from "@/lib/i18n/config";
+import { getClusterMeta } from "@/lib/i18n/cluster-meta";
+import { getUi } from "@/lib/i18n/ui";
+import { CONTACT_PHONE, CONTACT_PHONE_DISPLAY } from "./content";
 
 /**
  * BOSH SAHIFA NAVBARI — sahifa bilan birga ketmaydigan, `fixed` suzuvchi "orol" (island).
@@ -46,6 +50,22 @@ const SOLUTION_ICONS: Record<string, LucideIcon> = {
 };
 const iconFor = (href: string): LucideIcon => SOLUTION_ICONS[href] ?? Sparkles;
 
+const NAV_CACHE: Partial<Record<Locale, { label: string; href: string }[]>> = {};
+/** Navbar havolalari (tilga qarab; har til uchun BIR marta yaratiladi — effektlar bog'liqligi barqaror bo'lsin). */
+function navLinksFor(locale: Locale) {
+  return (NAV_CACHE[locale] ??= (() => {
+    const nav = getUi(locale).nav;
+    return [
+      { label: nav.features, href: "#features" },
+      { label: nav.solutions, href: SOLUTIONS_HREF },
+      { label: nav.how, href: "#how-it-works" },
+      { label: nav.pricing, href: "#pricing" },
+      { label: nav.blog, href: "/blog" },
+      { label: nav.contact, href: "#contact" },
+    ];
+  })());
+}
+
 /** Sahifa ichidagi `#bo'lim` ga silliq o'tish (harakatni kamaytirish yoqilgan bo'lsa — sakrab). */
 function goTo(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
   if (!href.startsWith("#")) return;
@@ -58,9 +78,17 @@ function goTo(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
 }
 
 export function HomeHeader() {
-  const pathname = usePathname();
-  const isHome = pathname === "/";
-  const homeSectionHref = (href: string) => (href.startsWith("#") && !isHome ? `/${href}` : href);
+  const pathname = usePathname() ?? "/";
+  // Til manzildan olinadi (`/ru/...`, `/en/...`; aks holda o'zbekcha) — `lib/i18n/config.ts`.
+  const locale = localeFromPathname(pathname);
+  const ui = getUi(locale);
+  const basePath = stripLocale(pathname);
+  const isHome = basePath === "/";
+  // `#bo'lim` — bosh sahifada joyida, boshqa sahifada o'sha tildagi bosh sahifaga; oddiy manzil — tilga moslanadi.
+  const homeSectionHref = (href: string) =>
+    href.startsWith("#") ? (isHome ? href : `${localizePath("/", locale)}${href}`) : localizePath(href, locale);
+  const navLinks = navLinksFor(locale);
+  const clusters = getClusterMeta(locale);
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -79,7 +107,7 @@ export function HomeHeader() {
   const openedByHover = useRef(false);
 
   // Highlight qaysi havola ustida turadi: hover → ochiq panel (Yechimlar) → faol bo'lim.
-  const currentPage = pathname === "/blog" || pathname.startsWith("/blog/") ? "/blog" : null;
+  const currentPage = basePath === "/blog" || basePath.startsWith("/blog/") ? "/blog" : null;
   const target = hoverKey ?? (panelOpen ? SOLUTIONS_HREF : currentPage ?? active);
 
   /* ── Skroll: ixchamlashish, progress, skroll-spy ── */
@@ -116,7 +144,7 @@ export function HomeHeader() {
       window.removeEventListener("resize", onScroll);
       if (raf) cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [navLinks]);
 
   /* ── Highlight'ni havola ustiga qo'yish (o'lchov DOM'dan, state'siz — qayta render yo'q) ── */
   const placeHighlight = useCallback(() => {
@@ -203,7 +231,7 @@ export function HomeHeader() {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-blue-600 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
       >
-        Asosiy kontentga o&apos;tish
+        {ui.header.skip}
       </a>
 
       {/* Navbar `fixed` (oqimdan chiqqan) — uning o'rnini shu bo'sh joy saqlaydi. */}
@@ -240,7 +268,7 @@ export function HomeHeader() {
             <Link
               href={homeSectionHref("#hero")}
               onClick={(event) => isHome && goTo(event, "#hero")}
-              aria-label="OneRoom bosh sahifa"
+              aria-label={ui.header.homeAria}
               className="flex shrink-0 items-center gap-2.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-4"
             >
               <Image
@@ -258,7 +286,7 @@ export function HomeHeader() {
 
             {/* Desktop navigatsiya */}
             <nav
-              aria-label="Asosiy menyu"
+              aria-label={ui.header.mainMenu}
               onPointerLeave={() => setHoverKey(null)}
               className="relative hidden items-center lg:flex"
             >
@@ -347,6 +375,7 @@ export function HomeHeader() {
 
             {/* O'ng tomon: telefon, kirish, CTA, burger */}
             <div className="flex items-center gap-1 sm:gap-1.5">
+              <LanguageSwitcher />
               <a
                 href={`tel:${CONTACT_PHONE}`}
                 className="hidden h-9 items-center gap-2 whitespace-nowrap rounded-full pl-1.5 pr-3 text-[13px] font-bold text-slate-800 outline-none transition-colors hover:bg-slate-900/[0.05] focus-visible:ring-2 focus-visible:ring-blue-500 xl:inline-flex"
@@ -358,7 +387,7 @@ export function HomeHeader() {
               </a>
               <a
                 href={`tel:${CONTACT_PHONE}`}
-                aria-label={`Qo'ng'iroq qilish: ${CONTACT_PHONE_DISPLAY}`}
+                aria-label={`${ui.header.call}: ${CONTACT_PHONE_DISPLAY}`}
                 className="hidden h-9 w-9 items-center justify-center rounded-full text-blue-600 outline-none transition-colors hover:bg-slate-900/[0.05] focus-visible:ring-2 focus-visible:ring-blue-500 sm:flex xl:hidden"
               >
                 <Phone className="h-4 w-4" aria-hidden />
@@ -368,7 +397,7 @@ export function HomeHeader() {
                   aria-hidden
                   className="pointer-events-none absolute inset-y-0 -left-full w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover:translate-x-[400%] motion-reduce:hidden"
                 />
-                <span className="relative">Ariza qoldirish</span>
+                <span className="relative">{ui.header.cta}</span>
                 <span className="relative flex h-5 w-5 items-center justify-center rounded-full bg-white/20">
                   <ArrowUpRight
                     className="h-3 w-3 transition-transform duration-200 group-hover:-translate-y-px group-hover:translate-x-px"
@@ -383,7 +412,7 @@ export function HomeHeader() {
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-expanded={menuOpen}
                 aria-controls="home-mobile-menu"
-                aria-label={menuOpen ? "Menyuni yopish" : "Menyuni ochish"}
+                aria-label={menuOpen ? ui.header.menuClose : ui.header.menuOpen}
                 className="flex h-10 w-10 items-center justify-center rounded-full text-slate-800 outline-none transition-colors hover:bg-slate-900/[0.06] focus-visible:ring-2 focus-visible:ring-blue-500 lg:hidden"
               >
                 <span aria-hidden className="relative block h-4 w-[18px]">
@@ -427,12 +456,12 @@ export function HomeHeader() {
           >
             <div className="mx-auto w-full max-w-[780px] rounded-[28px] bg-white/90 p-2.5 shadow-[0_28px_70px_-24px_rgba(15,23,42,0.4)] ring-1 ring-slate-900/[0.06] backdrop-blur-2xl backdrop-saturate-150">
               <div className="grid gap-x-1 gap-y-0.5 sm:grid-cols-2">
-                {CLUSTER_PAGES.map((p) => {
+                {clusters.map((p) => {
                   const Icon = iconFor(p.href);
                   return (
                     <Link
                       key={p.href}
-                      href={p.href}
+                      href={localizePath(p.href, locale)}
                       onClick={() => setPanelOpen(false)}
                       className="group/item flex items-start gap-3 rounded-2xl p-3 outline-none transition-colors hover:bg-blue-50/70 focus-visible:bg-blue-50/70 focus-visible:ring-2 focus-visible:ring-blue-500"
                     >
@@ -465,7 +494,7 @@ export function HomeHeader() {
                   }}
                   className="group/all inline-flex shrink-0 items-center gap-1 rounded-full text-xs font-semibold text-blue-600 outline-none hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500"
                 >
-                  Barcha yechimlar
+                  {ui.header.allSolutions}
                   <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover/all:translate-x-0.5" aria-hidden />
                 </a>
               </div>
@@ -482,7 +511,7 @@ export function HomeHeader() {
             }`}
           >
             <div className="max-h-[calc(100dvh-5.5rem)] overflow-y-auto overscroll-contain rounded-[28px] bg-white/95 p-3 shadow-[0_28px_70px_-24px_rgba(15,23,42,0.45)] ring-1 ring-slate-900/[0.06] backdrop-blur-2xl">
-              <nav aria-label="Mobil menyu">
+              <nav aria-label={ui.header.mobileMenu}>
                 <ul>
                   {navLinks.map((l, i) => {
                     const isActive = (currentPage ?? active) === l.href;
@@ -537,12 +566,12 @@ export function HomeHeader() {
                           >
                             <div className="overflow-hidden" inert={!mobileSolutions}>
                               <div className="grid gap-0.5 pb-2 pl-9">
-                                {CLUSTER_PAGES.map((p) => {
+                                {clusters.map((p) => {
                                   const Icon = iconFor(p.href);
                                   return (
                                     <Link
                                       key={p.href}
-                                      href={p.href}
+                                      href={localizePath(p.href, locale)}
                                       onClick={() => setMenuOpen(false)}
                                       className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold text-slate-700 outline-none transition-colors hover:bg-blue-50/70 focus-visible:ring-2 focus-visible:ring-blue-500"
                                     >
@@ -561,7 +590,7 @@ export function HomeHeader() {
                                   }}
                                   className="mt-1 inline-flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-semibold text-blue-600 outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 >
-                                  Barcha yechimlar <ArrowRight className="h-4 w-4" aria-hidden />
+                                  {ui.header.allSolutions} <ArrowRight className="h-4 w-4" aria-hidden />
                                 </a>
                               </div>
                             </div>
@@ -603,7 +632,7 @@ export function HomeHeader() {
                   onClick={() => setMenuOpen(false)}
                   className="col-span-2 h-12 rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 text-sm font-bold text-white shadow-[0_8px_20px_-8px_rgba(37,99,235,0.8),inset_0_1px_0_rgba(255,255,255,0.28)] outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                 >
-                  Ariza qoldirish
+                  {ui.header.cta}
                 </ApplyButton>
               </div>
             </div>

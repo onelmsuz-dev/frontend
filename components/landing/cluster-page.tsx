@@ -10,7 +10,9 @@ import { FaqAccordion, type FaqEntry } from "./faq-accordion";
 import { ApplyButton, ApplyProvider } from "./apply-dialog";
 import { ApplyInline } from "./apply-form";
 import { solutionArt } from "./solution-art";
-import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
+import { DEFAULT_LOCALE, localizePath, type Locale } from "@/lib/i18n/config";
+import { getClusterMeta } from "@/lib/i18n/cluster-meta";
+import { getUi } from "@/lib/i18n/ui";
 
 export interface PainPoint {
   title: string;
@@ -49,6 +51,8 @@ export interface ClusterPageContent {
   leadDescription?: string;
   leadCta?: string;
   leadNotePlaceholder?: string;
+  /** Sahifa tili (ruscha/inglizcha sahifalar). Berilmasa — o'zbekcha. */
+  locale?: Locale;
 }
 
 /**
@@ -85,12 +89,14 @@ const STEP_STYLES = [
 ];
 
 export function ClusterPage(c: ClusterPageContent) {
-  const related = CLUSTER_PAGES.filter((p) => p.href !== c.href).slice(0, 6);
+  const locale = c.locale ?? DEFAULT_LOCALE;
+  const ui = getUi(locale).cluster;
+  const related = getClusterMeta(locale).filter((p) => p.href !== c.href).slice(0, 6);
   const art = solutionArt(c.href);
   const [h1Head, h1Accent] = splitAccent(c.h1);
 
   return (
-    <ApplyProvider page={c.leadSource}>
+    <ApplyProvider page={locale === DEFAULT_LOCALE ? c.leadSource : `${c.leadSource} [${locale.toUpperCase()}]`}>
       <div data-landing-light="white" className="min-h-screen overflow-x-hidden bg-white text-slate-900 antialiased">
         <HomeHeader />
 
@@ -101,8 +107,8 @@ export function ClusterPage(c: ClusterPageContent) {
 
             <div className="mx-auto max-w-[1200px]">
               {/* Breadcrumb */}
-              <nav aria-label="Yo'lni ko'rsatish" className="flex min-w-0 items-center gap-1.5 text-[13px] text-slate-500">
-                <Link href="/" className="shrink-0 font-medium transition-colors hover:text-blue-600">Bosh sahifa</Link>
+              <nav aria-label={ui.breadcrumbAria} className="flex min-w-0 items-center gap-1.5 text-[13px] text-slate-500">
+                <Link href={localizePath("/", locale)} className="shrink-0 font-medium transition-colors hover:text-blue-600">{ui.home}</Link>
                 <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300" aria-hidden />
                 <span className="truncate font-semibold text-slate-700">{c.h1}</span>
               </nav>
@@ -132,7 +138,7 @@ export function ClusterPage(c: ClusterPageContent) {
                       where="Hero"
                       className="group inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-7 text-base font-semibold text-white shadow-[0_14px_30px_-12px_rgba(37,99,235,0.7)] transition-colors hover:bg-blue-700"
                     >
-                      {c.leadCta ?? "Bepul konsultatsiya olish"}
+                      {c.leadCta ?? ui.defaultCta}
                       <ArrowUpRight className="h-[18px] w-[18px] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden />
                     </ApplyButton>
                     <a
@@ -142,7 +148,7 @@ export function ClusterPage(c: ClusterPageContent) {
                       className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 text-base font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
                     >
                       <MessageCircle className="h-[18px] w-[18px]" aria-hidden />
-                      Telegramda so&apos;rash
+                      {ui.telegramAsk}
                     </a>
                   </div>
                 </div>
@@ -229,7 +235,7 @@ export function ClusterPage(c: ClusterPageContent) {
             <section className="bg-white px-5 py-20 sm:px-8 sm:py-28" aria-labelledby="steps-heading">
               <div className="mx-auto max-w-[1200px]">
                 <Reveal>
-                  <h2 id="steps-heading" className={H2}>Qanday ishlaydi?</h2>
+                  <h2 id="steps-heading" className={H2}>{ui.stepsTitle}</h2>
                 </Reveal>
                 <ol className={`mt-12 grid gap-3 sm:mt-16 sm:gap-4 ${c.steps.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : c.steps.length === 3 ? "md:grid-cols-3" : "sm:grid-cols-2"}`}>
                   {c.steps.map((s, i) => {
@@ -253,10 +259,10 @@ export function ClusterPage(c: ClusterPageContent) {
           <section className="bg-white px-5 pb-20 pt-4 sm:px-8 sm:pb-28 sm:pt-8" aria-labelledby="cluster-faq-heading">
             <div className="mx-auto max-w-[860px]">
               <Reveal className="text-center">
-                <p className={EYEBROW}>Savol-javob</p>
-                <h2 id="cluster-faq-heading" className={`mt-4 ${H2}`}>{c.faqHeading ?? "Savollaringiz bormi?"}</h2>
+                <p className={EYEBROW}>{ui.faqEyebrow}</p>
+                <h2 id="cluster-faq-heading" className={`mt-4 ${H2}`}>{c.faqHeading ?? ui.faqDefaultHeading}</h2>
                 <p className={`mx-auto mt-5 max-w-xl ${LEAD}`}>
-                  Boshqa savol bo&apos;lsa — shu yerdan ariza qoldiring, o&apos;zimiz bog&apos;lanamiz.
+                  {ui.faqLead}
                 </p>
               </Reveal>
               <div className="mt-12 sm:mt-16">
@@ -269,12 +275,12 @@ export function ClusterPage(c: ClusterPageContent) {
           <section id="ariza" className="scroll-mt-20 bg-white px-4 pb-20 sm:px-5 sm:pb-28" aria-labelledby="ariza-heading">
             <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-7 overflow-hidden rounded-[1.75rem] bg-slate-950 p-5 text-white sm:gap-10 sm:rounded-[2.5rem] sm:p-10 lg:grid-cols-2 lg:gap-16 lg:p-14">
               <div className="min-w-0 pt-1 sm:pt-0">
-                <p className={EYEBROW_DARK}>Bog&apos;lanish</p>
+                <p className={EYEBROW_DARK}>{ui.contactEyebrow}</p>
                 <h2 id="ariza-heading" className={`mt-3 text-balance text-[2rem] leading-[1.08] sm:mt-4 sm:text-5xl ${DISPLAY}`}>
-                  {c.leadHeading ?? "Bepul konsultatsiya oling"}
+                  {c.leadHeading ?? ui.defaultLeadHeading}
                 </h2>
                 <p className="mt-3 max-w-md text-[15px] leading-relaxed text-slate-300 sm:mt-5 sm:text-lg">
-                  {c.leadDescription ?? "Ism va telefon raqamingizni qoldiring — siz bilan bog'lanamiz."}
+                  {c.leadDescription ?? ui.defaultLeadDescription}
                 </p>
                 <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 sm:mt-8 sm:block sm:space-y-1">
                   <a href={`tel:${CONTACT_PHONE}`} className="text-xl font-bold tracking-[-0.03em] text-white hover:text-blue-300 sm:block sm:text-2xl">{CONTACT_PHONE_DISPLAY}</a>
@@ -282,7 +288,7 @@ export function ClusterPage(c: ClusterPageContent) {
                 </div>
               </div>
               <div className="min-w-0 rounded-[1.4rem] bg-white p-4 text-slate-900 sm:rounded-3xl sm:p-7">
-                <ApplyInline source={c.leadSource} heading="Ma'lumotlaringiz" compact ctaLabel={c.leadCta} />
+                <ApplyInline source={c.leadSource} heading={ui.formHeading} compact ctaLabel={c.leadCta} />
               </div>
             </div>
           </section>
@@ -291,7 +297,7 @@ export function ClusterPage(c: ClusterPageContent) {
           <section className="bg-slate-50 px-5 py-20 sm:px-8 sm:py-28" aria-labelledby="related-heading">
             <div className="mx-auto max-w-[1200px]">
               <Reveal>
-                <h2 id="related-heading" className={H2}>Boshqa yechimlar</h2>
+                <h2 id="related-heading" className={H2}>{ui.relatedTitle}</h2>
               </Reveal>
               <div className="mt-12 grid gap-3 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3">
                 {related.map((p) => {
@@ -299,7 +305,7 @@ export function ClusterPage(c: ClusterPageContent) {
                   return (
                     <Link
                       key={p.href}
-                      href={p.href}
+                      href={localizePath(p.href, locale)}
                       className="group relative isolate min-h-[12.5rem] overflow-hidden rounded-3xl border border-blue-100/80 bg-blue-50/70 p-6 pb-[4.75rem] shadow-[0_1px_0_rgba(15,23,42,0.03)] transition-[background-color,border-color,box-shadow] duration-300 hover:border-blue-200 hover:bg-white hover:shadow-[0_18px_45px_-32px_rgba(37,99,235,0.35)]"
                     >
                       <span className="relative z-10 block max-w-[62%]">
@@ -322,7 +328,7 @@ export function ClusterPage(c: ClusterPageContent) {
           </section>
         </main>
 
-        <LandingFooter />
+        <LandingFooter locale={locale} />
       </div>
     </ApplyProvider>
   );

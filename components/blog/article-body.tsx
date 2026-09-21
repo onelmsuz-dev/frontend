@@ -13,7 +13,7 @@ function inline(text: string) {
   });
 }
 
-export function ArticleBody({ markdown }: { markdown: string }) {
+export function ArticleBody({ markdown, tableLabel }: { markdown: string; tableLabel: string }) {
   let heading = 0;
   return markdown.trim().split(/\n\n+/).filter((block) => !block.startsWith("# ")).map((block, index) => {
     if (block.startsWith("## ")) {
@@ -22,7 +22,7 @@ export function ArticleBody({ markdown }: { markdown: string }) {
     }
     if (block.startsWith("|")) {
       const rows = block.split("\n").map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
-      return <div key={index} className="blog-table-scroll" role="region" aria-label="Demo uchun tekshiruv jadvali" tabIndex={0}>
+      return <div key={index} className="blog-table-scroll" role="region" aria-label={tableLabel} tabIndex={0}>
         <table><thead><tr>{rows[0].map((cell, i) => <th key={i} scope="col">{cell}</th>)}</tr></thead>
           <tbody>{rows.slice(2).map((row, i) => <tr key={i}>{row.map((cell, j) => <td key={j}>{inline(cell)}</td>)}</tr>)}</tbody>
         </table>

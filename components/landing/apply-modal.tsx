@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { X } from "lucide-react";
+import { useLocale } from "@/lib/i18n/use-locale";
+import { getUi } from "@/lib/i18n/ui";
 import { CONTACT_PHONE, CONTACT_PHONE_DISPLAY } from "@/lib/seo/site";
 import { ApplyPanel } from "./apply-form";
 import styles from "./apply-dialog.module.css";
@@ -24,6 +26,7 @@ import styles from "./apply-dialog.module.css";
  */
 
 export function ApplyModalCard({ source, onClose }: { source: string; onClose: () => void }) {
+  const tx = getUi(useLocale()).apply;
   return (
     <div
       className={`${styles.card} relative grid max-h-[calc(100dvh-1rem)] overflow-y-auto overscroll-contain rounded-[1.75rem] bg-white shadow-[0_28px_80px_-24px_rgba(15,23,42,0.48)] ring-1 ring-white/80 md:min-h-[var(--m-h)] md:max-h-[calc(100dvh-2rem)] md:grid-cols-[5fr_6fr] md:rounded-[2rem]`}
@@ -32,7 +35,7 @@ export function ApplyModalCard({ source, onClose }: { source: string; onClose: (
 
       {/* FORMA — DOM'da birinchi, shuning uchun modal ochilganda fokus ism maydoniga tushadi. */}
       <div className="relative order-2 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[var(--m-pt)] md:px-9 md:pb-[var(--m-pb)]">
-        <ApplyPanel source={source} variant="modal" heading="Bepul sinovni boshlang" />
+        <ApplyPanel source={source} variant="modal" heading={tx.modalHeading} />
       </div>
 
       {/* CHAP PANEL (faqat kompyuterda): 3D "eshik" — hero bilan bir obraz. */}
@@ -43,9 +46,10 @@ export function ApplyModalCard({ source, onClose }: { source: string; onClose: (
             OneRoom
           </div>
           <p className="mt-10 text-[2.5rem] font-bold leading-[1.02] tracking-[-0.05em] text-slate-900">
-            <span className="inline-block text-blue-600">7 kun</span>{" "}
-            <span className="inline-block">bepul</span>{" "}
-            sinab ko&apos;ring
+            {tx.asidePre ? <>{tx.asidePre}{" "}</> : null}
+            <span className="inline-block text-blue-600">{tx.asideWord1}</span>{" "}
+            <span className="inline-block">{tx.asideWord2}</span>
+            {tx.asideRest ? <>{" "}{tx.asideRest}</> : null}
           </p>
         </div>
 
@@ -60,7 +64,7 @@ export function ApplyModalCard({ source, onClose }: { source: string; onClose: (
         />
 
         <div className="relative z-10 mt-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">Shoshilyapsizmi?</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-600">{tx.rushTitle}</p>
           <a href={`tel:${CONTACT_PHONE}`} className="mt-1 inline-block text-lg font-bold tracking-[-0.02em] text-slate-900 hover:text-blue-700">{CONTACT_PHONE_DISPLAY}</a>
         </div>
       </aside>
@@ -69,7 +73,7 @@ export function ApplyModalCard({ source, onClose }: { source: string; onClose: (
       <button
         type="button"
         onClick={onClose}
-        aria-label="Yopish"
+        aria-label={tx.close}
         className="absolute right-3.5 top-3.5 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900 max-md:right-4 max-md:top-5 max-md:h-9 max-md:w-9"
       >
         <X className="h-[18px] w-[18px]" aria-hidden />

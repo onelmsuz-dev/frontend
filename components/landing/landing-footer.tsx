@@ -1,21 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
-import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
 import { CONTACT_PHONE, CONTACT_PHONE_DISPLAY } from "@/lib/seo/site";
+import { DEFAULT_LOCALE, localizePath, type Locale } from "@/lib/i18n/config";
+import { getClusterMeta } from "@/lib/i18n/cluster-meta";
+import { getUi } from "@/lib/i18n/ui";
 
 // Faqat mavjud sahifalarga havolalar (ilgari /blog, /privacy, /help... kabi mavjud bo'lmagan
 // manzillar bor edi — ular 404 berardi). "Yechimlar" — barcha klaster sahifalarga ichki havolalar.
-const footerLinks = {
-  Mahsulot: [
-    { label: "Imkoniyatlar", href: "/#features" },
-    { label: "Narxlar", href: "/#pricing" },
-    { label: "Blog", href: "/blog" },
-    { label: "Savol-javoblar", href: "/#faq" },
-    { label: "Qanday ishlaydi", href: "/#how-it-works" },
-    { label: "Bog'lanish", href: "/#contact" },
-  ],
-  Yechimlar: CLUSTER_PAGES.map((p) => ({ label: p.navLabel, href: p.href })),
-};
+// Havola manzillari va matnlar tilga qarab (`lib/i18n`): o'zbekcha manzillar avvalgidek.
 
 const socials = [
   {
@@ -38,18 +30,29 @@ const socials = [
   },
 ];
 
-export function LandingFooter() {
+export function LandingFooter({ locale = DEFAULT_LOCALE }: { locale?: Locale }) {
+  const ui = getUi(locale).footer;
+  const home = localizePath("/", locale);
+  const product = [
+    { label: ui.features, href: `${home}#features` },
+    { label: ui.pricing, href: `${home}#pricing` },
+    { label: ui.blog, href: localizePath("/blog", locale) },
+    { label: ui.faq, href: `${home}#faq` },
+    { label: ui.how, href: `${home}#how-it-works` },
+    { label: ui.contactLink, href: `${home}#contact` },
+  ];
+  const solutions = getClusterMeta(locale).map((p) => ({ label: p.navLabel, href: localizePath(p.href, locale) }));
   return (
-    <footer className="border-t border-slate-200 bg-slate-50 px-5 py-14 text-sm text-slate-600 sm:px-8" aria-label="Sayt altbilgisi">
+    <footer className="border-t border-slate-200 bg-slate-50 px-5 py-14 text-sm text-slate-600 sm:px-8" aria-label={ui.aria}>
       <div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-[1.1fr_0.7fr_1.7fr_1fr]">
         <div className="col-span-2 lg:col-span-1">
-          <Link href="/" className="inline-flex items-center gap-2.5" aria-label="OneRoom bosh sahifa">
+          <Link href={home} className="inline-flex items-center gap-2.5" aria-label={getUi(locale).header.homeAria}>
             <Image src="/logo.png" alt="OneRoom logo" width={30} height={30} className="rounded-lg" />
             <span className="text-base font-bold tracking-[-0.03em] text-slate-900">
               One<span className="text-blue-600">Room</span>
             </span>
           </Link>
-          <p className="mt-3 max-w-xs leading-relaxed">O&apos;quv markazlar uchun zamonaviy LMS va CRM tizimi. O&apos;zbekistonda ishlab chiqilgan.</p>
+          <p className="mt-3 max-w-xs leading-relaxed">{ui.tagline}</p>
           <div className="mt-5 flex gap-2">
             {socials.map((s) => (
               <a
@@ -67,37 +70,37 @@ export function LandingFooter() {
         </div>
 
         <div>
-          <p className="font-bold text-slate-900">Mahsulot</p>
+          <p className="font-bold text-slate-900">{ui.product}</p>
           <ul className="mt-3 space-y-2">
-            {footerLinks.Mahsulot.map((l) => (
+            {product.map((l) => (
               <li key={l.label}><Link href={l.href} className="transition-colors hover:text-slate-900">{l.label}</Link></li>
             ))}
           </ul>
         </div>
 
         <div className="order-last col-span-2 lg:order-none lg:col-span-1">
-          <p className="font-bold text-slate-900">Yechimlar</p>
+          <p className="font-bold text-slate-900">{ui.solutions}</p>
           <ul className="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-2">
-            {footerLinks.Yechimlar.map((l) => (
+            {solutions.map((l) => (
               <li key={l.href}><Link href={l.href} className="transition-colors hover:text-slate-900">{l.label}</Link></li>
             ))}
           </ul>
         </div>
 
         <div>
-          <p className="font-bold text-slate-900">Aloqa</p>
+          <p className="font-bold text-slate-900">{ui.contact}</p>
           <ul className="mt-3 space-y-2">
             <li><a href={`tel:${CONTACT_PHONE}`} className="transition-colors hover:text-slate-900">{CONTACT_PHONE_DISPLAY}</a></li>
             <li><a href="https://t.me/oneroomuz" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-slate-900">@oneroomuz</a></li>
             <li><a href="mailto:info@oneroom.uz" className="transition-colors hover:text-slate-900">info@oneroom.uz</a></li>
-            <li><Link href="/login" className="transition-colors hover:text-slate-900">Kirish</Link></li>
+            <li><Link href="/login" className="transition-colors hover:text-slate-900">{ui.login}</Link></li>
           </ul>
         </div>
       </div>
 
       <div className="mx-auto mt-10 flex max-w-[1200px] flex-col gap-2 border-t border-slate-200 pt-5 text-xs sm:flex-row sm:items-center sm:justify-between">
-        <p>© {new Date().getFullYear()} OneRoom. Barcha huquqlar himoyalangan.</p>
-        <address className="not-italic">Toshkent, O&apos;zbekiston</address>
+        <p>© {new Date().getFullYear()} OneRoom. {ui.rights}</p>
+        <address className="not-italic">{ui.address}</address>
       </div>
     </footer>
   );

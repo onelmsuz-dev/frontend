@@ -1,10 +1,11 @@
 import { Check } from "lucide-react";
 import { ApplyButton } from "@/components/landing/apply-dialog";
-import { links, plans, pricingCopy } from "./content";
+import { links } from "./content";
+import type { HomeContent } from "./content-i18n";
 import { DISPLAY } from "./style";
 
 /** Narxlar: uchta tarif kartasi + maxsus tarif bloki. */
-export function PricingPlans() {
+export function PricingPlans({ pricingCopy, plans }: { pricingCopy: HomeContent["pricingCopy"]; plans: HomeContent["plans"] }) {
   return (
     <section id="pricing" className="scroll-mt-16 bg-slate-50 px-5 py-24 sm:px-8 sm:py-32">
       <div className="mx-auto max-w-[1200px]">

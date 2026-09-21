@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
-import { features, featuresCopy } from "./content";
+import { useLocale } from "@/lib/i18n/use-locale";
+import { getUi } from "@/lib/i18n/ui";
+import { features as baseFeatures } from "./content";
 import { DISPLAY } from "./style";
 import { Selection } from "./ui";
 
@@ -34,8 +36,25 @@ import { Selection } from "./ui";
 const AUTO_SECONDS = 3;
 const HOLD_SECONDS = 30;
 
-export function FeaturesTabs() {
+/** Server komponent matnni beradi (tilga qarab); ikonkalar (funksiya) prop bo'la olmaydi — indeks bo'yicha shu yerda olinadi. */
+export interface FeatureTabItem {
+  title: string;
+  description: string;
+  color: string;
+  bg: string;
+  border: string;
+}
+export interface FeaturesTabsCopy {
+  eyebrow: string;
+  titleStart: string;
+  titleAccent: string;
+  lead: string;
+}
+
+export function FeaturesTabs({ items, copy: featuresCopy }: { items: FeatureTabItem[]; copy: FeaturesTabsCopy }) {
   const uid = useId();
+  const ui = getUi(useLocale()).home;
+  const features = items.map((x, idx) => ({ ...x, icon: baseFeatures[idx].icon }));
   const n = features.length;
 
   const [i, setI] = useState(0);
@@ -168,7 +187,7 @@ export function FeaturesTabs() {
           <div
             ref={listRef}
             role="tablist"
-            aria-label="Imkoniyatlar"
+            aria-label={ui.tabsAria}
             aria-orientation="vertical"
             onKeyDown={onListKeyDown}
             className="relative -mx-5 flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain scroll-px-5 px-5 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [mask-image:linear-gradient(to_right,transparent,#000_22px,#000_calc(100%-36px),transparent)] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:flex-col lg:gap-0 lg:overflow-visible lg:px-0 lg:pb-0 lg:[mask-image:none]"
@@ -223,9 +242,9 @@ export function FeaturesTabs() {
                 }}
                 aria-pressed={userPaused}
                 aria-label={
-                  userPaused ? "Avto-almashtirishni davom ettirish"
-                  : hold ? `Avto-almashtirish ${holdLeft} soniyadan keyin davom etadi. Hozir davom ettirish`
-                  : "Avto-almashtirishni to'xtatish"
+                  userPaused ? ui.autoResume
+                  : hold ? ui.autoHold(holdLeft)
+                  : ui.autoPause
                 }
                 className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-slate-800 shadow-sm backdrop-blur transition-colors hover:bg-white"
               >

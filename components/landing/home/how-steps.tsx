@@ -1,4 +1,4 @@
-import { howCopy, steps } from "./content";
+import type { HomeContent } from "./content-i18n";
 import { DISPLAY } from "./style";
 
 /** Qanday ishlaydi: 4 ta rangli blok. */
@@ -9,7 +9,7 @@ const STEP_STYLES = [
   { card: "bg-blue-50 text-slate-900", num: "text-blue-900/15", desc: "text-slate-600", badge: "bg-white text-blue-700" },
 ];
 
-export function HowSteps() {
+export function HowSteps({ howCopy, steps }: { howCopy: HomeContent["howCopy"]; steps: HomeContent["steps"] }) {
   return (
     <section id="how-it-works" className="scroll-mt-16 px-5 py-24 sm:px-8 sm:py-32">
       <div className="mx-auto max-w-[1200px]">

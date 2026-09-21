@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { SITE_URL, ORG_ID, WEBSITE_ID, CONTACT_PHONE } from "@/lib/seo/site";
+import { alternatesFor } from "@/lib/i18n/config";
 import { ApplyProvider } from "@/components/landing/apply-dialog";
 import { HomeLanding } from "@/components/landing/home/home-landing";
 import { faqItems } from "@/components/landing/faq-data";
@@ -27,9 +28,7 @@ export const metadata: Metadata = {
   authors: [{ name: "OneRoom", url: SITE_URL }],
   creator: "OneRoom",
   publisher: "OneRoom",
-  alternates: {
-    canonical: SITE_URL,
-  },
+  alternates: alternatesFor("/"),
   openGraph: {
     type: "website",
     locale: "uz_UZ",

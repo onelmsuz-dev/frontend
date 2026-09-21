@@ -1,6 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useLocale } from "@/lib/i18n/use-locale";
+import { getUi } from "@/lib/i18n/ui";
 import { ApplyModalCard } from "./apply-modal";
 import styles from "./apply-dialog.module.css";
 
@@ -37,6 +39,7 @@ export function ApplyProvider({
   children: React.ReactNode;
 }) {
   // null — yopiq; satr — ochiq va qaysi tugmadan ochilgani.
+  const locale = useLocale();
   const [where, setWhere] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const isOpen = where !== null;
@@ -66,7 +69,7 @@ export function ApplyProvider({
       <dialog
         ref={dialogRef}
         data-apply
-        aria-label="Ariza qoldirish"
+        aria-label={getUi(locale).apply.dialogAria}
         tabIndex={-1}
         // Escape: `cancel` hodisasini to'xtatamiz. Chrome faydalanuvchi harakatisiz ikkinchi marta
         // bosilgan Escape'da `cancel`ni to'xtatib bo'lmaydigan qilib qo'yadi — shuning uchun

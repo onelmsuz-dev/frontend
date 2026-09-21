@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { ArrowDown, ArrowUpRight } from "lucide-react";
 import { ApplyButton } from "@/components/landing/apply-dialog";
-import { hero } from "./content";
 import s from "./hero.module.css";
 
 /**
@@ -26,9 +25,18 @@ function goToFeatures(e: React.MouseEvent<HTMLAnchorElement>) {
   history.replaceState(null, "", "#features");
 }
 
-export function Hero() {
+export interface HeroContent {
+  titleLine1: string;
+  titleLine2: string;
+  titleAccent: string;
+  leadStrong: string;
+  lead: string;
+  imageAlt: string;
+}
+
+export function Hero({ content: hero, labels, lang }: { content: HeroContent; labels: { features: string; apply: string }; lang: string }) {
   return (
-    <div className={s.hero}>
+    <div className={s.hero} data-lang={lang}>
       <section id="hero" className={`${s.editorial} ${s.editorialWithArt} scroll-mt-24`} aria-labelledby="hero-heading">
         <div className={s.perspectiveGrid}>
           <div className={s.perspectiveCopy}>
@@ -42,9 +50,9 @@ export function Hero() {
               <p><strong>{hero.leadStrong}</strong> {hero.lead}</p>
               <div className={s.actions}>
                 <a href="#features" className={s.secondary} onClick={goToFeatures}>
-                  <ArrowDown size={14} aria-hidden /> Imkoniyatlar
+                  <ArrowDown size={14} aria-hidden /> {labels.features}
                 </a>
-                <ApplyButton where="Hero" className={s.primary}>Ariza qoldirish <ArrowUpRight size={18} /></ApplyButton>
+                <ApplyButton where="Hero" className={s.primary}>{labels.apply} <ArrowUpRight size={18} /></ApplyButton>
               </div>
             </div>
           </div>

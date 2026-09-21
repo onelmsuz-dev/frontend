@@ -33,8 +33,11 @@ const PUBLIC_EXACT = new Set<string>([
   "/twitter-image",
 ]);
 
-/** Ostidagi hamma sahifa ham ochiq (`/blog`, `/blog/maqola-nomi`). */
-const PUBLIC_PREFIXES = ["/blog"];
+/**
+ * Ostidagi hamma sahifa ham ochiq: `/blog`, `/blog/maqola-nomi` va ruscha/inglizcha sayt
+ * (`/ru`, `/ru/davomat`, `/en/blog/...` — `lib/i18n/config.ts`).
+ */
+const PUBLIC_PREFIXES = ["/blog", "/ru", "/en"];
 
 export function isPublicPath(pathname: string): boolean {
   // "/davomat/" ham "/davomat" bilan bir xil.
