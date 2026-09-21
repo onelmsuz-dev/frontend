@@ -9,6 +9,8 @@ const footerLinks = {
   Mahsulot: [
     { label: "Imkoniyatlar", href: "/#features" },
     { label: "Narxlar", href: "/#pricing" },
+    { label: "Blog", href: "/blog" },
+    { label: "Savol-javoblar", href: "/#faq" },
     { label: "Qanday ishlaydi", href: "/#how-it-works" },
     { label: "Bog'lanish", href: "/#contact" },
   ],

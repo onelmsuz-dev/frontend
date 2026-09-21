@@ -227,7 +227,7 @@ export const navLinks = [
   { label: "Yechimlar", href: "#solutions" },
   { label: "Qanday ishlaydi", href: "#how-it-works" },
   { label: "Narxlar", href: "#pricing" },
-  { label: "FAQ", href: "#faq" },
+  { label: "Blog", href: "/blog" },
   { label: "Bog'lanish", href: "#contact" },
 ];
 

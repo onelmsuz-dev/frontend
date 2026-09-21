@@ -48,6 +48,7 @@ const iconFor = (href: string): LucideIcon => SOLUTION_ICONS[href] ?? Sparkles;
 
 /** Sahifa ichidagi `#bo'lim` ga silliq o'tish (harakatni kamaytirish yoqilgan bo'lsa — sakrab). */
 function goTo(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
+  if (!href.startsWith("#")) return;
   const target = document.getElementById(href.slice(1));
   if (!target) return;
   e.preventDefault();
@@ -59,7 +60,7 @@ function goTo(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
 export function HomeHeader() {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const homeSectionHref = (hash: string) => (isHome ? hash : `/${hash}`);
+  const homeSectionHref = (href: string) => (href.startsWith("#") && !isHome ? `/${href}` : href);
   const [scrolled, setScrolled] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -78,7 +79,8 @@ export function HomeHeader() {
   const openedByHover = useRef(false);
 
   // Highlight qaysi havola ustida turadi: hover → ochiq panel (Yechimlar) → faol bo'lim.
-  const target = hoverKey ?? (panelOpen ? SOLUTIONS_HREF : active);
+  const currentPage = pathname === "/blog" || pathname.startsWith("/blog/") ? "/blog" : null;
+  const target = hoverKey ?? (panelOpen ? SOLUTIONS_HREF : currentPage ?? active);
 
   /* ── Skroll: ixchamlashish, progress, skroll-spy ── */
   useEffect(() => {
@@ -96,6 +98,7 @@ export function HomeHeader() {
       const line = window.innerHeight * 0.4;
       let current: string | null = null;
       for (const l of navLinks) {
+        if (!l.href.startsWith("#")) continue;
         const el = document.getElementById(l.href.slice(1));
         if (el && el.getBoundingClientRect().top <= line) current = l.href;
       }
@@ -265,7 +268,7 @@ export function HomeHeader() {
                 className={`pointer-events-none absolute inset-y-0 left-0 rounded-full bg-slate-900/[0.06] opacity-0 transition-[transform,width,opacity] duration-300 motion-reduce:transition-none ${EASE}`}
               />
               {navLinks.map((l) => {
-                const isActive = active === l.href;
+                const isActive = (currentPage ?? active) === l.href;
                 const setRef = (el: HTMLElement | null) => {
                   itemRefs.current[l.href] = el;
                 };
@@ -482,7 +485,7 @@ export function HomeHeader() {
               <nav aria-label="Mobil menyu">
                 <ul>
                   {navLinks.map((l, i) => {
-                    const isActive = active === l.href;
+                    const isActive = (currentPage ?? active) === l.href;
                     const isSolutions = l.href === SOLUTIONS_HREF;
                     const stagger = {
                       transitionDelay: menuOpen ? `${80 + i * 45}ms` : "0ms",
