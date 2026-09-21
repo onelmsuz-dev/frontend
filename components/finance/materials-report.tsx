@@ -38,6 +38,8 @@ interface Yozuv {
   createdByName: string;
   /** `TOLOV` bo'lsa va sotuv bilan BIR VAQTDA to'langan bo'lsa — sotuv id'si. */
   saleId: string | null;
+  /** `SOTUV` dan qancha qismi to'langan (server FIFO bo'yicha hisoblaydi). */
+  settled: number;
   student: { id: string; name: string; phone: string | null } | null;
 }
 
@@ -46,6 +48,23 @@ interface Hisobot {
   count: number;
   debt: number;
   byCategory: { category: string; amount: number; count: number }[];
+}
+
+/**
+ * QATOR NIMANI ANGLATADI.
+ *
+ * Yopilish `settled` dan keladi — uni server FIFO bo'yicha, o'quvchining
+ * BUTUN tarixi bo'yicha hisoblaydi. Bu yerda qayta hisoblab bo'lmaydi:
+ * ekranda faqat tanlangan oy ko'rinadi va avgustdagi sotuv sentabrda
+ * to'langan bo'lsa, u "to'lanmagan" bo'lib qolardi.
+ */
+function holat(it: Yozuv, juft: Yozuv | null) {
+  if (it.kind === "TOLOV") return { matn: "To'lov", yashil: true, qoldi: 0 };
+  if (juft) return { matn: "Sotildi", yashil: true, qoldi: 0 };
+  const qoldi = Math.max(0, it.amount - (it.settled ?? 0));
+  if (qoldi === 0) return { matn: "To'landi", yashil: true, qoldi: 0 };
+  if ((it.settled ?? 0) > 0) return { matn: "Qisman to'landi", yashil: false, qoldi };
+  return { matn: "Qarzga berildi", yashil: false, qoldi: 0 };
 }
 
 export function MaterialsReport({
@@ -174,15 +193,17 @@ export function MaterialsReport({
                     )}
                   </td>
                   <td className="px-4 py-2.5 whitespace-nowrap">
-                    {/* UCH XIL HOLAT, uch xil yozuv:
-                          sotuv + juft to'lov → "Sotildi"  (pul olingan)
-                          juftsiz sotuv      → "Qarzga berildi"
-                          juftsiz to'lov     → "To'lov"    (qarz yopilishi) */}
+                    {/* BESH XIL HOLAT — har biri boshqa narsani anglatadi:
+                          sotuv + juft to'lov  → "Sotildi"        joyida to'landi
+                          sotuv to'liq yopilgan → "To'landi"       keyin to'landi
+                          sotuv qisman         → "Qisman to'landi"
+                          sotuv yopilmagan     → "Qarzga berildi"  hali qarz
+                          juftsiz to'lov       → "To'lov"          qarz yopilishi */}
                     <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-lg",
-                      (it.kind === "TOLOV" || juft)
+                      holat(it, juft).yashil
                         ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400"
                         : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400")}>
-                      {juft ? "Sotildi" : it.kind === "TOLOV" ? "To'lov" : "Qarzga berildi"}
+                      {holat(it, juft).matn}
                     </span>
                   </td>
                   <td className="px-4 py-2.5 whitespace-nowrap">
@@ -196,10 +217,17 @@ export function MaterialsReport({
                       : <span className="text-neutral-300 dark:text-neutral-600">—</span>}
                   </td>
                   <td className={cn("px-4 py-2.5 text-[12.5px] font-bold tabular-nums whitespace-nowrap",
-                    (it.kind === "TOLOV" || juft)
+                    holat(it, juft).yashil
                       ? "text-green-600 dark:text-green-400"
                       : "text-amber-600 dark:text-amber-400")}>
-                    {(it.kind === "TOLOV" || juft) ? "+" : ""}{formatCurrency(it.amount)}
+                    {holat(it, juft).yashil ? "+" : ""}{formatCurrency(it.amount)}
+                    {/* Qisman to'langanda qancha QOLGANI ko'rsatiladi —
+                        usiz xodim uni to'lanmagan deb o'qirdi. */}
+                    {holat(it, juft).qoldi > 0 && (
+                      <span className="block text-[10.5px] font-semibold text-amber-600 dark:text-amber-400">
+                        {formatCurrency(holat(it, juft).qoldi)} qoldi
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-[12px] text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
                     {it.createdByName}

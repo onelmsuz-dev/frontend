@@ -31,6 +31,14 @@ interface Yozuv {
   createdByName: string;
   /** `TOLOV` bo'lsa va sotuv bilan BIR VAQTDA to'langan bo'lsa — sotuv id'si. */
   saleId: string | null;
+  /** `SOTUV` dan qancha qismi to'langan (server FIFO bo'yicha hisoblaydi). */
+  settled: number;
+}
+
+/** Sotuvdan qancha QARZ qolgani. `TOLOV` da har doim 0. */
+function qolgan(it: Yozuv): number {
+  if (it.kind !== "SOTUV") return 0;
+  return Math.max(0, it.amount - (it.settled ?? 0));
 }
 
 export function StudentMaterials({
@@ -87,15 +95,20 @@ export function StudentMaterials({
             </span>
             {/* SOTUV — qarz yozilishi, TO'LOV — pul kirishi.
                 Rang bilan ajratiladi, chunki ikkalasi bir ro'yxatda. */}
-            {/* Pul OLINGAN bo'lsa yashil va "+": sotuvning o'zi qarz,
-                lekin darhol to'langani — kirim. Ikkisini bir xil
-                ko'rsatish "qarz yozildi" degan yolg'on taassurot
-                berardi. */}
+            {/* Pul OLINGAN bo'lsa yashil va "+". Qarzga berilgan sotuv
+                KEYIN to'langan bo'lsa ham yashil bo'ladi — u endi qarz
+                emas. Ilgari ikkalasi bir xil ko'rinardi va to'langan
+                qarz "hamon qarzda" degan taassurot berardi. */}
             <span className={cn("text-[11.5px] font-semibold shrink-0 tabular-nums",
-              (it.kind === "TOLOV" || tolangan)
+              (it.kind === "TOLOV" || tolangan || qolgan(it) === 0)
                 ? "text-green-600 dark:text-green-400"
                 : "text-amber-600 dark:text-amber-400")}>
-              {(it.kind === "TOLOV" || tolangan) ? "+" : ""}{fmt(it.amount)}
+              {(it.kind === "TOLOV" || tolangan || qolgan(it) === 0) ? "+" : ""}{fmt(it.amount)}
+              {qolgan(it) > 0 && (it.settled ?? 0) > 0 && (
+                <span className="block text-[10px] font-normal text-amber-600 dark:text-amber-400">
+                  {fmt(qolgan(it))} qoldi
+                </span>
+              )}
             </span>
           </li>
         ))}
