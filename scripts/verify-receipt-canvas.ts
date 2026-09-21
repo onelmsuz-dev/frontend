@@ -104,5 +104,31 @@ check("qora va oq doimiylari bor",
 check("punktir chiziq ishlatilmaydi (qog'ozda yo'qoladi)",
   !/setLineDash\(\[/.test(kod));
 
+console.log("\n━━━ CHOP ETISH: chek modaldan TASHQARIDA ━━━\n");
+
+/**
+ * Chop etiladigan nusxa `body` ning to'g'ridan-to'g'ri bolasi bo'lishi
+ * SHART. Sabab: `#chek` `position: absolute` bilan sahifa boshiga
+ * qo'yiladi, lekin `absolute` eng yaqin JOYLASHTIRILGAN yoki TRANSFORM
+ * qilingan ajdodga nisbatan hisoblanadi.
+ *
+ * 2026-09-21 da aynan shu buzildi: chek umumiy modal qavatiga
+ * (`ModalOverlay`) ko'chirilgan edi va uning panelida animatsiya uchun
+ * `transform` bor. Natijada chek sahifa emas, panel boshiga qo'yildi va
+ * tor bosma sahifada varaqning eng pastida, kichkina bo'lib chiqdi.
+ * Markaz "chekni chiqara olmadim" deb xabar berdi.
+ *
+ * Bu tekshiruv modal tuzilmasi yana o'zgarganda ogohlantiradi.
+ */
+const modal = readFileSync(
+  new URL("../components/payments/receipt-modal.tsx", import.meta.url), "utf8");
+
+check("chop etiladigan nusxa `body` ga portal qilinadi",
+  /createPortal\([\s\S]{0,400}?id="chek"[\s\S]{0,400}?document\.body/.test(modal));
+check("modal ICHIDAGI nusxada `id=\"chek\"` YO'Q — aks holda ikki nusxa bosilardi",
+  (modal.match(/id="chek"/g) ?? []).length === 1);
+check("`#chek` bosmada ko'rsatiladi (ekranda `hidden`)",
+  /#chek\s*\{[^}]*display:\s*block\s*!important/.test(modal));
+
 console.log(`\n${fail === 0 ? "✅" : "❌"} Jami: ${pass} o'tdi, ${fail} yiqildi\n`);
 process.exit(fail === 0 ? 0 : 1);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import useSWR from "swr";
 import QRCode from "qrcode";
 import { Printer, Loader2, X, Download, Share2, Check, FileText } from "lucide-react";
@@ -29,7 +30,20 @@ const PRINT_CSS = `
 @media print {
   body * { visibility: hidden !important; }
   #chek, #chek * { visibility: visible !important; }
+  /* CHEK \`body\` NING TO'G'RIDAN-TO'G'RI BOLASI — modal ichida emas.
+
+     NEGA SHUNDAY: \`position: absolute\` eng yaqin JOYLASHTIRILGAN yoki
+     TRANSFORM qilingan ajdodga nisbatan hisoblanadi. Umumiy modal
+     qavati (\`ModalOverlay\`) panelida ochilish animatsiyasi uchun
+     \`transform\` bor — ya'ni chek sahifa emas, PANEL boshiga
+     qo'yilardi. Panel esa tor bosma sahifada \`items-end\` bilan pastga
+     tushar va chek varaqning eng pastida, kichkina bo'lib chiqardi
+     (Proton School, 2026-09-21).
+
+     Modal tuzilmasiga bog'lanib qolmaslik uchun chop etiladigan nusxa
+     \`body\` ga alohida chiqariladi. Ekranda u KO'RINMAYDI. */
   #chek {
+    display: block !important;
     position: absolute; left: 0; top: 0;
     width: 100%; margin: 0; padding: 0;
     box-shadow: none !important; border: none !important;
@@ -225,8 +239,10 @@ export function ReceiptModal({
 
             {/* Chek O'RTADA, oq qog'oz ko'rinishida — qorong'i rejimda ham
                 oq qoladi, chunki bosib chiqarilganda shunday chiqadi. */}
+            {/* EKRANDAGI nusxa — `id` YO'Q. Chop etiladigan nusxa
+                alohida, `body` ga chiqariladi (pastda). */}
             {rasm && (
-              <div id="chek" className="mx-auto w-full max-w-[340px] bg-white rounded-xl
+              <div className="mx-auto w-full max-w-[340px] bg-white rounded-xl
                 shadow-lg overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={rasm} alt="To'lov cheki" className="w-full block" />
@@ -263,6 +279,16 @@ export function ReceiptModal({
           )}
         </div>
       </ModalOverlay>
+
+      {/* CHOP ETILADIGAN NUSXA — `body` ga, modaldan TASHQARIDA.
+          Ekranda `hidden`, bosmada `#chek` qoidasi uni ochadi. */}
+      {open && rasm && typeof document !== "undefined" && createPortal(
+        <div id="chek" className="hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={rasm} alt="To'lov cheki" className="w-full block" />
+        </div>,
+        document.body,
+      )}
     </>
   );
 }
