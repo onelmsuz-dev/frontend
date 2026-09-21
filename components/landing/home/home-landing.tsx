@@ -206,7 +206,7 @@ function Footer() {
 
 export function HomeLanding() {
   return (
-    <div className="min-h-screen overflow-x-hidden bg-white text-slate-900 antialiased">
+    <div data-landing-light="white" className="min-h-screen overflow-x-hidden bg-white text-slate-900 antialiased">
       <HomeKeyframes />
       <HomeHeader />
       <main id="main-content">

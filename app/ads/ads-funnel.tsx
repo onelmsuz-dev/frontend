@@ -562,7 +562,7 @@ function Card({ children }: { children: React.ReactNode }) {
  */
 function Shell({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-slate-50">
+    <div data-landing-light="slate" className="relative min-h-dvh overflow-hidden bg-slate-50">
       {/* Fon urg'ulari — pastda, kontentga xalaqit bermaydi */}
       <div aria-hidden className="pointer-events-none absolute -top-32 -right-24 h-96 w-96 rounded-full bg-blue-200/35 blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute -bottom-40 -left-32 h-[28rem] w-[28rem] rounded-full bg-indigo-200/30 blur-3xl" />

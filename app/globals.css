@@ -552,6 +552,24 @@ html:has(dialog[data-apply][open]) {
   overflow: hidden;
 }
 
+/* Landing sahifalari (bosh sahifa, klaster sahifalar, /ads) HAR DOIM och:
+   ularda `dark:` sinfi yo'q. Lekin `<html>`/`<body>` foni `next-themes`
+   mavzusiga (`.dark`) bog'liq — brauzerda mavzu qorong'i yoki tizim qorong'i
+   bo'lsa, sahifa och ko'rinib turib, tepa/pastga oxirigacha aylantirganda
+   (overscroll / rubber-band) orqadagi qora kanvas ko'rinib qolardi.
+   Shu sahifalarda kanvas foni va `color-scheme` (scrollbar) ham och bo'ladi.
+   Belgi `data-landing-light` — sahifa ildizida (qiymat: oq/slate-50). */
+html:has([data-landing-light]) {
+  color-scheme: light;
+  background-color: #ffffff;
+}
+html:has([data-landing-light="slate"]) {
+  background-color: #f8fafc; /* slate-50 — /ads foni */
+}
+html:has([data-landing-light]) body {
+  background-color: inherit;
+}
+
 /* Sahifalararo o'tish: eski sahifa tez chiqadi, yangi sahifa yumshoq kiradi. */
 ::view-transition-old(.page-swap) {
   animation: page-transition-out 150ms ease-in both;
