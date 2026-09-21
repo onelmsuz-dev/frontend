@@ -3,32 +3,16 @@ import Image from "next/image";
 import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
 import { CONTACT_PHONE, CONTACT_PHONE_DISPLAY } from "@/lib/seo/site";
 
+// Faqat mavjud sahifalarga havolalar (ilgari /blog, /privacy, /help... kabi mavjud bo'lmagan
+// manzillar bor edi — ular 404 berardi). "Yechimlar" — barcha klaster sahifalarga ichki havolalar.
 const footerLinks = {
   Mahsulot: [
     { label: "Imkoniyatlar", href: "/#features" },
     { label: "Narxlar", href: "/#pricing" },
     { label: "Qanday ishlaydi", href: "/#how-it-works" },
-    { label: "Yangiliklar", href: "/blog" },
-    { label: "Yo'l haritasi", href: "/roadmap" },
-  ],
-  Resurslar: [
-    { label: "Yordam markazi", href: "/help" },
-    { label: "Video darsliklar", href: "/tutorials" },
-    { label: "API hujjatlari", href: "/docs/api" },
-    { label: "Holat sahifasi", href: "/status" },
-  ],
-  Kompaniya: [
-    { label: "Biz haqimizda", href: "/about" },
-    { label: "Blog", href: "/blog" },
-    { label: "Hamkorlik", href: "/partners" },
     { label: "Bog'lanish", href: "/#contact" },
   ],
   Yechimlar: CLUSTER_PAGES.map((p) => ({ label: p.navLabel, href: p.href })),
-  Huquqiy: [
-    { label: "Maxfiylik siyosati", href: "/privacy" },
-    { label: "Foydalanish shartlari", href: "/terms" },
-    { label: "Cookie siyosati", href: "/cookies" },
-  ],
 };
 
 const socials = [
@@ -54,90 +38,64 @@ const socials = [
 
 export function LandingFooter() {
   return (
-    <footer className="bg-slate-950 text-slate-400" aria-label="Sayt altbilgisi">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-14 pb-8 sm:pt-16 lg:pt-20">
-
-        {/* Top: brand + links */}
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-7">
-          {/* Brand — full-width on mobile, 2 cols on lg */}
-          <div className="sm:col-span-2 lg:col-span-2">
-            <Link href="/" className="inline-flex items-center gap-2.5" aria-label="OneRoom bosh sahifa">
-              <Image
-                src="/logo.png"
-                alt="OneRoom logo"
-                width={34}
-                height={34}
-                className="rounded-lg ring-1 ring-white/10"
-              />
-              <span className="text-base font-bold text-white">
-                One<span className="text-blue-400">Room</span>
-              </span>
-            </Link>
-
-            <p className="mt-4 text-sm leading-relaxed max-w-xs">
-              O'quv markazlar uchun zamonaviy LMS va CRM tizimi. O'zbekistonda ishlab chiqilgan.
-            </p>
-
-            {/* Social links */}
-            <div className="mt-5 flex gap-2">
-              {socials.map((s) => (
-                <a
-                  key={s.name}
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={s.name}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
-                >
-                  {s.icon}
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Links — 2-col on mobile, then 5-col */}
-          <div className="grid grid-cols-2 gap-8 sm:col-span-2 lg:col-span-5 lg:grid-cols-5">
-            {Object.entries(footerLinks).map(([category, links]) => (
-              <div key={category}>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300 mb-3.5">
-                  {category}
-                </h3>
-                <ul className="space-y-2" role="list">
-                  {links.map((link) => (
-                    <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="text-sm text-slate-400 transition-colors hover:text-slate-200"
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+    <footer className="border-t border-slate-200 bg-slate-50 px-5 py-14 text-sm text-slate-600 sm:px-8" aria-label="Sayt altbilgisi">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-[1.1fr_0.7fr_1.7fr_1fr]">
+        <div className="col-span-2 lg:col-span-1">
+          <Link href="/" className="inline-flex items-center gap-2.5" aria-label="OneRoom bosh sahifa">
+            <Image src="/logo.png" alt="OneRoom logo" width={30} height={30} className="rounded-lg" />
+            <span className="text-base font-bold tracking-[-0.03em] text-slate-900">
+              One<span className="text-blue-600">Room</span>
+            </span>
+          </Link>
+          <p className="mt-3 max-w-xs leading-relaxed">O&apos;quv markazlar uchun zamonaviy LMS va CRM tizimi. O&apos;zbekistonda ishlab chiqilgan.</p>
+          <div className="mt-5 flex gap-2">
+            {socials.map((s) => (
+              <a
+                key={s.name}
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.name}
+                className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 transition-colors hover:border-blue-200 hover:text-blue-600"
+              >
+                {s.icon}
+              </a>
             ))}
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="mt-12 border-t border-white/5 pt-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-400">
-              © {new Date().getFullYear()} OneRoom. Barcha huquqlar himoyalangan.
-            </p>
-            {/* text-slate-500 emas: bg-slate-950 ustida 4.13:1 berardi (WCAG AA
-                normal matn uchun 4.5:1 kerak) — Lighthouse color-contrast xatosi. */}
-            <address className="not-italic text-xs text-slate-400 flex flex-wrap gap-x-3 gap-y-1">
-              <span>Toshkent, O'zbekiston</span>
-              <a href="mailto:info@oneroom.uz" className="hover:text-slate-300 transition-colors">
-                info@oneroom.uz
-              </a>
-              <a href={`tel:${CONTACT_PHONE}`} className="hover:text-slate-300 transition-colors">
-                {CONTACT_PHONE_DISPLAY}
-              </a>
-            </address>
-          </div>
+        <div>
+          <p className="font-bold text-slate-900">Mahsulot</p>
+          <ul className="mt-3 space-y-2">
+            {footerLinks.Mahsulot.map((l) => (
+              <li key={l.label}><Link href={l.href} className="transition-colors hover:text-slate-900">{l.label}</Link></li>
+            ))}
+          </ul>
         </div>
+
+        <div className="order-last col-span-2 lg:order-none lg:col-span-1">
+          <p className="font-bold text-slate-900">Yechimlar</p>
+          <ul className="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-2">
+            {footerLinks.Yechimlar.map((l) => (
+              <li key={l.href}><Link href={l.href} className="transition-colors hover:text-slate-900">{l.label}</Link></li>
+            ))}
+          </ul>
+        </div>
+
+        <div>
+          <p className="font-bold text-slate-900">Aloqa</p>
+          <ul className="mt-3 space-y-2">
+            <li><a href={`tel:${CONTACT_PHONE}`} className="transition-colors hover:text-slate-900">{CONTACT_PHONE_DISPLAY}</a></li>
+            <li><a href="https://t.me/oneroomuz" target="_blank" rel="noopener noreferrer" className="transition-colors hover:text-slate-900">@oneroomuz</a></li>
+            <li><a href="mailto:info@oneroom.uz" className="transition-colors hover:text-slate-900">info@oneroom.uz</a></li>
+            <li><Link href="/login" className="transition-colors hover:text-slate-900">Kirish</Link></li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="mx-auto mt-10 flex max-w-[1200px] flex-col gap-2 border-t border-slate-200 pt-5 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <p>© {new Date().getFullYear()} OneRoom. Barcha huquqlar himoyalangan.</p>
+        <address className="not-italic">Toshkent, O&apos;zbekiston</address>
       </div>
     </footer>
   );

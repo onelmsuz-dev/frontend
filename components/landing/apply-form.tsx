@@ -70,12 +70,14 @@ function Field({
  * `compact` — "Nima qiziqtiradi?" va izohni yashiradi (ular sukut bo'yicha yuboriladi).
  */
 export function ApplyPanel({
-  source, variant, heading = "Ariza qoldiring", compact = false,
+  source, variant, heading = "Ariza qoldiring", compact = false, ctaLabel = "Ariza yuborish",
 }: {
   source: string;
   variant: "modal" | "inline";
   heading?: string;
   compact?: boolean;
+  /** Yuborish tugmasidagi matn (klaster sahifalarda sahifaga xos: "Bepul sinab ko'rish"). */
+  ctaLabel?: string;
 }) {
   const {
     name, setName, digits, center, setCenter, note, setNote, topic, setTopic, trap, setTrap, phoneDisplay,
@@ -289,7 +291,7 @@ export function ApplyPanel({
           {sending ? (
             <><Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Yuborilmoqda…</>
           ) : (
-            <>Ariza yuborish <Send className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden /></>
+            <>{ctaLabel} <Send className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden /></>
           )}
         </button>
 
@@ -302,6 +304,6 @@ export function ApplyPanel({
 }
 
 /** Sahifa ichidagi (footer tepasidagi) ariza bloki: modal bilan bir xil forma, faqat sahifada. */
-export function ApplyInline({ source, heading, compact }: { source: string; heading?: string; compact?: boolean }) {
-  return <ApplyPanel variant="inline" source={source} heading={heading} compact={compact} />;
+export function ApplyInline({ source, heading, compact, ctaLabel }: { source: string; heading?: string; compact?: boolean; ctaLabel?: string }) {
+  return <ApplyPanel variant="inline" source={source} heading={heading} compact={compact} ctaLabel={ctaLabel} />;
 }

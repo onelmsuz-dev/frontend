@@ -1,5 +1,5 @@
 // O'zbekiston telefon raqami uchun umumiy format helperlari.
-// `components/landing/contact-section.tsx` va `components/landing/lead-form.tsx`
+// Ariza formasi hook'i (`components/landing/use-lead-form.ts`) va boshqa formalar
 // bir xil mantiqni ishlatadi — shu sabab bu yerga chiqarilgan.
 
 /**

@@ -6,8 +6,8 @@ import { extractNationalDigits, toDisplayPhone, caretForDigits } from "@/lib/pho
 /**
  * Ariza formasi mantig'i (holat, tekshiruv, telefon formati, yuborish) — ko'rinishsiz.
  *
- * `LeadForm` (klaster sahifalar) va `apply-form.tsx` (ariza modali + bosh sahifadagi ariza bloki)
- * shu hook'dan foydalanadi: ikki xil dizayn, bitta ishonchli mantiq. Yuborish `/api/contact` ga ketadi va Telegram botga
+ * `apply-form.tsx` (ariza modali, bosh sahifa va klaster sahifalardagi ariza bloki)
+ * shu hook'dan foydalanadi: bitta ishonchli mantiq. Yuborish `/api/contact` ga ketadi va Telegram botga
  * tushadi (backend o'zgarmaydi). Backend sxemasida alohida "markaz"/"manba" maydoni yo'q —
  * ular ixtiyoriy `message` ichiga qator bo'lib qo'shiladi va Telegramda "Izoh" ostida ko'rinadi.
  */
