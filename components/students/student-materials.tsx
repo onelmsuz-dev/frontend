@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import useSWR from "swr";
 import { Package } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,8 @@ interface Yozuv {
   note: string | null;
   date: string;
   createdByName: string;
+  /** `TOLOV` bo'lsa va sotuv bilan BIR VAQTDA to'langan bo'lsa — sotuv id'si. */
+  saleId: string | null;
 }
 
 export function StudentMaterials({
@@ -39,6 +42,20 @@ export function StudentMaterials({
   const { data } = useSWR<{
     items: Yozuv[]; sold: number; paid: number; debt: number;
   }>(`/api/materials/student/${studentId}`, fetcher);
+
+  /**
+   * SOTUV + DARHOL TO'LOV = BITTA QATOR — Moliya bo'limidagi bilan
+   * bir xil qoida. Ikki ekran bir hodisani ikki xil ko'rsatsa,
+   * xodim qaysi biriga ishonishni bilmasdi.
+   */
+  const qatorlar = useMemo(() => {
+    const xom = data?.items ?? [];
+    const juftlar = new Set(
+      xom.filter(x => x.kind === "TOLOV" && x.saleId).map(x => x.saleId!));
+    return xom
+      .filter(x => !(x.kind === "TOLOV" && x.saleId))
+      .map(x => ({ it: x, tolangan: juftlar.has(x.id) }));
+  }, [data]);
 
   if (!data || data.items.length === 0) return null;
 
@@ -59,7 +76,7 @@ export function StudentMaterials({
       </div>
 
       <ul className="space-y-1.5">
-        {data.items.slice(0, 6).map((it) => (
+        {qatorlar.slice(0, 6).map(({ it, tolangan }) => (
           <li key={it.id} className="flex items-start justify-between gap-2">
             <span className="text-[11.5px] leading-snug min-w-0 flex-1
               text-neutral-600 dark:text-neutral-300">
@@ -70,11 +87,15 @@ export function StudentMaterials({
             </span>
             {/* SOTUV — qarz yozilishi, TO'LOV — pul kirishi.
                 Rang bilan ajratiladi, chunki ikkalasi bir ro'yxatda. */}
+            {/* Pul OLINGAN bo'lsa yashil va "+": sotuvning o'zi qarz,
+                lekin darhol to'langani — kirim. Ikkisini bir xil
+                ko'rsatish "qarz yozildi" degan yolg'on taassurot
+                berardi. */}
             <span className={cn("text-[11.5px] font-semibold shrink-0 tabular-nums",
-              it.kind === "TOLOV"
+              (it.kind === "TOLOV" || tolangan)
                 ? "text-green-600 dark:text-green-400"
-                : "text-neutral-500 dark:text-neutral-400")}>
-              {it.kind === "TOLOV" ? "+" : ""}{fmt(it.amount)}
+                : "text-amber-600 dark:text-amber-400")}>
+              {(it.kind === "TOLOV" || tolangan) ? "+" : ""}{fmt(it.amount)}
             </span>
           </li>
         ))}
@@ -85,9 +106,9 @@ export function StudentMaterials({
         <span className="text-[11px] text-neutral-400">
           Sotilgan {fmt(data.sold)} · to&apos;langan {fmt(data.paid)}
         </span>
-        {data.items.length > 6 && (
+        {qatorlar.length > 6 && (
           <span className="text-[11px] text-neutral-400">
-            yana {data.items.length - 6} ta
+            yana {qatorlar.length - 6} ta
           </span>
         )}
       </div>
