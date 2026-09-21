@@ -18,19 +18,36 @@ export const FONT_OPTIONS: { v: FontScale; label: string; hint: string }[] = [
 ];
 
 /**
- * `<html data-font="KATTA">` — CSS shundan o'qiydi.
+ * EKRANGA QO'LLASH — `<html data-font="KATTA">`, CSS shundan o'qiydi.
  *
  * `STANDART` da atribut BUTUNLAY olib tashlanadi, `data-font="STANDART"`
  * deb qoldirilmaydi: keraksiz holat bo'lardi va "atribut bor, demak
  * sozlangan" degan xulosa yolg'on chiqardi.
  *
- * `localStorage` ga ham yozamiz — keyingi ochilishda sahifa
- * `/api/me` javobini kutmasdan darhol to'g'ri o'lchamda chiziladi.
+ * `localStorage` GA TEGMAYDI — u faqat SAQLANGAN tanlovni eslaydi.
+ * Sinab ko'rish uchun aynan shu funksiya ishlatiladi.
  */
-export function applyFontScale(v: FontScale) {
+export function previewFontScale(v: FontScale) {
   if (typeof document === "undefined") return;
   const el = document.documentElement;
   if (v === "STANDART") delete el.dataset.font;
   else el.dataset.font = v;
+}
+
+/**
+ * SAQLANGAN tanlovni qo'llash — ekranga ham, `localStorage` ga ham.
+ *
+ * `localStorage` keyingi ochilishda kerak: sahifa `/api/me` javobini
+ * kutmasdan darhol to'g'ri o'lchamda chiziladi.
+ *
+ * DIQQAT — SINAB KO'RISH UCHUN BUNI ISHLATMANG. Ilgari sozlamalardagi
+ * jonli ko'rish shu funksiyani chaqirardi va saqlanmagan tanlov
+ * `localStorage` ga tushib qolardi: xodim boshqa bo'limga o'tsa shrift
+ * kattaligicha qolar, "Ko'rinish" ga qaytsa esa "Standart" turardi —
+ * ekran bir narsani, sozlama boshqa narsani ko'rsatardi
+ * (egasi xabar berdi, 2026-09-21).
+ */
+export function applyFontScale(v: FontScale) {
+  previewFontScale(v);
   try { localStorage.setItem(FONT_KEY, v); } catch { /* private rejim */ }
 }

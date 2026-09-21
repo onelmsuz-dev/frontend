@@ -130,7 +130,19 @@ for (const f of FAYLLAR) {
     ayt(`${kalit} serverga YUBORILADI, lekin ${setter}() effektdan tashqarida `
       + `${marta} marta ishlatilgan — ya'ni uni o'zgartiradigan tugma yo'q.`);
   }
-  console.log(`  ✅ ${nom} — ${tekshirildi} ta maydon tekshirildi`);
+  /**
+   * NOL MAYDON — ✅ EMAS.
+   *
+   * Bu "hammasi joyida" degani emas, "qo'riqchi bu faylda hech
+   * narsani ko'rmadi" degani. Masalan saqlash tanasida hosila
+   * qiymat turgan bo'lsa (`uiFontScale: tanlov`, bu yerda `tanlov`
+   * — `useState` emas, undan hisoblangan) qo'riqchi uni topa
+   * olmaydi. Yashil belgi qo'yilsa, qamrov yo'qligi qamrov bordek
+   * ko'rinardi.
+   */
+  console.log(tekshirildi === 0
+    ? `  ⚠️  ${nom} — maydon topilmadi (qo'riqchi bu faylni qoplamayapti)`
+    : `  ✅ ${nom} — ${tekshirildi} ta maydon tekshirildi`);
 }
 
 console.log(xato === 0

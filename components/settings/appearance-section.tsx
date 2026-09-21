@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { Type, Check, Users, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
 import { Button } from "@/components/ui/button";
-import { applyFontScale, FONT_OPTIONS, type FontScale } from "@/lib/font-scale";
+import {
+  applyFontScale, previewFontScale, FONT_OPTIONS, type FontScale,
+} from "@/lib/font-scale";
 
 /**
  * KO'RINISH — hozircha bitta sozlama: shrift o'lchami.
@@ -43,10 +45,28 @@ export function AppearanceSection({ canEdit }: { canEdit: boolean }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  /**
+   * BO'LIMDAN CHIQQANDA SAQLANMAGAN TANLOV QAYTARILADI.
+   *
+   * Ilgari jonli ko'rish `localStorage` ga ham yozardi: xodim
+   * tanlab, saqlamasdan boshqa bo'limga o'tsa shrift kattaligicha
+   * qolar, "Ko'rinish" ga qaytsa esa "Standart" turardi — ekran bir
+   * narsani, sozlama boshqa narsani ko'rsatardi (2026-09-21).
+   *
+   * `ref` KERAK: tozalash funksiyasi bir marta, komponent
+   * o'rnatilganda yaratiladi va o'sha paytdagi qiymatni "yodida"
+   * saqlab qolardi. Saqlangandan keyin chiqilsa u ESKI o'lchamni
+   * tiklab, yangi tanlovni bekor qilardi.
+   */
+  const oxirgiSaqlangan = useRef<FontScale>(saqlangan);
+  useEffect(() => { oxirgiSaqlangan.current = saqlangan; }, [saqlangan]);
+  useEffect(() => () => applyFontScale(oxirgiSaqlangan.current), []);
+
   function koroq(v: FontScale) {
     setQolda(v);
     setMsg(null);
-    applyFontScale(v);          // jonli ko'rish
+    // FAQAT ekranga — `localStorage` ga emas. Bu hali tanlov, qaror emas.
+    previewFontScale(v);
   }
 
   async function save() {
@@ -60,6 +80,12 @@ export function AppearanceSection({ canEdit }: { canEdit: boolean }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setMsg({ ok: false, text: data?.error ?? "Saqlanmadi" }); return; }
       setMsg({ ok: true, text: "Saqlandi — barcha xodimga qo'llanadi" });
+      // `localStorage` ni ham yangilaymiz: endi bu SAQLANGAN tanlov,
+      // va keyingi ochilishda sahifa darhol shu o'lchamda chizilishi
+      // kerak. Ref ham darhol yangilanadi — `mutate()` javobini
+      // kutmasdan chiqib ketilsa, tozalash eski qiymatni tiklamasin.
+      applyFontScale(tanlov);
+      oxirgiSaqlangan.current = tanlov;
       setQolda(null);           // endi yana server qiymatiga ergashamiz
       mutate();
     } catch {
@@ -113,10 +139,21 @@ export function AppearanceSection({ canEdit }: { canEdit: boolean }) {
               })}
             </div>
 
-            <p className="text-[11px] text-neutral-400 mt-3">
-              Tanlaganingiz shu zahoti ko&apos;rinadi. Boshqa xodimlarda
-              saqlaganingizdan keyin qo&apos;llanadi.
-            </p>
+            {/* SAQLANMAGANI ANIQ AYTILADI. Ilgari shu yerda faqat
+                "shu zahoti ko'rinadi" deb yozilardi va xodim buni
+                "saqlandi" deb tushunardi — keyin qaytib kelganda
+                "Standart" turganini ko'rib hayron bo'lardi. */}
+            {ozgardi ? (
+              <p className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mt-3">
+                Bu — sinov ko&apos;rinishi, hali saqlanmagan. Bo&apos;limdan
+                chiqsangiz avvalgi o&apos;lchamga qaytadi.
+              </p>
+            ) : (
+              <p className="text-[11px] text-neutral-400 mt-3">
+                Tanlaganingiz shu zahoti ko&apos;rinadi. Boshqa xodimlarda
+                saqlaganingizdan keyin qo&apos;llanadi.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -184,7 +221,7 @@ export function AppearanceSection({ canEdit }: { canEdit: boolean }) {
           </Button>
           {ozgardi && !saving && (
             <button type="button"
-              onClick={() => { setQolda(null); setMsg(null); applyFontScale(saqlangan); }}
+              onClick={() => { setQolda(null); setMsg(null); previewFontScale(saqlangan); }}
               className="text-[12px] font-semibold text-neutral-500 dark:text-neutral-400
                 hover:text-neutral-700 dark:hover:text-neutral-200">
               Bekor qilish
