@@ -923,7 +923,8 @@ export default function SchedulePage() {
         /* Vertikal aylanish PANJARANING O'ZIDA — shu yerda bo'lsa,
            ichkaridagi yopishgan sarlavha ishlamasdi. */
         <div className="flex-1 min-h-0 p-4">
-          <RoomGrid groups={groups} rooms={rooms} />
+          <RoomGrid groups={groups} rooms={rooms}
+            ishBoshi={org?.workStart} ishOxiri={org?.workEnd} />
         </div>
       )}
 

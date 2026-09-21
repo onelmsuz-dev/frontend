@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CalendarClock, X } from "lucide-react";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useRooms } from "@/lib/hooks/useRooms";
+import { useOrganization } from "@/lib/hooks/useOrganization";
 import { RoomTimeGrid, type Guruh } from "@/components/schedule/room-grid";
 import {
   ScheduleTabs, filtrla, bugungiIndeks, haftaSanasi, KUNLAR,
@@ -53,6 +54,9 @@ export function ScheduleDrawer() {
   const { data: raw, isLoading } = useGroups(
     ochiq ? { status: "ACTIVE" } : undefined, { enabled: ochiq });
   const groups: Guruh[] = Array.isArray(raw) ? raw : [];
+  // Ish vaqti — panjara o'qining chegarasi. Sozlamalar sahifasi ham
+  // shu kalitni o'qiydi, ya'ni qo'shimcha so'rov ketmaydi.
+  const { data: org } = useOrganization() as { data?: { workStart?: string; workEnd?: string } };
   const { data: roomsRaw } = useRooms();
   const rooms: { id: string; name: string }[] = Array.isArray(roomsRaw) ? roomsRaw : [];
 
@@ -154,7 +158,9 @@ export function ScheduleDrawer() {
                 </p>
               )}
               {!isLoading && korinadi.length > 0 && (
-                <RoomTimeGrid groups={korinadi} rooms={rooms} compact showNow={bugunmi} />
+                <RoomTimeGrid groups={korinadi} rooms={rooms} compact
+                  ishBoshi={org?.workStart} ishOxiri={org?.workEnd}
+                  showNow={bugunmi} />
               )}
             </div>
 

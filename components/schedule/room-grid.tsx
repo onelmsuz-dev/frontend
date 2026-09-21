@@ -114,9 +114,19 @@ function yolaklar(list: Guruh[]): { g: Guruh; yolak: number; jami: number }[] {
 
 export function RoomTimeGrid({
   groups, rooms, compact = false, showNow = false,
+  ishBoshi, ishOxiri,
 }: {
   groups: Guruh[];
   rooms: { id: string; name: string }[];
+  /**
+   * MARKAZNING ISH VAQTI ("08:00" / "20:00") — o'qning chegarasi.
+   *
+   * Berilmasa o'q faqat darslar bo'yicha quriladi. Berilsa — butun
+   * ish kuni ko'rinadi va "qaysi soat bo'sh" degan savolga javob
+   * bo'ladi (egasining talabi, 2026-09-21).
+   */
+  ishBoshi?: string | null;
+  ishOxiri?: string | null;
   /** Yon panel uchun torroq ustun va pastroq qator. */
   compact?: boolean;
   /**
@@ -162,13 +172,27 @@ export function RoomTimeGrid({
   const oyna = useMemo(() => {
     const boshlar = groups.map((g) => daqiqa(g.startTime)).filter((x): x is number => x !== null);
     const oxirlar = groups.map((g) => daqiqa(g.endTime)).filter((x): x is number => x !== null);
-    if (boshlar.length === 0) return null;
-    const b = Math.floor(Math.min(...boshlar) / QADAM) * QADAM;
+    const ishB = daqiqa(ishBoshi ?? "");
+    const ishO = daqiqa(ishOxiri ?? "");
+    if (boshlar.length === 0 && ishB === null) return null;
+
+    /**
+     * DARS ISH VAQTIDAN TASHQARIDA BO'LSA HAM KO'RINADI.
+     *
+     * O'q faqat `workStart`–`workEnd` bilan cheklansa, 07:30 dagi yoki
+     * 21:00 dagi dars jadvaldan JIMGINA yo'qolardi — va aynan shunday
+     * dars e'tiborni ko'proq talab qiladi. Shuning uchun chegara ikkovi
+     * orasidan kengrog'i bo'yicha olinadi.
+     */
+    const eng = (a: number[], b: number | null, f: (...x: number[]) => number) =>
+      b === null ? f(...a) : (a.length ? f(...a, b) : b);
+
+    const b = Math.floor(eng(boshlar, ishB, Math.min) / QADAM) * QADAM;
     const o = Math.max(
-      Math.ceil(Math.max(...oxirlar, Math.min(...boshlar) + QADAM) / QADAM) * QADAM,
+      Math.ceil(eng(oxirlar, ishO, Math.max) / QADAM) * QADAM,
       b + QADAM);
     return { bosh: b, oxir: o, qator: (o - b) / QADAM };
-  }, [groups]);
+  }, [groups, ishBoshi, ishOxiri]);
 
   /** Guruhlar xona bo'yicha, har birida yo'laklar hisoblangan. */
   const xonaBoyicha = useMemo(() => {
@@ -181,11 +205,59 @@ export function RoomTimeGrid({
   }, [groups, ustunlar]);
 
   const eniPx  = compact ? 150 : 190;
-  const qatorH = compact ? 34 : 44;          // yarim soatning balandligi
+  const qatorH = compact ? 34 : 44;          // BAND yarim soatning balandligi
+  const boshH  = compact ? 16 : 20;          // bo'sh yarim soat — torroq
   const gutter = compact ? 48 : 56;
 
-  /** Daqiqa → pikselga. */
-  const yPx = (min: number) => ((min - (oyna?.bosh ?? 0)) / QADAM) * qatorH;
+  /**
+   * HAR QATORNING BALANDLIGI — darsi borlari CHO'ZILADI.
+   *
+   * O'q butun ish kunini qamragach jadval juda baland bo'lib ketdi:
+   * 08:00–20:00 = 24 qator, va ularning ko'pi bo'sh. Hammasi bir xil
+   * balandlikda bo'lsa, ekranga sig'may qoladi va darslar orasida
+   * uzoq bo'shliq turadi.
+   *
+   * Shuning uchun darsi bor qator TO'LIQ balandlikda (matn butun
+   * ko'rinadi), bo'sh qator esa torroq. "Bir kunda 3-4 ta dars bo'lsa
+   * o'sha qator to'liq ko'rinishi uchun cho'zilsin" — egasining
+   * talabi, 2026-09-21.
+   */
+  const band = useMemo(() => {
+    if (!oyna) return [] as boolean[];
+    const b = new Array<boolean>(oyna.qator).fill(false);
+    for (const g of groups) {
+      const bosh = daqiqa(g.startTime);
+      if (bosh === null) continue;
+      const oxir = Math.max(daqiqa(g.endTime) ?? bosh + QADAM, bosh + QADAM);
+      const bi = Math.max(0, Math.floor((bosh - oyna.bosh) / QADAM));
+      const oi = Math.min(oyna.qator, Math.ceil((oxir - oyna.bosh) / QADAM));
+      for (let i = bi; i < oi; i++) b[i] = true;
+    }
+    return b;
+  }, [groups, oyna]);
+
+  const qatorBal = (i: number) => (band[i] ? qatorH : boshH);
+
+  /** Qator boshigacha bo'lgan yig'indi balandlik. */
+  const yigindi = useMemo(() => {
+    const out = [0];
+    for (let i = 0; i < band.length; i++) out.push(out[i] + qatorBal(i));
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [band, qatorH, boshH]);
+
+  /**
+   * Daqiqa → pikselga. Qatorlar har xil balandlikda bo'lgani uchun
+   * oddiy ko'paytirish YETMAYDI — yig'indi jadvalidan olinadi va
+   * qator ICHIDAGI ulush alohida qo'shiladi (10:15 kabi vaqtlar
+   * qatorning aynan yarmiga tushishi uchun).
+   */
+  const yPx = (min: number) => {
+    if (!oyna) return 0;
+    const ulush = (min - oyna.bosh) / QADAM;
+    const i = Math.max(0, Math.min(band.length - 1, Math.floor(ulush)));
+    return (yigindi[i] ?? 0) + (ulush - i) * qatorBal(i);
+  };
 
   /**
    * "HOZIR" — endi ANIQ DAQIQADA.
@@ -205,7 +277,7 @@ export function RoomTimeGrid({
 
   if (groups.length === 0 || !oyna) return null;
 
-  const jadvalH = oyna.qator * qatorH;
+  const jadvalH = yigindi[yigindi.length - 1] ?? 0;
 
   return (
     /* IKKALA O'Q BITTA IDISHDA aylanadi. `sticky` eng yaqin aylanadigan
@@ -243,8 +315,10 @@ export function RoomTimeGrid({
                     butunSoat
                       ? "font-bold text-neutral-600 dark:text-neutral-300"
                       : "text-neutral-400 dark:text-neutral-500")}
-                  style={{ height: qatorH }}>
-                  {soat(min)}
+                  style={{ height: qatorBal(i) }}>
+                  {/* Bo'sh, toraytirilgan qatorda faqat BUTUN soat
+                      yoziladi — 16px ga ikki qator raqam sig'maydi. */}
+                  {band[i] || butunSoat ? soat(min) : ""}
                 </div>
               );
             })}
@@ -259,7 +333,7 @@ export function RoomTimeGrid({
                 <div key={i}
                   className={cn("absolute inset-x-0 border-b", PANJARA,
                     (oyna.bosh + i * QADAM) % 60 === 0 ? "" : "border-dashed")}
-                  style={{ top: i * qatorH, height: qatorH }} />
+                  style={{ top: yigindi[i], height: qatorBal(i) }} />
               ))}
 
               {/* BLOKLAR — davomiyligi bo'yicha cho'ziladi */}
@@ -321,10 +395,13 @@ export function RoomTimeGrid({
 }
 
 export function RoomGrid({
-  groups, rooms,
+  groups, rooms, ishBoshi, ishOxiri,
 }: {
   groups: Guruh[];
   rooms: { id: string; name: string }[];
+  /** Markazning ish vaqti — o'q shu oraliqni to'liq ko'rsatadi. */
+  ishBoshi?: string | null;
+  ishOxiri?: string | null;
 }) {
   const [tab, setTab] = useState<JadvalTab>("toq");
   const [kunIdx, setKunIdx] = useState(() => bugungiIndeks());
@@ -350,6 +427,7 @@ export function RoomGrid({
       ) : (
         <div className="flex-1 min-h-0 p-2">
           <RoomTimeGrid groups={korinadi} rooms={rooms}
+            ishBoshi={ishBoshi} ishOxiri={ishOxiri}
             showNow={tab === "boshqa" && kunIdx === bugungiIndeks()} />
         </div>
       )}
