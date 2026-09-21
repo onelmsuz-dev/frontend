@@ -273,6 +273,25 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   // qilmaydi" deb belgilangan o'qituvchida bu huquq yo'q, server ham
   // balansni bermaydi.
   const canSeeMoney = hasPerm(me?.permissions, "payments.view");
+
+  /**
+   * KEYINGI HISOBDA TUSHADIGAN CHEGIRMA.
+   *
+   * Qoida FAQAT bundan keyingi hisoblarga ta'sir qiladi — allaqachon
+   * yozilgan qarz o'zgarmaydi. Oylik markazda keyingi hisob 1-sanada
+   * yoziladi, ya'ni 21-sentabrda chegirma bergan admin 1-oktabrgacha
+   * HECH QANDAY o'zgarish ko'rmasdi va "chegirma ishlamadi" degan
+   * xulosaga kelardi (markaz so'radi, 2026-09-21).
+   *
+   * Server hech narsa yozmaydi — qarz yozadigan yo'l bilan aynan bir
+   * xil funksiyadan o'tib, faqat hisoblab beradi.
+   */
+  const { data: kelgusiRaw } = useSWR<{
+    groupId: string; groupName: string; netto: number; amount: number; label: string;
+  }[]>(canSeeMoney ? `/api/discounts/for-student/${id}` : null, _fetcher);
+  const kelgusi = (groupId: string) =>
+    (Array.isArray(kelgusiRaw) ? kelgusiRaw : []).find((x) => x.groupId === groupId);
+
   /**
    * DAVOMAT — ALOHIDA RUXSAT.
    *
@@ -1776,10 +1795,24 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                               bilan jurnal bir-biridan ajralib keta olmaydi. */}
                           {canSeeMoney && (() => {
                             const ch = guruhChegirmasi(sg.groupId);
-                            if (!ch) return null;
+                            if (ch) {
+                              return (
+                                <p className="text-[10px] text-pink-600 dark:text-pink-400">
+                                  Chegirma −{fmt(ch.discountAmount)}{ch.discountLabel ? ` (${ch.discountLabel})` : ""} · to&apos;lanadi: {fmt(Math.abs(ch.amount ?? 0))}
+                                </p>
+                              );
+                            }
+                            /* QARZDA CHEGIRMA YO'Q, lekin QOIDA BOR —
+                               keyingi hisobda tushadi. Busiz admin chegirma
+                               berib, o'quvchi kartochkasida hech qanday
+                               o'zgarish ko'rmasdi va "ishlamadi" degan
+                               xulosaga kelardi. */
+                            const k = kelgusi(sg.groupId);
+                            if (!k) return null;
                             return (
                               <p className="text-[10px] text-pink-600 dark:text-pink-400">
-                                Chegirma −{fmt(ch.discountAmount)}{ch.discountLabel ? ` (${ch.discountLabel})` : ""} · to&apos;lanadi: {fmt(Math.abs(ch.amount ?? 0))}
+                                Keyingi hisobdan: −{fmt(k.amount)}
+                                {k.label ? ` (${k.label})` : ""} · to&apos;lanadi: {fmt(k.netto)}
                               </p>
                             );
                           })()}
