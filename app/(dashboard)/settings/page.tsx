@@ -18,10 +18,11 @@ import { DiscountsSection } from "@/components/settings/discounts-section";
 import { ActivitySection } from "@/components/settings/activity-section";
 import { TrashSection } from "@/components/settings/trash-section";
 import { AppearanceSection } from "@/components/settings/appearance-section";
+import { TargetPageSection } from "@/components/settings/target-page-section";
 import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
 import type { Branch, Room } from "@/types";
 import {
-  Plus, Trash2, Users, Building, Bell, Type,
+  Plus, Trash2, Users, Building, Bell, Type, Link2,
   MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket, Wallet, History, Percent,
   CalendarOff,
 } from "lucide-react";
@@ -73,6 +74,9 @@ const sections = [
   // hisobining maxraji — ya'ni pulga tegadi. Shuning uchun o'z ruxsat kaliti.
   { id: "bayramlar",     label: "Bayram kunlari",   icon: CalendarOff, group: "markaz",
     perm: "holidays.view" },
+  // Ariza sahifasi — markazning reklamadagi yuzi. "Markaz" guruhida,
+  // chunki u markazning O'ZI haqida, pul yoki tizim sozlamasi emas.
+  { id: "ariza",         label: "Ariza sahifasi",   icon: Link2,     group: "markaz" },
 
   // ─ Pul: O'QUVCHIDAN qanday pul olinadi ─
   { id: "tolov",         label: "O'quvchi to'lovlari", icon: Wallet, group: "pul" },
@@ -126,6 +130,17 @@ function SettingsContent() {
   // ya'ni bayroq ortidagi ikkinchi bo'lim qo'shilgan zahoti u ham
   // onboarding bayrog'iga bog'lanib qolardi. Endi har bo'lim o'z kalitini
   // ko'rsatadi va tekshiruv umumiy.
+  /**
+   * Ariza sahifasining havolasi uchun subdomen — manzil satridan.
+   * `useState` ning DANGASA boshlang'ichi: effekt ichida holat
+   * o'zgartirish ortiqcha qayta chizishga olib keladi.
+   */
+  const [subdomain] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const parts = window.location.hostname.split(".");
+    return parts.length > 2 ? parts[0] : null;
+  });
+
   const { enabled: onboardingEnabled } = useOnboardingCtx();
   const features = useFeatures().data;
   const { me } = useMe();
@@ -521,6 +536,8 @@ function SettingsContent() {
           {activeSection === "harakatlar" && <ActivitySection />}
 
           {activeSection === "korzinka" && <TrashSection />}
+
+          {activeSection === "ariza" && <TargetPageSection subdomain={subdomain} />}
 
           {activeSection === "korinish" && (
             <AppearanceSection canEdit={hasPerm(me?.permissions, "settings.view")} />

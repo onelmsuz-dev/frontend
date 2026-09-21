@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
+import Link from "next/link";
 import {
-  Link2, Copy, Check, Share2, FileText, Sheet, Users, Search, Phone,
+  Link2, Copy, Check, Share2, FileText, Sheet, Users, Search, Phone, Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
@@ -199,6 +200,17 @@ export function TargetLeads() {
                 dark:text-neutral-200 truncate">
                 {havola || "—"}
               </code>
+              {/* SOZLASH — sahifani moslash uchun. Havolaning yonida
+                  turishi muhim: markaz havolani nusxa olayotgan paytda
+                  "buni o'zgartirsa ham bo'lar ekan" degan fikr
+                  tug'iladi, sozlamalarni alohida qidirmaydi. */}
+              <Link href="/settings?tab=ariza"
+                className="h-9 px-3 rounded-xl glass-soft border border-white/60
+                  dark:border-white/10 text-[12.5px] font-semibold text-neutral-600
+                  dark:text-neutral-300 flex items-center gap-1.5 hover:border-indigo-400
+                  transition-colors">
+                <Settings2 className="w-3.5 h-3.5" />Sozlash
+              </Link>
               <button type="button" disabled={!havola}
                 onClick={() => nusxa(havola, "havola")}
                 className={cn("h-9 px-3.5 rounded-xl text-[12.5px] font-semibold",
