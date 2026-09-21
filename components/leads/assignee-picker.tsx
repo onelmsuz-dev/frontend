@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { UserPlus, Check, Loader2 } from "lucide-react";
 import { useLeadAssignees } from "@/lib/hooks/useLeads";
+import { createPortal } from "react-dom";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,59 @@ export function AssigneePicker({
   /** Hali hech kimga biriktirilmagan. */
   const biriktirilmagan = !current?.id;
 
+  /**
+   * RO'YXAT `body` GA CHIQARILADI, kartochka ichida emas.
+   *
+   * Kartochka aylanadigan ustunning ichida va `overflow` bilan
+   * kesiladi — ochilgan ro'yxat KO'RINMAY qolardi. Mobilda bu ayniqsa
+   * yomon: ustun tor va ro'yxat deyarli butunlay kesilardi (egasi
+   * suratda ko'rsatdi, 2026-09-21).
+   *
+   * Portal bilan ro'yxat hech qanday `overflow` ga bog'liq bo'lmaydi,
+   * lekin o'rnini o'zi hisoblashi kerak — quyidagi `joy`.
+   */
+  const tugmaRef = useRef<HTMLButtonElement>(null);
+  const [joy, setJoy] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    /* Yopilganda holat TOZALANMAYDI: chizish `ochiq` ga bog'liq, ya'ni
+       eski qiymat ko'rinmaydi. Effekt ichida holat o'zgartirish esa
+       ortiqcha qayta chizish beradi. Qayta ochilganda `useLayoutEffect`
+       o'rnini chizishdan OLDIN qayta hisoblaydi. */
+    if (!ochiq) return;
+    const olch = () => {
+      const r = tugmaRef.current?.getBoundingClientRect();
+      if (!r) return;
+      /* Pastda joy yetmasa ro'yxat TEPADA ochiladi — aks holda u
+         ekran ostida qolib, foydalanuvchi uni umuman ko'rmasdi. */
+      const past = window.innerHeight - r.bottom;
+      const balandlik = 220;
+      const tepada = past < balandlik && r.top > past;
+      setJoy({
+        top: tepada ? Math.max(8, r.top - balandlik - 4) : r.bottom + 4,
+        left: r.left,
+        width: r.width,
+      });
+    };
+    olch();
+    /* Aylanish va o'lcham o'zgarishi — ro'yxat tugmadan ajralib
+       qolmasin. `capture`: ichki aylanadigan idishlar ham sanaladi. */
+    window.addEventListener("scroll", olch, true);
+    window.addEventListener("resize", olch);
+    return () => {
+      window.removeEventListener("scroll", olch, true);
+      window.removeEventListener("resize", olch);
+    };
+  }, [ochiq]);
+
+  // Boshqa joy bosilganda yopiladi (portal ichi bundan mustasno).
+  useEffect(() => {
+    if (!ochiq) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOchiq(false); };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [ochiq]);
+
   // Biriktira olmaydigan xodimga tanlov ko'rsatilmaydi — faqat
   // mas'ul nomi (agar bor bo'lsa) o'qiladigan matn sifatida qoladi.
   if (!taqsimlay && !current?.name) return null;
@@ -66,7 +120,7 @@ export function AssigneePicker({
 
   return (
     <div className="mt-2 relative">
-      <button type="button"
+      <button type="button" ref={tugmaRef}
         onClick={(e) => { e.stopPropagation(); setOchiq(v => !v); }}
         className={cn(
           "w-full flex items-center gap-1 text-[10px] rounded-md px-1.5 py-1 transition-colors",
@@ -79,11 +133,15 @@ export function AssigneePicker({
           : <><span className="shrink-0">👤</span> <span className="truncate">{current?.name}</span></>}
       </button>
 
-      {ochiq && (
+      {ochiq && joy && typeof document !== "undefined" && createPortal(
         <>
-          <div className="fixed inset-0 z-20" onClick={(e) => { e.stopPropagation(); setOchiq(false); }} />
-          <div className="absolute z-30 left-0 right-0 mt-1 max-h-52 overflow-y-auto rounded-lg
+          <div className="fixed inset-0 z-[200]"
+            onClick={(e) => { e.stopPropagation(); setOchiq(false); }} />
+          {/* MOBILDA ENG KAM ENI — kartochka tor bo'lsa ro'yxat ham
+              tor bo'lib, ismlar qirqilardi. */}
+          <div className="fixed z-[201] max-h-52 overflow-y-auto rounded-lg
             border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-900 shadow-xl py-1"
+            style={{ top: joy.top, left: joy.left, minWidth: Math.max(joy.width, 180) }}
             onClick={(e) => e.stopPropagation()}>
 
             {saqlanmoqda && (
@@ -111,7 +169,8 @@ export function AssigneePicker({
               </>
             )}
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </div>
   );
