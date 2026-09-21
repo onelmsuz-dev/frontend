@@ -195,10 +195,12 @@ export function TargetPageSection({
         </div>
       </div>
 
-      {/* YARIM-YARIM: sozlama chapda, natija o'ngda. Tor ekranda
-          ustma-ust tushadi va namuna pastda qoladi — telefonda
-          sozlash kamdan-kam bo'ladi. */}
-      <div className="grid lg:grid-cols-2 gap-4 items-start">
+      {/* SOZLAMA CHAPDA, NATIJA O'NGDA.
+          Teng yarim EMAS: namuna — 312px lik telefon, unga yarim ekran
+          bergan bilan u kattalashmaydi va yonida bo'sh joy qolardi.
+          Shuning uchun o'ng ustun telefon eniga moslangan, qolgan joy
+          sozlamaga beriladi. Tor ekranda ustma-ust tushadi. */}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_400px] gap-5 items-start">
 
         {/* ── SOZLAMALAR ── */}
         <div className="space-y-4 min-w-0">
@@ -364,7 +366,10 @@ export function TargetPageSection({
                 uzunligini noto'g'ri baholardi va telefonda sarlavha
                 ikki qatorga tushib ketardi. */}
             {qurilma === "mobil" ? (
-              <div className="relative mx-auto" style={{ width: 300 }}>
+              /* HAQIQIY NISBAT — iPhone Pro Max 430×932 (0.461).
+                 Ilgari 300×620 edi va nisbat 0.484 chiqib, ramka
+                 haqiqiydan kengroq/pastroq ko'rinardi. */
+              <div className="relative mx-auto" style={{ width: 312 }}>
                 <div className="relative rounded-[3rem] bg-neutral-900 p-[10px]
                   shadow-[0_25px_60px_-15px_rgba(0,0,0,0.45)]
                   ring-1 ring-neutral-700/60">
@@ -373,8 +378,8 @@ export function TargetPageSection({
                   <span className="absolute -left-[3px] top-[160px] w-[3px] h-14 rounded-l bg-neutral-700" />
                   <span className="absolute -right-[3px] top-[140px] w-[3px] h-20 rounded-r bg-neutral-700" />
 
-                  <div className="relative rounded-[2.4rem] overflow-hidden bg-white"
-                    style={{ height: 620 }}>
+                  <div className="relative rounded-[2.4rem] overflow-hidden"
+                    style={{ height: 676 }}>
                     {/* DYNAMIC ISLAND — kontent ustida suzadi.
                         `pointer-events-none`: u namunadagi bosishlarni
                         yutib qo'ymasligi kerak. */}
@@ -418,10 +423,14 @@ export function TargetPageSection({
    * Orqaga tugmasi sozlamalarga qaytaradi.
    */
   return (
-    <div className="fixed inset-0 z-50 bg-[#fbfbfd] dark:bg-neutral-950 flex flex-col">
+    /* FON ILOVANING O'ZIDAGIDEK. Ilgari tekis rang edi va bo'lim
+       qolgan sahifalardan begona ko'rinardi — xodim "boshqa
+       dasturga tushdimmi" degan taassurotga tushardi. */
+    <div className="fixed inset-0 z-50 flex flex-col">
+      <div className="app-bg-base fixed inset-0 -z-20" />
+      <div className="app-bg-split fixed inset-0 -z-10" />
       <div className="shrink-0 flex items-center gap-3 px-4 sm:px-6 h-14
-        border-b border-neutral-200 dark:border-white/10 bg-white/80 dark:bg-neutral-900/80
-        backdrop-blur">
+        border-b border-white/60 dark:border-white/10 glass-panel">
         <button type="button" onClick={onBack}
           className="h-9 px-3 -ml-1 rounded-xl text-[13px] font-semibold
             text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5
@@ -440,7 +449,7 @@ export function TargetPageSection({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
-        <div className="max-w-[1500px] mx-auto">{tana}</div>
+        <div className="max-w-[1180px] mx-auto">{tana}</div>
       </div>
     </div>
   );

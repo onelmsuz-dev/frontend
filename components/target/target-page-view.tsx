@@ -113,8 +113,13 @@ export function TargetPageView({
     "focus:outline-none focus-within:ring-2", m.maydon);
 
   return (
-    <div className={cn("relative w-full", namuna ? "py-7 px-4" : "min-h-dvh py-10 sm:py-16 px-4",
-      m.fon, namuna && "rounded-2xl overflow-hidden")}>
+    /* `min-h-full` NAMUNADA HAM: telefon ramkasi qat'iy balandlikda va
+       kontent undan kaltaroq bo'lsa, ostida ramkaning oq foni ko'rinib
+       qolardi — mavzu yarmida uzilgandek chiqardi (egasi ko'rsatdi,
+       2026-09-21). Haqiqiy sahifada esa `min-h-dvh`. */
+    <div className={cn("relative w-full flex flex-col",
+      namuna ? "min-h-full py-7 px-4" : "min-h-dvh py-10 sm:py-16 px-4",
+      m.fon)}>
 
       {/* FON — yumshoq nur dog'lari. `pointer-events-none`: ular
           formadagi bosishlarni yutib qo'ymasligi kerak. */}
@@ -123,7 +128,15 @@ export function TargetPageView({
         <div className={cn("absolute -bottom-40 -right-20 w-[24rem] h-[24rem] rounded-full blur-[90px]", m.dog2)} />
       </div>
 
-      <div className={cn("relative w-full mx-auto", namuna ? "max-w-[340px]" : "max-w-[420px]")}>
+      {/* `my-auto` — `justify-center` EMAS.
+          Ikkalasi ham kontentni markazga qo'yadi, lekin kontent
+          idishdan BALAND bo'lganda `justify-center` uni ikki tomonga
+          chiqarib, TEPASINI aylantirib bo'lmaydigan qilib qo'yadi.
+          `my-auto` esa joy yetmasa o'zi 0 ga tushadi. Telefon ramkasi
+          qat'iy balandlikda, maydonlar soni esa markazga bog'liq —
+          ya'ni bu holat muqarrar. */}
+      <div className={cn("relative w-full mx-auto my-auto",
+        namuna ? "max-w-[340px]" : "max-w-[420px]")}>
 
         {/* MARKAZ BRENDI */}
         <div className={cn("text-center", namuna ? "mb-5" : "mb-8")}>
