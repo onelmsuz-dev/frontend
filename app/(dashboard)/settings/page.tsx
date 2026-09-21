@@ -537,7 +537,13 @@ function SettingsContent() {
 
           {activeSection === "korzinka" && <TrashSection />}
 
-          {activeSection === "ariza" && <TargetPageSection subdomain={subdomain} />}
+          {/* TO'LIQ EKRAN: `onBack` berilgani uchun bo'lim butun ekranni
+              egallaydi. Orqaga tugmasi xodimlar ro'yxatiga qaytaradi —
+              sozlamalarning eng ko'p ochiladigan bo'limi. */}
+          {activeSection === "ariza" && (
+            <TargetPageSection subdomain={subdomain}
+              onBack={() => setActiveSection("xodimlar")} />
+          )}
 
           {activeSection === "korinish" && (
             <AppearanceSection canEdit={hasPerm(me?.permissions, "settings.view")} />

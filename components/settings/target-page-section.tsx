@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import useSWR from "swr";
 import {
   Upload, X, Check, Loader2, Link2, Copy, Eye, Palette, Type, ListChecks,
-  Smartphone, Monitor, HelpCircle,
+  Smartphone, Monitor, HelpCircle, ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
@@ -73,7 +73,13 @@ const BOSH: Sozlama = {
   fields: null,
 };
 
-export function TargetPageSection({ subdomain }: { subdomain: string | null }) {
+export function TargetPageSection({
+  subdomain, onBack,
+}: {
+  subdomain: string | null;
+  /** Berilsa — TO'LIQ EKRAN rejimi va tepada orqaga tugmasi. */
+  onBack?: () => void;
+}) {
   const { data, mutate } = useSWR<Sozlama>("/api/target-page", fetcher);
   const { data: org } = useSWR<{ name?: string }>("/api/organization", fetcher);
   const { data: kurslarRaw } = useSWR<{ id: string; name: string }[]>("/api/courses", fetcher);
@@ -144,7 +150,7 @@ export function TargetPageSection({ subdomain }: { subdomain: string | null }) {
     } finally { setSaving(false); }
   }
 
-  return (
+  const tana = (
     <div className="space-y-4">
 
       {/* ── HAVOLA ── */}
@@ -351,27 +357,90 @@ export function TargetPageSection({ subdomain }: { subdomain: string | null }) {
             </div>
           </div>
 
-          <div className={cn("mx-auto transition-all",
-            qurilma === "mobil" ? "max-w-[310px]" : "max-w-full")}>
-            {/* TELEFON RAMKASI — namuna haqiqiy o'lchamda ekanini
-                ko'rsatadi. Ramkasiz markaz uni kichik rasm deb o'ylab,
-                matn uzunligini noto'g'ri baholardi. */}
-            <div className={cn("overflow-hidden border bg-neutral-900",
-              qurilma === "mobil"
-                ? "rounded-[2rem] border-[6px] border-neutral-800 shadow-2xl"
-                : "rounded-2xl border-white/60 dark:border-white/10")}>
-              <div className={cn("overflow-y-auto",
-                qurilma === "mobil" ? "h-[560px]" : "h-[480px]")}>
-                <TargetPageView markaz={org?.name ?? "Markaz"} config={s}
-                  courses={kurslar} namuna={qurilma === "mobil"} />
+          <div className="mx-auto transition-all">
+            {/* TELEFON RAMKASI — iPhone Pro Max nisbatida (430×932).
+                Namuna haqiqiy qurilma o'lchamida ekanini ko'rsatadi:
+                ramkasiz markaz uni kichik rasm deb o'ylab, matn
+                uzunligini noto'g'ri baholardi va telefonda sarlavha
+                ikki qatorga tushib ketardi. */}
+            {qurilma === "mobil" ? (
+              <div className="relative mx-auto" style={{ width: 300 }}>
+                <div className="relative rounded-[3rem] bg-neutral-900 p-[10px]
+                  shadow-[0_25px_60px_-15px_rgba(0,0,0,0.45)]
+                  ring-1 ring-neutral-700/60">
+                  {/* Yon tugmalar — ramkaga qurilma ko'rinishini beradi. */}
+                  <span className="absolute -left-[3px] top-[110px] w-[3px] h-9 rounded-l bg-neutral-700" />
+                  <span className="absolute -left-[3px] top-[160px] w-[3px] h-14 rounded-l bg-neutral-700" />
+                  <span className="absolute -right-[3px] top-[140px] w-[3px] h-20 rounded-r bg-neutral-700" />
+
+                  <div className="relative rounded-[2.4rem] overflow-hidden bg-white"
+                    style={{ height: 620 }}>
+                    {/* DYNAMIC ISLAND — kontent ustida suzadi.
+                        `pointer-events-none`: u namunadagi bosishlarni
+                        yutib qo'ymasligi kerak. */}
+                    <div className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 z-20
+                      w-[86px] h-[26px] rounded-full bg-black" />
+                    <div className="h-full overflow-y-auto">
+                      <TargetPageView markaz={org?.name ?? "Markaz"} config={s}
+                        courses={kurslar} namuna />
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-2xl overflow-hidden border border-white/60 dark:border-white/10">
+                <div className="h-[560px] overflow-y-auto">
+                  <TargetPageView markaz={org?.name ?? "Markaz"} config={s}
+                    courses={kurslar} />
+                </div>
+              </div>
+            )}
           </div>
 
           <p className="text-[11px] text-neutral-400 text-center mt-2">
             Namuna — forma bu yerdan yuborilmaydi
           </p>
         </div>
+      </div>
+    </div>
+  );
+
+  if (!onBack) return tana;
+
+  /**
+   * TO'LIQ EKRAN — sozlama va namuna yonma-yon sig'ishi uchun.
+   *
+   * Sozlamalar sahifasining ichida bu bo'lim tor ustunga tiqilib,
+   * namuna kichrayib ketardi — markaz esa aynan NAMUNAGA qarab
+   * ishlaydi (egasining talabi, 2026-09-21).
+   *
+   * `fixed` + `z-50`: yon menyu va tepa sarlavha ostida qolmasin.
+   * Orqaga tugmasi sozlamalarga qaytaradi.
+   */
+  return (
+    <div className="fixed inset-0 z-50 bg-[#fbfbfd] dark:bg-neutral-950 flex flex-col">
+      <div className="shrink-0 flex items-center gap-3 px-4 sm:px-6 h-14
+        border-b border-neutral-200 dark:border-white/10 bg-white/80 dark:bg-neutral-900/80
+        backdrop-blur">
+        <button type="button" onClick={onBack}
+          className="h-9 px-3 -ml-1 rounded-xl text-[13px] font-semibold
+            text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5
+            hover:bg-neutral-100 dark:hover:bg-white/10 transition-colors">
+          <ArrowLeft className="w-4 h-4" />Sozlamalar
+        </button>
+        <div className="w-px h-5 bg-neutral-200 dark:bg-white/10" />
+        <p className="text-[14px] font-bold text-neutral-900 dark:text-neutral-100">
+          Ariza sahifasi
+        </p>
+        {ozgardi && (
+          <span className="ml-auto text-[11.5px] font-semibold text-amber-600 dark:text-amber-400">
+            Saqlanmagan
+          </span>
+        )}
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
+        <div className="max-w-[1500px] mx-auto">{tana}</div>
       </div>
     </div>
   );
