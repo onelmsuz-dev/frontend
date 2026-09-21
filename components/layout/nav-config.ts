@@ -76,6 +76,31 @@ export function itemVisible(perm: NavItem["perm"], permissions: string[] | undef
   return list.some((p) => permissions.includes(p));
 }
 
+/**
+ * XODIMGA OCHIQ BIRINCHI BO'LIM.
+ *
+ * Kirgandan keyin hamma `/dashboard` ga tushadi, lekin `dashboard.view`
+ * hamma rolda yo'q. Operator rolida bu aniq ko'rindi: unga dashboard
+ * kerak emas, lekin u baribir o'sha yerga tushardi (egasi xabar
+ * berdi, 2026-09-21).
+ *
+ * Menyu tartibi bo'yicha yuriladi — ya'ni xodim o'zining eng muhim
+ * bo'limiga tushadi (sotuvchi → Lidlar, o'qituvchi → Jadval).
+ * Hech biri ochiq bo'lmasa `null`: bunday xodimga umuman ish yo'q
+ * va uni jimgina biror sahifaga tashlash chalg'itardi.
+ */
+export function birinchiOchiq(permissions: string[] | undefined): string | null {
+  if (!permissions) return null;
+  for (const s of navSections) {
+    for (const i of s.items) {
+      if (i.href === "/dashboard") continue;   // dashboard — chiqish nuqtasi emas
+      if (i.teacherOnly) continue;             // rolga qarab, ruxsatga emas
+      if (itemVisible(i.perm, permissions)) return i.href;
+    }
+  }
+  return null;
+}
+
 export function getActiveSection(pathname: string): string {
   for (const s of navSections) {
     if (s.items.some(i => pathname === i.href || pathname?.startsWith(i.href + "/"))) return s.id;

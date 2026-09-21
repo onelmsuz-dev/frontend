@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -23,6 +25,7 @@ import { OnboardingChecklist } from "@/components/onboarding/onboarding-checklis
 import { formatCurrency } from "@/lib/money";
 import { formatUzDate } from "@/lib/date-uz";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { birinchiOchiq } from "@/components/layout/nav-config";
 
 const _fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -82,6 +85,30 @@ function OwnerDashboardPage() {
    */
   const { me } = useMe();
   const kor = (p: string) => hasPerm(me?.permissions, p);
+
+  /**
+   * `dashboard.view` YO'Q BO'LSA — bu sahifa umuman ochilmaydi.
+   *
+   * Ilgari ruxsat FAQAT kartochkalarni filtrlash uchun ishlatilardi,
+   * sahifaning o'ziga esa hech kim qaramasdi. Natijada operator
+   * rolidagi xodim (unda `dashboard.view` yo'q) kirgandan keyin
+   * baribir shu yerga tushib, yarim bo'sh ekranni ko'rardi
+   * (egasi xabar berdi, 2026-09-21).
+   *
+   * Menyudagi birinchi OCHIQ bo'limga o'tkaziladi — masalan operator
+   * uchun bu Lidlar bo'ladi.
+   */
+  const router = useRouter();
+  const dashKor = kor("dashboard.view");
+  const kirish = me ? birinchiOchiq(me.permissions) : null;
+  useEffect(() => {
+    // Ochiq bo'lim UMUMAN bo'lmasa — yo'naltirmaymiz. Bunday xodimni
+    // ham ko'ra olmaydigan sahifaga tashlash ikki marta chalg'itardi;
+    // bo'sh dashboard hech bo'lmasa "sizda ruxsat yo'q" degan aniq
+    // holat bo'lib qoladi.
+    if (!me || dashKor || !kirish) return;
+    router.replace(kirish);
+  }, [me, dashKor, kirish, router]);
   const pulKor  = kor("payments.view");
   const lidKor  = kor("leads.view");
 
