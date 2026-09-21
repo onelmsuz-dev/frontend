@@ -4,12 +4,16 @@ import { useRef, useState } from "react";
 import useSWR from "swr";
 import {
   Upload, X, Check, Loader2, Link2, Copy, Eye, Palette, Type, ListChecks,
+  Smartphone, Monitor, HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
 import { Button } from "@/components/ui/button";
 import { MAVZULAR, type TargetTheme } from "@/lib/target-theme";
-import { TargetPageView, type TargetConfig } from "@/components/target/target-page-view";
+import {
+  TargetPageView, type TargetConfig, type Maydon,
+} from "@/components/target/target-page-view";
+import { TargetFieldEditor } from "@/components/settings/target-field-editor";
 
 /**
  * ARIZA SAHIFASI SOZLAMASI.
@@ -61,11 +65,12 @@ function rasmniTayyorla(file: File): Promise<string> {
   });
 }
 
-type Sozlama = TargetConfig & { theme: TargetTheme };
+type Sozlama = TargetConfig & { theme: TargetTheme; fields?: Maydon[] | null };
 
 const BOSH: Sozlama = {
   logoUrl: null, title: null, subtitle: null, buttonText: null, successText: null,
   theme: "BINAFSHA", showNote: true, showCourse: false, showSchool: false, showGrade: false,
+  fields: null,
 };
 
 export function TargetPageSection({ subdomain }: { subdomain: string | null }) {
@@ -87,6 +92,12 @@ export function TargetPageSection({ subdomain }: { subdomain: string | null }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [nusxa, setNusxa] = useState(false);
+  /**
+   * NAMUNA QAYSI QURILMADA. Standart — TELEFON: reklamadan kelgan
+   * odamlarning deyarli hammasi mobil qurilmada ochadi, ya'ni markaz
+   * birinchi navbatda o'shani ko'rishi kerak.
+   */
+  const [qurilma, setQurilma] = useState<"mobil" | "kompyuter">("mobil");
   const fayl = useRef<HTMLInputElement>(null);
 
   const oz = (p: Partial<Sozlama>) => { setQolda({ ...s, ...p }); setMsg(null); };
@@ -120,6 +131,7 @@ export function TargetPageSection({ subdomain }: { subdomain: string | null }) {
           theme: s.theme,
           showNote: s.showNote, showCourse: s.showCourse,
           showSchool: s.showSchool, showGrade: s.showGrade,
+          fields: s.fields ?? [],
         }),
       });
       const d = await res.json().catch(() => ({}));
@@ -177,7 +189,10 @@ export function TargetPageSection({ subdomain }: { subdomain: string | null }) {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_360px] gap-4 items-start">
+      {/* YARIM-YARIM: sozlama chapda, natija o'ngda. Tor ekranda
+          ustma-ust tushadi va namuna pastda qoladi — telefonda
+          sozlash kamdan-kam bo'ladi. */}
+      <div className="grid lg:grid-cols-2 gap-4 items-start">
 
         {/* ── SOZLAMALAR ── */}
         <div className="space-y-4 min-w-0">
@@ -251,6 +266,13 @@ export function TargetPageSection({ subdomain }: { subdomain: string | null }) {
             </div>
           </Blok>
 
+          {/* QO'SHIMCHA SAVOLLAR — markazning o'zi yozadi. */}
+          <Blok ikonka={<HelpCircle className="w-4 h-4" />} sarlavha="O'z savollaringiz"
+            tavsif="Yosh, manzil, email — ko'pi bilan 3 ta">
+            <TargetFieldEditor value={(s.fields as Maydon[]) ?? []}
+              onChange={v => oz({ fields: v })} />
+          </Blok>
+
           {/* MAVZU */}
           <Blok ikonka={<Palette className="w-4 h-4" />} sarlavha="Ko'rinish"
             tavsif="Fon va ranglar">
@@ -297,16 +319,58 @@ export function TargetPageSection({ subdomain }: { subdomain: string | null }) {
           </div>
         </div>
 
-        {/* ── NAMUNA ── */}
+        {/* ── NAMUNA ──
+            Sahifaning O'ZIDAN chiziladi (`TargetPageView`), alohida
+            yozilmagan — aks holda u sahifadan asta-sekin ajralib
+            ketardi va markaz bir narsani ko'rib sozlar, mijoz
+            boshqasini ko'rardi. */}
         <div className="lg:sticky lg:top-4">
-          <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400
-            uppercase tracking-wider mb-2">
-            Mijoz shuni ko&apos;radi
-          </p>
-          <div className="rounded-2xl border border-white/60 dark:border-white/10 overflow-hidden">
-            <TargetPageView markaz={org?.name ?? "Markaz"} config={s}
-              courses={kurslar} namuna />
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400
+              uppercase tracking-wider">
+              Mijoz shuni ko&apos;radi
+            </p>
+            {/* QURILMA ALMASHTIRGICHI — mobil standart, chunki
+                reklamadan kelganlarning deyarli hammasi telefonda. */}
+            <div className="flex gap-0.5 p-0.5 rounded-lg glass-soft">
+              {([
+                { v: "mobil" as const,     i: Smartphone, t: "Telefon" },
+                { v: "kompyuter" as const, i: Monitor,    t: "Kompyuter" },
+              ]).map(q => {
+                const I = q.i;
+                return (
+                  <button key={q.v} type="button" onClick={() => setQurilma(q.v)} title={q.t}
+                    className={cn("w-7 h-7 grid place-items-center rounded-md transition-colors",
+                      qurilma === q.v
+                        ? "bg-indigo-600 text-white"
+                        : "text-neutral-400 hover:text-neutral-600")}>
+                    <I className="w-3.5 h-3.5" />
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          <div className={cn("mx-auto transition-all",
+            qurilma === "mobil" ? "max-w-[310px]" : "max-w-full")}>
+            {/* TELEFON RAMKASI — namuna haqiqiy o'lchamda ekanini
+                ko'rsatadi. Ramkasiz markaz uni kichik rasm deb o'ylab,
+                matn uzunligini noto'g'ri baholardi. */}
+            <div className={cn("overflow-hidden border bg-neutral-900",
+              qurilma === "mobil"
+                ? "rounded-[2rem] border-[6px] border-neutral-800 shadow-2xl"
+                : "rounded-2xl border-white/60 dark:border-white/10")}>
+              <div className={cn("overflow-y-auto",
+                qurilma === "mobil" ? "h-[560px]" : "h-[480px]")}>
+                <TargetPageView markaz={org?.name ?? "Markaz"} config={s}
+                  courses={kurslar} namuna={qurilma === "mobil"} />
+              </div>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-neutral-400 text-center mt-2">
+            Namuna — forma bu yerdan yuborilmaydi
+          </p>
         </div>
       </div>
     </div>

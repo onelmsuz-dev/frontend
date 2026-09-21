@@ -70,6 +70,10 @@ export default function TargetPage() {
           courseId: v.courseId || undefined,
           school: v.school.trim() || undefined,
           grade: v.grade.trim() || undefined,
+          // Bo'sh javoblar yuborilmaydi — server ularni baribir
+          // tashlab yuboradi, lekin so'rovni bekorga shishirmaymiz.
+          extra: Object.fromEntries(
+            Object.entries(v.extra).filter(([, x]) => x.trim() !== "")),
         }),
       });
       const d = await r.json().catch(() => ({}));

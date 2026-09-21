@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import {
   Check, Loader2, User, MessageSquare, ShieldCheck, BookOpen, School, Hash,
+  Phone, Mail, MapPin, ListChecks, Type,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mavzuOl, type TargetTheme } from "@/lib/target-theme";
@@ -22,7 +23,17 @@ import { mavzuOl, type TargetTheme } from "@/lib/target-theme";
  * `onSubmit` BERILMASA — namuna rejimi: forma yuborilmaydi.
  */
 
+/** Markaz qo'shgan qo'shimcha savol. */
+export interface Maydon {
+  id: string;
+  label: string;
+  type: "MATN" | "RAQAM" | "TEL" | "EMAIL" | "JOY" | "TANLOV";
+  required?: boolean;
+  options?: string[];
+}
+
 export interface TargetConfig {
+  fields?: Maydon[] | null;
   logoUrl?: string | null;
   title?: string | null;
   subtitle?: string | null;
@@ -42,10 +53,12 @@ export interface TargetQiymat {
   courseId: string;
   school: string;
   grade: string;
+  /** Qo'shimcha savollarga javoblar: `{ maydon_id: qiymat }`. */
+  extra: Record<string, string>;
 }
 
 export const BOSH_QIYMAT: TargetQiymat = {
-  name: "", tel: "", note: "", courseId: "", school: "", grade: "",
+  name: "", tel: "", note: "", courseId: "", school: "", grade: "", extra: {},
 };
 
 /** Faqat raqam, aynan 9 ta. */
@@ -81,6 +94,12 @@ export function TargetPageView({
        to'ldirilgan urinishlar bilan o'zini bloklab qo'yishi mumkin. */
     if (v.name.trim().length < 2) { setXato("Ismingizni to'liq yozing"); return; }
     if (v.tel.length !== 9) { setXato("Telefon raqam 9 ta raqamdan iborat bo'lishi kerak"); return; }
+    // MAJBURIY qo'shimcha savollar. Server ularni tekshirmaydi —
+    // u faqat "bu markazniki bo'lsa yoz" deydi. Majburiylik
+    // markazning MARKETING qarori, ma'lumot butunligi emas.
+    const yoq = (config?.fields ?? []).find(
+      (f) => f.required && !(v.extra[f.id] ?? "").trim());
+    if (yoq) { setXato(`"${yoq.label}" to'ldirilmagan`); return; }
 
     setYuborilyapti(true); setXato("");
     const err = await onSubmit(v);
@@ -191,6 +210,40 @@ export function TargetPageView({
               </Maydon>
             )}
 
+            {/* QO'SHIMCHA SAVOLLAR — markaz qo'shganlari.
+                Izohdan OLDIN: izoh eng erkin maydon va u odatda
+                oxirida turadi. */}
+            {(config?.fields ?? []).map((f) => {
+              const qiy = v.extra[f.id] ?? "";
+              const yoz = (x: string) =>
+                setV(p => ({ ...p, extra: { ...p.extra, [f.id]: x } }));
+              return (
+                <Maydon key={f.id} m={m} ikonka={<TurIkonka tur={f.type} />}
+                  yorliq={f.label} ixtiyoriy={!f.required}>
+                  {f.type === "TANLOV" ? (
+                    <select value={qiy} onChange={e => { yoz(e.target.value); setXato(""); }}
+                      className={KIRISH}>
+                      <option value="">Tanlang…</option>
+                      {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : (
+                    <input value={qiy}
+                      onChange={e => { yoz(e.target.value); setXato(""); }}
+                      /* Tur MOBIL KLAVIATURANI belgilaydi: raqam
+                         so'ralganda harf klaviaturasi chiqsa, odam
+                         raqamni qidirib vaqt yo'qotadi. */
+                      type={f.type === "EMAIL" ? "email" : f.type === "TEL" ? "tel" : "text"}
+                      inputMode={f.type === "RAQAM" ? "numeric"
+                        : f.type === "TEL" ? "tel"
+                        : f.type === "EMAIL" ? "email" : "text"}
+                      maxLength={300}
+                      placeholder={JOY_MATN[f.type]}
+                      className={KIRISH} />
+                  )}
+                </Maydon>
+              );
+            })}
+
             {config?.showNote !== false && (
               <Maydon m={m} ikonka={<MessageSquare className="w-4 h-4" />} yorliq="Izoh" ixtiyoriy>
                 <textarea value={v.note} onChange={e => setV(p => ({ ...p, note: e.target.value }))}
@@ -228,6 +281,22 @@ export function TargetPageView({
       </div>
     </div>
   );
+}
+
+/** Har tur uchun namuna matn — odam nima kutilayotganini ko'rsin. */
+const JOY_MATN: Record<Maydon["type"], string> = {
+  MATN: "", RAQAM: "18", TEL: "+998 90 123 45 67",
+  EMAIL: "ism@mail.uz", JOY: "Toshkent, Chilonzor", TANLOV: "",
+};
+
+function TurIkonka({ tur }: { tur: Maydon["type"] }) {
+  const C = tur === "RAQAM" ? Hash
+    : tur === "TEL" ? Phone
+    : tur === "EMAIL" ? Mail
+    : tur === "JOY" ? MapPin
+    : tur === "TANLOV" ? ListChecks
+    : Type;
+  return <C className="w-4 h-4" />;
 }
 
 function TelIkonka() {

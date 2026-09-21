@@ -11,7 +11,9 @@
  * qo'shish bitta obyekt yozish bilan cheklanadi.
  */
 
-export type TargetTheme = "BINAFSHA" | "OKEAN" | "ILIQ" | "TUN";
+export type TargetTheme =
+  | "BINAFSHA" | "OKEAN" | "ILIQ" | "TUN"
+  | "YASHIL" | "GULOBI" | "QUMLI" | "TONG";
 
 export interface Mavzu {
   kalit: TargetTheme;
@@ -89,6 +91,56 @@ export const MAVZULAR: Mavzu[] = [
     maydonYorliq: "text-neutral-300",
     tugma: "bg-indigo-500 hover:bg-indigo-400 active:bg-indigo-600 shadow-indigo-500/25",
     mayda: "text-neutral-600",
+  },
+  {
+    kalit: "YASHIL", nom: "Yashil",
+    namuna: "linear-gradient(135deg,#10b981,#84cc16)",
+    fon: "bg-[#f7fdf9]",
+    dog1: "bg-emerald-400/20", dog2: "bg-lime-400/15",
+    sarlavha: "text-neutral-900", tavsif: "text-neutral-500",
+    karta: "bg-white border-neutral-200/80 shadow-xl shadow-neutral-900/5",
+    maydon: "border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-400 focus-within:border-emerald-500 focus-within:ring-emerald-500/20",
+    maydonYorliq: "text-neutral-600",
+    tugma: "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-600/25",
+    mayda: "text-neutral-400",
+  },
+  {
+    kalit: "GULOBI", nom: "Gulobi",
+    namuna: "linear-gradient(135deg,#ec4899,#f472b6)",
+    fon: "bg-[#fff8fb]",
+    dog1: "bg-pink-400/20", dog2: "bg-rose-400/15",
+    sarlavha: "text-neutral-900", tavsif: "text-neutral-500",
+    karta: "bg-white border-pink-200/70 shadow-xl shadow-pink-900/5",
+    maydon: "border-pink-200 bg-white text-neutral-900 placeholder:text-neutral-400 focus-within:border-pink-500 focus-within:ring-pink-500/20",
+    maydonYorliq: "text-neutral-600",
+    tugma: "bg-pink-600 hover:bg-pink-700 active:bg-pink-800 shadow-pink-600/25",
+    mayda: "text-neutral-400",
+  },
+  {
+    /* QUMLI — eng sokin variant. Rang e'tiborni tortmaydi, ya'ni
+       markazning O'Z logotipi va matni butun e'tiborni oladi. */
+    kalit: "QUMLI", nom: "Qumli",
+    namuna: "linear-gradient(135deg,#d6d3d1,#a8a29e)",
+    fon: "bg-[#faf9f7]",
+    dog1: "bg-stone-300/30", dog2: "bg-stone-400/15",
+    sarlavha: "text-stone-900", tavsif: "text-stone-500",
+    karta: "bg-white border-stone-200 shadow-lg shadow-stone-900/5",
+    maydon: "border-stone-300 bg-white text-stone-900 placeholder:text-stone-400 focus-within:border-stone-700 focus-within:ring-stone-700/15",
+    maydonYorliq: "text-stone-600",
+    tugma: "bg-stone-800 hover:bg-stone-900 active:bg-black shadow-stone-800/25",
+    mayda: "text-stone-400",
+  },
+  {
+    kalit: "TONG", nom: "Tong",
+    namuna: "linear-gradient(135deg,#fb7185,#fb923c)",
+    fon: "bg-[#fffaf8]",
+    dog1: "bg-rose-400/25", dog2: "bg-orange-400/20",
+    sarlavha: "text-neutral-900", tavsif: "text-neutral-500",
+    karta: "bg-white border-orange-200/70 shadow-xl shadow-orange-900/5",
+    maydon: "border-orange-200 bg-white text-neutral-900 placeholder:text-neutral-400 focus-within:border-orange-500 focus-within:ring-orange-500/20",
+    maydonYorliq: "text-neutral-600",
+    tugma: "bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 shadow-orange-500/25",
+    mayda: "text-neutral-400",
   },
 ];
 

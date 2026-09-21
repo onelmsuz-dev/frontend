@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
 import { formatUzDate } from "@/lib/date-uz";
 import { TargetGuide } from "@/components/leads/target-guide";
+import { useLeadStages } from "@/lib/hooks/useLeads";
 
 /**
  * TARGET LIDLARI — `markaz.oneroom.uz/target` sahifasidan kelganlar.
@@ -32,8 +33,14 @@ interface Lid {
   name: string;
   phone: string;
   note: string | null;
+  /** Ariza sahifasidagi qo'shimcha savollarga javoblar. */
+  extra?: { label: string; value: string }[] | null;
+  course?: string | null;
+  school?: string | null;
+  grade?: string | null;
   createdAt: string;
-  stage?: { name: string; color?: string | null } | null;
+  /** Ro'yxat bosqich OBYEKTINI qaytarmaydi — faqat id. */
+  stageId?: string | null;
   assignedTo?: { name: string } | null;
 }
 
@@ -59,6 +66,21 @@ export function TargetLeads() {
     if (Array.isArray(data)) return data;
     return data?.items ?? [];
   }, [data]);
+
+  /**
+   * BOSQICH NOMI — id bo'yicha. Lidlar ro'yxati bosqich obyektini
+   * qaytarmaydi (500 ta lid uchun uni takrorlash ortiqcha), shuning
+   * uchun nomlar ALOHIDA, bir marta olinadi. Taxta ham shu yo'ldan
+   * yuradi, ya'ni ikki ekran bir xil nomni ko'rsatadi.
+   */
+  const { data: bosqichRaw } = useLeadStages();
+  const bosqichNomi = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const b of (Array.isArray(bosqichRaw) ? bosqichRaw : []) as { id: string; name: string }[]) {
+      m.set(b.id, b.name);
+    }
+    return m;
+  }, [bosqichRaw]);
 
   const [q, setQ] = useState("");
   const [tanlangan, setTanlangan] = useState<Set<string>>(new Set());
@@ -105,8 +127,17 @@ export function TargetLeads() {
     }
   }
 
+  /** Qo'shimcha javoblar — bir qatorda, "Yoshi: 17 · Manzil: ..." */
+  const qoshimcha = (l: Lid) =>
+    (l.extra ?? []).map(x => `${x.label}: ${x.value}`).join(" · ");
+
   const matnRoyxat = (list: Lid[]) => list
-    .map(l => `${l.name} — ${l.phone}${l.note ? ` (${l.note})` : ""}`)
+    .map(l => {
+      const q = qoshimcha(l);
+      return `${l.name} — ${l.phone}`
+        + (l.note ? ` (${l.note})` : "")
+        + (q ? ` [${q}]` : "");
+    })
     .join("\n");
 
   async function ulash() {
@@ -131,9 +162,11 @@ export function TargetLeads() {
   function excel() {
     const qator = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const csv = [
-      ["Ism", "Telefon", "Izoh", "Bosqich", "Mas'ul", "Sana"].map(qator).join(";"),
+      ["Ism", "Telefon", "Kurs", "Maktab", "Sinf", "Qo'shimcha",
+       "Izoh", "Bosqich", "Mas'ul", "Sana"].map(qator).join(";"),
       ...amalUchun.map(l => [
-        l.name, l.phone, l.note ?? "", l.stage?.name ?? "",
+        l.name, l.phone, l.course ?? "", l.school ?? "", l.grade ?? "",
+        qoshimcha(l), l.note ?? "", bosqichNomi.get(l.stageId ?? "") ?? "",
         l.assignedTo?.name ?? "", formatUzDate(l.createdAt),
       ].map(qator).join(";")),
     ].join("\r\n");
@@ -156,6 +189,13 @@ export function TargetLeads() {
       if (y > 280) { doc.addPage(); y = 20; }
       doc.text(`${l.name} — ${l.phone}`, 14, y);
       y += 5;
+      const q = qoshimcha(l);
+      if (q) {
+        doc.setFontSize(8);
+        doc.text(doc.splitTextToSize(q, 180), 18, y);
+        y += 5;
+        doc.setFontSize(10);
+      }
       if (l.note) {
         doc.setFontSize(8);
         doc.text(doc.splitTextToSize(l.note, 180), 18, y);
@@ -286,7 +326,7 @@ export function TargetLeads() {
                     onChange={hammasini} aria-label="Hammasini belgilash"
                     className="w-4 h-4 accent-indigo-600 cursor-pointer" />
                 </th>
-                {["Ism", "Telefon", "Izoh", "Bosqich", "Sana"].map(h => (
+                {["Ism", "Telefon", "Qo'shimcha", "Izoh", "Bosqich", "Sana"].map(h => (
                   <th key={h} className="px-3 py-2.5 text-[11px] font-bold uppercase
                     tracking-wider text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
                     {h}
@@ -296,13 +336,13 @@ export function TargetLeads() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={6} className="px-4 py-10 text-center text-[12.5px] text-neutral-400">
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-[12.5px] text-neutral-400">
                   Yuklanmoqda...
                 </td></tr>
               )}
 
               {!isLoading && lidlar.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-12 text-center">
+                <tr><td colSpan={7} className="px-4 py-12 text-center">
                   <Users className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
                   <p className="text-[13px] font-semibold text-neutral-600 dark:text-neutral-300">
                     Hali ariza yo&apos;q
@@ -314,7 +354,7 @@ export function TargetLeads() {
               )}
 
               {!isLoading && lidlar.length > 0 && korinadi.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-10 text-center text-[12.5px] text-neutral-400">
+                <tr><td colSpan={7} className="px-4 py-10 text-center text-[12.5px] text-neutral-400">
                   Qidiruv bo&apos;yicha topilmadi
                 </td></tr>
               )}
@@ -345,6 +385,24 @@ export function TargetLeads() {
                         <Phone className="w-3 h-3" />{l.phone || "—"}
                       </a>
                     </td>
+                    {/* QO'SHIMCHA JAVOBLAR — yorliq bilan birga.
+                        Faqat qiymat ko'rsatilsa ("17", "Chilonzor")
+                        ular nimaga tegishli ekani bilinmasdi. */}
+                    <td className="px-3 py-2.5 text-[12px] text-neutral-600 dark:text-neutral-300
+                      max-w-[240px]">
+                      {(l.extra ?? []).length === 0 && !l.course && !l.school && !l.grade
+                        ? <span className="text-neutral-300 dark:text-neutral-600">—</span>
+                        : (
+                          <span className="block truncate">
+                            {[l.course, l.school, l.grade].filter(Boolean).join(" · ")}
+                            {(l.extra ?? []).map(x => (
+                              <span key={x.label} className="ml-1">
+                                <span className="text-neutral-400">{x.label}:</span> {x.value}
+                              </span>
+                            ))}
+                          </span>
+                        )}
+                    </td>
                     <td className="px-3 py-2.5 text-[12px] text-neutral-500 dark:text-neutral-400
                       max-w-[220px] truncate">
                       {l.note || "—"}
@@ -352,7 +410,7 @@ export function TargetLeads() {
                     <td className="px-3 py-2.5 whitespace-nowrap">
                       <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg
                         bg-neutral-100 text-neutral-600 dark:bg-white/10 dark:text-neutral-300">
-                        {l.stage?.name ?? "—"}
+                        {bosqichNomi.get(l.stageId ?? "") ?? "—"}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 text-[12px] text-neutral-500
