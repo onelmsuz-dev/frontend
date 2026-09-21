@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { SESSION_EXPIRED, UNAUTHORIZED_EVENT } from "@/lib/session-expiry";
+import { isPublicPath } from "@/lib/public-paths";
 
 /**
  * OCHIQ TURGAN OYNANI KUZATADI.
@@ -20,6 +21,12 @@ import { SESSION_EXPIRED, UNAUTHORIZED_EVENT } from "@/lib/session-expiry";
  *      qayta tekshiramiz, oyna fokusini kutib o'tirmasdan.
  *
  * Chiqarish qarori FAQAT {@link SESSION_EXPIRED} bo'yicha qabul qilinadi.
+ *
+ * OCHIQ SAHIFALARDA login'ga HAYDAMAYDI. Bu komponent `Providers` orqali hamma
+ * sahifada ishlaydi, shuning uchun brauzerda oldingi kirishdan muddati o'tgan sessiya
+ * qolgan bo'lsa, bosh sahifani ochgan mehmon `/login?muddat=1` ga tushib qolardi.
+ * Login talabi faqat shaxsiy kabinetlarda; bosh sahifa, yechimlar, blog sessiya holatidan
+ * qat'i nazar ochiq (`lib/public-paths.ts`). Ochiq sahifada faqat o'lik cookie tozalanadi.
  */
 export function SessionWatcher() {
   const { data: session, status, update } = useSession();
@@ -40,10 +47,10 @@ export function SessionWatcher() {
     if (chiqarilmoqda.current) return;
     chiqarilmoqda.current = true;
 
-    // Allaqachon login sahifasidamiz: yo'naltirish kerak emas, lekin o'lik
-    // cookie'ni tozalash KERAK. Aks holda odam parolini yozguncha har bir
-    // so'rov yana foydasiz refresh urinishini boshlaydi.
-    if (pathname.endsWith("/login")) {
+    // Login yoki ochiq sahifadamiz: yo'naltirish kerak emas, lekin o'lik
+    // cookie'ni tozalash KERAK. Aks holda odam parolini yozguncha (yoki keyingi
+    // safar kirgunicha) har bir so'rov yana foydasiz refresh urinishini boshlaydi.
+    if (pathname.endsWith("/login") || isPublicPath(pathname)) {
       void signOut({ redirect: false });
       return;
     }

@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { CLUSTER_PAGES } from "@/lib/seo/cluster-pages";
+import { isPublicPath } from "@/lib/public-paths";
 import { SESSION_EXPIRED } from "@/lib/session-expiry";
 
 const { auth } = NextAuth(authConfig);
@@ -24,28 +24,6 @@ function loginGa(target: string | URL, muddatTugadi: boolean): Response {
   const url = new URL(target.toString());
   if (muddatTugadi) url.searchParams.set("muddat", "1");
   return NextResponse.redirect(url);
-}
-
-/**
- * Marketing domenidagi SEO landing sahifalari (login talab qilmaydi) va
- * Next.js'ning o'zi generatsiya qiladigan metadata yo'llari.
- *
- * DIQQAT: buni qo'shmasak, quyidagi "qolgan barcha ilova sahifalari"
- * qoidasi `/davomat`, `/oquv-markaz-crm` kabi landinglarni ham login yoki
- * bosh sahifaga qayta yo'naltirib yuborardi — Googlebot ularni umuman
- * ko'ra olmasdi.
- */
-const PUBLIC_MARKETING_PATHS = new Set<string>([
-  ...CLUSTER_PAGES.map((p) => p.href),
-  "/testgpt",
-  "/robots.txt",
-  "/sitemap.xml",
-  "/opengraph-image",
-  "/twitter-image",
-]);
-
-function isPublicMarketingPath(pathname: string): boolean {
-  return PUBLIC_MARKETING_PATHS.has(pathname);
 }
 
 function isLocalOrIpHost(hostname: string): boolean {
@@ -223,8 +201,10 @@ export const proxy = auth((req) => {
   // yuboramiz: u haqiqatan ishlaydigan joy o'sha.
   if (isMarketingHost(req)) {
     // `/api/*` yuqorida, global istisnoda hal qilingan.
-    if (pathname === "/") return NextResponse.next();
-    if (isPublicMarketingPath(pathname)) return NextResponse.next();
+    // Ochiq sahifalar (`lib/public-paths.ts` — bitta manba; uni brauzerdagi `SessionWatcher`
+    // ham o'qiydi). DIQQAT: ro'yxatga tushmagan sahifa "qolgan barcha ilova sahifalari"
+    // qoidasiga tushadi va yo'naltiriladi — Googlebot `/davomat` kabi landinglarni ko'ra olmasdi.
+    if (isPublicPath(pathname)) return NextResponse.next();
 
     if (pathname === "/login") {
       if (isLoggedIn && role === "PLATFORM_ADMIN") {
@@ -247,8 +227,7 @@ export const proxy = auth((req) => {
   }
 
   // ── localhost / IP / *.vercel.app — ishlab chiqish va preview ────────────
-  if (pathname === "/") return NextResponse.next();
-  if (isPublicMarketingPath(pathname)) return NextResponse.next();
+  if (isPublicPath(pathname)) return NextResponse.next();
   if (pathname === "/login") {
     if (isLoggedIn) return Response.redirect(new URL(home, req.nextUrl));
     return NextResponse.next();
