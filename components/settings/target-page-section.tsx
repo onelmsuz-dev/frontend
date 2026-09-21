@@ -439,7 +439,7 @@ export function TargetPageSection({
         </button>
         <div className="w-px h-5 bg-neutral-200 dark:bg-white/10" />
         <p className="text-[14px] font-bold text-neutral-900 dark:text-neutral-100">
-          Ariza sahifasi
+          Target sozlamasi
         </p>
         {ozgardi && (
           <span className="ml-auto text-[11.5px] font-semibold text-amber-600 dark:text-amber-400">

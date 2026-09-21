@@ -102,6 +102,22 @@ export default function LeadsPage() {
    * ko'rsatilsa, u bosib 403 olardi.
    */
   const ochiraOladi = hasPerm(menOzim?.permissions, "leads.delete");
+  /**
+   * TARGET va BOSQICH — alohida ruxsatlar.
+   *
+   * Operator kundalik lid ishini qiladi: ko'radi, qo'ng'iroq qiladi,
+   * bosqichdan bosqichga suradi. Reklama havolasi va quvurning O'ZI
+   * (bosqichlar ro'yxati) markaz darajasidagi qaror — u yerga
+   * tegmasin. Tugma ko'rsatib keyin 403 bermaymiz: ko'rinmasa,
+   * bosilmaydi ham.
+   */
+  const targetKora   = hasPerm(menOzim?.permissions, "leads.target");
+  const bosqichSozlay = hasPerm(menOzim?.permissions, "leads.stages");
+  // Ruxsatsiz odam eski havola bilan target tabida qolib ketmasin.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (menOzim && !targetKora) setTab((t) => (t === "target" ? "board" : t));
+  }, [menOzim, targetKora]);
   const [ochirilganlar, setOchirilganlar] = useState(false);
   const [showModal,    setShowModal]    = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
@@ -397,13 +413,15 @@ export default function LeadsPage() {
                 : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
             <LayoutGrid className="w-3.5 h-3.5" /> Taxta
           </button>
-          <button onClick={() => setTab("target")}
-            className={cn("shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
-              tab === "target"
-                ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
-                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
-            <Target className="w-3.5 h-3.5" /> Target
-          </button>
+          {targetKora && (
+            <button onClick={() => setTab("target")}
+              className={cn("shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
+                tab === "target"
+                  ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
+                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+              <Target className="w-3.5 h-3.5" /> Target
+            </button>
+          )}
           {META_TABI_KORINSIN && metaEnabled && (
             <button onClick={() => setTab("meta")}
               className={cn("shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
@@ -423,7 +441,7 @@ export default function LeadsPage() {
         onClose={() => setShowImport(false)}
         onDone={() => lidlarniYangila()} />
 
-      <StageManagerModal open={showStages} onClose={() => setShowStages(false)} />
+      <StageManagerModal open={bosqichSozlay && showStages} onClose={() => setShowStages(false)} />
 
       {/* Lid tarixi va izohlari. Kanban holatini yo'qotmaslik uchun
           alohida sahifa emas, oyna — xodim taxtaga qaytganda o'sha
@@ -698,7 +716,7 @@ export default function LeadsPage() {
         )}
       </ConfirmDeleteModal>
 
-      {tab === "target" && <TargetLeads />}
+      {targetKora && tab === "target" && <TargetLeads />}
 
       {META_TABI_KORINSIN && metaEnabled && tab === "meta" && (
         <div className="p-5">
@@ -723,12 +741,14 @@ export default function LeadsPage() {
               </div>
             );
           })}
-          <button onClick={() => setShowStages(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold
-                       glass-soft text-neutral-500 dark:text-neutral-400 hover:text-indigo-600
-                       border border-dashed border-neutral-300 dark:border-neutral-600 transition-colors">
-            <Settings2 className="w-3.5 h-3.5" /> Bosqichlarni sozlash
-          </button>
+          {bosqichSozlay && (
+            <button onClick={() => setShowStages(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold
+                         glass-soft text-neutral-500 dark:text-neutral-400 hover:text-indigo-600
+                         border border-dashed border-neutral-300 dark:border-neutral-600 transition-colors">
+              <Settings2 className="w-3.5 h-3.5" /> Bosqichlarni sozlash
+            </button>
+          )}
         </div>
 
         {/* Bugun qo'ng'iroq qilinadiganlar — taxtadan YUQORIDA. */}
@@ -832,10 +852,12 @@ export default function LeadsPage() {
         ) : stages.length === 0 ? (
           <div className="border-2 border-dashed border-white/60 dark:border-white/10 rounded-xl p-10 text-center">
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-3">Hali bosqich yaratilmagan</p>
-            <button onClick={() => setShowStages(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
-              <Plus className="w-3.5 h-3.5" />{" "}Birinchi bosqichni qo&apos;shish
-            </button>
+            {bosqichSozlay && (
+              <button onClick={() => setShowStages(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+                <Plus className="w-3.5 h-3.5" />{" "}Birinchi bosqichni qo&apos;shish
+              </button>
+            )}
           </div>
         ) : (
           <>

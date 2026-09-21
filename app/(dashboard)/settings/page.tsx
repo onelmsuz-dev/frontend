@@ -74,9 +74,11 @@ const sections = [
   // hisobining maxraji — ya'ni pulga tegadi. Shuning uchun o'z ruxsat kaliti.
   { id: "bayramlar",     label: "Bayram kunlari",   icon: CalendarOff, group: "markaz",
     perm: "holidays.view" },
-  // Ariza sahifasi — markazning reklamadagi yuzi. "Markaz" guruhida,
+  // Target sozlamasi — markazning reklamadagi yuzi. "Markaz" guruhida,
   // chunki u markazning O'ZI haqida, pul yoki tizim sozlamasi emas.
-  { id: "ariza",         label: "Ariza sahifasi",   icon: Link2,     group: "markaz" },
+  // Lidlardagi "Target" tabi bilan BIR ruxsat: ikkalasi ham reklama ishi.
+  { id: "ariza",         label: "Target sozlamasi", icon: Link2,     group: "markaz",
+    perm: "leads.target" },
 
   // ─ Pul: O'QUVCHIDAN qanday pul olinadi ─
   { id: "tolov",         label: "O'quvchi to'lovlari", icon: Wallet, group: "pul" },
