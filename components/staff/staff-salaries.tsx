@@ -221,22 +221,44 @@ export function StaffSalaries() {
         </div>
       )}
 
-      {/* ── Yig'ma ────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: `${oyNomi(oy)} jami`, value: formatCurrency(jami.jami) },
-          { label: "To'langan", value: formatCurrency(jami.tolangan) },
-          { label: "Kutilmoqda", value: `${jami.kutilmoqda} ta` },
-          { label: "Stavkasiz", value: `${jami.sozlanmagan} ta` },
-        ].map((k) => (
-          <div key={k.label}
-            className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-3.5">
-            <p className="text-[16px] sm:text-[18px] font-black text-neutral-900 dark:text-neutral-100 leading-none tabular-nums">
-              {isLoading ? "…" : k.value}
-            </p>
-            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{k.label}</p>
-          </div>
-        ))}
+      {/* ── YIG'MA — bitta kartochka, bitta chiziq ────────────────────────
+          "Oyning qanchasi to'landi" degan savolga to'rtta alohida raqam
+          emas, chiziq javob beradi: to'ldi — tugadi. */}
+      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4 sm:p-5">
+        <div className="flex items-baseline justify-between gap-2 mb-1">
+          <h2 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">
+            {oyNomi(oy)} oyligi
+          </h2>
+          <span className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500">
+            {qatorlar.length} xodim
+          </span>
+        </div>
+        <p className="text-[22px] sm:text-[26px] font-black text-neutral-900 dark:text-neutral-100 leading-none tabular-nums mt-2">
+          {isLoading ? "…" : formatCurrency(jami.jami)}
+        </p>
+        <div className="flex items-baseline justify-between gap-2 mt-3 mb-1.5">
+          <span className="text-[11.5px] text-neutral-500 dark:text-neutral-400">
+            To&apos;langan{" "}
+            <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+              {formatCurrency(jami.tolangan)}
+            </span>
+          </span>
+          <span className="text-[11.5px] font-bold text-neutral-900 dark:text-neutral-100 tabular-nums">
+            {jami.jami > 0 ? Math.round((jami.tolangan / jami.jami) * 100) : 0}%
+          </span>
+        </div>
+        <div className="h-2.5 rounded-full bg-neutral-100 dark:bg-white/5 overflow-hidden">
+          <div className="h-full rounded-full bg-emerald-500 transition-all"
+            style={{ width: `${jami.jami > 0 ? Math.min(100, (jami.tolangan / jami.jami) * 100) : 0}%` }} />
+        </div>
+        <div className="flex items-center gap-3 mt-2.5 text-[11px] text-neutral-500 dark:text-neutral-400 flex-wrap">
+          <span><b className="text-neutral-800 dark:text-neutral-200">{jami.kutilmoqda}</b> ta kutilmoqda</span>
+          {jami.sozlanmagan > 0 && (
+            <span className="text-amber-600 dark:text-amber-400">
+              <b>{jami.sozlanmagan}</b>{" "}ta xodimda stavka yo&apos;q
+            </span>
+          )}
+        </div>
       </div>
 
       {/* ── Ro'yxat ──────────────────────────────────────────────────────── */}
@@ -304,6 +326,13 @@ export function StaffSalaries() {
                         )}
                       </div>
                     </div>
+
+                    {/* TARKIB CHIZIG'I — maosh nimadan yig'ilganini bir
+                        qarashda: ko'k oylik, sariq foiz, binafsha o'quvchi
+                        ulushi, yashil bonus. Raqamlar ochilganda. */}
+                    {s && s.total > 0 && (
+                      <TarkibChizigi s={s} />
+                    )}
 
                     {/* Amallar + kesimni ochish */}
                     {s && (
@@ -485,6 +514,44 @@ export function StaffSalaries() {
           </div>
         )}
       </Modal>
+    </div>
+  );
+}
+
+/**
+ * Maosh tarkibi — bitta chiziq, to'rt bo'lak. Bo'laklar orasida 2px
+ * oraliq, har birining rangi pastdagi izohda so'z bilan yozilgan — rang
+ * yakka o'zi ma'no tashimaydi.
+ */
+function TarkibChizigi({ s }: { s: NonNullable<Qator["salary"]> }) {
+  const qismlar = [
+    { nom: "Oylik",   qiymat: s.base,             rang: "bg-indigo-500" },
+    { nom: "Foiz",    qiymat: s.percentAmount,    rang: "bg-amber-500" },
+    { nom: "O'quvchi", qiymat: s.perStudentAmount, rang: "bg-violet-500" },
+    { nom: "Bonus",   qiymat: s.bonus,            rang: "bg-emerald-500" },
+  ].filter((q) => q.qiymat > 0);
+  const yigindi = qismlar.reduce((t, q) => t + q.qiymat, 0);
+  if (yigindi <= 0 || qismlar.length < 2) return null;
+  return (
+    <div className="mt-2.5">
+      <div className="flex h-1.5 rounded-full overflow-hidden gap-[2px]">
+        {qismlar.map((q) => (
+          <div key={q.nom} className={cn("h-full first:rounded-l-full last:rounded-r-full", q.rang)}
+            style={{ width: `${(q.qiymat / yigindi) * 100}%` }}
+            title={`${q.nom}: ${formatCurrency(q.qiymat)}`} />
+        ))}
+      </div>
+      <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+        {qismlar.map((q) => (
+          <span key={q.nom} className="inline-flex items-center gap-1 text-[10.5px] text-neutral-500 dark:text-neutral-400">
+            <span className={cn("w-2 h-2 rounded-sm", q.rang)} />
+            {q.nom}{" "}
+            <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+              {Math.round((q.qiymat / yigindi) * 100)}%
+            </span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

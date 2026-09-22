@@ -4,10 +4,13 @@ import { useMemo, useState } from "react";
 import { mutate } from "swr";
 import {
   Plus, Pencil, Trash2, KeyRound, Users, Shield,
-  CheckCircle, XCircle, AlertCircle,
+  CheckCircle, XCircle, AlertCircle, MoreHorizontal, Building2, KeySquare,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
@@ -276,175 +279,219 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
     finally { setResetSaving(false); }
   }
 
+  const faol = users.filter(u => u.isActive).length;
+  const loginsiz = users.filter(u => u.isActive && u.loginBor === false).length;
+
   return (
-    <div className="space-y-5">
-      {/* Sarlavha */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Xodimlar va rollar</p>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            O'qituvchilar bu ro'yxatga kirmaydi — ular O'qituvchilar bo'limida qo'shiladi va limitga hisoblanmaydi
-          </p>
-        </div>
-        <Button size="sm" onClick={openCreate} disabled={atLimit}
- className="gap-1.5 shrink-0 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-xs h-8">
-          <Plus className="w-3.5 h-3.5" /> Xodim qo'shish
-        </Button>
+    <div className="space-y-4">
+      {/* ── YIG'MA ─────────────────────────────────────────────────────────
+          Uchta raqam va bitta chiziq: nechta xodim, limitning qanchasi
+          band, nechtasi loginsiz. Ilgari limit alohida sariq qatorda
+          turardi va faqat to'lganda ko'zga tashlanardi — to'lishiga
+          yaqinlashganini hech kim ko'rmasdi. */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {[
+          { label: "Xodim",   value: usersLoading ? "…" : String(users.length), icon: Users },
+          { label: "Rol",     value: String(roles.length + 1),                    icon: Shield },
+          { label: "Loginsiz", value: usersLoading ? "…" : String(loginsiz),      icon: KeySquare },
+        ].map(k => {
+          const Icon = k.icon;
+          return (
+            <div key={k.label} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-3 sm:p-4">
+              <Icon className="w-4 h-4 text-neutral-400 dark:text-neutral-500 mb-2" />
+              <p className="text-[18px] sm:text-[22px] font-black text-neutral-900 dark:text-neutral-100 leading-none tabular-nums">
+                {k.value}
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{k.label}</p>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Tarif limiti */}
       {typeof limit === "number" && (
         <div className={cn(
-          "flex items-center justify-between rounded-xl border px-3.5 py-2.5",
-          atLimit
-            ? "border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/20"
-            : "border-white/60 dark:border-white/10 glass-soft",
+          "glass-panel border rounded-2xl px-4 py-3",
+          atLimit ? "border-amber-200 dark:border-amber-900/40" : "border-white/60 dark:border-white/10",
         )}>
-          <span className="text-[12px] text-neutral-600 dark:text-neutral-300">
-            Xodim limiti — <strong>{used}/{limit}</strong>
-            {org?.limits?.label ? ` (${org.limits.label})` : ""}
-          </span>
-          {atLimit && (
-            <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-              Limit to'ldi — tarifni yangilang
+          <div className="flex items-baseline justify-between gap-2 mb-1.5">
+            <span className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">
+              Tarif limiti{org?.limits?.label ? ` · ${org.limits.label}` : ""}
             </span>
+            <span className={cn(
+              "text-[12px] font-bold tabular-nums",
+              atLimit ? "text-amber-600 dark:text-amber-400" : "text-neutral-900 dark:text-neutral-100",
+            )}>
+              {used} / {limit}
+            </span>
+          </div>
+          <div className="h-2 rounded bg-neutral-100 dark:bg-white/5 overflow-hidden">
+            <div className={cn("h-full rounded transition-all", atLimit ? "bg-amber-500" : "bg-indigo-500")}
+              style={{ width: `${Math.min(100, (used / Math.max(limit, 1)) * 100)}%` }} />
+          </div>
+          {atLimit && (
+            <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-1.5">
+              Limit to&apos;ldi — yangi xodim uchun tarifni yangilang
+            </p>
           )}
         </div>
       )}
 
-      {/* Rollar */}
-      <div className="space-y-2">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400">Rollar</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div className="border border-white/60 dark:border-white/10 rounded-xl p-3 bg-neutral-50/60 dark:bg-neutral-800/30">
-            <div className="flex items-center justify-between">
-              <span className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200">Admin</span>
-              <span className="text-[11px] text-neutral-400">
-                {users.filter(u => u.role === ADMIN).length} ta
-              </span>
-            </div>
-            <p className="text-[11px] text-neutral-400 mt-0.5">Barcha bo'limlarga to'liq kirish</p>
-          </div>
+      {/* ── ROLLAR — bitta qator, chiplar ──────────────────────────────────
+          Rol — imkoniyatlar to'plami, alohida "ob'ekt" emas. Katta
+          kartochkalar ro'yxatning yarmini egallab, xodimlarni pastga
+          surib yuborardi. Chip bosilsa imkoniyatlar ochiladi. */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mr-1">Rollar</span>
+        <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold
+          bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/40">
+          Admin
+          <span className="text-red-400 dark:text-red-500 font-medium">{users.filter(u => u.role === ADMIN).length}</span>
+        </span>
+        {roles.map(r => (
+          <DropdownMenu key={r.id}>
+            <DropdownMenuTrigger className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold
+              bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300
+              border border-indigo-100 dark:border-indigo-900/40 hover:border-indigo-300 transition-colors outline-none">
+              {r.name}
+              <span className="text-indigo-400 font-medium">{r._count?.users ?? 0}</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[200px]">
+              <div className="px-2 py-1.5 text-[11px] text-neutral-400">{r.permissions.length} ta ruxsat</div>
+              <DropdownMenuItem onClick={() => openRoleEdit(r)}>
+                <Pencil className="w-3.5 h-3.5" />{" "}Imkoniyatlarni sozlash
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setDeleteRole(r)} className="text-red-600 dark:text-red-400">
+                <Trash2 className="w-3.5 h-3.5" />{" "}O&apos;chirish
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ))}
+        <Button size="sm" onClick={openCreate} disabled={atLimit}
+          className="ml-auto gap-1.5 shrink-0 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-xs h-8">
+          <Plus className="w-3.5 h-3.5" />{" "}Xodim qo&apos;shish
+        </Button>
+      </div>
 
-          {roles.map(r => (
-            <div key={r.id} className="border border-white/60 dark:border-white/10 rounded-xl p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">{r.name}</span>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <button onClick={() => openRoleEdit(r)} title="Imkoniyatlarni sozlash"
-                    className="w-6 h-6 flex items-center justify-center rounded-md text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                    <Pencil className="w-3 h-3" />
-                  </button>
-                  <button onClick={() => setDeleteRole(r)} title="O'chirish"
-                    className="w-6 h-6 flex items-center justify-center rounded-md text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
+      {/* ── XODIMLAR — kartochkalar ─────────────────────────────────────────
+          Amallar "…" menyusida: qatorda beshta ikonka telefonda sig'masdi
+          va ism kesilib qolardi. */}
+      {usersLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4 flex items-center gap-3">
+              <Skeleton className="w-10 h-10 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3 w-32" />
+                <Skeleton className="h-2.5 w-24" />
               </div>
-              <p className="text-[11px] text-neutral-400 mt-0.5">
-                {r.permissions.length} ta ruxsat · {r._count?.users ?? 0} ta xodim
-              </p>
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-neutral-400">
-          Yangi rol xodim qo'shish oynasida yaratiladi — rol bu xodimning imkoniyatlar to'plami.
-        </p>
-      </div>
-
-      {/* Xodimlar ro'yxati */}
-      <Card className="border border-white/60 dark:border-white/10 shadow-none">
-        <CardContent className="p-0">
-          {usersLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
-                <Skeleton className="w-9 h-9 rounded-full" />
-                <div className="flex-1 space-y-1.5">
-                  <Skeleton className="h-3 w-32" />
-                  <Skeleton className="h-2.5 w-24" />
-                </div>
-                <Skeleton className="h-6 w-20 rounded-full" />
-              </div>
-            ))
-          ) : users.length === 0 ? (
-            <div className="py-12 text-center text-neutral-400">
-              <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Hali xodim qo'shilmagan</p>
-            </div>
-          ) : (
-            users.map(u => (
+      ) : users.length === 0 ? (
+        <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl py-12 text-center text-neutral-400">
+          <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">Hali xodim qo&apos;shilmagan</p>
+          <p className="text-[11px] mt-1">O&apos;qituvchilar bu ro&apos;yxatga kirmaydi — ular o&apos;z bo&apos;limida</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {users.map(u => {
+            const filial = filialMatni(u);
+            return (
               <div key={u.id}
-                className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
-                <div className="flex items-center gap-3 min-w-0">
+                className={cn(
+                  "glass-panel border rounded-2xl p-4 transition-colors",
+                  u.isActive
+                    ? "border-white/60 dark:border-white/10"
+                    : "border-dashed border-neutral-300 dark:border-neutral-700 opacity-70",
+                )}>
+                <div className="flex items-start gap-3">
                   <div className={cn(
-                    "w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0",
-                    u.isActive ? "bg-gradient-to-br from-blue-400 to-purple-500" : "bg-neutral-300 dark:bg-neutral-600",
+                    "w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-[14px] shrink-0",
+                    u.isActive ? "bg-gradient-to-br from-indigo-400 to-purple-500" : "bg-neutral-300 dark:bg-neutral-600",
                   )}>
                     {u.name?.[0] ?? "?"}
                   </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{u.name}</p>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13.5px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{u.name}</p>
+                    <p className="text-[11.5px] text-neutral-400 dark:text-neutral-500 truncate mt-0.5">{u.phone}</p>
+
+                    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                      {u.role === ADMIN ? (
+                        <span className="text-[10.5px] px-2 py-0.5 rounded-md font-semibold bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400">
+                          Admin
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => u.staffRole && openRoleEdit(rolesById[u.staffRole.id] ?? u.staffRole)}
+                          className="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded-md font-semibold
+                            bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300 hover:opacity-80 transition-opacity">
+                          <Shield className="w-3 h-3" />
+                          {u.staffRole?.name ?? "Rolsiz"}
+                        </button>
+                      )}
+                      {filial && (
+                        <span className="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded-md font-medium
+                          bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300 max-w-full">
+                          <Building2 className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{filial}</span>
+                        </span>
+                      )}
                       {!u.isActive && (
-                        <span className="text-[10px] bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded font-medium shrink-0">
+                        <span className="text-[10.5px] px-2 py-0.5 rounded-md font-semibold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
                           Bloklangan
                         </span>
                       )}
                       {u.isActive && u.loginBor === false && (
-                        <span className="text-[10px] bg-neutral-100 text-neutral-500 dark:bg-white/5 dark:text-neutral-400 px-1.5 py-0.5 rounded font-medium shrink-0">
+                        <span className="text-[10.5px] px-2 py-0.5 rounded-md font-medium bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
                           Loginsiz
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
-                      {u.phone}{filialMatni(u) ? ` · ${filialMatni(u)}` : ""}
-                    </p>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  {u.role === ADMIN ? (
-                    <span className="text-[11px] px-2.5 py-1 rounded-lg font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                      Admin
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => u.staffRole && openRoleEdit(rolesById[u.staffRole.id] ?? u.staffRole)}
-                      title="Imkoniyatlarini sozlash"
-                      className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 hover:opacity-80 transition-opacity">
-                      <Shield className="w-3 h-3" />
-                      {u.staffRole?.name ?? "Rolsiz"}
-                    </button>
-                  )}
-                  <button onClick={() => { setResetUser(u); setResetPassword(""); setResetErr(""); }} title="Parolni tiklash"
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
-                    <KeyRound className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => openEdit(u)} title="Tahrirlash"
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={() => toggleActive(u)} title={u.isActive ? "Bloklash" : "Faollashtirish"}
-                    className={cn(
-                      "w-7 h-7 flex items-center justify-center rounded-lg transition-colors",
-                      u.isActive
-                        ? "text-neutral-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                        : "text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20",
-                    )}>
-                    {u.isActive ? <XCircle className="w-3.5 h-3.5" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                  </button>
-                  {u.role !== ADMIN && (
-                    <button onClick={() => setDeleteUser(u)} title="O'chirish"
-                      className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger aria-label="Amallar"
+                      className="w-8 h-8 -mr-1 -mt-1 flex items-center justify-center rounded-lg text-neutral-400
+                        hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white/60 dark:hover:bg-white/10 transition-colors outline-none shrink-0">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[190px]">
+                      <DropdownMenuItem onClick={() => openEdit(u)}>
+                        <Pencil className="w-3.5 h-3.5" />{" "}Tahrirlash
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setResetUser(u); setResetPassword(""); setResetErr(""); }}>
+                        <KeyRound className="w-3.5 h-3.5" />
+                        {u.loginBor === false ? "Login yaratish" : "Parolni tiklash"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleActive(u)}>
+                        {u.isActive
+                          ? <><XCircle className="w-3.5 h-3.5" />{" "}Bloklash</>
+                          : <><CheckCircle className="w-3.5 h-3.5" />{" "}Faollashtirish</>}
+                      </DropdownMenuItem>
+                      {u.role !== ADMIN && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setDeleteUser(u)} className="text-red-600 dark:text-red-400">
+                            <Trash2 className="w-3.5 h-3.5" />{" "}O&apos;chirish
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+            );
+          })}
+        </div>
+      )}
+      {faol > 0 && faol < users.length && (
+        <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+          {users.length - faol}{" "}ta bloklangan xodim kulrang ko&apos;rsatilgan.
+        </p>
+      )}
 
       {/* ── Xodim qo'shish / tahrirlash ── */}
       <Modal

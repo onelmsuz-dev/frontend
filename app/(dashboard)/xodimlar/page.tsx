@@ -48,9 +48,11 @@ export default function XodimlarPage() {
       <TopHeader
         title="Xodimlar"
         subtitle={
-          kopFilial
-            ? (activeBranch?.name ?? "Barcha filiallar")
-            : "Markaz xodimlari va ularning oyligi"
+          tab === "oylik"
+            ? "Oylik hisobi va to'lovlar"
+            : kopFilial
+              ? (activeBranch?.name ?? "Barcha filiallar")
+              : "Markaz xodimlari, rollar va oyliklar"
         }
       />
 
