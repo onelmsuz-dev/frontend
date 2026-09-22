@@ -1,7 +1,8 @@
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, CalendarDays,
   ClipboardList, Wallet, BarChart3, Settings, UserCheck, Target,
-  Home, Megaphone, Layers, Banknote, Wrench, MessageSquare, Trophy, type LucideIcon,
+  Home, Megaphone, Layers, Banknote, Wrench, MessageSquare, Trophy,
+  TrendingDown, type LucideIcon,
 } from "lucide-react";
 
 export interface NavItem {
@@ -54,6 +55,9 @@ export const navSections: NavSection[] = [
     id: "moliya", label: "Moliyaviy", icon: Banknote,
     items: [
       { href: "/finance", label: "Moliya", icon: Wallet, perm: ["payments.view", "expenses.view"] },
+      // Xarajat Moliyaning ichidagi tab emas, alohida bo'lim: u boshqa
+      // savolga javob beradi — "pul qayerga ketdi va real foyda qancha".
+      { href: "/xarajatlar", label: "Xarajatlar", icon: TrendingDown, perm: "expenses.view" },
       { href: "/reports", label: "Hisobotlar", icon: BarChart3, perm: "reports.view" },
     ],
   },

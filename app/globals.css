@@ -194,6 +194,28 @@ html[data-font] .bottom-nav-label {
    These rules just consume those variables.
    ============================================= */
 
+/* =============================================
+   DIAGRAMMA RANGLARI (xarajat bo'limi)
+
+   Ikki rejim uchun ALOHIDA qadam — avtomatik yorug'lashtirish emas.
+   Qorong'i fonda ruxsat etilgan yorqinlik oralig'i tor (OKLCH L
+   0.48–0.67), shuning uchun yorug' rejimdagi indigo u yerda
+   tekshiruvdan o'tmaydi. Ikkala juftlik ham rang ko'rligi va
+   kontrast tekshiruvidan o'tkazilgan.
+
+   Yashil/qizil ATAYLAB YO'Q: deuteranopiyada tushum va xarajat
+   ustunlari qo'shilib ketardi (ΔE 4.9). Ular faqat foyda
+   ishorasi uchun, doim `+/−` belgisi bilan birga ishlatiladi.
+   ============================================= */
+:root {
+  --xarajat-tushum:  #4f46e5; /* indigo-600 */
+  --xarajat-neytral: #a3a3a3; /* neutral-400 — "filialsiz" qatori */
+}
+.dark {
+  --xarajat-tushum:  #6366f1; /* indigo-500 */
+  --xarajat-neytral: #737373; /* neutral-500 */
+}
+
 /* Default fallback values (before JS runs) */
 :root {
   --v-radius:        14px;
