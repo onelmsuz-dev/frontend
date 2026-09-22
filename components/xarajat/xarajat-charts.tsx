@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/money";
 
@@ -53,7 +54,7 @@ export function GorizontalUstunlar({
 
   if (qatorlar.length === 0) {
     return (
-      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
+      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4 sm:p-5">
         <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100 mb-3">{bosh}</h3>
         <p className="text-[12px] text-neutral-400 dark:text-neutral-500">Bu davrda xarajat yo&apos;q</p>
       </div>
@@ -61,15 +62,15 @@ export function GorizontalUstunlar({
   }
 
   return (
-    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
+    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4 sm:p-5">
       <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100 mb-4">{bosh}</h3>
       <div className="space-y-3">
         {qatorlar.map((q) => {
           const foiz = butun > 0 ? Math.round((q.summa / butun) * 100) : 0;
           return (
             <div key={q.nom}>
-              <div className="flex items-baseline justify-between gap-3 mb-1">
-                <span className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 truncate">
+              <div className="flex items-baseline justify-between gap-2 mb-1">
+                <span className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300 truncate min-w-0">
                   {q.nom}
                   {q.ajratilgan && (
                     <span className="ml-1.5 text-[10px] font-medium text-neutral-400 dark:text-neutral-500">
@@ -77,7 +78,7 @@ export function GorizontalUstunlar({
                     </span>
                   )}
                 </span>
-                <span className="text-[12px] font-bold text-neutral-900 dark:text-neutral-100 shrink-0 tabular-nums">
+                <span className="text-[12px] font-bold text-neutral-900 dark:text-neutral-100 shrink-0 tabular-nums whitespace-nowrap">
                   {formatCurrency(q.summa)}
                   <span className="ml-1.5 text-[11px] font-medium text-neutral-400 dark:text-neutral-500">
                     {foiz}%
@@ -131,7 +132,7 @@ export function TarixGrafigi({ tarix }: { tarix: TarixOy[] }) {
   );
 
   return (
-    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
+    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">
           Oxirgi 6 oy
@@ -152,7 +153,7 @@ export function TarixGrafigi({ tarix }: { tarix: TarixOy[] }) {
         </div>
       </div>
 
-      <div className="flex items-end gap-2 h-36">
+      <div className="flex items-end gap-1.5 sm:gap-2 h-32 sm:h-36">
         {tarix.map((m) => (
           <div key={m.oy} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
             {/* 2px oraliq — yonma-yon ustunlar qo'shilib ketmasin. */}
@@ -187,9 +188,20 @@ export function TarixGrafigi({ tarix }: { tarix: TarixOy[] }) {
 
       {/* RAQAMLI KO'RINISH — grafikdan o'qib bo'lmaydigan aniq qiymatlar
           va foyda shu yerda. Rangni ko'ra olmaydigan foydalanuvchi ham
-          bir xil ma'lumotga ega bo'ladi. */}
+          bir xil ma'lumotga ega bo'ladi.
+
+          YIG'ILGAN holda turadi: telefonda oltita qator grafikdan
+          ikki barobar ko'p joy egallab, keyingi blok ekrandan uzoqqa
+          tushib ketardi. Ochish bitta bosish. */}
       {pulKorinadi && (
-        <div className="mt-4 pt-3 border-t border-white/60 dark:border-white/10 overflow-x-auto">
+        <details className="mt-4 pt-3 border-t border-white/60 dark:border-white/10 group">
+          <summary className="flex items-center justify-between gap-2 cursor-pointer list-none
+            text-[11.5px] font-semibold text-neutral-500 dark:text-neutral-400
+            hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors">
+            Raqamlar bilan
+            <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="mt-2 -mx-1 px-1 overflow-x-auto">
           <table className="w-full text-[11px] tabular-nums">
             <thead>
               <tr className="text-neutral-400 dark:text-neutral-500 text-left">
@@ -222,7 +234,8 @@ export function TarixGrafigi({ tarix }: { tarix: TarixOy[] }) {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </details>
       )}
     </div>
   );

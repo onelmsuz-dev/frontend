@@ -194,6 +194,12 @@ html[data-font] .bottom-nav-label {
    These rules just consume those variables.
    ============================================= */
 
+/* Yon tomonga suriladigan filtr qatorlari uchun — chiziq ko'rinmasin.
+   Telefonda boshqaruvlar bitta qatorda surilib turadi; scrollbar
+   ularning tagida joy egallab, tugmalarni kesib qo'yardi. */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 /* =============================================
    DIAGRAMMA RANGLARI (xarajat bo'limi)
 
