@@ -126,6 +126,13 @@ export function StaffSalaries() {
   // ── Stavka sozlash ─────────────────────────────────────────────────────────
   const [sozlash, setSozlash] = useState<Qator | null>(null);
   const [stavka, setStavka] = useState({ base: "", percent: "", perStudent: "" });
+  /**
+   * HAR QISMNING O'Z KALITI. Ilgari uchala maydon doim ochiq turardi
+   * va placeholder qiymatga o'xshab ketardi — "qaysi qism yoqilgan"
+   * ko'rinmasdi. Kalit o'chiq bo'lsa qiymat YUBORILMAYDI (0/null),
+   * maydonda nima yozilgan bo'lsa ham.
+   */
+  const [yoqilgan, setYoqilgan] = useState({ base: false, percent: false, perStudent: false });
 
   function sozlashniOch(q: Qator) {
     setStavka({
@@ -133,14 +140,29 @@ export function StaffSalaries() {
       percent:    q.sozlama.percent != null ? String(q.sozlama.percent) : "",
       perStudent: q.sozlama.perStudent != null ? String(q.sozlama.perStudent) : "",
     });
+    setYoqilgan({
+      base:       q.sozlama.base > 0,
+      percent:    (q.sozlama.percent ?? 0) > 0,
+      perStudent: (q.sozlama.perStudent ?? 0) > 0,
+    });
     setXato(""); setSozlash(q);
   }
 
   async function stavkaniSaqla() {
     if (!sozlash) return;
     const son = (v: string) => (v.trim() === "" ? null : Number(v.replace(/\s/g, "")));
-    const foiz = son(stavka.percent);
-    if (foiz != null && (isNaN(foiz) || foiz < 0 || foiz > 100)) {
+    const base       = yoqilgan.base       ? (son(stavka.base) ?? 0)  : 0;
+    const foiz       = yoqilgan.percent    ? son(stavka.percent)      : null;
+    const perStudent = yoqilgan.perStudent ? son(stavka.perStudent)   : null;
+    // Yoqilgan, lekin bo'sh qoldirilgan qism — "nima yozay" degan
+    // savol. O'chirib qo'yish o'rniga xato aytamiz: foydalanuvchi
+    // yoqqan narsasi jimgina yo'qolib qolmasin.
+    if (yoqilgan.base && !(base > 0)) { setXato("Oylik summani kiriting yoki kalitni o'chiring"); return; }
+    if (yoqilgan.percent && !(foiz != null && foiz > 0)) { setXato("Foizni kiriting yoki kalitni o'chiring"); return; }
+    if (yoqilgan.perStudent && !(perStudent != null && perStudent > 0)) {
+      setXato("Har o'quvchi uchun summani kiriting yoki kalitni o'chiring"); return;
+    }
+    if (foiz != null && (isNaN(foiz) || foiz > 100)) {
       setXato("Foiz 0 va 100 orasida bo'lsin"); return;
     }
     setIshlamoqda(true); setXato("");
@@ -148,9 +170,9 @@ export function StaffSalaries() {
       const res = await fetch(`/api/staff-salaries/config/${sozlash.userId}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          salaryBase:       son(stavka.base) ?? 0,
+          salaryBase:       base,
           salaryPercent:    foiz,
-          salaryPerStudent: son(stavka.perStudent),
+          salaryPerStudent: perStudent,
         }),
       });
       const d = await res.json();
@@ -422,7 +444,7 @@ export function StaffSalaries() {
         open={!!sozlash}
         onClose={() => setSozlash(null)}
         title={sozlash ? `${sozlash.name} — maosh stavkasi` : ""}
-        subtitle="Uchta qism QO'SHILADI. Keraksizini bo'sh qoldiring"
+        subtitle="Bittasini, xohlaganingizni yoki uchalasini yoqing — yoqilganlari qo'shiladi"
         size="sm"
         footer={
           <>
@@ -435,25 +457,67 @@ export function StaffSalaries() {
           </>
         }
       >
-        <FormField label="Oylik summa (so'm)" hint="Belgilangan oylik. Yo'q bo'lsa bo'sh qoldiring">
-          <Input type="number" inputMode="numeric" placeholder="4 000 000" className="h-10"
-            value={stavka.base}
+        <StavkaQismi
+          yoqiq={yoqilgan.base}
+          onKalit={(v) => { setYoqilgan((p) => ({ ...p, base: v })); setXato(""); }}
+          nom="Oylik summa"
+          izoh="Har oy bir xil belgilangan summa"
+        >
+          <Input type="number" inputMode="numeric" placeholder="masalan 4 000 000" className="h-10"
+            value={stavka.base} autoFocus
             onChange={(e) => { setStavka((p) => ({ ...p, base: e.target.value })); setXato(""); }} />
-        </FormField>
+        </StavkaQismi>
 
-        <FormField label="Tushumdan foiz (%)"
-          hint="Xodim biriktirilgan filial(lar) tushumidan. Uch filialda ishlasa — uchalasidan">
-          <Input type="number" inputMode="decimal" placeholder="3" className="h-10" min="0" max="100"
-            value={stavka.percent}
-            onChange={(e) => { setStavka((p) => ({ ...p, percent: e.target.value })); setXato(""); }} />
-        </FormField>
+        <StavkaQismi
+          yoqiq={yoqilgan.percent}
+          onKalit={(v) => { setYoqilgan((p) => ({ ...p, percent: v })); setXato(""); }}
+          nom="Tushumdan foiz"
+          izoh={
+            sozlash && sozlash.branches.length > 1
+              ? `${sozlash.branches.length} ta filialning har biridan alohida`
+              : sozlash && sozlash.branches.length === 1
+                ? `${sozlash.branches[0]} tushumidan`
+                : "Butun markaz tushumidan"
+          }
+        >
+          <div className="relative">
+            <Input type="number" inputMode="decimal" placeholder="masalan 3" className="h-10 pr-9"
+              min="0" max="100" value={stavka.percent} autoFocus
+              onChange={(e) => { setStavka((p) => ({ ...p, percent: e.target.value })); setXato(""); }} />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-neutral-400">%</span>
+          </div>
+        </StavkaQismi>
 
-        <FormField label="Har o'quvchi uchun (so'm)"
-          hint="Faol o'quvchi soniga ko'paytiriladi. Masalan 50 000">
-          <Input type="number" inputMode="numeric" placeholder="50 000" className="h-10"
-            value={stavka.perStudent}
+        <StavkaQismi
+          yoqiq={yoqilgan.perStudent}
+          onKalit={(v) => { setYoqilgan((p) => ({ ...p, perStudent: v })); setXato(""); }}
+          nom="Har o'quvchi uchun"
+          izoh="O'sha oyda guruhda bo'lgan o'quvchi soniga ko'paytiriladi"
+        >
+          <Input type="number" inputMode="numeric" placeholder="masalan 50 000" className="h-10"
+            value={stavka.perStudent} autoFocus
             onChange={(e) => { setStavka((p) => ({ ...p, perStudent: e.target.value })); setXato(""); }} />
-        </FormField>
+        </StavkaQismi>
+
+        {/* NIMA YOQILGANI — bir qatorda. Uchtasi ham o'chiq bo'lsa
+            bu "maoshsiz" degani; uni yashirmaymiz, aytamiz. */}
+        <p className={cn(
+          "text-[11.5px] px-3 py-2 rounded-lg",
+          Object.values(yoqilgan).some(Boolean)
+            ? "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300"
+            : "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300",
+        )}>
+          {Object.values(yoqilgan).some(Boolean)
+            ? <>Yoqilgan:{" "}
+                <b>{[
+                  yoqilgan.base && "oylik",
+                  yoqilgan.percent && "tushumdan foiz",
+                  yoqilgan.perStudent && "o\u2019quvchi ulushi",
+                ].filter(Boolean).join(" + ")}</b>
+                {Object.values(yoqilgan).filter(Boolean).length > 1 && " — qismlar qo\u2019shiladi"}
+              </>
+            : "Hech biri yoqilmagan — bu xodimga oylik yozilmaydi"}
+        </p>
 
         <div className="flex items-start gap-2 rounded-xl px-3 py-2.5 bg-neutral-50 dark:bg-white/[0.03]">
           <Wallet className="w-3.5 h-3.5 text-neutral-400 shrink-0 mt-0.5" />
@@ -515,6 +579,61 @@ export function StaffSalaries() {
         )}
       </Modal>
     </div>
+  );
+}
+
+/**
+ * Stavkaning bitta qismi: kalit + nom + (yoqiq bo'lsa) maydon.
+ * O'chiq holatda maydon umuman chizilmaydi — "bo'sh qoldirish"
+ * o'rniga aniq "yoqilmagan" holat.
+ */
+function StavkaQismi({
+  yoqiq, onKalit, nom, izoh, children,
+}: {
+  yoqiq: boolean;
+  onKalit: (v: boolean) => void;
+  nom: string;
+  izoh: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn(
+      "rounded-xl border p-3 transition-colors",
+      yoqiq
+        ? "border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/40 dark:bg-indigo-950/20"
+        : "border-white/60 dark:border-white/10",
+    )}>
+      <button type="button" onClick={() => onKalit(!yoqiq)}
+        aria-pressed={yoqiq}
+        className="w-full flex items-center gap-3 text-left">
+        <Kalit yoqiq={yoqiq} />
+        <span className="min-w-0 flex-1">
+          <span className={cn(
+            "block text-[13px] font-semibold",
+            yoqiq ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-500 dark:text-neutral-400",
+          )}>
+            {nom}
+          </span>
+          <span className="block text-[11px] text-neutral-400 dark:text-neutral-500 leading-snug">{izoh}</span>
+        </span>
+      </button>
+      {yoqiq && <div className="mt-2.5">{children}</div>}
+    </div>
+  );
+}
+
+/** Oddiy kalit — loyihada switch komponenti yo'q, chip uslubida. */
+function Kalit({ yoqiq }: { yoqiq: boolean }) {
+  return (
+    <span className={cn(
+      "relative inline-block w-9 h-5 rounded-full shrink-0 transition-colors",
+      yoqiq ? "bg-indigo-600" : "bg-neutral-300 dark:bg-neutral-600",
+    )}>
+      <span className={cn(
+        "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all",
+        yoqiq ? "left-[18px]" : "left-0.5",
+      )} />
+    </span>
   );
 }
 
