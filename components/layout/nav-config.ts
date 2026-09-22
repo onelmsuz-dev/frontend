@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, GraduationCap, BookOpen, CalendarDays,
   ClipboardList, Wallet, BarChart3, Settings, UserCheck, Target,
   Home, Megaphone, Layers, Banknote, Wrench, MessageSquare, Trophy,
-  TrendingDown, type LucideIcon,
+  TrendingDown, UserCog, type LucideIcon,
 } from "lucide-react";
 
 export interface NavItem {
@@ -49,6 +49,10 @@ export const navSections: NavSection[] = [
     items: [
       { href: "/students", label: "O'quvchilar", icon: GraduationCap, perm: "students.view" },
       { href: "/teachers", label: "O'qituvchilar", icon: ClipboardList, perm: "teachers.view" },
+      // Xodim va rollar Sozlamalar ichida edi — ya'ni ularni ko'rish
+      // uchun markazning pul va tizim sozlamalarini ochadigan
+      // `settings.view` kerak bo'lardi. Endi o'z ruxsati bilan.
+      { href: "/xodimlar", label: "Xodimlar", icon: UserCog, perm: "staff.view" },
     ],
   },
   {

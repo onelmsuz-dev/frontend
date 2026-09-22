@@ -171,7 +171,12 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
     if (!editUser) {
       if (!form.name.trim()) { setError("Ism majburiy"); return; }
       if (form.phone.replace(/\D/g, "").length !== 12) { setError("To'liq telefon raqam kiriting"); return; }
-      if (!form.password.trim()) { setError("Parol majburiy"); return; }
+      // Parol faqat ADMIN uchun majburiy: logini yo'q "egalik" hisobi
+      // hech qachon ishlatilmaydi va faqat chalkashlik tug'dirardi.
+      // Qolganlarda bo'sh parol — "tizimga kirmaydigan xodim".
+      if (roleSel === ADMIN && !form.password.trim()) {
+        setError("Admin uchun parol majburiy"); return;
+      }
     }
     if (roleSel === NEW_ROLE && !newRoleName.trim()) { setError("Yangi rol nomini kiriting"); return; }
 
@@ -385,6 +390,11 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
                           Bloklangan
                         </span>
                       )}
+                      {u.isActive && u.loginBor === false && (
+                        <span className="text-[10px] bg-neutral-100 text-neutral-500 dark:bg-white/5 dark:text-neutral-400 px-1.5 py-0.5 rounded font-medium shrink-0">
+                          Loginsiz
+                        </span>
+                      )}
                     </div>
                     <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
                       {u.phone}{filialMatni(u) ? ` · ${filialMatni(u)}` : ""}
@@ -468,10 +478,20 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
           </FormField>
         </div>
 
+        {/* PAROL IXTIYORIY.
+
+            Hamma xodimga kabinet kerak emas: farrosh yoki qorovulning
+            maoshi hisoblanadi, lekin u tizimga kirmaydi. Ilgari parol
+            majburiy edi va bunday odamni ro'yxatga qo'shish uchun
+            soxta parol o'ylab topishga to'g'ri kelardi — u esa
+            haqiqiy, ishlaydigan login bo'lib qolardi. */}
         <FormField
           label={editUser ? "Yangi parol" : "Parol"}
-          required={!editUser}
-          hint={editUser ? "Bo'sh qoldirsangiz o'zgarmaydi" : undefined}
+          hint={editUser
+            ? (editUser.loginBor
+                ? "Bo'sh qoldirsangiz o'zgarmaydi"
+                : "Bu xodimda login yo'q. Parol kiritsangiz — kirish ochiladi")
+            : "Bo'sh qoldirsangiz xodim tizimga kirmaydi (faqat ro'yxat va maosh uchun)"}
         >
           <Input noAutofill name="staff-new-password" type="password" placeholder="Kamida 6 belgi" value={form.password}
             onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="h-10" />
