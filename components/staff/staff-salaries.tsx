@@ -35,6 +35,9 @@ type Kesim = {
   students: number;
   percentAmount: number;
   perStudentAmount: number;
+  expenses?: number;
+  profit?: number;
+  profitAmount?: number;
 };
 
 type Qator = {
@@ -43,11 +46,11 @@ type Qator = {
   phone: string;
   roleName: string;
   branches: string[];
-  sozlama: { base: number; percent: number | null; perStudent: number | null };
+  sozlama: { base: number; percent: number | null; perStudent: number | null; profitPercent: number | null };
   sozlanmagan: boolean;
   salary: {
     id: string; total: number; status: "PENDING" | "PAID"; paidAt: string | null;
-    base: number; percentAmount: number; perStudentAmount: number;
+    base: number; percentAmount: number; perStudentAmount: number; profitAmount: number;
     bonus: number; deduction: number; note: string | null;
     breakdown: Kesim[];
   } | null;
@@ -125,25 +128,27 @@ export function StaffSalaries() {
 
   // ── Stavka sozlash ─────────────────────────────────────────────────────────
   const [sozlash, setSozlash] = useState<Qator | null>(null);
-  const [stavka, setStavka] = useState({ base: "", percent: "", perStudent: "" });
+  const [stavka, setStavka] = useState({ base: "", percent: "", perStudent: "", profit: "" });
   /**
    * HAR QISMNING O'Z KALITI. Ilgari uchala maydon doim ochiq turardi
    * va placeholder qiymatga o'xshab ketardi — "qaysi qism yoqilgan"
    * ko'rinmasdi. Kalit o'chiq bo'lsa qiymat YUBORILMAYDI (0/null),
    * maydonda nima yozilgan bo'lsa ham.
    */
-  const [yoqilgan, setYoqilgan] = useState({ base: false, percent: false, perStudent: false });
+  const [yoqilgan, setYoqilgan] = useState({ base: false, percent: false, perStudent: false, profit: false });
 
   function sozlashniOch(q: Qator) {
     setStavka({
       base:       q.sozlama.base ? String(q.sozlama.base) : "",
       percent:    q.sozlama.percent != null ? String(q.sozlama.percent) : "",
       perStudent: q.sozlama.perStudent != null ? String(q.sozlama.perStudent) : "",
+      profit:     q.sozlama.profitPercent != null ? String(q.sozlama.profitPercent) : "",
     });
     setYoqilgan({
       base:       q.sozlama.base > 0,
       percent:    (q.sozlama.percent ?? 0) > 0,
       perStudent: (q.sozlama.perStudent ?? 0) > 0,
+      profit:     (q.sozlama.profitPercent ?? 0) > 0,
     });
     setXato(""); setSozlash(q);
   }
@@ -154,6 +159,7 @@ export function StaffSalaries() {
     const base       = yoqilgan.base       ? (son(stavka.base) ?? 0)  : 0;
     const foiz       = yoqilgan.percent    ? son(stavka.percent)      : null;
     const perStudent = yoqilgan.perStudent ? son(stavka.perStudent)   : null;
+    const foydaFoiz  = yoqilgan.profit     ? son(stavka.profit)       : null;
     // Yoqilgan, lekin bo'sh qoldirilgan qism — "nima yozay" degan
     // savol. O'chirib qo'yish o'rniga xato aytamiz: foydalanuvchi
     // yoqqan narsasi jimgina yo'qolib qolmasin.
@@ -162,6 +168,10 @@ export function StaffSalaries() {
     if (yoqilgan.perStudent && !(perStudent != null && perStudent > 0)) {
       setXato("Har o'quvchi uchun summani kiriting yoki kalitni o'chiring"); return;
     }
+    if (yoqilgan.profit && !(foydaFoiz != null && foydaFoiz > 0)) {
+      setXato("Sof foydadan foizni kiriting yoki kalitni o'chiring"); return;
+    }
+    if (foydaFoiz != null && foydaFoiz > 100) { setXato("Foiz 100 dan oshmasin"); return; }
     if (foiz != null && (isNaN(foiz) || foiz > 100)) {
       setXato("Foiz 0 va 100 orasida bo'lsin"); return;
     }
@@ -173,6 +183,7 @@ export function StaffSalaries() {
           salaryBase:       base,
           salaryPercent:    foiz,
           salaryPerStudent: perStudent,
+          salaryProfitPercent: foydaFoiz,
         }),
       });
       const d = await res.json();
@@ -396,6 +407,7 @@ export function StaffSalaries() {
                         <Satr nom="Oylik summa" qiymat={s.base} />
                         {s.percentAmount > 0 && <Satr nom="Tushumdan foiz" qiymat={s.percentAmount} />}
                         {s.perStudentAmount > 0 && <Satr nom="O'quvchi ulushi" qiymat={s.perStudentAmount} />}
+                        {s.profitAmount > 0 && <Satr nom="Sof foydadan ulush" qiymat={s.profitAmount} />}
                         {s.bonus > 0 && <Satr nom="Bonus" qiymat={s.bonus} />}
                         {s.deduction > 0 && <Satr nom="Ushlab qolish" qiymat={-s.deduction} />}
                         <div className="border-t border-neutral-200 dark:border-white/10 pt-1.5">
@@ -417,7 +429,7 @@ export function StaffSalaries() {
                                   </span>
                                 </span>
                                 <span className="text-[11.5px] font-bold text-neutral-900 dark:text-neutral-100 tabular-nums shrink-0">
-                                  {formatCurrency(b.percentAmount + b.perStudentAmount)}
+                                  {formatCurrency(b.percentAmount + b.perStudentAmount + (b.profitAmount ?? 0))}
                                 </span>
                               </div>
                             ))}
@@ -499,6 +511,20 @@ export function StaffSalaries() {
             onChange={(e) => { setStavka((p) => ({ ...p, perStudent: e.target.value })); setXato(""); }} />
         </StavkaQismi>
 
+        <StavkaQismi
+          yoqiq={yoqilgan.profit}
+          onKalit={(v) => { setYoqilgan((p) => ({ ...p, profit: v })); setXato(""); }}
+          nom="Sof foydadan ulush"
+          izoh="(Tushum − xarajatlar) × foiz. Xodim oyliklari xarajatga kirmaydi — aks holda ulush o'z-o'ziga bog'liq bo'lardi"
+        >
+          <div className="relative">
+            <Input type="number" inputMode="decimal" placeholder="masalan 5" className="h-10 pr-9"
+              min="0" max="100" value={stavka.profit} autoFocus
+              onChange={(e) => { setStavka((p) => ({ ...p, profit: e.target.value })); setXato(""); }} />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-neutral-400">%</span>
+          </div>
+        </StavkaQismi>
+
         {/* NIMA YOQILGANI — bir qatorda. Uchtasi ham o'chiq bo'lsa
             bu "maoshsiz" degani; uni yashirmaymiz, aytamiz. */}
         <p className={cn(
@@ -513,6 +539,7 @@ export function StaffSalaries() {
                   yoqilgan.base && "oylik",
                   yoqilgan.percent && "tushumdan foiz",
                   yoqilgan.perStudent && "o\u2019quvchi ulushi",
+                  yoqilgan.profit && "sof foydadan ulush",
                 ].filter(Boolean).join(" + ")}</b>
                 {Object.values(yoqilgan).filter(Boolean).length > 1 && " — qismlar qo\u2019shiladi"}
               </>
@@ -647,6 +674,7 @@ function TarkibChizigi({ s }: { s: NonNullable<Qator["salary"]> }) {
     { nom: "Oylik",   qiymat: s.base,             rang: "bg-indigo-500" },
     { nom: "Foiz",    qiymat: s.percentAmount,    rang: "bg-amber-500" },
     { nom: "O'quvchi", qiymat: s.perStudentAmount, rang: "bg-violet-500" },
+    { nom: "Foyda",    qiymat: s.profitAmount,     rang: "bg-teal-500" },
     { nom: "Bonus",   qiymat: s.bonus,            rang: "bg-emerald-500" },
   ].filter((q) => q.qiymat > 0);
   const yigindi = qismlar.reduce((t, q) => t + q.qiymat, 0);
