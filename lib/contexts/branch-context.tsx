@@ -19,12 +19,18 @@ export type BranchItem = {
   phone?: string | null;
 };
 
+/** Almashtirgichdagi "Barcha filiallar" qiymati. */
+export const HAMMA_FILIAL = "";
+
 type BranchContextValue = {
   branches: BranchItem[];
+  /** `null` = BARCHA filiallar (standart holat). */
   activeBranchId: string | null;
   activeBranch: BranchItem | null;
   isLoading: boolean;
-  setActiveBranchId: (id: string) => void;
+  /** Bir nechta filial bor va tanlash ma'noga ega. */
+  kopFilial: boolean;
+  setActiveBranchId: (id: string | null) => void;
   refreshBranches: () => void;
 };
 
@@ -33,6 +39,9 @@ const BranchContext = createContext<BranchContextValue | null>(null);
 function storageKey(subdomain: string | null) {
   return `oneroom:branch:${subdomain ?? "default"}`;
 }
+
+/** localStorage'da "barcha" ni ALOHIDA belgi bilan saqlaymiz. */
+const BARCHA = "__all__";
 
 export function BranchProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
@@ -50,41 +59,61 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem(storageKey(orgSubdomain));
-    setActiveBranchIdState(saved);
+    // Eski kalitda "barcha" tushunchasi yo'q edi va u yerda filial id'si
+    // yotibdi. Uni o'qiymiz, lekin pastdagi effekt ro'yxatda yo'q bo'lsa
+    // "barcha" ga tushiradi.
+    setActiveBranchIdState(saved && saved !== BARCHA ? saved : null);
     setHydrated(true);
   }, [orgSubdomain]);
 
+  /**
+   * TANLOVNI TEKSHIRISH.
+   *
+   * Ilgari bu yerda "hech narsa tanlanmagan bo'lsa BIRINCHI filialni qo'y"
+   * degan qoida bor edi. Aynan shu sabab markazda ikkita filial bo'lsa ham
+   * hamma narsa birinchisiga tushardi — panel ham, yangi kurs ham. Endi
+   * standart holat "barcha filiallar" va u HECH QACHON o'z-o'zidan
+   * bitta filialga almashmaydi.
+   *
+   * Yagona istisno — xodimga BITTA filial biriktirilgan bo'lsa: unda
+   * tanlov degani yo'q, ro'yxatdagi yagona filial doim aktiv.
+   */
   useEffect(() => {
     if (!hydrated || isLoading) return;
-    if (branches.length === 0) {
-      setActiveBranchIdState(null);
+    if (branches.length === 1) {
+      const yagona = branches[0].id;
+      if (activeBranchId !== yagona) setActiveBranchIdState(yagona);
       return;
     }
-    const exists = activeBranchId && branches.some(b => b.id === activeBranchId);
-    if (!exists) {
-      const first = branches[0].id;
-      setActiveBranchIdState(first);
-      localStorage.setItem(storageKey(orgSubdomain), first);
+    if (activeBranchId && !branches.some((b) => b.id === activeBranchId)) {
+      setActiveBranchIdState(null);
+      localStorage.removeItem(storageKey(orgSubdomain));
     }
   }, [hydrated, isLoading, branches, activeBranchId, orgSubdomain]);
 
   const setActiveBranchId = useCallback(
-    (id: string) => {
+    (id: string | null) => {
       setActiveBranchIdState(id);
-      localStorage.setItem(storageKey(orgSubdomain), id);
+      localStorage.setItem(storageKey(orgSubdomain), id ?? BARCHA);
+      /**
+       * Filial almashsa — KESHDAGI HAMMA NARSA eskiradi.
+       *
+       * Ilgari faqat uchta yo'l (dashboard/payments/reports) yangilanardi;
+       * o'quvchilar, guruhlar, kurslar va xodimlar ro'yxati eski filialdan
+       * qolgan qatorlarni ko'rsatib turaverardi. Bu esa "filialni
+       * almashtirdim, lekin ma'lumot o'sha-o'sha" degan tuyg'u berardi.
+       */
       void mutate(
-        key => typeof key === "string" && (
-          key.startsWith("/api/dashboard") ||
-          key.startsWith("/api/payments") ||
-          key.startsWith("/api/reports")
-        ),
+        (key) => typeof key === "string" && key.startsWith("/api/"),
+        undefined,
+        { revalidate: true },
       );
     },
     [orgSubdomain],
   );
 
   const activeBranch = useMemo(
-    () => branches.find(b => b.id === activeBranchId) ?? null,
+    () => branches.find((b) => b.id === activeBranchId) ?? null,
     [branches, activeBranchId],
   );
 
@@ -94,6 +123,7 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
       activeBranchId,
       activeBranch,
       isLoading,
+      kopFilial: branches.length > 1,
       setActiveBranchId,
       refreshBranches: () => void refresh(),
     }),

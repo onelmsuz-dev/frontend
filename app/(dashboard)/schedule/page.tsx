@@ -18,6 +18,7 @@ import { businessToday } from "@/lib/time";
 import { useOrganization } from "@/lib/hooks/useOrganization";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { RoomGrid } from "@/components/schedule/room-grid";
+import { BranchFilter } from "@/components/layout/branch-filter";
 import { courseBlockColor, GROUP_COLORS, blockColorFor } from "@/lib/course-colors";
 import {
   ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, List, ChevronDown, Plus,
@@ -897,6 +898,9 @@ export default function SchedulePage() {
           Bugun
         </button>
         )}
+
+        {/* Filial — guruhlar ham, xonalar ham shu bo'yicha toraydi. */}
+        <BranchFilter className="rounded-xl" />
 
         {/* Two buttons side by side — admin only */}
         {isAdmin && (

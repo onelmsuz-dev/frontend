@@ -43,6 +43,7 @@ export function BranchHeaderControls() {
     activeBranchId,
     activeBranch,
     isLoading,
+    kopFilial,
     setActiveBranchId,
     refreshBranches,
   } = useBranch();
@@ -98,7 +99,10 @@ export function BranchHeaderControls() {
           )}
         >
           <span className="max-w-[120px] sm:max-w-[160px] truncate">
-            {isLoading ? "..." : activeBranch?.name ?? "Filial tanlang"}
+            {isLoading
+              ? "..."
+              : activeBranch?.name
+                ?? (branches.length === 0 ? "Filial yo'q" : "Barcha filiallar")}
           </span>
           <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
         </DropdownMenuTrigger>
@@ -107,6 +111,19 @@ export function BranchHeaderControls() {
           {branches.length === 0 && !isLoading && (
             <DropdownMenuItem disabled className="text-neutral-400">
               Filial yo&apos;q
+            </DropdownMenuItem>
+          )}
+          {/* Standart ko'rinish — butun markaz. Faqat bitta filial
+              bo'lganda ma'nosiz, shuning uchun yashiriladi. */}
+          {kopFilial && (
+            <DropdownMenuItem
+              onClick={() => setActiveBranchId(null)}
+              className="flex items-center justify-between gap-2 font-medium"
+            >
+              <span className="truncate">Barcha filiallar</span>
+              {activeBranchId === null && (
+                <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              )}
             </DropdownMenuItem>
           )}
           {branches.map(b => (

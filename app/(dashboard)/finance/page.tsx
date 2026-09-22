@@ -30,6 +30,7 @@ import { useGroups } from "@/lib/hooks/useGroups";
 import { useStudents } from "@/lib/hooks/useStudents";
 import useSWR, { mutate } from "swr";
 import { useBranch, useBranchQueryString } from "@/lib/contexts/branch-context";
+import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
 import { fmtMonthYear, formatUzDate } from "@/lib/date-uz";
 import { formatCurrency } from "@/lib/money";
 
@@ -72,7 +73,7 @@ export default function FinancePage() {
 
   // Xarajat
   const [showExpModal, setShowExpModal] = useState(false);
-  const [expForm,      setExpForm]      = useState({ category: "", description: "", amount: "", date: "" });
+  const [expForm,      setExpForm]      = useState({ category: "", description: "", amount: "", date: "", branchId: "" });
   const [expErr,       setExpErr]       = useState("");
   const [expSaving,    setExpSaving]    = useState(false);
 
@@ -101,7 +102,7 @@ export default function FinancePage() {
   const [chargingDues,  setChargingDues]  = useState(false);
   const [chargeMsg,     setChargeMsg]     = useState("");
 
-  const { activeBranchId } = useBranch();
+  const { activeBranchId, kopFilial } = useBranch();
   const { data: paymentsRaw, isLoading: paymentsLoading } = usePayments({
     month:   payDate ? undefined : payMonth,   // aniq sana tanlansa oy shart emas
     date:    payDate || undefined,
@@ -209,9 +210,12 @@ export default function FinancePage() {
           category:    expForm.category.trim(),
           description: expForm.description.trim(),
           amount,
-          // Sarlavhada tanlangan filial — aks holda yozuv egasining "uy"
-          // filialiga tushib, boshqa filial hisobotini buzardi.
-          ...(activeBranchId ? { branchId: activeBranchId } : {}),
+          // Formada tanlangan filial ustun; tanlanmasa sarlavhadagisi.
+          // Ikkalasi ham bo'sh bo'lsa xarajat filialsiz qoladi va FAQAT
+          // umumiy ko'rinishda sanaladi — filial hisobotini buzmaydi.
+          ...(expForm.branchId || activeBranchId
+            ? { branchId: expForm.branchId || activeBranchId }
+            : {}),
           ...(expForm.date ? { date: expForm.date } : {}),
         }),
       });
@@ -220,7 +224,7 @@ export default function FinancePage() {
       mutate((k: string) => typeof k === "string" && k.startsWith("/api/expenses"));
       mutate("/api/reports");
       setShowExpModal(false);
-      setExpForm({ category: "", description: "", amount: "", date: "" });
+      setExpForm({ category: "", description: "", amount: "", date: "", branchId: "" });
     } catch { setExpErr("Serverga ulanib bo'lmadi"); }
     finally { setExpSaving(false); }
   }
@@ -321,6 +325,15 @@ export default function FinancePage() {
                   ))}
                 </select>
               </div>
+              {kopFilial && (
+                <div>
+                  <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">Filial</Label>
+                  <BranchPicker value={expForm.branchId || activeBranchId || ""}
+                    onChange={(v) => setExpForm(p => ({ ...p, branchId: v }))}
+                    hammasiLabel="Filialga bog'lanmagan (umumiy)"
+                    className="h-9 rounded-lg text-sm" />
+                </div>
+              )}
               <div>
                 <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">Tavsif</Label>
                 <Input placeholder="Masalan: Iyul oyi ijara to'lovi" value={expForm.description}
@@ -424,6 +437,8 @@ export default function FinancePage() {
               onChange={e => setPayDate(e.target.value)}
               className={FILTER_CLS}
             />
+
+            <BranchFilter className={FILTER_CLS} />
 
             <select
               value={payGroupId}
@@ -584,7 +599,7 @@ export default function FinancePage() {
               {/* Asosiy amal — ko'rinadigan (to'ldirilgan) tugma bo'lishi kerak.
                   Ilgari shaffof fonli, och kulrang matnli edi va deyarli
                   bilinmasdi. */}
-              <button onClick={() => { setExpErr(""); setExpForm({ category: "", description: "", amount: "", date: "" }); setShowExpModal(true); }}
+              <button onClick={() => { setExpErr(""); setExpForm({ category: "", description: "", amount: "", date: "", branchId: "" }); setShowExpModal(true); }}
                 className="flex items-center gap-1.5 text-[12.5px] font-semibold px-3.5 h-9 rounded-xl
                   bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm
                   transition-colors">
@@ -595,6 +610,12 @@ export default function FinancePage() {
 
             {/* ── FILTR ── */}
             <div className="flex flex-wrap items-end gap-2 px-5 py-3 border-b border-white/50 dark:border-white/10">
+              {kopFilial && (
+                <div className="min-w-[150px]">
+                  <Label className="text-[11px] font-medium text-neutral-500 mb-1 block">Filial</Label>
+                  <BranchFilter className="w-full h-9 px-2.5 text-[13px] bg-white dark:bg-neutral-800" />
+                </div>
+              )}
               <div className="min-w-[150px]">
                 <Label className="text-[11px] font-medium text-neutral-500 mb-1 block">Kategoriya</Label>
                 <select value={expCat} onChange={e => setExpCat(e.target.value)}
@@ -672,7 +693,7 @@ export default function FinancePage() {
                 <p className="text-sm text-neutral-400">
                   {expFiltered ? "Bu filtrga mos xarajat yo'q" : "Bu oyda xarajat yozilmagan"}
                 </p>
-                <button onClick={() => { setExpErr(""); setExpForm({ category: "", description: "", amount: "", date: "" }); setShowExpModal(true); }}
+                <button onClick={() => { setExpErr(""); setExpForm({ category: "", description: "", amount: "", date: "", branchId: "" }); setShowExpModal(true); }}
                   className="flex items-center gap-1.5 text-[12.5px] font-semibold px-3.5 h-9 rounded-xl
                     bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm
                     transition-colors">

@@ -11,6 +11,8 @@ export interface MeData {
   studentId: string | null;
   organizationId: string | null;
   branchId: string | null;
+  /** Xodim ko'ra oladigan filiallar. Bo'sh = barchasi. */
+  branchIds?: string[];
   staffRoleId: string | null;
   orgSubdomain: string | null;
   acceptsPayments?: boolean;

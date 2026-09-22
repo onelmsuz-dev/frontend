@@ -23,10 +23,26 @@ import type { Branch } from "@/types";
 const ADMIN = "SUPER_ADMIN";
 const NEW_ROLE = "__new__";
 
-const EMPTY_FORM = { name: "", phone: "", email: "", password: "", branchId: "" };
+const EMPTY_FORM = {
+  name: "", phone: "", email: "", password: "",
+  /**
+   * Xodim ishlaydigan filiallar. Bo'sh ro'yxat = BARCHA filiallar —
+   * kichik markazlarda bitta buxgalter hammasiga xizmat qiladi va uni
+   * bitta filialga qamab qo'yish noto'g'ri bo'lardi.
+   */
+  branchIds: [] as string[],
+};
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-lg", className)} />;
+}
+
+/** Ro'yxatdagi filial matni: bir nechta bo'lsa hammasi ko'rinsin. */
+function filialMatni(u: any): string {
+  const list: string[] = Array.isArray(u.branches) && u.branches.length > 0
+    ? u.branches.map((b: any) => b.name)
+    : (u.branch?.name ? [u.branch.name] : []);
+  return list.join(", ");
 }
 
 function ErrorBox({ text }: { text: string }) {
@@ -100,7 +116,13 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
     setEditUser(u);
     setForm({
       name: u.name ?? "", phone: u.phone ?? "", email: u.email ?? "",
-      password: "", branchId: u.branchId ?? "",
+      password: "",
+      // Eski yozuvda faqat yakka `branchId` bo'lishi mumkin — u ham
+      // ro'yxatga tushadi, aks holda forma ochilganda xodim "filialsiz"
+      // ko'rinib, saqlash uni rostdan ham filialsiz qoldirardi.
+      branchIds: Array.isArray(u.branches) && u.branches.length > 0
+        ? u.branches.map((b: any) => b.id)
+        : (u.branchId ? [u.branchId] : []),
     });
     // Rolsiz eski xodim (RECEPTIONIST/ACCOUNTANT) tasodifan Admin bo'lib qolmasligi uchun
     // Admin'ga faqat rostdan ham Admin bo'lgani tushadi.
@@ -163,7 +185,9 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
       if (form.phone.trim())    body.phone = form.phone;
       if (form.email.trim())    body.email = form.email.trim();
       if (form.password.trim()) body.password = form.password;
-      if (form.branchId)        body.branchId = form.branchId;
+      // Ro'yxat HAR DOIM yuboriladi — bo'sh bo'lsa ham. Aks holda
+      // xodimning oxirgi filialini olib tashlab bo'lmasdi.
+      body.branchIds = form.branchIds;
 
       const res = await fetch(editUser ? `/api/users/${editUser.id}` : "/api/users", {
         method: editUser ? "PATCH" : "POST",
@@ -363,7 +387,7 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
                       )}
                     </div>
                     <p className="text-[11px] text-neutral-400 dark:text-neutral-500 truncate">
-                      {u.phone}{u.branch?.name ? ` · ${u.branch.name}` : ""}
+                      {u.phone}{filialMatni(u) ? ` · ${filialMatni(u)}` : ""}
                     </p>
                   </div>
                 </div>
@@ -453,13 +477,37 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
             onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="h-10" />
         </FormField>
 
-        <FormField label="Filial">
-          <select value={form.branchId} onChange={e => setForm(p => ({ ...p, branchId: e.target.value }))}
-            className="w-full h-10 px-3 text-sm rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 outline-none">
-            <option value="">Filial tanlanmagan</option>
-            {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
-        </FormField>
+        {branches.length > 0 && (
+          <FormField
+            label="Filiallar"
+            hint={form.branchIds.length === 0
+              ? "Hech biri belgilanmasa — xodim barcha filiallarni ko'radi"
+              : "Birinchi belgilangani asosiy filial: yangi yozuv o'shanga tushadi"}
+          >
+            <div className="flex flex-wrap gap-1.5">
+              {branches.map(b => {
+                const tanlangan = form.branchIds.includes(b.id);
+                return (
+                  <button key={b.id} type="button"
+                    onClick={() => setForm(p => ({
+                      ...p,
+                      branchIds: tanlangan
+                        ? p.branchIds.filter(x => x !== b.id)
+                        : [...p.branchIds, b.id],
+                    }))}
+                    className={cn(
+                      "px-3 h-9 rounded-lg text-[12px] font-semibold border transition-colors",
+                      tanlangan
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400",
+                    )}>
+                    {b.name}
+                  </button>
+                );
+              })}
+            </div>
+          </FormField>
+        )}
 
         {/* Rol = imkoniyatlar to'plami */}
         <FormField label="Rol" required>

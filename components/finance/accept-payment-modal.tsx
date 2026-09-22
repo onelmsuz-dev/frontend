@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
 import { ReceiptModal } from "@/components/payments/receipt-modal";
 import { StudentPicker, type PickedStudent } from "@/components/finance/student-picker";
+import { BranchPicker } from "@/components/layout/branch-filter";
+import { useBranch } from "@/lib/contexts/branch-context";
 import { useStudent } from "@/lib/hooks/useStudents";
 import { cn } from "@/lib/utils";
 import { SELECTABLE_METHODS, methodGridCls } from "@/lib/payment-methods";
@@ -30,9 +32,11 @@ type PayForm = {
   amount: string;
   method: string;
   note: string;
+  /** Pul QAYSI kassaga tushdi. Bo'sh = o'quvchining o'z filiali. */
+  branchId: string;
 };
 
-const EMPTY_FORM: PayForm = { studentId: "", groupId: "", amount: "", method: "NAQD", note: "" };
+const EMPTY_FORM: PayForm = { studentId: "", groupId: "", amount: "", method: "NAQD", note: "", branchId: "" };
 
 type AcceptPaymentModalProps = {
   open: boolean;
@@ -45,6 +49,7 @@ export function AcceptPaymentModal({
   onClose,
   defaultStudentId,
 }: AcceptPaymentModalProps) {
+  const { kopFilial } = useBranch();
   const [payForm, setPayForm] = useState<PayForm>(EMPTY_FORM);
   const [payFormErr, setPayFormErr] = useState("");
   const [saving, setSaving] = useState(false);
@@ -213,6 +218,7 @@ export function AcceptPaymentModal({
           method: payForm.method,
           note: payForm.note || undefined,
           ...(groupId ? { groupId } : {}),
+          ...(payForm.branchId ? { branchId: payForm.branchId } : {}),
         }),
       });
       const created = await res.json().catch(() => null);
@@ -288,6 +294,22 @@ export function AcceptPaymentModal({
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {/* FILIAL — pul qaysi kassaga tushdi. Bo'sh qoldirilsa
+              o'quvchining o'z filialiga yoziladi; boshqa filialda to'lasa
+              kassir shu yerda ko'rsatadi, aks holda tushum noto'g'ri
+              filial hisobotiga tushardi. */}
+          {kopFilial && (
+            <div>
+              <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">
+                Filial (kassa)
+              </Label>
+              <BranchPicker value={payForm.branchId}
+                onChange={(v) => setPayForm(p => ({ ...p, branchId: v }))}
+                hammasiLabel="O'quvchining filiali"
+                className="h-10 sm:h-9 rounded-md text-sm" />
             </div>
           )}
 

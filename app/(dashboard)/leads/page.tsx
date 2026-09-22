@@ -44,6 +44,7 @@ import { StageManagerModal } from "@/components/leads/stage-manager-modal";
 import { SalesStats } from "@/components/leads/sales-stats";
 import { DistributeModal } from "@/components/leads/distribute-modal";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { BranchFilter } from "@/components/layout/branch-filter";
 import { useFeature } from "@/lib/hooks/useFeatures";
 import { stageHue, defaultStage } from "@/lib/lead-stages";
 import { mutate } from "swr";
@@ -764,6 +765,8 @@ export default function LeadsPage() {
             <Input placeholder="Ism, telefon, maktab, kurs..." className="pl-9 h-9 text-sm"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <BranchFilter className="rounded-xl text-[12px] font-medium shrink-0" />
+
           {/* SOTUVCHI FILTRI — faqat boshqalarning lidini ko'ra oladigan
               odamga ma'noli. Oddiy sotuvchida ro'yxat o'zidan iborat
               bo'lardi, ya'ni tugma shunchaki joy egallardi. */}

@@ -12,6 +12,7 @@ import { Search, Users, Clock, CalendarDays, BookOpen, TrendingUp, Edit, Trash2,
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useGroups } from "@/lib/hooks/useGroups";
+import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { useRooms } from "@/lib/hooks/useRooms";
@@ -47,6 +48,9 @@ function Skeleton({ className }: { className?: string }) {
 
 const EMPTY_FORM = {
   name: "", courseId: "", teacherId: "", roomId: "", maxStudents: "15",
+  // Guruh JISMONAN qaysi filialda o'tadi. Xona va kurs ro'yxati shunga
+  // qarab filtrlanadi.
+  branchId: "",
   scheduleDays: [] as string[], startTime: "18:00", endTime: "19:30",
   startDate: todayStr(), endDate: "", status: "ACTIVE",
   // Guruh darajasidagi to'lov rejimi (M6) — bo'sh = kurs/markaz.
@@ -55,6 +59,23 @@ const EMPTY_FORM = {
 
 function revalidate() {
   mutate((k: string) => typeof k === "string" && k.startsWith("/api/groups"), undefined, { revalidate: true });
+}
+
+/**
+ * Guruh formasidagi filial qatori. Filial almashsa XONA tozalanadi —
+ * boshqa filialning xonasi bilan saqlashga urinish serverda rad etilardi
+ * va foydalanuvchi sababini tushunmasdi.
+ */
+function BranchFormField({ branchId, onChange }: { branchId: string; onChange: (v: string) => void }) {
+  // Bitta filialli markazda qator umuman chizilmaydi — `BranchPicker`
+  // bo'sh qaytarsa, sarlavhasi osilib qolmasin.
+  const { kopFilial } = useBranch();
+  if (!kopFilial) return null;
+  return (
+    <FormField label="Filial" hint="Guruh qaysi filialda o'tadi">
+      <BranchPicker value={branchId} onChange={onChange} hammasiOchiq={false} />
+    </FormField>
+  );
 }
 
 /**
@@ -125,8 +146,12 @@ function GroupsContent() {
   // tegishli — ilgari ular filtrdan tushib qolib, "Avval xona qo'shing"
   // chiqardi, holbuki xona bor edi. Tahrirlashda tanlangan xona ham
   // ro'yxatdan tushmasligi kerak.
-  const rooms = activeBranchId
-    ? allRooms.filter(r => !r.branchId || r.branchId === activeBranchId || r.id === form.roomId)
+  // Xona ro'yxati FORMADAGI filialga bog'langan (tepadagi almashtirgichga
+  // emas): "Barcha filiallar" turganda ham yangi guruh aniq bir filialda
+  // ochiladi va begona filial xonasi ro'yxatga tushmasligi kerak.
+  const formBranchId = form.branchId || activeBranchId;
+  const rooms = formBranchId
+    ? allRooms.filter(r => !r.branchId || r.branchId === formBranchId || r.id === form.roomId)
     : allRooms;
   // Guruh o'quvchi soniga sig'maydigan xonani ko'rsatmaymiz — joriy tanlangan
   // xona (tahrirlashda) va sig'imi belgilanmagan xonalar har doim ko'rinadi.
@@ -137,13 +162,13 @@ function GroupsContent() {
 
   async function createRoomInline() {
     if (!newRoomName.trim()) { setNewRoomErr("Xona nomi kerak"); return; }
-    if (!activeBranchId) { setNewRoomErr("Avval filialni tanlang"); return; }
+    if (!formBranchId) { setNewRoomErr("Avval filialni tanlang"); return; }
     setNewRoomSaving(true); setNewRoomErr("");
     try {
       const res = await fetch("/api/rooms", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: newRoomName.trim(), branchId: activeBranchId,
+          name: newRoomName.trim(), branchId: formBranchId,
           ...(newRoomCapacity ? { capacity: Number(newRoomCapacity) } : {}),
         }),
       });
@@ -170,7 +195,7 @@ function GroupsContent() {
   }), [groups]);
 
   function openCreate() {
-    setEditId(null); setForm(EMPTY_FORM); setError("");
+    setEditId(null); setForm({ ...EMPTY_FORM, branchId: activeBranchId ?? "" }); setError("");
     setShowNewRoom(false); setNewRoomName(""); setNewRoomCapacity(""); setNewRoomErr("");
     setShowModal(true);
   }
@@ -178,6 +203,7 @@ function GroupsContent() {
     setEditId(g.id);
     setForm({
       name: g.name, courseId: g.courseId ?? "", teacherId: g.teacherId ?? "", roomId: g.roomId ?? "",
+      branchId: g.branchId ?? "",
       maxStudents: String(g.maxStudents ?? 15),
       billingMode: g.billingMode ?? "", moduleLessons: g.moduleLessons == null ? "" : String(g.moduleLessons),
       scheduleDays: g.scheduleDays ?? [],
@@ -289,7 +315,11 @@ function GroupsContent() {
       // olib tashlab bo'lmasdi (server "yuborilmadi" ni "o'zgarmadi" deb
       // tushunardi va guruh o'z-o'zidan "Tugagan" bo'lib qolaverardi).
       if (editId || form.endDate) body.endDate = form.endDate;
-      if (!editId && activeBranchId) body.branchId = activeBranchId;
+      // Filial tahrirda ham yuboriladi — guruhni boshqa filialga
+      // ko'chirish kerak bo'lishi mumkin. Bo'sh bo'lsa server o'zi hal
+      // qiladi (bitta filialli markazda tanlov yo'q).
+      if (form.branchId) body.branchId = form.branchId;
+      else if (!editId && activeBranchId) body.branchId = activeBranchId;
 
       const res = await fetch(editId ? `/api/groups/${editId}` : "/api/groups", {
         method: editId ? "PATCH" : "POST",
@@ -349,6 +379,9 @@ function GroupsContent() {
           </>
         }
       >
+        <BranchFormField branchId={form.branchId}
+          onChange={(v) => setForm(p => ({ ...p, branchId: v, roomId: "" }))} />
+
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Kurs" required>
             <select value={form.courseId} onChange={e => onCourseChange(e.target.value)} className={selectCls}
@@ -563,6 +596,7 @@ function GroupsContent() {
             <Input placeholder="Guruh, o'qituvchi..." className="pl-9 h-9 text-sm w-60"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <BranchFilter />
           <span className="ml-auto text-xs text-neutral-400">{filtered.length} ta guruh</span>
         </div>
 

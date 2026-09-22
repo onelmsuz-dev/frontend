@@ -4,6 +4,7 @@ import { useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TopHeader } from "@/components/layout/top-header";
+import { BranchFilter } from "@/components/layout/branch-filter";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { StudentDeleteModal } from "@/components/students/student-delete-modal";
@@ -403,6 +404,8 @@ export default function StudentsPage() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          <BranchFilter />
+
           <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)} className={selectCls}>
             <option value="barchasi">Barcha guruhlar</option>
             {groups.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}

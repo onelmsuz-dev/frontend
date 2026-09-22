@@ -10,6 +10,7 @@ import { useChartColors } from "@/hooks/use-chart-colors";
 import { useDashboard } from "@/lib/hooks/useDashboard";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { useBranchQueryString } from "@/lib/contexts/branch-context";
+import { BranchFilter } from "@/components/layout/branch-filter";
 import { TrendingUp, Users, BookOpen, CalendarCheck, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OverviewSections } from "@/components/reports/overview-sections";
@@ -94,6 +95,8 @@ export default function ReportsPage() {
               </>
             )}
           </div>
+
+          <BranchFilter className="rounded-xl" />
         </div>
 
         {/* KPI stats */}

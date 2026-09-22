@@ -11,6 +11,8 @@ import { Search, BookOpen, Users, Wallet, Clock, Edit, Trash2, ChevronRight } fr
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useCourses } from "@/lib/hooks/useCourses";
+import { useBranch } from "@/lib/contexts/branch-context";
+import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
 import { mutate } from "swr";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { useFeature } from "@/lib/hooks/useFeatures";
@@ -37,6 +39,8 @@ const DURATION_PRESETS = ["1 oy", "3 oy", "6 oy", "9 oy", "12 oy"];
 
 const EMPTY = {
   name: "", description: "", duration: "", price: "", color: "bg-blue-500",
+  // Qaysi filial uchun. Bo'sh = barcha filiallarga umumiy kurs.
+  branchId: "",
   // To'lov rejimi va narxlari (M6) — bo'sh = markaz standarti / hosila narx.
   billingMode: "", lessonPrice: "", moduleLessons: "", modulePrice: "", coursePrice: "", durationMonths: "",
 };
@@ -58,6 +62,7 @@ export default function CoursesPage() {
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const { data: raw, isLoading } = useCourses();
+  const { activeBranchId, kopFilial } = useBranch();
   // Kurs darajasidagi to'lov rejimi — faqat bayroq yoqiq va markazga ochilgan rejimlar.
   const modesOn = useFeature("billing-modes") === true;
   const { data: modesData } = useSWR<any>(modesOn ? "/api/billing/modes" : null, fetcher);
@@ -87,11 +92,16 @@ export default function CoursesPage() {
   }), [courses]);
 
   function openCreate() {
-    setEditId(null); setForm(EMPTY); setError(""); setShowModal(true);
+    // Tepada filial tanlangan bo'lsa, yangi kurs o'shanga tayyorlanadi.
+    // "Barcha filiallar" turganda esa bo'sh qoladi va foydalanuvchi
+    // o'zi tanlaydi — ilgari shu yerda jimgina birinchi filial tushardi.
+    setEditId(null); setForm({ ...EMPTY, branchId: activeBranchId ?? "" });
+    setError(""); setShowModal(true);
   }
   function openEdit(c: any) {
     setEditId(c.id);
     setForm({ name: c.name, description: c.description ?? "", duration: c.duration, price: String(c.price), color: c.color ?? "bg-blue-500",
+      branchId: c.branchId ?? "",
       billingMode: c.billingMode ?? "", lessonPrice: c.lessonPrice == null ? "" : String(c.lessonPrice),
       moduleLessons: c.moduleLessons == null ? "" : String(c.moduleLessons), modulePrice: c.modulePrice == null ? "" : String(c.modulePrice),
       coursePrice: c.coursePrice == null ? "" : String(c.coursePrice), durationMonths: c.durationMonths == null ? "" : String(c.durationMonths) });
@@ -112,6 +122,7 @@ export default function CoursesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name, description: form.description || undefined, duration: form.duration, price: parseFloat(form.price), color: form.color,
+          ...(kopFilial ? { branchId: form.branchId || undefined } : {}),
           ...(modesOn ? {
             billingMode: form.billingMode || null,
             lessonPrice: num(form.lessonPrice), moduleLessons: num(form.moduleLessons), modulePrice: num(form.modulePrice),
@@ -181,6 +192,13 @@ export default function CoursesPage() {
           <Input placeholder="Qisqacha tavsif..." value={form.description}
             onChange={e => setForm(p => ({...p, description: e.target.value}))} className="h-10" />
         </FormField>
+
+        {kopFilial && (
+          <FormField label="Filial" hint="Bo'sh qoldirilsa kurs barcha filiallarda ko'rinadi">
+            <BranchPicker value={form.branchId}
+              onChange={(v) => setForm(p => ({ ...p, branchId: v }))} />
+          </FormField>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Davomiyligi" required>
@@ -297,6 +315,7 @@ export default function CoursesPage() {
             <Input placeholder="Kurs nomi yoki tavsif..." className="pl-9 h-9 text-sm w-64"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <BranchFilter />
           <span className="text-xs text-neutral-400 dark:text-neutral-500 ml-auto">{filtered.length} ta kurs</span>
         </div>
 

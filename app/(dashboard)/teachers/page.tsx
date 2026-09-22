@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { TopHeader } from "@/components/layout/top-header";
+import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -39,11 +40,13 @@ const EMPTY = {
   subjects: [] as string[], salary: "",
   salaryType: "FIXED" as SalaryType,
   acceptsPayments: false,
+  // Qaysi filialda ishlaydi. O'qituvchining LOGIN qamrovi ham shundan.
+  branchId: "",
 };
 
 export default function TeachersPage() {
   const router = useRouter();
-  const { activeBranchId } = useBranch();
+  const { activeBranchId, kopFilial } = useBranch();
   // Boshqa sahifalarda tugma huquqqa bog'langan (courses/page.tsx naqshi),
   // bu yerda esa tushib qolgan edi: `teachers.view` bor, `teachers.create`
   // yo'q xodim tugmani ko'rib, bosgach 403 olardi.
@@ -91,6 +94,7 @@ export default function TeachersPage() {
       subjects: t.subjects ?? [], salary: String(t.salary ?? ""),
       salaryType: t.salaryType ?? "FIXED",
       acceptsPayments: t.acceptsPayments ?? false,
+      branchId: t.branchId ?? "",
     });
     setSubInput(""); setError(""); setPhoneErr(""); setShowModal(true);
   }
@@ -124,9 +128,12 @@ export default function TeachersPage() {
       if (form.joinedAt)     body.joinedAt = form.joinedAt;
       if (!editTarget) {
         body.password = form.password;
-        if (activeBranchId) body.branchId = activeBranchId;
-      } else if (form.password.trim()) {
-        body.password = form.password;
+        if (form.branchId || activeBranchId) body.branchId = form.branchId || activeBranchId;
+      } else {
+        if (form.password.trim()) body.password = form.password;
+        // Tahrirda ham yuboriladi — o'qituvchini boshqa filialga
+        // ko'chirish kerak bo'lishi mumkin.
+        if (kopFilial) body.branchId = form.branchId;
       }
 
       const url    = editTarget ? `/api/teachers/${editTarget.id}` : "/api/teachers";
@@ -251,6 +258,14 @@ export default function TeachersPage() {
             />
           </FormField>
         </div>
+
+        {kopFilial && (
+          <FormField label="Filial" hint="Bo'sh qoldirilsa o'qituvchi barcha filiallarni ko'radi">
+            <BranchPicker value={form.branchId}
+              onChange={(v) => setForm(p => ({ ...p, branchId: v }))}
+              hammasiLabel="Filialga biriktirilmagan" />
+          </FormField>
+        )}
 
         <FormField label="Jinsini tanlang">
           <GenderPicker value={form.gender} onChange={v => setForm(p => ({...p, gender: v}))} />
@@ -378,6 +393,7 @@ export default function TeachersPage() {
             <Input placeholder="Ism, fan, telefon..." className="pl-9 h-9 text-sm w-64"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
+          <BranchFilter />
           <div className="flex p-1 gap-0.5 glass-soft rounded-xl ml-auto">
             {([["grid", LayoutGrid], ["list", List]] as [ViewMode, any][]).map(([id, Icon]) => (
               <button key={id} onClick={() => setViewMode(id)}
