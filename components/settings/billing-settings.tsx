@@ -24,6 +24,7 @@ interface OrgBilling {
   billingTiming?: "OLDINDAN" | "OXIRIDA" | "DAVR_OXIRIDA";
   billingAdvanceDays?: number;
   archiveDebtPolicy?: "QOLSIN" | "QISMAN" | "KECHIRILSIN";
+  transferOldPeriod?: "QOLSIN" | "DARSLAR" | "KECHIRILSIN";
 }
 
 export function BillingSettings({
@@ -38,6 +39,7 @@ export function BillingSettings({
   const [timing, setTiming] = useState<"OLDINDAN" | "OXIRIDA" | "DAVR_OXIRIDA">("OXIRIDA");
   const [advanceDays, setAdvanceDays] = useState("3");
   const [archivePolicy, setArchivePolicy] = useState<"QOLSIN" | "QISMAN" | "KECHIRILSIN">("QOLSIN");
+  const [transferPolicy, setTransferPolicy] = useState<"QOLSIN" | "DARSLAR" | "KECHIRILSIN">("DARSLAR");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -52,6 +54,7 @@ export function BillingSettings({
     setTiming(org.billingTiming ?? "OXIRIDA");
     setAdvanceDays(String(org.billingAdvanceDays ?? 3));
     setArchivePolicy(org.archiveDebtPolicy ?? "QOLSIN");
+    setTransferPolicy(org.transferOldPeriod ?? "DARSLAR");
   }, [org]);
 
   async function save() {
@@ -67,6 +70,7 @@ export function BillingSettings({
           billingTiming: timing,
           billingAdvanceDays: Math.min(14, Math.max(0, Number(advanceDays) || 0)),
           archiveDebtPolicy: archivePolicy,
+          transferOldPeriod: transferPolicy,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -333,6 +337,53 @@ export function BillingSettings({
             kechirganini ko&apos;rish mumkin. O&apos;zgarish faqat BUNDAN KEYIN
             ketgan deb belgilanganlarga ta&apos;sir qiladi.
           </p>
+        </div>
+      </div>
+
+      {/* ── Guruh almashtirishda eski davr ──────────────────────────── */}
+      <div className="glass-panel rounded-2xl border border-white/60 dark:border-white/10 p-5">
+        <p className="text-[15px] font-bold text-neutral-900 dark:text-neutral-100">
+          Guruh almashtirishda eski davr
+        </p>
+        <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+          O&apos;quvchi boshqa guruhga ko&apos;chirilganda eski guruhning ochiq davri bilan
+          nima qilinishi oldindan belgilangan bo&apos;lsin. Yakuniy qaror har ko&apos;chirishda alohida.
+        </p>
+
+        <div className="grid sm:grid-cols-3 gap-2.5 mt-4">
+          {([
+            {
+              v: "DARSLAR" as const,
+              l: "O'tgan darslar bo'yicha",
+              d: "Eski ustozga o'tgan darslar ulushi, qolgani o'quvchiga qaytadi, yangi guruhga qolgan darslar yoziladi. Davomat kerak.",
+            },
+            {
+              v: "QOLSIN" as const,
+              l: "Davr eski guruhda qolsin",
+              d: "Eski davr to'liq eski guruhda, yangi guruhda ko'chgan kundan yangi davr. Ustma-ust kunlar ikki marta to'lanadi.",
+            },
+            {
+              v: "KECHIRILSIN" as const,
+              l: "Eski davr kechirilsin",
+              d: "Eski guruh davri butunlay qaytariladi, faqat yangi guruh hisoblanadi.",
+            },
+          ]).map(o => (
+            <button key={o.v} type="button" onClick={() => setTransferPolicy(o.v)}
+              className={cn(
+                "text-left px-4 py-3 rounded-2xl border-2 transition-all",
+                transferPolicy === o.v
+                  ? "border-indigo-600 bg-indigo-50/70 dark:bg-indigo-900/20 dark:border-indigo-400"
+                  : "border-white/60 dark:border-white/10 hover:border-neutral-400",
+              )}>
+              <p className={cn("text-[13px] font-bold",
+                transferPolicy === o.v ? "text-indigo-700 dark:text-indigo-300" : "text-neutral-800 dark:text-neutral-200")}>
+                {o.l}
+              </p>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                {o.d}
+              </p>
+            </button>
+          ))}
         </div>
       </div>
 

@@ -31,6 +31,7 @@ import {
 } from "@/lib/hooks/useGamification";
 import { levelFromXp } from "@/lib/levels";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { useOrganization } from "@/lib/hooks/useOrganization";
 import useSWR, { mutate } from "swr";
 import { fetcher as _fetcher } from "@/lib/fetcher";
 import {
@@ -217,12 +218,18 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   /**
    * ESKI GURUHNING OCHIQ DAVRI bilan nima qilinsin.
    *
-   * Standart — `QOLSIN`, ya'ni bugungi xulq: davr eski guruhda to'liq
-   * qoladi. Bu ataylab: proratsiya avtomatik yoqilsa markazlarning
-   * raqami o'z-o'zidan o'zgarardi.
+   * Standart — MARKAZ SOZLAMASI (Sozlamalar → O'quvchi to'lovlari →
+   * "Guruh almashtirishda eski davr"). Ilgari qattiq "QOLSIN" turardi
+   * va 34 ko'chirishdan 29 tasi shu bilan ketgan: eski ustoz o'zi
+   * o'qitmagan kunlar uchun ulush olgan, o'quvchi ustma-ust kunlar
+   * uchun ikki marta to'lagan.
    */
+  const { data: orgSozlama } = useOrganization();
+  const kochirishStandarti: "QOLSIN" | "DARSLAR" | "KECHIRILSIN" =
+    (orgSozlama as { transferOldPeriod?: "QOLSIN" | "DARSLAR" | "KECHIRILSIN" } | undefined)
+      ?.transferOldPeriod ?? "DARSLAR";
   const [oldPeriod, setOldPeriod] =
-    useState<"QOLSIN" | "DARSLAR" | "KECHIRILSIN">("QOLSIN");
+    useState<"QOLSIN" | "DARSLAR" | "KECHIRILSIN">("DARSLAR");
   const [transferDebtChoice, setTransferDebtChoice] =
     useState<{ replacing: any; groupName: string; debt: number } | null>(null);
 
@@ -563,7 +570,10 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               fromId: replacing.id, groupId: transferGroupId,
               ...(enrollDate ? { joinedAt: enrollDate } : {}),
               ...(waiveOldDebt ? { waiveOldDebt: true } : {}),
-              ...(oldPeriod !== "QOLSIN" ? { oldPeriod } : {}),
+              // HAR DOIM yuboriladi: oynadagi tanlov markaz standartidan
+              // ustun. Yuborilmasa server o'z standartini qo'llardi va
+              // admin ataylab tanlagan "QOLSIN" jimgina almashib ketardi.
+              oldPeriod,
             }),
           })
         : await fetch("/api/student-groups", {
@@ -580,7 +590,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       setGroupModal(null);
       setTransferGroupId("");
       setTransferDebtChoice(null);
-      setOldPeriod("QOLSIN");
+      setOldPeriod(kochirishStandarti);
     } catch { setTransferErr("Serverga ulanib bo'lmadi"); }
     finally { setTransferring(false); }
   }
