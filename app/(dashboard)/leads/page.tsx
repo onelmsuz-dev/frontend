@@ -189,7 +189,7 @@ export default function LeadsPage() {
   // SAHIFALAB yuklanadi. Ilgari bitta so'rov edi va server 500 ta bilan
   // cheklardi — 938 lidning 438 tasi ekranda umuman ko'rinmasdi.
   const { items: raw, total: jamiLid, yanaBor, qolgaYetdi, yanaYukla, isLoading,
-          mutate: lidlarniQaytaOl } = useLeadsPaged();
+          mutate: lidlarniQaytaOl } = useLeadsPaged({ jonli: true });
   const leads: Lead[] = useMemo(() => (raw as Lead[]) ?? [], [raw]);
   // Bosqich sarlavhasidagi son SERVERDAN — yuklanmagan lidlar ham
   // sanaladi, aks holda "12 ta" deb turib, aslida 300 ta bo'lardi.

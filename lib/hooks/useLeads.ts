@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import useSWRInfinite from "swr/infinite";
 import useSWRMutation from "swr/mutation";
 import { fetcher } from "@/lib/fetcher";
@@ -52,7 +52,18 @@ export function useLeads(params?: { stageId?: string; search?: string }) {
   return { data: items, total, isLoading, error, mutate };
 }
 
-export function useLeadsPaged(params?: { stageId?: string; search?: string }) {
+/** "Jonli" taxta — yangi lid/o'zgarish qanchalik tez ko'rinsin. */
+const JONLI_MS = 20_000;
+
+export function useLeadsPaged(params?: {
+  stageId?: string; search?: string;
+  /**
+   * JONLI — boshqa joyda qo'shilgan/o'zgargan lid sahifa yangilanmasdan
+   * ko'rinsin (target sahifasi, Meta, hamkasb). Faqat lidlar taxtasida
+   * yoqiladi; bosh sahifa kabi boshqa chaqiruvchilarga kerak emas.
+   */
+  jonli?: boolean;
+}) {
   const qs = (skip: number) => {
     const q = new URLSearchParams();
     if (params?.stageId) q.set("stageId", params.stageId);
@@ -63,7 +74,7 @@ export function useLeadsPaged(params?: { stageId?: string; search?: string }) {
   };
 
   const { data, size, setSize, isLoading, error, mutate } = useSWRInfinite<{
-    items: unknown[]; total: number; skip: number; take: number;
+    items: unknown[]; total: number; skip: number; take: number; latestAt?: string | null;
   }>(
     (index, oldingi) => {
       // Oldingi sahifa oxirgisi bo'lsa — to'xtaymiz.
@@ -77,6 +88,38 @@ export function useLeadsPaged(params?: { stageId?: string; search?: string }) {
   const sahifalar = data ?? [];
   const items = sahifalar.flatMap((p) => p?.items ?? []);
   const total = sahifalar[0]?.total ?? 0;
+
+  /**
+   * YURAK URISHI — yengil so'rov (`take=1`), 20 soniyada bir.
+   *
+   * NEGA KERAK: ro'yxat `revalidateFirstPage: false` bilan olinadi (1183
+   * lidni avto-yuklashda birinchi sahifa har safar qayta so'ralmasin).
+   * Uning yon ta'siri — fokus yoki taymer bo'yicha qayta tekshiruv
+   * HECH BIR sahifani qayta olmaydi: target sahifasidan kelgan lid
+   * xodim sahifani qo'lda yangilamaguncha ko'rinmasdi (Doniyorjon,
+   * 2026-09-24). Butun ro'yxatni 20 soniyada qayta olish esa 1000+
+   * lidli markazda ortiqcha yuk.
+   *
+   * Yurak urishi `total` va `latestAt` (eng so'nggi `updatedAt`) ni
+   * qaytaradi; farq bo'lsagina ro'yxat, bosqich sonlari va "vaqti
+   * kelganlar" qayta olinadi.
+   */
+  const pulsKalit = params?.jonli
+    ? `/api/leads?${qs(0).replace(`take=${SAHIFA}`, "take=1")}&puls=1`
+    : null;
+  const { data: puls } = useSWR<{ total: number; latestAt?: string | null }>(
+    pulsKalit, fetcher, { refreshInterval: JONLI_MS, dedupingInterval: 5_000 });
+  const bizdagi = sahifalar[0] as { latestAt?: string | null } | undefined;
+  const bizdagiLatest = bizdagi?.latestAt ?? null;
+  useEffect(() => {
+    if (!puls || !bizdagi) return;
+    if (puls.total === total && (puls.latestAt ?? null) === bizdagiLatest) return;
+    void mutate();
+    void globalMutate((k) => typeof k === "string"
+      && (k.startsWith("/api/leads/counts") || k.startsWith("/api/leads/due")));
+    // `bizdagi` obyekt — faqat qiymatlari muhim.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puls?.total, puls?.latestAt, total, bizdagiLatest, mutate]);
 
   /**
    * QOLGAN SAHIFALAR O'ZI YUKLANADI.
@@ -171,7 +214,14 @@ export interface FeedItem {
 }
 
 export interface LeadFeed {
-  lead: { id: string; name: string; createdAt: string };
+  lead: {
+    id: string; name: string; createdAt: string;
+    /** Ariza ma'lumotlari — tarix oynasi tepasida. */
+    phone?: string; source?: string; note?: string | null; course?: string | null;
+    school?: string | null; grade?: string | null;
+    /** Target sahifasidagi qo'shimcha savollarga javoblar. */
+    extra?: { label: string; value: string }[] | null;
+  };
   items: FeedItem[];
   truncated: boolean;
   commentCount: number;

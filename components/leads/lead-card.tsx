@@ -33,6 +33,8 @@ export interface Lead {
   lostReason?: string | null;
   nextContactAt?: string | null;
   convertedStudentId?: string | null;
+  /** Target sahifasidagi qo'shimcha savollarga javoblar. */
+  extra?: { label: string; value: string }[] | null;
   _count?: { comments: number };
 }
 
@@ -141,6 +143,19 @@ export function LeadCard({ lead, stage, stages, onDelete, onEdit, onOpen, onConv
         <p className="text-[11px] text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded-lg px-2.5 py-1.5 mb-2">
           💬 {lead.note}
         </p>
+      )}
+
+      {/* ARIZA JAVOBLARI — target sahifasidagi qo'shimcha savollar. Ilgari
+          faqat Target tabida bor edi; taxtada lid bilan ishlayotgan xodim
+          ularni ko'rmasdi (2026-09-24). Ko'pi bilan 3 ta savol. */}
+      {Array.isArray(lead.extra) && lead.extra.length > 0 && (
+        <div className="text-[11px] text-neutral-600 dark:text-neutral-300 glass-soft rounded-lg px-2.5 py-1.5 mb-2 space-y-0.5 break-words">
+          {lead.extra.map((x) => (
+            <p key={x.label}>
+              <span className="text-neutral-400 dark:text-neutral-500">{x.label}:</span>{" "}{x.value}
+            </p>
+          ))}
+        </div>
       )}
 
       <div className="flex items-center justify-between pt-2 border-t border-white/50 dark:border-white/10">

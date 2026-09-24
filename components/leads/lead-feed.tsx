@@ -247,8 +247,34 @@ export function LeadFeedPanel({ leadId }: { leadId: string }) {
   const { data, isLoading, error } = useLeadFeed(leadId);
   const refresh = () => mutate(`/api/leads/${leadId}/feed`);
 
+  const l = data?.lead;
+  const javoblar = Array.isArray(l?.extra) ? l!.extra! : [];
+  const qatorlar: [string, string][] = l ? ([
+    ["Telefon", l.phone ?? ""],
+    ["Manba", l.source ?? ""],
+    ["Kurs", l.course ?? ""],
+    ["Maktab", l.school ?? ""],
+    ["Sinf", l.grade ?? ""],
+    ...javoblar.map((x) => [x.label, x.value] as [string, string]),
+    ["Izoh", l.note ?? ""],
+  ] as [string, string][]).filter(([, v]) => v.trim() !== "") : [];
+
   return (
     <div className="space-y-3">
+      {/* ARIZA MA'LUMOTLARI — lid nima deb yozgani, qo'shimcha savollarga
+          javoblar bilan. Ilgari bular faqat Target tabida edi (2026-09-24). */}
+      {qatorlar.length > 0 && (
+        <dl className="rounded-xl border border-neutral-200 dark:border-neutral-700 px-3 py-2.5
+                       grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px]">
+          {qatorlar.map(([k, v]) => (
+            <div key={k} className="contents">
+              <dt className="text-neutral-400 dark:text-neutral-500">{k}</dt>
+              <dd className="text-neutral-800 dark:text-neutral-100 break-words">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
       <Composer leadId={leadId} onDone={refresh} />
 
       {isLoading ? (

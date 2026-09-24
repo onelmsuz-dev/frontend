@@ -59,8 +59,11 @@ export function TargetLeads() {
     return parts.length > 2 ? parts[0] : null;
   });
 
+  // JONLI — yangi ariza sahifa yangilanmasdan ko'rinsin (Doniyorjon,
+  // 2026-09-24: "refresh qilmasa ko'rinmayapti"). Taxtadagi bilan bir xil 20 s.
   const { data, isLoading } = useSWR<{ items?: Lid[] } | Lid[]>(
-    `/api/leads?source=${encodeURIComponent(MANBA)}&take=1000`, fetcher);
+    `/api/leads?source=${encodeURIComponent(MANBA)}&take=1000`, fetcher,
+    { refreshInterval: 20_000 });
 
   const lidlar: Lid[] = useMemo(() => {
     if (Array.isArray(data)) return data;
@@ -388,23 +391,28 @@ export function TargetLeads() {
                     {/* QO'SHIMCHA JAVOBLAR — yorliq bilan birga.
                         Faqat qiymat ko'rsatilsa ("17", "Chilonzor")
                         ular nimaga tegishli ekani bilinmasdi. */}
+                    {/* TO'LIQ, har javob o'z qatorida. Ilgari bitta `truncate`
+                        qatorga tiqilardi va uchinchi savolning javobi
+                        umuman ko'rinmasdi (2026-09-24). */}
                     <td className="px-3 py-2.5 text-[12px] text-neutral-600 dark:text-neutral-300
-                      max-w-[240px]">
+                      min-w-[180px] max-w-[320px]">
                       {(l.extra ?? []).length === 0 && !l.course && !l.school && !l.grade
                         ? <span className="text-neutral-300 dark:text-neutral-600">—</span>
                         : (
-                          <span className="block truncate">
-                            {[l.course, l.school, l.grade].filter(Boolean).join(" · ")}
+                          <div className="space-y-0.5 whitespace-normal break-words">
+                            {[l.course, l.school, l.grade].filter(Boolean).length > 0 && (
+                              <p>{[l.course, l.school, l.grade].filter(Boolean).join(" · ")}</p>
+                            )}
                             {(l.extra ?? []).map(x => (
-                              <span key={x.label} className="ml-1">
-                                <span className="text-neutral-400">{x.label}:</span> {x.value}
-                              </span>
+                              <p key={x.label}>
+                                <span className="text-neutral-400">{x.label}:</span>{" "}{x.value}
+                              </p>
                             ))}
-                          </span>
+                          </div>
                         )}
                     </td>
                     <td className="px-3 py-2.5 text-[12px] text-neutral-500 dark:text-neutral-400
-                      max-w-[220px] truncate">
+                      min-w-[140px] max-w-[260px] whitespace-normal break-words">
                       {l.note || "—"}
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap">
