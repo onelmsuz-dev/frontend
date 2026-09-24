@@ -70,6 +70,8 @@ function yorliq(it: LedgerItem, kind: "charge" | "payment",
   switch (it.reason) {
     case "DISCOUNT":
       return ["Chegirma", it.discountLabel].filter(Boolean).join(" · ");
+    case "TRANSFER":
+      return "Eski guruhdan ko'chirilgan balans";
     case "CORRECTION":
       return "Tuzatish";
     case "ADJUSTMENT":

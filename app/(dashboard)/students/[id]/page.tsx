@@ -209,6 +209,22 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       if (res.ok) revalidateAll();
     } finally { setUnfreezing(null); }
   }
+  /**
+   * O'QUVCHI QAYTDI — muzlatish tugaydi, tarixda qoladi. "bekor" bilan
+   * aralashtirmaslik kerak: bekor go'yo muzlatilmagandek qiladi va
+   * dvigatel muzlatilgan oylarni ham yozib yuboradi.
+   */
+  async function endFreeze(sgId: string, freezeId: string) {
+    setUnfreezing(freezeId);
+    try {
+      const res = await fetch(`/api/student-groups/${sgId}/freezes/${freezeId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: todayStr() }),
+      });
+      if (res.ok) revalidateAll();
+    } finally { setUnfreezing(null); }
+  }
   const [transferring,    setTransferring]    = useState(false);
   /**
    * Almashtirilayotgan a'zolikning ESKI guruhida qarz bo'lsa — API
@@ -1192,6 +1208,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       <FreezeModal
         membership={freezeFor}
         open={!!freezeFor}
+        canSeeMoney={canSeeMoney}
         onClose={() => setFreezeFor(null)}
         onSaved={revalidateAll}
       />
@@ -1296,8 +1313,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     { v: "QOLSIN" as const, l: "To'liq qolsin",
                       d: `${fmt(hisob.charged)} eski guruhda qoladi — yangi guruh shu oy uchun yozmaydi` },
                     { v: "DARSLAR" as const, l: "O'tgan darslar uchun",
-                      d: `${fmt(hisob.suggested)} qoladi, ${fmt(hisob.charged - hisob.suggested)} qaytariladi`
-                       + ` — qolgan ${hisob.totalLessons - hisob.usedLessons} dars yangi guruh narxida yoziladi` },
+                      d: `${hisob.usedLessons}/${hisob.totalLessons} dars uchun ${fmt(hisob.suggested)} eski guruhda qoladi,`
+                       + ` ${fmt(hisob.charged - hisob.suggested)} balansga o'tib yangi guruh to'lovini qoplaydi` },
                     { v: "KECHIRILSIN" as const, l: "Kechirilsin",
                       d: `${fmt(hisob.charged)} to'liq qaytariladi — faqat yangi guruh hisoblanadi` },
                   ]).map(o => (
@@ -1839,16 +1856,35 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                       {Array.isArray(sg.freezes) && sg.freezes.length > 0 && (
                         <div className="space-y-1">
                           {sg.freezes.map((f: any) => (
-                            <div key={f.id} className="flex items-center gap-1.5 text-[11px] rounded-lg bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 px-2 py-1">
-                              <Snowflake className="w-3 h-3 shrink-0" />
-                              <span className="truncate">
-                                {formatUzDate(f.from)} – {f.to ? formatUzDate(f.to) : "ochiq"}{f.reason ? ` · ${f.reason}` : ""}
-                              </span>
-                              {canManageGroups && (
-                                <button onClick={() => unfreeze(sg.id, f.id)} disabled={unfreezing === f.id}
-                                  className="ml-auto font-semibold hover:underline disabled:opacity-50">
-                                  bekor
-                                </button>
+                            <div key={f.id} className="text-[11px] rounded-lg bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 px-2 py-1 space-y-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <Snowflake className="w-3 h-3 shrink-0" />
+                                <span className="truncate">
+                                  {formatUzDate(f.from)} – {f.to ? formatUzDate(f.to) : "ochiq"}{f.reason ? ` · ${f.reason}` : ""}
+                                </span>
+                                {canManageGroups && (
+                                  <span className="ml-auto flex items-center gap-2 shrink-0">
+                                    {!f.to && (
+                                      <button onClick={() => endFreeze(sg.id, f.id)} disabled={unfreezing === f.id}
+                                        title="O'quvchi bugundan qaytdi — muzlatish tugaydi"
+                                        className="font-semibold hover:underline disabled:opacity-50">
+                                        qaytdi
+                                      </button>
+                                    )}
+                                    <button onClick={() => unfreeze(sg.id, f.id)} disabled={unfreezing === f.id}
+                                      title="Go'yo muzlatilmagandek — qaytarilgan pul qayta yoziladi"
+                                      className="font-semibold hover:underline disabled:opacity-50 opacity-70">
+                                      bekor
+                                    </button>
+                                  </span>
+                                )}
+                              </div>
+                              {/* HISOB-KITOB — sarflangan guruhda qoldi, qolgani balansda. */}
+                              {canSeeMoney && f.keptAmount != null && (
+                                <p className="text-[10px] text-sky-600/80 dark:text-sky-300/70 pl-[18px]">
+                                  sarflangan {fmt(f.keptAmount)}
+                                  {f.refundedAmount ? <> · balansga qaytdi {fmt(f.refundedAmount)}</> : null}
+                                </p>
                               )}
                             </div>
                           ))}

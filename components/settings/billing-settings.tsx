@@ -355,7 +355,7 @@ export function BillingSettings({
             {
               v: "DARSLAR" as const,
               l: "O'tgan darslar bo'yicha",
-              d: "Eski ustozga o'tgan darslar ulushi, qolgani o'quvchiga qaytadi, yangi guruhga qolgan darslar yoziladi. Davomat kerak.",
+              d: "O'tgan darslar puli eski guruhda qoladi (eski ustoz shundan ulush oladi), qolgani balansga o'tib yangi guruh to'lovini qoplaydi. Yangi guruh o'z davrini ko'chish kunidan yozadi.",
             },
             {
               v: "QOLSIN" as const,
