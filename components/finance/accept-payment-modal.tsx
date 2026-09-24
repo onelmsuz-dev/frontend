@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import useSWR, { mutate } from "swr";
-import { CreditCard, Info, Receipt, X } from "lucide-react";
+import { CreditCard, Info, Receipt, X, Snowflake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { SELECTABLE_METHODS, methodGridCls } from "@/lib/payment-methods";
 import { formatCurrency } from "@/lib/money";
 import { fetcher } from "@/lib/fetcher";
+import { activeFreeze, isFrozenNow, freezeUntilLabel, type FreezeLike } from "@/lib/freeze";
 
 
 
@@ -24,6 +25,7 @@ type Membership = {
   groupId: string;
   enrollmentStatus?: string;
   group?: { name?: string };
+  freezes?: FreezeLike[];
 };
 
 type PayForm = {
@@ -132,6 +134,13 @@ export function AcceptPaymentModal({
       : payableGroups.length === 1
         ? payableGroups[0].groupId
         : "";
+
+  // MUZLATILGAN GURUHGA TO'LOV — to'xtatilmaydi, lekin OGOHLANTIRILADI
+  // (Doniyorjon, 2026-09-22: adashib muzlatilgan guruhga to'lab yuborishadi).
+  // Pul balansga tushadi va o'quvchi qaytganda ishlatiladi, shuning uchun
+  // taqiq emas; xodim bilib tursin, xolos.
+  const tanlanganMuz = activeFreeze(
+    payableGroups.find(g => g.groupId === selectedGroupId)?.freezes);
 
   function handleClose() {
     setPayForm(EMPTY_FORM);
@@ -290,10 +299,19 @@ export function AcceptPaymentModal({
                 <option value="">Tanlang…</option>
                 {payableGroups.map(sg => (
                   <option key={sg.groupId} value={sg.groupId}>
-                    {sg.group?.name ?? sg.groupId}
+                    {sg.group?.name ?? sg.groupId}{isFrozenNow(sg.freezes) ? " — muzlatilgan" : ""}
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+          {!forMaterials && tanlanganMuz && (
+            <div className="flex items-start gap-2 rounded-lg bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/40 px-3 py-2">
+              <Snowflake className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-sky-800 dark:text-sky-200">
+                Bu guruhda a&apos;zolik <strong>muzlatilgan</strong> ({freezeUntilLabel(tanlanganMuz)}).
+                To&apos;lov balansga tushadi va o&apos;quvchi qaytganda ishlatiladi — guruh to&apos;g&apos;ri tanlanganini tekshiring.
+              </p>
             </div>
           )}
 

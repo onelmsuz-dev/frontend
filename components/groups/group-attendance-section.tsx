@@ -4,9 +4,10 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, FileCheck,
-  Save, Check, Users, Phone, UserCheck,
+  Save, Check, Users, Phone, UserCheck, Snowflake,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { activeFreeze, freezeUntilLabel, type FreezeLike } from "@/lib/freeze";
 import { ATTENDANCE_GRACE_MINUTES } from "@/lib/form-constants";
 import { businessMinutesOfDay, businessToday } from "@/lib/time";
 import { StudentInfoPopover } from "./student-info-popover";
@@ -275,6 +276,7 @@ export function GroupAttendanceSection({
             const s = sg.student;
             const status = localStatus[sg.studentId];
             const isTrial = sg.enrollmentStatus === "SINOV";
+            const muz = activeFreeze(sg.freezes as FreezeLike[] | undefined);
             // SHU GURUHDAGI holat — umumiy balans EMAS.
             //
             // Ilgari bu yerda `s.balance` turardi va chalg'itardi: kursi
@@ -293,7 +295,8 @@ export function GroupAttendanceSection({
             return (
               <div key={sg.id}
                 className={cn("flex items-center justify-between gap-3 px-5 py-2.5 flex-wrap transition-colors",
-                  isTrial ? "bg-amber-50/40 dark:bg-amber-900/10" : "hover:bg-white/60 dark:hover:bg-white/10")}>
+                  muz ? "bg-sky-50 dark:bg-sky-900/20"
+                  : isTrial ? "bg-amber-50/40 dark:bg-amber-900/10" : "hover:bg-white/60 dark:hover:bg-white/10")}>
                 {/* Kim — ustiga turganda (yoki telefonda uzoq bosganda)
                     to'liq ma'lumot chiqadi. Oyna FAQAT shu blokka
                     bog'langan: butun qatorga bog'lansa davomat tugmasini
@@ -320,6 +323,13 @@ export function GroupAttendanceSection({
                       {isTrial && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
                           Sinov
+                        </span>
+                      )}
+                      {/* MUZLATILGAN — to'q ko'k, ko'zga tashlansin (Doniyorjon, 2026-09-22). */}
+                      {muz && (
+                        <span title={`Muzlatilgan — ${freezeUntilLabel(muz)}`}
+                          className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-sky-600 text-white dark:bg-sky-500">
+                          <Snowflake className="w-2.5 h-2.5" /> Muzlatilgan
                         </span>
                       )}
                       {debt && (

@@ -23,6 +23,7 @@ import { todayStr } from "@/lib/form-constants";
 import { DatePicker } from "@/components/ui/date-picker";
 import { MembershipDateModal } from "@/components/students/membership-date-modal";
 import { FreezeModal } from "@/components/students/freeze-modal";
+import { activeFreeze, freezeUntilLabel, type FreezeLike } from "@/lib/freeze";
 import { Snowflake } from "lucide-react";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import {
@@ -71,6 +72,17 @@ type Membership = {
   groupId: string;
   enrollmentStatus?: string;
   group?: { name?: string };
+  /** Muzlatishlar — "hozir muzlatilganmi" `lib/freeze` bilan. */
+  freezes?: FreezeLike[];
+};
+
+/** Oldingi (chiqib ketgan) a'zolik — ro'yxat uchun yetarli maydonlar. */
+type KetganAzolik = {
+  id: string;
+  enrollmentStatus?: string;
+  joinedAt?: string;
+  leftAt?: string | null;
+  group?: { id?: string; name?: string; teacher?: { user?: { name?: string } } };
 };
 
 /**
@@ -338,6 +350,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       : payableGroups.length === 1
         ? payableGroups[0].groupId
         : "";
+  const payMuz = activeFreeze(
+    payableGroups.find((g: Membership) => g.groupId === selectedPayGroupId)?.freezes);
 
   async function setArchived(archived: boolean) {
     setArchiving(true); setArchiveErr("");
@@ -493,6 +507,16 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         const d = await r.json();
         setExitInfo(d);
         if (d?.settlement?.suggested != null) setExitKeep(String(d.settlement.suggested));
+        // STANDART — MARKAZ SOZLAMASI ("Ketganda hisob-kitob"). Ilgari oyna
+        // sozlamaga qaramay har doim "to'liq qarz qolsin"dan boshlanardi —
+        // sozlamada "o'tgan darslar bo'yicha" turgan markazda ham. Xodim
+        // tanlovni ko'rmay tasdiqlasa, ketgan o'quvchiga butun oy yozilardi
+        // (Doniyorjon, 2026-09-22: "avto hisoblashda chalkashlik").
+        const siyosat = (orgSozlama as { archiveDebtPolicy?: string } | undefined)?.archiveDebtPolicy ?? "QOLSIN";
+        if (d?.settlement && !d.settlement.reason && d.settlement.forgive > 0) {
+          if (siyosat === "QISMAN") setExitPartial(true);
+          else if (siyosat === "KECHIRILSIN") { setExitPartial(true); setExitKeep("0"); }
+        }
       }
     } catch { /* hisobsiz ham chiqarish ishlayveradi */ }
     finally { setExitLoading(false); }
@@ -693,6 +717,12 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const activeSgs: any[] = (student.groups ?? []).filter(
     (g: any) => g.enrollmentStatus !== "CHIQIB_KETGAN",
   );
+  // OLDINGI GURUHLAR — chiqib ketgan / ko'chirilgan a'zoliklar. Ma'lumot
+  // hech qachon o'chmagan (davomat, hisob-kitob o'sha a'zolikda turadi),
+  // lekin ekranda ko'rinmasdi (Doniyorjon, 2026-09-22).
+  const ketganSgs: KetganAzolik[] = (student.groups ?? []).filter(
+    (g: KetganAzolik) => g.enrollmentStatus === "CHIQIB_KETGAN",
+  );
   // Umumiy holat: kamida bitta FAOL a'zolik bo'lsa — faol, aks holda sinov.
   // "Ketgan" — faqat ATAYLAB belgilangan bo'lsa. Guruhga hali biriktirilmagan
   // yangi o'quvchi "Yangi" bo'ladi (ilgari u ham "Ketgan" ko'rinardi).
@@ -808,11 +838,22 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               <option value="">Tanlang…</option>
               {payableGroups.map((sg: Membership) => (
                 <option key={sg.groupId} value={sg.groupId}>
-                  {sg.group?.name ?? sg.groupId}
+                  {sg.group?.name ?? sg.groupId}{activeFreeze(sg.freezes) ? " — muzlatilgan" : ""}
                 </option>
               ))}
             </select>
           </FormField>
+        )}
+        {/* MUZLATILGAN GURUHGA TO'LOV — taqiq emas, ogohlantirish: pul
+            balansga tushadi va o'quvchi qaytganda ishlatiladi. */}
+        {!material && payMuz && (
+          <div className="flex items-start gap-2 rounded-xl bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/40 px-3 py-2.5">
+            <Snowflake className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 mt-0.5 shrink-0" />
+            <p className="text-[12px] text-sky-800 dark:text-sky-200">
+              Bu guruhda a&apos;zolik <strong>muzlatilgan</strong> ({freezeUntilLabel(payMuz)}).
+              To&apos;lov balansga tushadi va o&apos;quvchi qaytganda ishlatiladi — guruh to&apos;g&apos;ri tanlanganini tekshiring.
+            </p>
+          </div>
         )}
         <FormField label="Summa (UZS)" required>
           <Input placeholder="500 000" value={payForm.amount} type="number" min="0"
@@ -1725,21 +1766,33 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                   const g = sg.group;
                   const t = g?.teacher?.user;
                   const isTrial = sg.enrollmentStatus === "SINOV";
+                  // MUZLATILGAN — kartochka ko'k, belgi to'q (Doniyorjon, 2026-09-22:
+                  // "sal bilinarli bo'lsin"). Holat FAOL bo'lib qolaveradi.
+                  const muz = activeFreeze(sg.freezes as FreezeLike[] | undefined);
                   return (
                     <div key={sg.id}
                       className={cn("rounded-xl border p-3 space-y-2",
-                        isTrial
-                          ? "border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-900/10"
-                          : "border-white/60 dark:border-white/10 glass-soft")}>
+                        muz
+                          ? "border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-900/20"
+                          : isTrial
+                            ? "border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-900/10"
+                            : "border-white/60 dark:border-white/10 glass-soft")}>
                       <div className="flex items-start justify-between gap-2">
                         <Link href={`/groups/${g.id}`}
                           className="text-[13px] font-bold text-blue-600 hover:underline leading-tight">
                           {g.name}
                         </Link>
-                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0",
-                          ENROLL_CFG[sg.enrollmentStatus]?.cls ?? "bg-neutral-100 text-neutral-500")}>
-                          {ENROLL_CFG[sg.enrollmentStatus]?.label ?? sg.enrollmentStatus}
-                        </span>
+                        {muz ? (
+                          <span title={freezeUntilLabel(muz)}
+                            className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0 bg-sky-600 text-white dark:bg-sky-500">
+                            <Snowflake className="w-2.5 h-2.5" /> Muzlatilgan
+                          </span>
+                        ) : (
+                          <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0",
+                            ENROLL_CFG[sg.enrollmentStatus]?.cls ?? "bg-neutral-100 text-neutral-500")}>
+                            {ENROLL_CFG[sg.enrollmentStatus]?.label ?? sg.enrollmentStatus}
+                          </span>
+                        )}
                       </div>
 
                       <p className="text-[12px] text-neutral-500">{g.course?.name}</p>
@@ -1921,6 +1974,34 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                   );
                 })}
               </div>
+            )}
+
+            {ketganSgs.length > 0 && (
+              <details className="mt-3">
+                <summary className="cursor-pointer select-none text-[11px] font-semibold text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200">
+                  Oldingi guruhlar ({ketganSgs.length})
+                </summary>
+                <div className="mt-2 space-y-1.5">
+                  {ketganSgs.map((sg) => (
+                    <div key={sg.id}
+                      className="flex items-center justify-between gap-2 rounded-lg bg-neutral-50 dark:bg-white/5 px-3 py-2">
+                      <div className="min-w-0">
+                        <Link href={`/groups/${sg.group?.id}`}
+                          className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-200 hover:underline truncate block">
+                          {sg.group?.name ?? "Guruh"}
+                        </Link>
+                        <p className="text-[11px] text-neutral-400">
+                          {formatUzDate(sg.joinedAt)} – {sg.leftAt ? formatUzDate(sg.leftAt) : "…"}
+                          {sg.group?.teacher?.user?.name ? ` · ${sg.group.teacher.user.name}` : ""}
+                        </p>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0 bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+                        Ketgan
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </details>
             )}
 
             {groupActionErr && (
