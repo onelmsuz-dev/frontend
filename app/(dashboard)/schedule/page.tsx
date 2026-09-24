@@ -42,6 +42,18 @@ const DEFAULT_START = 8;
 const DEFAULT_END   = 20;
 const HOUR_H        = 64;
 const TIME_W        = 52;
+/**
+ * BIR VAQTDAGI DARS YO'LAGINING ENG KICHIK ENI (px).
+ *
+ * Doniyorjon (2026-09-21/24): "bir kunda 3-4 ta dars bo'lsa o'sha qator
+ * to'liq ko'rinishi uchun cho'zilsin". Ilgari parallel darslar kun
+ * ustunining ichida teng bo'linardi — hafta ko'rinishida 4 ta dars
+ * ~40 px lik tasmaga aylanib, faqat nomining boshi qolardi. Endi ustun
+ * yo'laklar soniga qarab KENGAYADI, sig'masa jadval yonga suriladi.
+ */
+const LANE_MIN_W    = 132;
+/** Bo'sh yoki bitta darsli kun ustunining eng kichik eni. */
+const DAY_MIN_W     = 120;
 
 const DAY_MAP: Record<string, string> = {
   DUSHANBA: "Dushanba", SESHANBA: "Seshanba", CHORSHANBA: "Chorshanba",
@@ -558,7 +570,18 @@ export default function SchedulePage() {
   // uchun "kun jadvalda yo'q" degan holat qolmadi.
   const kunUzIdx   = getUzIdx(selDay);
   const kunDayName = kunUzIdx !== null ? UZ_DAYS[kunUzIdx] : "Yakshanba";
-  const kunEntries = kunUzIdx !== null ? entriesOn(selDay) : [];
+  const kunEntries = useMemo(
+    () => (kunUzIdx !== null ? entriesOn(selDay) : []), [kunUzIdx, entriesOn, selDay]);
+  const kunLayout  = useMemo(() => layoutOverlaps(kunEntries), [kunEntries]);
+  const kunLanes   = kunLayout.reduce((m, x) => Math.max(m, x.cols), 1);
+
+  /** Hafta: har kunning joylashuvi va o'sha kun ustunining eng kichik eni. */
+  const weekLayout = useMemo(() => weekDays.map((d) => {
+    const lay = layoutOverlaps(entriesOn(d));
+    const lanes = lay.reduce((m, x) => Math.max(m, x.cols), 1);
+    return { lay, minW: Math.max(DAY_MIN_W, lanes * LANE_MIN_W) };
+  }), [weekDays, entriesOn]);
+  const weekMinW = TIME_W + weekLayout.reduce((n, w) => n + w.minW, 0);
   const kunIsToday = sameDay(selDay, today);
 
   const SELECT_CLS = "w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-neutral-900 dark:focus:border-neutral-400 transition-colors";
@@ -974,8 +997,9 @@ export default function SchedulePage() {
           </div>
 
           <div className="flex-1 overflow-auto">
-            <div className="flex">
-              <div className="shrink-0 border-r border-white/50 dark:border-white/10 relative" style={{ width: TIME_W, height: TOTAL_H }}>
+            {/* Parallel darslar ko'p bo'lsa kun kengayadi (telefonda yonga suriladi). */}
+            <div className="flex" style={{ minWidth: TIME_W + kunLanes * LANE_MIN_W }}>
+              <div className="shrink-0 border-r border-white/50 dark:border-white/10 relative sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900" style={{ width: TIME_W, height: TOTAL_H }}>
                 {HOURS.map((h,i) => (
                   <span key={h} className="absolute right-2 text-[10px] font-medium text-neutral-400 dark:text-neutral-600 tabular-nums select-none" style={{ top: i*HOUR_H+3 }}>
                     {String(h === 24 ? 0 : h).padStart(2,"0")}:00
@@ -1007,7 +1031,7 @@ export default function SchedulePage() {
                       )}
                     </div>
                   </div>
-                ) : layoutOverlaps(kunEntries).map(({ item: entry, col, cols }) => {
+                ) : kunLayout.map(({ item: entry, col, cols }) => {
                   const top    = blockTop(entry.time, dayStart);
                   const height = blockH(entry.time, entry.endTime);
                   // Bir vaqtda bir nechta dars bo'lsa — ustunlarga bo'linadi.
@@ -1054,15 +1078,19 @@ export default function SchedulePage() {
       {/* ══ HAFTA VIEW ════════════════════════════════════════════════════════ */}
       {view === "hafta" && (
         <div className="flex-1 overflow-auto">
+          {/* KENGLIK KUNLARDAN — parallel darsli kun kengroq (`LANE_MIN_W`).
+              Sarlavha va tana bir xil `flex-basis` oladi, ustunlar mos turadi. */}
+          <div style={{ minWidth: weekMinW }}>
           <div className="sticky top-0 z-20 flex border-b border-white/50 dark:border-white/10 glass-strong">
-            <div style={{ width: TIME_W, minWidth: TIME_W }} className="shrink-0 border-r border-white/50 dark:border-white/10" />
+            <div style={{ width: TIME_W, minWidth: TIME_W }} className="shrink-0 border-r border-white/50 dark:border-white/10 sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900" />
             {weekDays.map((d, i) => {
               const isToday = sameDay(d, today);
               const isSel   = sameDay(d, selDay) && !isToday;
               return (
                 <button key={i} onClick={() => { setSelDay(new Date(d)); setView("kun"); }}
+                  style={{ flex: `1 0 ${weekLayout[i]?.minW ?? DAY_MIN_W}px` }}
                   className={cn(
-                    "flex-1 flex flex-col items-center justify-center py-3 gap-px",
+                    "flex flex-col items-center justify-center py-3 gap-px",
                     "border-r border-white/50 dark:border-white/10 last:border-r-0 cursor-pointer transition-colors",
                     isToday ? "bg-indigo-600" : isSel ? "glass-soft" : "hover:bg-white/60 dark:hover:bg-white/10"
                   )}>
@@ -1083,7 +1111,7 @@ export default function SchedulePage() {
             })}
           </div>
           <div className="flex">
-            <div className="shrink-0 border-r border-white/50 dark:border-white/10 relative" style={{ width: TIME_W, height: TOTAL_H }}>
+            <div className="shrink-0 border-r border-white/50 dark:border-white/10 relative sticky left-0 z-10 bg-neutral-50 dark:bg-neutral-900" style={{ width: TIME_W, height: TOTAL_H }}>
               {HOURS.map((h,i) => (
                 <span key={h} className="absolute right-2 text-[10px] font-medium text-neutral-400 dark:text-neutral-600 tabular-nums select-none" style={{ top: i*HOUR_H+3 }}>
                   {String(h === 24 ? 0 : h).padStart(2,"0")}:00
@@ -1093,19 +1121,20 @@ export default function SchedulePage() {
             {weekDays.map((d, ci) => {
               const isToday   = sameDay(d, today);
               const isSel     = sameDay(d, selDay) && !isToday;
-              const entries   = entriesOn(d);
+              const kunJoy    = weekLayout[ci];
               return (
                 <div key={ci}
-                  className={cn("flex-1 relative border-r border-white/50 dark:border-white/10 last:border-r-0",
+                  className={cn("relative border-r border-white/50 dark:border-white/10 last:border-r-0",
                     isToday && "bg-blue-50/25 dark:bg-blue-900/10", isSel && "bg-neutral-50/80 dark:bg-neutral-800/30")}
-                  style={{ height: TOTAL_H }}>
+                  style={{ height: TOTAL_H, flex: `1 0 ${kunJoy?.minW ?? DAY_MIN_W}px` }}>
                   {HOURS.map((_,i) => <div key={i} className="absolute inset-x-0 border-t border-white/50 dark:border-white/10" style={{ top: i*HOUR_H }} />)}
                   {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-white/50 dark:border-white/10" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
-                  {layoutOverlaps(entries).map(({ item: entry, col, cols }) => {
+                  {(kunJoy?.lay ?? []).map(({ item: entry, col, cols }) => {
                     const top     = blockTop(entry.time, dayStart);
                     const height  = blockH(entry.time, entry.endTime);
-                    // Ustunlarga bo'lingach blok torayadi — matn ham qisqaradi.
-                    const compact = height < 52 || cols > 1;
+                    // Yo'lak endi kamida `LANE_MIN_W` — parallel dars ham to'liq
+                    // matnda; faqat juda qisqa (yarim soatdan kam) blok qisqaradi.
+                    const compact = height < 52;
                     const w = 100 / cols;
                     return (
                       <div key={entry.id}
@@ -1139,6 +1168,7 @@ export default function SchedulePage() {
               );
             })}
           </div>
+        </div>
         </div>
       )}
 
