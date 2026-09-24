@@ -17,6 +17,7 @@ import { useTeachers } from "@/lib/hooks/useTeachers";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useBranch } from "@/lib/contexts/branch-context";
+import { BranchPicker } from "@/components/layout/branch-filter";
 import { SOURCE_OPTIONS, WEEKDAYS, SCHEDULE_PRESETS, todayStr, type Gender } from "@/lib/form-constants";
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
@@ -51,7 +52,15 @@ function revalidateGroups() {
 
 export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Props) {
   const isEdit = mode === "edit";
-  const { activeBranchId } = useBranch();
+  const { activeBranchId, kopFilial } = useBranch();
+  /**
+   * O'QUVCHINING FILIALI (2026-09-24). Ilgari forma faqat tepadagi
+   * tanlangan filialni yuborardi — "Barcha filiallar" turganda o'quvchi
+   * FILIALSIZ saqlanardi va biror filial tanlanganda ro'yxatdan
+   * yo'qolardi (Mudarris: bir kunda 72 ta). Guruh tanlansa server guruh
+   * filialini oladi — bu maydon guruhsiz qo'shishda hal qiluvchi.
+   */
+  const [oqBranch, setOqBranch] = useState("");
 
   const [form, setForm] = useState(emptyForm());
   const [fErr, setFErr] = useState<{ name?: string; phone?: string }>({});
@@ -110,6 +119,10 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
     }
     setFErr({}); setErr(""); setReferrer(null); setRefErr("");
     setFBranch(""); setFTeacher(""); setFCourse(""); setShowNewGroup(false);
+    setOqBranch(isEdit ? (initial?.branchId ?? "") : (activeBranchId ?? ""));
+    // `activeBranchId` ATAYLAB bog'liqlikda yo'q — oyna ochiq turganda
+    // tepadagi filial almashsa, tanlangan qiymat o'chib ketmasin.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, isEdit, initial]);
 
   /**
@@ -184,6 +197,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       return;
     }
     if (ng.scheduleDays.length === 0) { setNgErr("Kamida 1 ta kun tanlang"); return; }
+    if (kopFilial && !(oqBranch || fBranch || activeBranchId)) { setNgErr("Filialni tanlang"); return; }
     setNgSaving(true); setNgErr("");
     try {
       const res = await fetch("/api/groups", {
@@ -192,7 +206,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
           name: ng.name, courseId: ng.courseId, teacherId: ng.teacherId, roomId: ng.roomId,
           scheduleDays: ng.scheduleDays, startTime: ng.startTime, endTime: ng.endTime,
           startDate: ng.startDate, status: "ACTIVE",
-          ...(activeBranchId ? { branchId: activeBranchId } : {}),
+          ...((oqBranch || fBranch || activeBranchId) ? { branchId: oqBranch || fBranch || activeBranchId } : {}),
         }),
       });
       const data = await res.json();
@@ -211,6 +225,11 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
     if (!form.name.trim()) e.name = "Ism majburiy";
     if (form.phone.replace(/\D/g, "").length !== 12) e.phone = "To'liq 9 ta raqam kiriting";
     if (e.name || e.phone) { setFErr(e); return; }
+    // Ko'p filialli markazda guruhsiz qo'shilayotgan o'quvchi filialsiz qolmasin.
+    if (kopFilial && !oqBranch && (isEdit || !form.groupId)) {
+      setErr("Filialni tanlang — aks holda o'quvchi filial bo'yicha ro'yxatlarda ko'rinmaydi");
+      return;
+    }
 
     setSaving(true); setErr("");
     try {
@@ -233,7 +252,9 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
 
       if (!isEdit) {
         if (form.groupId) { body.groupId = form.groupId; body.joinDate = form.joinDate; }
-        if (activeBranchId) body.branchId = activeBranchId;
+        if (oqBranch) body.branchId = oqBranch;
+      } else if (kopFilial && oqBranch && oqBranch !== (initial?.branchId ?? "")) {
+        body.branchId = oqBranch;
       }
 
       const url = isEdit ? `/api/students/${initial.id}` : "/api/students";
@@ -357,6 +378,12 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       <FormField label="Jinsini tanlang">
         <GenderPicker value={form.gender} onChange={v => setForm(p => ({ ...p, gender: v }))} />
       </FormField>
+
+      {kopFilial && (
+        <FormField label="Filial" required hint={!isEdit ? "Guruh tanlansa — guruh filiali olinadi" : undefined}>
+          <BranchPicker value={oqBranch} onChange={setOqBranch} hammasiOchiq={false} />
+        </FormField>
+      )}
 
       <FormField label="Izoh" hint="Ixtiyoriy">
         <Input placeholder="Qo'shimcha ma'lumot..." value={form.note}

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { activeFreeze, freezeUntilLabel, type FreezeLike } from "@/lib/freeze";
+import { attendanceFrom, kunUz } from "@/lib/attendance-from";
 import { ATTENDANCE_GRACE_MINUTES } from "@/lib/form-constants";
 import { businessMinutesOfDay, businessToday } from "@/lib/time";
 import { StudentInfoPopover } from "./student-info-popover";
@@ -102,7 +103,14 @@ export function GroupAttendanceSection({
   const isToday  = currentDate.getTime() === today.getTime();
   // Chiqib ketganlarga davomat yozib bo'lmaydi (backend ham rad etadi),
   // qolganlarning hammasi — sinovdagilar ham — belgilanadi.
-  const students = studentGroups.filter(sg => sg.enrollmentStatus !== "CHIQIB_KETGAN");
+  const faollar = studentGroups.filter(sg => sg.enrollmentStatus !== "CHIQIB_KETGAN");
+  // QO'SHILISHDAN OLDINGI KUNDA ro'yxatda YO'Q — belgilash ham, "hammasi
+  // keldi" ham unga tegmaydi (server ham rad etadi, 2026-09-24).
+  const students = faollar.filter(sg => {
+    const dan = attendanceFrom(sg.joinedAt, sg.student?.joinedAt);
+    return !dan || dateStr >= dan;
+  });
+  const keyinQoshilgan = faollar.filter(sg => !students.includes(sg));
 
   const isLessonDay = scheduleDays?.includes(DOW_TO_VALUE[currentDate.getDay()]);
   const lessonStarted = !isToday || (() => {
@@ -267,9 +275,22 @@ export function GroupAttendanceSection({
         </div>
       )}
 
+      {/* Keyin qo'shilganlar — bu kunda hali guruhda emas edi. */}
+      {keyinQoshilgan.length > 0 && (
+        <p className="text-[11px] text-neutral-500 dark:text-neutral-400 px-5 py-2 border-b border-neutral-100 dark:border-neutral-800">
+          Bu kunda hali guruhda emas:{" "}
+          {keyinQoshilgan.map((sg) => {
+            const dan = attendanceFrom(sg.joinedAt, sg.student?.joinedAt);
+            return `${sg.student?.name ?? "O'quvchi"}${dan ? ` (${kunUz(dan)} dan)` : ""}`;
+          }).join(", ")}
+        </p>
+      )}
+
       {/* Ro'yxat */}
       {students.length === 0 ? (
-        <p className="text-[12px] text-neutral-400 px-5 py-8 text-center">Guruhda o&apos;quvchi yo&apos;q</p>
+        <p className="text-[12px] text-neutral-400 px-5 py-8 text-center">
+          {faollar.length > 0 ? "Bu kunda guruhda o'quvchi bo'lmagan" : "Guruhda o'quvchi yo'q"}
+        </p>
       ) : (
         <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {students.map((sg: any) => {

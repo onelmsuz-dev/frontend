@@ -7,6 +7,8 @@ import { FormField } from "@/components/ui/form-field";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { cn } from "@/lib/utils";
 import { useGroups } from "@/lib/hooks/useGroups";
+import { useBranch } from "@/lib/contexts/branch-context";
+import { BranchPicker } from "@/components/layout/branch-filter";
 import { UserPlus, AlertCircle, CheckCircle2, Users } from "lucide-react";
 
 /**
@@ -46,6 +48,10 @@ export function ConvertModal({
     Array.isArray(groupsRaw) ? groupsRaw : [];
 
   const [groupId, setGroupId] = useState("");
+  // FILIAL — guruhsiz aylantirishda, ko'p filialli markazda (2026-09-24).
+  // Target/Meta lidlarida filial yo'q; usiz o'quvchi filialsiz qolardi.
+  const { kopFilial, activeBranchId } = useBranch();
+  const [branchId, setBranchId] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -64,10 +70,15 @@ export function ConvertModal({
     : [];
   const others = allGroups.filter((g) => !matching.includes(g));
 
+  const leadBranch = (lead as { branchId?: string | null }).branchId ?? "";
+  const tanlanganFilial = branchId || leadBranch || activeBranchId || "";
+  const filialKerak = kopFilial && !groupId && !leadBranch;
+
   async function submit() {
     if (needPhone && finalPhone.replace(/\D/g, "").length !== 12) {
       setErr("Telefon raqamni to'liq kiriting"); return;
     }
+    if (filialKerak && !tanlanganFilial) { setErr("Filialni tanlang"); return; }
     setBusy(true); setErr("");
     try {
       const r = await fetch(`/api/leads/${lead!.id}/convert`, {
@@ -76,6 +87,7 @@ export function ConvertModal({
         body: JSON.stringify({
           ...(groupId ? { groupId } : {}),
           ...(needPhone ? { phone: finalPhone } : {}),
+          ...(!groupId && tanlanganFilial ? { branchId: tanlanganFilial } : {}),
         }),
       });
       const j = await r.json();
@@ -88,7 +100,7 @@ export function ConvertModal({
   }
 
   function close() {
-    setGroupId(""); setPhone(""); setErr(""); setDone(null);
+    setGroupId(""); setBranchId(""); setPhone(""); setErr(""); setDone(null);
     onClose();
   }
 
@@ -178,6 +190,13 @@ export function ConvertModal({
               </div>
             )}
           </FormField>
+
+          {filialKerak && (
+            <FormField label="Filial" required hint="Guruh tanlansa — guruh filiali olinadi">
+              <BranchPicker value={branchId || activeBranchId || ""} onChange={(v) => { setBranchId(v); setErr(""); }}
+                hammasiOchiq={false} />
+            </FormField>
+          )}
 
           <div className="flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-amber-900/20 px-3 py-2.5">
             <UserPlus className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-px" />

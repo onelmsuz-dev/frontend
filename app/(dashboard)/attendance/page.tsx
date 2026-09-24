@@ -16,6 +16,7 @@ import { businessMinutesOfDay, businessToday } from "@/lib/time";
 import {
   ScheduleTabs, filtrla, dushanbadan, type JadvalTab,
 } from "@/components/schedule/schedule-tabs";
+import { attendanceFrom, kunUz } from "@/lib/attendance-from";
 
 const UZ_MONTHS = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
 const UZ_DAYS   = ["Yakshanba","Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba"];
@@ -41,6 +42,7 @@ type Membership = {
   groupId: string;
   enrollmentStatus?: string;
   leftAt?: string | null;
+  joinedAt?: string | null;
 };
 
 function addDays(date: Date, n: number) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
@@ -130,10 +132,19 @@ export default function AttendancePage() {
   // esa chiqib ketgan o'quvchi ham "faol" bo'lib ro'yxatda qolib ketardi.
   const membership = (s: { groups?: Membership[] }): Membership | undefined =>
     s.groups?.find(g => g.groupId === selectedGroup);
-  const enrolled = allStudents.filter(s => {
+  const azolar = allStudents.filter(s => {
     const sg = membership(s);
     return !!sg && sg.enrollmentStatus !== "CHIQIB_KETGAN" && !sg.leftAt;
   });
+  // QO'SHILISHDAN OLDINGI KUNDA ro'yxatda YO'Q (server ham rad etadi,
+  // 2026-09-24): bugun qo'shilgan o'quvchiga o'tgan darslar yozilib qolardi.
+  const qoshilganKun = (s: { joinedAt?: string | null; groups?: Membership[] }) =>
+    attendanceFrom(membership(s)?.joinedAt, s.joinedAt);
+  const enrolled = azolar.filter(s => {
+    const dan = qoshilganKun(s);
+    return !dan || dateStr >= dan;
+  });
+  const keyinQoshilgan = azolar.filter(s => !enrolled.includes(s));
   const students     = enrolled.filter(s => membership(s)?.enrollmentStatus !== "SINOV");
   const sinovStudents = enrolled.filter(s => membership(s)?.enrollmentStatus === "SINOV");
 
@@ -506,8 +517,19 @@ export default function AttendancePage() {
           }
           {!studentsLoading && students.length === 0 && (
             <div className="py-12 text-center text-sm text-neutral-400 glass-panel border border-white/60 dark:border-white/10 rounded-2xl">
-              {selectedGroup ? "Bu guruhda faol o'quvchi yo'q" : "Guruhni tanlang"}
+              {!selectedGroup ? "Guruhni tanlang"
+                : keyinQoshilgan.length > 0 ? "Bu kunda guruhda o'quvchi bo'lmagan"
+                : "Bu guruhda faol o'quvchi yo'q"}
             </div>
+          )}
+          {!studentsLoading && keyinQoshilgan.length > 0 && (
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 px-1">
+              Bu kunda hali guruhda emas:{" "}
+              {keyinQoshilgan.map(s => {
+                const dan = qoshilganKun(s);
+                return `${s.name}${dan ? ` (${kunUz(dan)} dan)` : ""}`;
+              }).join(", ")}
+            </p>
           )}
         </div>
 

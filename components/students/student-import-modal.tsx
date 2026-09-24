@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useBranch } from "@/lib/contexts/branch-context";
+import { BranchPicker } from "@/components/layout/branch-filter";
 import { parseDelimited, mapRows, toCsv, downloadFile, type MappedRow } from "@/lib/csv";
 import { readTable } from "@/lib/xlsx";
 import { Upload, FileDown, AlertCircle, CheckCircle2, CircleAlert, Copy } from "lucide-react";
@@ -53,6 +55,9 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
   const [matched,  setMatched]  = useState<string[]>([]);
   const [headerless, setHeaderless] = useState(false);
   const [groupId,  setGroupId]  = useState("");
+  // FILIAL — guruhsiz qatorlar uchun, ko'p filialli markazda (2026-09-24).
+  const { kopFilial, activeBranchId } = useBranch();
+  const [branchId, setBranchId] = useState("");
   const [activate, setActivate] = useState(false);
   const [busy,     setBusy]     = useState(false);
   const [err,      setErr]      = useState("");
@@ -115,6 +120,7 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
         body: JSON.stringify({
           rows: valid.slice(0, 1000),
           ...(groupId ? { groupId } : {}),
+          ...(!groupId && (branchId || activeBranchId) ? { branchId: branchId || activeBranchId } : {}),
           activate,
         }),
       });
@@ -216,6 +222,11 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
           )}
 
           {/* Sozlamalar */}
+          {kopFilial && !groupId && (
+            <FormField label="Filial" required hint="Guruhsiz qatorlar shu filialga yoziladi (guruhli qatorda — guruh filiali)">
+              <BranchPicker value={branchId || activeBranchId || ""} onChange={setBranchId} hammasiOchiq={false} />
+            </FormField>
+          )}
           <div className="grid sm:grid-cols-2 gap-3">
             <FormField label="Hammasini shu guruhga" hint="Ixtiyoriy — jadvaldagi «Guruh» ustuni ustun turadi">
               <select value={groupId} onChange={e => setGroupId(e.target.value)} className={selectCls}>

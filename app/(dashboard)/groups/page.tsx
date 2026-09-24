@@ -110,7 +110,7 @@ function GroupsContent() {
   // Ochilmagani o'chiq holda "platformadan so'rang" bilan turadi — markaz
   // imkoniyat borligini biladi.
   const allowedModes: any[] = modesData?.modes ?? [];
-  const { activeBranchId } = useBranch();
+  const { activeBranchId, kopFilial: kopFilialForm } = useBranch();
   const [search,    setSearch]    = useState("");
   const [statusTab, setStatusTab] = useState("barchasi");
   const [showModal, setShowModal] = useState(false);
@@ -298,6 +298,9 @@ function GroupsContent() {
     }
     if (form.scheduleDays.length === 0) { setError("Kamida 1 ta dars kuni tanlang"); return; }
     if (form.endTime <= form.startTime) { setError("Tugash vaqti boshlanish vaqtidan keyin bo'lsin"); return; }
+    // Ko'p filialli markazda guruh FILIALSIZ saqlanmasin — ilgari "Filialni
+    // tanlang" varianti bo'sh qoldirilsa ham saqlanardi (Mudarris, "ARAB TILI").
+    if (kopFilialForm && !(form.branchId || activeBranchId)) { setError("Filialni tanlang"); return; }
     setSaving(true); setError("");
     try {
       const body: any = {
