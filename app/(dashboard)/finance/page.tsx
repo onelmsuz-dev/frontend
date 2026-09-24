@@ -547,16 +547,22 @@ export default function FinancePage() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(p.amount)}</span>
+                          {p.amount < 0 ? (
+                            <span className="text-[13px] font-bold text-red-600 dark:text-red-400" title="Qaytarilgan to'lov">
+                              −{formatCurrency(-p.amount)}
+                            </span>
+                          ) : (
+                            <span className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(p.amount)}</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
-                          <button type="button" onClick={() => setChekId(p.id)}
+                          {p.amount > 0 && <button type="button" onClick={() => setChekId(p.id)}
                             title="Chekni ko'rish va chop etish"
                             className="w-7 h-7 inline-flex items-center justify-center rounded-lg
                               text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50
                               dark:hover:bg-indigo-500/10 transition-colors">
                             <ReceiptText className="w-4 h-4" />
-                          </button>
+                          </button>}
                         </TableCell>
                       </TableRow>
                     ))

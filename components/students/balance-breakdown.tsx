@@ -62,7 +62,8 @@ function oyNomi(m?: string | null): string {
  */
 function yorliq(it: LedgerItem, kind: "charge" | "payment",
                 guruhNomi: (id?: string | null) => string): string {
-  if (kind === "payment") return "To'lov";
+  // Manfiy to'lov — kassadan o'quvchiga QAYTARILGAN pul (2026-09-24).
+  if (kind === "payment") return it.amount < 0 ? "To'lov qaytarildi" : "To'lov";
 
   const g = it.groupId ? guruhNomi(it.groupId) : "";
   const oy = oyNomi(it.month);
@@ -70,6 +71,8 @@ function yorliq(it: LedgerItem, kind: "charge" | "payment",
   switch (it.reason) {
     case "DISCOUNT":
       return ["Chegirma", it.discountLabel].filter(Boolean).join(" · ");
+    case "MANUAL":
+      return ["Qo'lda qarz", g].filter(Boolean).join(" · ");
     case "TRANSFER":
       return "Eski guruhdan ko'chirilgan balans";
     case "CORRECTION":
@@ -176,7 +179,9 @@ export function BalanceBreakdown({
     .map((x) => ({
       ...x,
       vaqt: new Date(x.it.createdAt ?? x.it.date ?? 0).getTime(),
-      summa: x.kind === "payment" ? Math.abs(x.it.amount) : x.it.amount,
+      // To'lov o'z ishorasi bilan: qaytarish MANFIY. Ilgari `Math.abs`
+      // edi — qaytarilgan 150 000 bu yerda "+150 000" bo'lib chiqardi.
+      summa: x.it.amount,
     }))
     .sort((a, b) => b.vaqt - a.vaqt);
 

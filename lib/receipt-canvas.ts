@@ -33,6 +33,8 @@ export interface ReceiptData {
   organization?: { name?: string | null } | null;
   periods?: { month: string | null; amount: number }[];
   advance?: number;
+  /** Shu to'lovdan keyin o'quvchiga qaytarilgan qism. */
+  refunded?: number;
 }
 
 const USUL: Record<string, string> = {
@@ -266,6 +268,7 @@ export function davrRoyxati(d: ReceiptData): [string, string][] {
   const r: [string, string][] = (d.periods ?? []).map(
     (p) => [oyNomi(p.month), pul(p.amount)] as [string, string]);
   if ((d.advance ?? 0) > 0) r.push(["Oldindan to'lov", pul(d.advance!)]);
+  if ((d.refunded ?? 0) > 0) r.push(["Keyin qaytarilgan", pul(d.refunded!)]);
   if (r.length === 0) r.push(["Oldindan to'lov", pul(d.amount)]);
   return r;
 }

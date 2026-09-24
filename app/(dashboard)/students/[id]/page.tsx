@@ -9,6 +9,7 @@ import { GroupDebtBreakdown } from "@/components/students/group-debt-breakdown";
 import { BalanceBreakdown } from "@/components/students/balance-breakdown";
 import { OneTimeDiscount } from "@/components/students/one-time-discount";
 import { PaymentEdit } from "@/components/students/payment-edit";
+import { PayActions, type MoneyGroup } from "@/components/students/money-actions";
 import { ReceiptModal } from "@/components/payments/receipt-modal";
 import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
@@ -723,6 +724,18 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const ketganSgs: KetganAzolik[] = (student.groups ?? []).filter(
     (g: KetganAzolik) => g.enrollmentStatus === "CHIQIB_KETGAN",
   );
+  // QAYTARISH / QARZ OYNALARI UCHUN — har a'zolik va uning savatidagi
+  // ortiqcha pul. Chiqib ketgan guruhlar ham: pul odatda ketgandan keyin qaytariladi.
+  const ledgerRows: { groupId: string | null; advance: number }[] =
+    (student as { groupLedger?: { rows?: { groupId: string | null; advance: number }[] } }).groupLedger?.rows ?? [];
+  const pulGuruhlari: MoneyGroup[] = (student.groups ?? [])
+    .filter((g: KetganAzolik & { groupId: string }) => !!g.groupId)
+    .map((g: KetganAzolik & { groupId: string }) => ({
+      groupId: g.groupId,
+      name:    g.group?.name ?? "Guruh",
+      advance: Math.max(0, ledgerRows.find((r) => r.groupId === g.groupId)?.advance ?? 0),
+      active:  g.enrollmentStatus !== "CHIQIB_KETGAN",
+    }));
   // Umumiy holat: kamida bitta FAOL a'zolik bo'lsa — faol, aks holda sinov.
   // "Ketgan" — faqat ATAYLAB belgilangan bo'lsa. Guruhga hali biriktirilmagan
   // yangi o'quvchi "Yangi" bo'ladi (ilgari u ham "Ketgan" ko'rinardi).
@@ -1634,10 +1647,16 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                       onDone={() => mutate(`/api/students/${student.id}`)}
                     />
                   )}
-                  <button onClick={() => { setPayErr(""); setShowPayModal(true); }}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                    <Plus className="w-3 h-3" /> To'lov
-                  </button>
+                  {/* TO'LOV + o'q: qaytarish va qarzdorlikka kiritish (2026-09-24). */}
+                  <PayActions
+                    studentId={student.id}
+                    studentName={student.name}
+                    balance={student.balance ?? 0}
+                    groups={pulGuruhlari}
+                    canAdjust={hasPerm(me?.permissions, "payments.update")}
+                    onPay={() => { setPayErr(""); setShowPayModal(true); }}
+                    onDone={() => mutate(`/api/students/${student.id}`)}
+                  />
                 </div>
               )}
             </div>
@@ -2077,7 +2096,17 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               {student.payments?.map((p: any) => (
                 <div key={p.id} className="flex items-center justify-between gap-2 px-5 py-3">
                   <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-green-600 dark:text-green-400">{fmt(p.amount)}</p>
+                    {/* QAYTARISH — manfiy to'lov, qizil va yorliq bilan. */}
+                    {p.amount < 0 ? (
+                      <p className="text-[13px] font-semibold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                        −{fmt(-p.amount)}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                          Qaytarildi
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-[13px] font-semibold text-green-600 dark:text-green-400">{fmt(p.amount)}</p>
+                    )}
                     <p className="text-[11px] text-neutral-400">
                       {formatUzDate(p.date)} · {methodLabel(p.method)}
                     </p>
@@ -2097,12 +2126,14 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     {/* CHEK — markazlar mijozga qog'oz berishi kerak.
                         Har bir to'lovda alohida, chunki chek raqami ham
                         to'lovga bog'langan. */}
-                    <button onClick={() => setReceiptId(p.id)} title="Chek"
-                      className="w-7 h-7 flex items-center justify-center rounded-lg
-                        text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50
-                        dark:hover:bg-indigo-950/30 transition-colors">
-                      <Printer className="w-3.5 h-3.5" />
-                    </button>
+                    {p.amount > 0 && (
+                      <button onClick={() => setReceiptId(p.id)} title="Chek"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg
+                          text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50
+                          dark:hover:bg-indigo-950/30 transition-colors">
+                        <Printer className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {hasPerm(me?.permissions, "payments.update") && (
                       <PaymentEdit
                         payment={p}

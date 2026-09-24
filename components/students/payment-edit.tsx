@@ -36,6 +36,8 @@ export function PaymentEdit({
   payment: PaymentRow;
   onDone: () => void;
 }) {
+  // QAYTARISH (manfiy to'lov) tahrirlanmaydi — faqat o'chiriladi (server ham shunday).
+  const qaytarish = payment.amount < 0;
   const [mode, setMode] = useState<null | "edit" | "delete">(null);
   const [amount, setAmount] = useState(String(Math.round(payment.amount)));
   const [method, setMethod] = useState(payment.method);
@@ -84,12 +86,14 @@ export function PaymentEdit({
   return (
     <>
       <div className="flex items-center gap-1">
-        <button onClick={() => { close(); setMode("edit"); }}
-          title="Tuzatish"
-          className="rounded-lg p-1 text-neutral-400 hover:text-blue-600 hover:bg-blue-50
-                     dark:hover:bg-blue-900/30 transition-colors">
-          <Pencil className="w-3.5 h-3.5" />
-        </button>
+        {!qaytarish && (
+          <button onClick={() => { close(); setMode("edit"); }}
+            title="Tuzatish"
+            className="rounded-lg p-1 text-neutral-400 hover:text-blue-600 hover:bg-blue-50
+                       dark:hover:bg-blue-900/30 transition-colors">
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
         <button onClick={() => { close(); setMode("delete"); }}
           title="O'chirish"
           className="rounded-lg p-1 text-neutral-400 hover:text-red-600 hover:bg-red-50
@@ -101,7 +105,7 @@ export function PaymentEdit({
       <Modal
         open={!!mode}
         onClose={close}
-        title={mode === "delete" ? "To'lovni o'chirish" : "To'lovni tuzatish"}
+        title={mode === "delete" ? (qaytarish ? "Qaytarishni bekor qilish" : "To'lovni o'chirish") : "To'lovni tuzatish"}
         footer={
           <>
             {!warn && (
