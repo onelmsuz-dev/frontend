@@ -132,6 +132,16 @@ function SettingsContent() {
   // Standart — "Markaz ma'lumoti": Xodimlar endi o'z bo'limiga ega, sozlamalar
   // ichidagi nusxasi rollarni sozlash uchun qoladi.
   const [activeSection, setActiveSection] = useState("markaz");
+  // HOVER — desktop akkordeonida guruh ustiga borilganda bo'limlari
+  // ko'rinadi (chap menyudagi flyout kabi, 2026-09-28). Bo'lim bosilsa
+  // guruh faol bo'lib ochiq qoladi; sichqoncha ketsa yig'iladi.
+  const [hoverGuruh, setHoverGuruh] = useState<string | null>(null);
+  const hoverTimer = useRef<number | null>(null);
+  const hoverKech = (id: string | null, ms: number) => {
+    if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
+    hoverTimer.current = window.setTimeout(() => setHoverGuruh(id), ms);
+  };
+  useEffect(() => () => { if (hoverTimer.current) window.clearTimeout(hoverTimer.current); }, []);
 
   // Bayroq va ruxsat ortidagi bo'limlar.
   //
@@ -437,15 +447,19 @@ function SettingsContent() {
               <nav className="hidden lg:flex flex-col gap-1.5 sticky top-24">
                 {guruhlar.map(g => {
                   const GIcon = g.icon;
-                  const ochiq = g.id === faolGuruh;
+                  const faol = g.id === faolGuruh;
+                  const ochiq = faol || g.id === hoverGuruh;
                   const yolgiz = g.items.length === 1;
                   return (
                     <div key={g.id}
+                      onMouseEnter={() => { if (!faol && !yolgiz) hoverKech(g.id, 80); }}
+                      onMouseLeave={() => hoverKech(null, 160)}
                       className={cn("rounded-2xl border transition-colors",
-                        ochiq ? "glass-panel border-white/60 dark:border-white/10 shadow-sm"
+                        faol  ? "glass-panel border-white/60 dark:border-white/10 shadow-sm"
+                        : ochiq ? "glass-soft border-white/50 dark:border-white/10"
                               : "border-transparent hover:bg-white/40 dark:hover:bg-white/5")}>
                       <button type="button" aria-expanded={ochiq}
-                        onClick={() => (yolgiz ? setActiveSection(g.items[0].id) : guruhgaOt(g))}
+                        onClick={() => { setHoverGuruh(null); if (yolgiz) setActiveSection(g.items[0].id); else guruhgaOt(g); }}
                         className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-left transition-colors",
                           ochiq ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-600 dark:text-neutral-400")}>
                         <span className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors",
@@ -471,7 +485,8 @@ function SettingsContent() {
                               const Icon = s.icon;
                               const on = activeSection === s.id;
                               return (
-                                <button key={s.id} type="button" onClick={() => setActiveSection(s.id)}
+                                <button key={s.id} type="button"
+                                  onClick={() => { setHoverGuruh(null); setActiveSection(s.id); }}
                                   data-tour={`settings-tab-${s.id}`}
                                   tabIndex={ochiq ? 0 : -1}
                                   className={cn(
