@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Users, GraduationCap, BookOpen, CalendarDays,
   ClipboardList, Wallet, BarChart3, Settings, UserCheck, Target,
   Home, Megaphone, Layers, Banknote, Wrench, MessageSquare, Trophy,
-  TrendingDown, UserCog, type LucideIcon,
+  TrendingDown, UserCog, ClipboardCheck, type LucideIcon,
 } from "lucide-react";
 
 export interface NavItem {
@@ -25,7 +25,12 @@ export interface NavSection {
 export const navSections: NavSection[] = [
   {
     id: "asosiy", label: "Asosiy", icon: Home,
-    items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard.view" }],
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard.view" },
+      // Xodimlarga biriktirilgan follow-up vazifalar bo'yicha hisobot —
+      // kim nechtasini bajargan, nechtasi muddatidan o'tib ketgan.
+      { href: "/vazifalar", label: "Vazifalar hisoboti", icon: ClipboardCheck, perm: "tasks.view" },
+    ],
   },
   {
     id: "crm", label: "CRM", icon: Megaphone,

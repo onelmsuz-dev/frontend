@@ -21,12 +21,18 @@
  */
 const RAQAM = new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 });
 
-/** `Intl` qaysi so'zni ishlatsa — o'shani olamiz ("soʻm"). */
-const VALYUTA = new Intl.NumberFormat("uz-UZ", {
-  style: "currency", currency: "UZS", maximumFractionDigits: 0,
-})
-  .formatToParts(0)
-  .find((p) => p.type === "currency")?.value ?? "soʻm";
+/**
+ * "soʻm" QO'LDA YOZILGAN — `Intl`dan OLINMAYDI.
+ *
+ * Ilgari `style: "currency"` bilan `Intl`ning o'zi tanlagan so'z
+ * ishlatilardi. Bu so'z Node'ning ICU ma'lumotiga bog'liq: to'liq ICU'da
+ * "soʻm", qisqartirilganida (`small-icu` — ko'p standart Node
+ * o'rnatishlarida shunday) "UZS" chiqadi. Server (Node) va brauzer har xil
+ * ICU'ga ega bo'lsa, SSR va CSR matni bir-biriga zid chiqib, React
+ * "hydration mismatch" xatosi berardi — sahifa bir lahza noto'g'ri
+ * ko'rinib, keyin qayta chizilardi.
+ */
+const VALYUTA = "soʻm";
 
 export function formatCurrency(v: number): string {
   return `${RAQAM.format(v)} ${VALYUTA}`;

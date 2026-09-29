@@ -6,8 +6,8 @@ import { useGroup } from "@/lib/hooks/useGroups";
 import { TopHeader } from "@/components/layout/top-header";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft, BookOpen, Clock, Calendar,
-  GraduationCap, AlertCircle, CheckCircle,
+  ArrowLeft, AlertCircle, CalendarCheck, Star, PlayCircle,
+  Percent, FileCheck2, History, MessageSquare,
 } from "lucide-react";
 import { mutate } from "swr";
 import { Input } from "@/components/ui/input";
@@ -15,9 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { GroupAttendanceSection } from "@/components/groups/group-attendance-section";
+import { GroupInfoSidebar } from "@/components/groups/group-info-sidebar";
+import { GroupAttendanceGrid } from "@/components/groups/group-attendance-grid";
+import { EntityHistorySection } from "@/components/activity/entity-history-section";
+import { GroupNotesSection } from "@/components/groups/group-notes-section";
+import { GroupTabPlaceholder } from "@/components/groups/group-tab-placeholder";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
-import { formatUzDate } from "@/lib/date-uz";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -29,17 +32,22 @@ const STATUS_CFG: Record<string, { label: string; cls: string }> = {
   COMPLETED: { label: "Yakunlangan", cls: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800" },
 };
 
-
-const DAY_LABELS: Record<string, string> = {
-  du: "Du", se: "Se", ch: "Ch", pa: "Pa", ju: "Ju", sha: "Sha", ya: "Ya",
-  mon: "Du", tue: "Se", wed: "Ch", thu: "Pa", fri: "Ju", sat: "Sha", sun: "Ya",
-};
+const TABS = [
+  { id: "davomat",  label: "Davomat",                    icon: CalendarCheck },
+  { id: "baho",     label: "Baholash",                   icon: Star },
+  { id: "onlayn",   label: "Onlayn darslar va materiallar", icon: PlayCircle },
+  { id: "chegirma", label: "Chegirmali narx",             icon: Percent },
+  { id: "imtihon",  label: "Imtihonlar",                  icon: FileCheck2 },
+  { id: "tarix",    label: "Tarix",                       icon: History },
+  { id: "izoh",     label: "Izohlar",                     icon: MessageSquare },
+] as const;
 
 export default function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: group, isLoading } = useGroup(id);
   const { me } = useMe();
   const canUpdate = hasPerm(me?.permissions, "students.update");
+  const canDelete = hasPerm(me?.permissions, "students.delete");
   /**
    * DAVOMAT — ALOHIDA RUXSAT.
    *
@@ -51,6 +59,8 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
    */
   const canSeeAttendance  = hasPerm(me?.permissions, "attendance.view");
   const canMarkAttendance = hasPerm(me?.permissions, "attendance.mark");
+
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("davomat");
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ name: "", phone: "", parentPhone: "" });
@@ -80,10 +90,10 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     return (
       <div className="p-5 space-y-5">
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1,2,3].map(i => <Skeleton key={i} className="h-36" />)}
+        <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-5">
+          <Skeleton className="h-96" />
+          <Skeleton className="h-96" />
         </div>
-        <Skeleton className="h-80" />
       </div>
     );
   }
@@ -98,23 +108,23 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const status  = STATUS_CFG[group.status] ?? STATUS_CFG.ACTIVE;
-  const teacher = group.teacher?.user;
-
-  const activeStudents = group.students?.filter((s: any) => s.enrollmentStatus === "FAOL").length ?? 0;
-  const sinovStudents  = group.students?.filter((s: any) => s.enrollmentStatus === "SINOV").length ?? 0;
+  const status = STATUS_CFG[group.status] ?? STATUS_CFG.ACTIVE;
+  const students = group.students ?? [];
 
   return (
     <div>
       <TopHeader
-        title={group.name}
+        title={`${group.name} · ${group.course?.name ?? "—"}${group.teacher?.user?.name ? ` · ${group.teacher.user.name}` : ""}`}
         subtitle={
           <Link href="/groups" className="flex items-center gap-1 text-neutral-400 hover:text-neutral-600 text-sm transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" />
             Guruhlar
           </Link>
         }
-        action={{ label: "O'quvchi qo'shish", onClick: () => { setAddErr(""); setShowAdd(true); } }}
+        // Sidebar'dagi + belgisi ko'zga tashlanmas edi — bu yerda aniq
+        // yozuvli, doim ko'rinadigan tugma (boshqa sahifalardagi bilan
+        // bir xil joy: sahifa yuqori o'ng burchagi).
+        action={canUpdate ? { label: "O'quvchi qo'shish", onClick: () => { setAddErr(""); setShowAdd(true); } } : undefined}
       />
 
       <Modal
@@ -153,99 +163,81 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         )}
       </Modal>
 
-      <div className="p-5 space-y-5">
-        {/* Info cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Group info */}
-          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", group.color ?? "bg-blue-100 text-blue-700")}>
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-semibold", status.cls)}>{status.label}</span>
-            </div>
-            <h2 className="font-bold text-neutral-900 dark:text-neutral-100 mb-1">{group.name}</h2>
-            <p className="text-[12px] text-neutral-500 dark:text-neutral-400">{group.course?.name}</p>
-            <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 space-y-1.5">
-              <div className="flex items-center gap-2 text-[12px] text-neutral-500">
-                <Clock className="w-3 h-3" />
-                {group.startTime} – {group.endTime}
-              </div>
-              <div className="flex items-center gap-2 text-[12px] text-neutral-500">
-                <Calendar className="w-3 h-3" />
-                {group.scheduleDays?.map((d: string) => DAY_LABELS[d.toLowerCase()] ?? d).join(", ")}
-              </div>
-              <div className="flex items-center gap-2 text-[12px] text-neutral-500">
-                <GraduationCap className="w-3 h-3" />
-                {formatUzDate(group.startDate)}{" "}
-                {group.status === "UPCOMING" ? "dan boshlanadi" : "dan boshlangan"}
-              </div>
-            </div>
-          </div>
-
-          {/* Teacher */}
-          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
-            <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">O'qituvchi</h3>
-            {teacher ? (
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-lg font-black">
-                  {teacher.name[0]}
-                </div>
-                <div>
-                  <Link href={`/teachers/${group.teacher?.id}`}
-                    className="font-bold text-neutral-900 dark:text-neutral-100 hover:text-blue-600 transition-colors">
-                    {teacher.name}
-                  </Link>
-                  <p className="text-[12px] text-neutral-400">{teacher.phone}</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-[13px] text-neutral-400">O'qituvchi biriktirilmagan</p>
-            )}
-          </div>
-
-          {/* Students stats */}
-          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
-            <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider mb-3">O'quvchilar</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] text-neutral-500">Jami</span>
-                <span className="text-[14px] font-bold text-neutral-900 dark:text-neutral-100">{group.students?.length ?? 0}/{group.maxStudents}</span>
-              </div>
-              <div className="h-2 glass-soft rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, ((group.students?.length ?? 0) / group.maxStudents) * 100)}%` }} />
-              </div>
-              <div className="flex gap-3">
-                <div className="flex items-center gap-1">
-                  <CheckCircle className="w-3 h-3 text-green-500" />
-                  <span className="text-[11px] text-neutral-500">{activeStudents} faol</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-amber-500" />
-                  <span className="text-[11px] text-neutral-500">{sinovStudents} sinov</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* CHAP: ixcham guruh ma'lumoti + raqamlangan o'quvchilar ro'yxati.
+          O'NG: tab qatori (Davomat, Baholash, ... Tarix, Izohlar) — har
+          safar faqat bitta bo'lim ko'rinadi, ekran uzun ro'yxatlar bilan
+          to'lib ketmaydi (egasining ko'rsatgan namunasi, 2026-09-28). */}
+      <div className="p-5 grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-5 items-start">
+        {/* ── CHAP USTUN ── */}
+        <div className="xl:sticky xl:top-4">
+          <GroupInfoSidebar
+            group={group}
+            students={students}
+            groupId={id}
+            canUpdate={canUpdate}
+            canDelete={canDelete}
+            status={status}
+            onAddStudent={() => { setAddErr(""); setShowAdd(true); }}
+            onChanged={() => mutate(`/api/groups/${id}`)}
+          />
         </div>
 
-        {/* O'quvchilar ro'yxati VA davomat — bitta panel.
-            Ilgari ikkita alohida blok bo'lib, bir xil o'quvchilar ikki marta
-            chizilardi: yuqorida ism/telefon, pastda yana o'sha ismlar davomat
-            tugmalari bilan. */}
-        {canSeeAttendance && (
-        <GroupAttendanceSection
-          groupId={id}
-          scheduleDays={group.scheduleDays ?? []}
-          startTime={group.startTime}
-          startDate={group.startDate}
-          endDate={group.endDate}
-          studentGroups={group.students ?? []}
-          onChanged={() => mutate(`/api/groups/${id}`)}
-          canUpdate={canUpdate}
-          canMarkAttendance={canMarkAttendance}
-        />
-        )}
+        {/* ── O'NG USTUN ── */}
+        <div className="min-w-0 space-y-4">
+          <nav className="flex items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {TABS.map(t => {
+              const Icon = t.icon;
+              const active = tab === t.id;
+              return (
+                <button key={t.id} onClick={() => setTab(t.id)}
+                  className={cn(
+                    "flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3.5 h-9 rounded-xl text-[12.5px] font-semibold transition-colors border-b-2",
+                    active
+                      ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                      : "border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+                  <Icon className="w-3.5 h-3.5" />
+                  {t.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {tab === "davomat" && (
+            canSeeAttendance ? (
+              <GroupAttendanceGrid
+                groupId={id}
+                scheduleDays={group.scheduleDays ?? []}
+                students={students}
+                canMark={canMarkAttendance}
+              />
+            ) : (
+              <p className="text-[12px] text-neutral-400 px-5 py-8 text-center glass-panel border border-white/60 dark:border-white/10 rounded-2xl">
+                Davomatni ko&apos;rish uchun ruxsatingiz yo&apos;q
+              </p>
+            )
+          )}
+          {tab === "baho" && (
+            <GroupTabPlaceholder icon={Star} title="Baholash"
+              note="O'quvchilarga dars/topshiriq bo'yicha baho qo'yish bu yerda bo'ladi." />
+          )}
+          {tab === "onlayn" && (
+            <GroupTabPlaceholder icon={PlayCircle} title="Onlayn darslar va materiallar"
+              note="Video darslar, fayllar va uy vazifalari shu yerga joylanadi." />
+          )}
+          {tab === "chegirma" && (
+            <GroupTabPlaceholder icon={Percent} title="Chegirmali narx"
+              note="Guruh darajasidagi maxsus narx/chegirma sozlamalari shu yerda bo'ladi." />
+          )}
+          {tab === "imtihon" && (
+            <GroupTabPlaceholder icon={FileCheck2} title="Imtihonlar"
+              note="Guruh imtihonlari va natijalari shu yerda ko'rinadi." />
+          )}
+          {tab === "tarix" && (
+            <EntityHistorySection entity="groups" entityId={id}
+              emptyHint="Guruh bilan bog'liq harakatlar shu yerda ko'rinadi." />
+          )}
+          {tab === "izoh" && <GroupNotesSection groupId={id} canUpdate={canUpdate} />}
+        </div>
       </div>
     </div>
   );

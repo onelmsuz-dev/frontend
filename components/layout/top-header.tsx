@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { BranchHeaderControls } from "@/components/layout/branch-header-controls";
 import { FullscreenToggle } from "@/components/fullscreen-toggle";
+import { MyTasksButton } from "@/components/layout/my-tasks-button";
 
 interface TopHeaderProps {
   title: string;
@@ -284,6 +285,8 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
         <BranchHeaderControls />
         <GlobalSearch />
         <FullscreenToggle className="hidden sm:flex w-9 h-9 rounded-xl" />
+
+        <MyTasksButton />
 
         {/* Bell */}
         <div className="relative" ref={panelRef}>

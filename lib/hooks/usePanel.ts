@@ -26,6 +26,16 @@ export interface AttendanceBreakdown {
   SABABLI: number;
 }
 
+export interface AttendanceMonth {
+  month: string;
+  /** "Sentabr 2026" */
+  label: string;
+  total: number;
+  present: number;
+  rate: number;
+  breakdown: AttendanceBreakdown;
+}
+
 export interface StudentAttendance {
   records: {
     id: string; date: string; status: string;
@@ -35,6 +45,8 @@ export interface StudentAttendance {
   total: number;
   present: number;
   breakdown: AttendanceBreakdown;
+  /** Ma'lumot bor har bir oy — yangi→eski. Bittadan ko'p bo'lsa filtr ko'rsatiladi. */
+  months: AttendanceMonth[];
 }
 
 export interface ScheduleItem {
@@ -57,8 +69,9 @@ export function useStudentGroups() {
 export function useStudentPayments() {
   return useSWR("/api/panel/payments", fetcher);
 }
-export function useStudentAttendance() {
-  return useSWR<StudentAttendance>("/api/panel/attendance", fetcher);
+/** `month` — "2026-09" kabi; berilsa faqat o'sha oyga filtrlangan holat qaytadi. */
+export function useStudentAttendance(month?: string) {
+  return useSWR<StudentAttendance>(`/api/panel/attendance${month ? `?month=${month}` : ""}`, fetcher);
 }
 /** Yaqin 14 kundagi darslar. */
 export function useStudentSchedule() {

@@ -6,7 +6,7 @@ import { methodShort } from "@/lib/payment-methods";
 import {
   useStudentProfile, useStudentGroups, useStudentPayments,
   useStudentAttendance, useStudentSchedule,
-  type StudentAttendance, type ScheduleItem,
+  type ScheduleItem,
 } from "@/lib/hooks/usePanel";
 import {
   User, Wallet, CalendarCheck, BookOpen, Phone, TrendingDown, TrendingUp,
@@ -304,7 +304,7 @@ export default function StudentPanelPage() {
       )}
 
       {/* ── Davomat ── */}
-      {tab === "davomat" && <AttendanceTab att={att} />}
+      {tab === "davomat" && <AttendanceTab />}
 
       {/* ── Kurslarim ── */}
       {tab === "kurslarim" && (
@@ -548,15 +548,32 @@ function ScheduleList({ items }: { items: ScheduleItem[] }) {
 
 // ─── Davomat ──────────────────────────────────────────────────────────────────
 
-function AttendanceTab({ att }: { att?: StudentAttendance }) {
+/**
+ * DAVOMAT — statistika birinchi, ro'yxat ikkinchi.
+ *
+ * Ilgari bu yerda faqat xom ro'yxat bor edi: har bir dars uchun "Keldi"
+ * yoki "Kelmadi" qatorlab tursin — o'quvchi "bu oy nechta darsga keldim"
+ * degan savolga javob topish uchun o'zi sanashi kerak edi. Endi:
+ *  1. Tanlangan davr foizi + taqsimot (yuqorida, doim ko'rinadi).
+ *  2. OYLAR BO'YICHA kartochkalar — bosilsa o'sha oyga filtrlaydi, yana
+ *     bosilsa "Barchasi"ga qaytadi. Har biri o'zining nisbatini (masalan
+ *     "18/20 · 90%") ko'rsatadi — oyni ochmasdan solishtirish mumkin.
+ *  3. Ro'yxat — faqat TANLANGAN davr uchun, tafsilot kerak bo'lganda.
+ */
+function AttendanceTab() {
+  const [month, setMonth] = useState("");
+  const { data: att, isLoading } = useStudentAttendance(month || undefined);
   const b = att?.breakdown;
   const rate = att?.rate ?? 0;
+  const months = att?.months ?? [];
+  const selectedLabel = month ? months.find(m => m.month === month)?.label ?? month : "Butun davr";
 
   return (
     <div className="space-y-3">
+      {/* Tanlangan davr foizi */}
       <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[13px] text-neutral-500">Davomat foizi</span>
+          <span className="text-[13px] text-neutral-500">Davomat foizi — {selectedLabel}</span>
           <span className={cn("text-xl font-black",
             rate >= 80 ? "text-green-600 dark:text-green-400"
               : rate >= 50 ? "text-amber-600 dark:text-amber-400"
@@ -569,6 +586,11 @@ function AttendanceTab({ att }: { att?: StudentAttendance }) {
             rate >= 80 ? "bg-green-500" : rate >= 50 ? "bg-amber-500" : "bg-red-500")}
             style={{ width: `${rate}%` }} />
         </div>
+        {att && (
+          <p className="text-[11px] text-neutral-400 mt-2">
+            {att.present}/{att.total} dars hisobga olindi
+          </p>
+        )}
         {b && (
           <div className="flex flex-wrap gap-1.5 mt-3">
             {(["KELDI", "KECH_KELDI", "KELMADI", "SABABLI"] as const).map(k => (
@@ -582,8 +604,45 @@ function AttendanceTab({ att }: { att?: StudentAttendance }) {
         )}
       </div>
 
+      {/* Oylar bo'yicha — bosilsa filtrlaydi */}
+      {months.length > 1 && (
+        <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-2.5">
+            Oylar bo&apos;yicha
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <button onClick={() => setMonth("")}
+              className={cn("rounded-xl p-3 text-left transition-colors",
+                !month ? "bg-indigo-600 text-white" : "glass-soft hover:bg-white/60 dark:hover:bg-white/10")}>
+              <p className="text-[12px] font-bold">Barchasi</p>
+              <p className={cn("text-[11px] mt-0.5", !month ? "text-indigo-100" : "text-neutral-400")}>
+                {months.reduce((s, m) => s + m.present, 0)}/{months.reduce((s, m) => s + m.total, 0)} dars
+              </p>
+            </button>
+            {months.map(m => {
+              const active = month === m.month;
+              return (
+                <button key={m.month} onClick={() => setMonth(active ? "" : m.month)}
+                  className={cn("rounded-xl p-3 text-left transition-colors",
+                    active ? "bg-indigo-600 text-white" : "glass-soft hover:bg-white/60 dark:hover:bg-white/10")}>
+                  <p className="text-[12px] font-bold">{m.label}</p>
+                  <p className={cn("text-[11px] mt-0.5", active ? "text-indigo-100" : "text-neutral-400")}>
+                    {m.present}/{m.total} dars · {m.rate}%
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Tanlangan davr ro'yxati */}
       <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
-        {(att?.records ?? []).length === 0 ? (
+        {isLoading ? (
+          <div className="p-4 space-y-2">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
+        ) : (att?.records ?? []).length === 0 ? (
           <Empty icon={CalendarCheck} text="Davomat yozuvi yo'q" />
         ) : (att?.records ?? []).map(r => {
           const cfg = ATT_CFG[r.status] ?? ATT_CFG.KELDI;

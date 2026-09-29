@@ -17,10 +17,9 @@ import {
 import {
   Search, Phone, MessageSquare, Edit, GraduationCap, CheckCircle, DollarSign, Trash2, UserMinus, UserPlus,
   UserRoundX, Plus,
-  UserCheck, Clock, Upload, Download, X, Snowflake,
+  UserCheck, Clock, Upload, Download, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { isFrozenNow, type FreezeLike } from "@/lib/freeze";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useGroups } from "@/lib/hooks/useGroups";
@@ -500,7 +499,6 @@ export default function StudentsPage() {
                     )] as string[];
                     const isSel = selectedIds.has(s.id);
                     const hasTrial = gs.some((g: any) => g.enrollmentStatus === "SINOV");
-                    const muzlatilgan = gs.some((g: { freezes?: FreezeLike[] }) => isFrozenNow(g.freezes));
                     return (
                       <TableRow key={s.id}
                         // Yo'l ko'rsatuvchi "o'quvchini guruhga biriktiring"
@@ -535,12 +533,6 @@ export default function StudentsPage() {
                             <div>
                               <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 group-hover/name:text-indigo-600 dark:group-hover/name:text-indigo-400 transition-colors flex items-center gap-1.5 flex-wrap">
                                 {s.name}
-                                {muzlatilgan && (
-                                  <span title="A'zoligi muzlatilgan"
-                                    className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-sky-600 text-white dark:bg-sky-500">
-                                    <Snowflake className="w-2.5 h-2.5" /> Muzlatilgan
-                                  </span>
-                                )}
                               </p>
                               {/* Qabul sanasi — tahrirlanadigan biznes sanasi.
                                   Eski yozuvlarda bo'sh bo'lishi mumkin, o'shanda

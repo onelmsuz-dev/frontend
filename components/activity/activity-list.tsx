@@ -6,7 +6,7 @@ import type { ActivityItem } from "@/lib/hooks/useActivity";
 import {
   UserPlus, UserMinus, UserCog, Users, CalendarCheck, Wallet, Receipt,
   BookOpen, DoorOpen, MapPin, Phone, Shield, GraduationCap, Settings2,
-  MessageSquare, Trophy, CreditCard, Building2, History, Pencil, Trash2,
+  MessageSquare, Trophy, CreditCard, Building2, History, Pencil, Trash2, Snowflake,
 } from "lucide-react";
 
 /**
@@ -26,8 +26,11 @@ const LOOK: Record<string, { icon: typeof UserPlus; cls: string }> = {
   "students.unarchive":{ icon: UserPlus,      cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400" },
   "students.bulk":     { icon: Users,         cls: "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400" },
   "students.import":   { icon: Users,         cls: "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400" },
-  "student-groups.create":   { icon: Users,   cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400" },
-  "student-groups.transfer": { icon: Users,   cls: "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400" },
+  "student-groups.create":   { icon: Users,      cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  "student-groups.transfer": { icon: Users,      cls: "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400" },
+  "student-groups.freeze":       { icon: Snowflake, cls: "text-cyan-600 bg-cyan-50 dark:bg-cyan-900/30 dark:text-cyan-400" },
+  "student-groups.freeze-end":   { icon: Snowflake, cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  "student-groups.freeze-cancel":{ icon: Snowflake, cls: "text-neutral-600 bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300" },
   "attendance.create": { icon: CalendarCheck, cls: "text-sky-600 bg-sky-50 dark:bg-sky-900/30 dark:text-sky-400" },
   "payments.create":   { icon: Wallet,        cls: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400" },
   "expenses.create":   { icon: Receipt,       cls: "text-orange-600 bg-orange-50 dark:bg-orange-900/30 dark:text-orange-400" },

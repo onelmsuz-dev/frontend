@@ -111,6 +111,7 @@ export function isTeacher(role: Role)    { return role === "TEACHER"; }
 // Nav items visible to each role
 export const NAV_PERMISSIONS: Record<string, Role[]> = {
   "/dashboard":  ["SUPER_ADMIN", "TEACHER", "RECEPTIONIST", "ACCOUNTANT"],
+  "/vazifalar":  ["SUPER_ADMIN"],
   "/leads":      ["SUPER_ADMIN", "RECEPTIONIST"],
   "/courses":    ["SUPER_ADMIN", "TEACHER", "RECEPTIONIST", "ACCOUNTANT"],
   "/groups":     ["SUPER_ADMIN", "TEACHER", "RECEPTIONIST", "ACCOUNTANT"],
