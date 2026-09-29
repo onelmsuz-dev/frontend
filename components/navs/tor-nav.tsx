@@ -140,6 +140,15 @@ export function TorNav() {
     if (next.has(id)) next.delete(id); else next.add(id);
     setOchiqRaw(JSON.stringify([...next]));
   };
+  // HOVER (keng rejim) — yig'ilgan guruh ustiga borilsa vaqtincha ochiladi,
+  // ketsa yig'iladi; bosilsa `toggleOchiq` bilan qoladi (sozlamalardagi kabi).
+  const [hoverGuruh, setHoverGuruh] = useState<string | null>(null);
+  const hoverTimer = useRef<number | null>(null);
+  const hoverKech = (id: string | null, ms: number) => {
+    if (hoverTimer.current) window.clearTimeout(hoverTimer.current);
+    hoverTimer.current = window.setTimeout(() => setHoverGuruh(id), ms);
+  };
+  useEffect(() => () => { if (hoverTimer.current) window.clearTimeout(hoverTimer.current); }, []);
 
   // ── tor rejim: flyout ────────────────────────────────────────────────
   const [fly, setFly] = useState<{ id: string; top: number; left: number; pinned: boolean } | null>(null);
@@ -158,7 +167,7 @@ export function TorNav() {
     if (fly?.pinned) return;
     clearTimers();
     const el = e.currentTarget;
-    openTimer.current = window.setTimeout(() => flyOch(s.id, el), 90);
+    openTimer.current = window.setTimeout(() => flyOch(s.id, el), 60);
   };
   const hoverOut = () => {
     if (fly?.pinned) return;
@@ -239,7 +248,7 @@ export function TorNav() {
             const SIcon = section.icon;
             const faol = section.id === activeSectionId;
             const yolgiz = section.items.length === 1;
-            const ochiqmi = ochiq.has(section.id);
+            const ochiqmi = ochiq.has(section.id) || hoverGuruh === section.id;
             if (yolgiz) {
               const item = section.items[0];
               const isActive = isActiveHref(pathname, item.href);
@@ -252,8 +261,11 @@ export function TorNav() {
               );
             }
             return (
-              <div key={section.id}>
-                <button type="button" onClick={() => toggleOchiq(section.id)} aria-expanded={ochiqmi}
+              <div key={section.id}
+                onMouseEnter={() => { if (!ochiq.has(section.id)) hoverKech(section.id, 80); }}
+                onMouseLeave={() => hoverKech(null, 160)}>
+                <button type="button" aria-expanded={ochiqmi}
+                  onClick={() => { setHoverGuruh(null); toggleOchiq(section.id); }}
                   className={cn(
                     "w-full flex items-center h-10 rounded-2xl transition-colors px-3 gap-3",
                     faol && !ochiqmi ? ACTIVE_ITEM : IDLE_ITEM,
