@@ -7,6 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
+import { CourseSelect } from "@/components/courses/course-select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GenderPicker } from "@/components/ui/segmented";
@@ -405,10 +406,8 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
               <option value="">Ustoz</option>
               {teachers.map(t => <option key={t.id} value={t.id}>{t.user?.name}</option>)}
             </select>
-            <select value={fCourse} onChange={e => { setFCourse(e.target.value); setForm(p => ({ ...p, groupId: "" })); }} className={cn(selectCls, "h-9 text-[12px] px-2")}>
-              <option value="">Kurslar</option>
-              {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <CourseSelect courses={courses} value={fCourse} placeholder="Kurslar"
+              onChange={v => { setFCourse(v); setForm(p => ({ ...p, groupId: "" })); }} className={cn(selectCls, "h-9 text-[12px] px-2")} />
           </div>
 
           <select value={form.groupId} onChange={e => setForm(p => ({ ...p, groupId: e.target.value }))} className={selectCls}>
@@ -438,10 +437,8 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
               <Input placeholder="Guruh nomi" value={ng.name}
                 onChange={e => setNg(p => ({ ...p, name: e.target.value }))} className="h-9" />
               <div className="grid grid-cols-2 gap-2">
-                <select value={ng.courseId} onChange={e => setNg(p => ({ ...p, courseId: e.target.value }))} className={cn(selectCls, "h-9 text-[12px] px-2")}>
-                  <option value="">Kurs...</option>
-                  {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <CourseSelect courses={courses} value={ng.courseId} placeholder="Kurs..."
+                  onChange={v => setNg(p => ({ ...p, courseId: v }))} className={cn(selectCls, "h-9 text-[12px] px-2")} />
                 <select value={ng.teacherId} onChange={e => setNg(p => ({ ...p, teacherId: e.target.value }))} className={cn(selectCls, "h-9 text-[12px] px-2")}>
                   <option value="">O'qituvchi...</option>
                   {teachers.map(t => <option key={t.id} value={t.id}>{t.user?.name}</option>)}

@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, CalendarDays,
   ClipboardList, Wallet, BarChart3, Settings, UserCheck, Target,
-  Home, Megaphone, Layers, Banknote, Wrench, MessageSquare, Trophy,
+  Home, Megaphone, Layers, Banknote, MessageSquare, Trophy,
   TrendingDown, UserCog, ClipboardCheck, type LucideIcon,
 } from "lucide-react";
 
@@ -18,13 +18,15 @@ export interface NavItem {
 export interface NavSection {
   id: string;
   label: string;
+  /** Tor ustundagi qisqa yozuv (ikonka ostida, 10px). Bo'lmasa `label`. */
+  short?: string;
   icon: LucideIcon;
   items: NavItem[];
 }
 
 export const navSections: NavSection[] = [
   {
-    id: "asosiy", label: "Asosiy", icon: Home,
+    id: "asosiy", label: "Asosiy", short: "Bosh", icon: Home,
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard.view" },
       // Xodimlarga biriktirilgan follow-up vazifalar bo'yicha hisobot —
@@ -50,7 +52,7 @@ export const navSections: NavSection[] = [
     ],
   },
   {
-    id: "odamlar", label: "Odamlar", icon: GraduationCap,
+    id: "odamlar", label: "Odamlar", short: "Odamlar", icon: GraduationCap,
     items: [
       { href: "/students", label: "O'quvchilar", icon: GraduationCap, perm: "students.view" },
       { href: "/teachers", label: "O'qituvchilar", icon: ClipboardList, perm: "teachers.view" },
@@ -61,7 +63,7 @@ export const navSections: NavSection[] = [
     ],
   },
   {
-    id: "moliya", label: "Moliyaviy", icon: Banknote,
+    id: "moliya", label: "Moliyaviy", short: "Moliya", icon: Banknote,
     items: [
       { href: "/finance", label: "Moliya", icon: Wallet, perm: ["payments.view", "expenses.view"] },
       // Xarajat Moliyaning ichidagi tab emas, alohida bo'lim: u boshqa
@@ -71,11 +73,11 @@ export const navSections: NavSection[] = [
     ],
   },
   {
-    id: "shaxsiy", label: "Shaxsiy", icon: Banknote,
+    id: "shaxsiy", label: "Shaxsiy", short: "Oyligim", icon: Wallet,
     items: [{ href: "/salary", label: "Oyligim", icon: Wallet, teacherOnly: true }],
   },
   {
-    id: "tizim", label: "Tizim", icon: Wrench,
+    id: "tizim", label: "Tizim", short: "Sozlama", icon: Settings,
     items: [{ href: "/settings", label: "Sozlamalar", icon: Settings, perm: "settings.view" }],
   },
 ];

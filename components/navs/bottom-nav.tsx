@@ -40,15 +40,18 @@ export function BottomNav() {
     : (NAV_PERMISSIONS["/finance"]?.includes(role) ?? true);
   const visibleBottomItems = BOTTOM_ITEMS.filter(item => item.href !== "/finance" || financeVisible);
 
-  const moreItems = navSections
-    .flatMap(s => s.items)
-    .filter(item => {
-      if (BOTTOM_HREFS.has(item.href)) return false;
-      if (item.teacherOnly) return role === "TEACHER" || (role === "SUPER_ADMIN" && !!me?.teacherId);
-      if (permissions) return itemVisible(item.perm, permissions);
-      const allowed = NAV_PERMISSIONS[item.href];
-      return !allowed || allowed.includes(role);
-    });
+  // "KO'PROQ" OYNASI — GURUH BO'YICHA (chap menyu bilan bir xil bo'linish,
+  // 2026-09-28). Ilgari 13 ta ikonka bitta to'rda aralash turardi.
+  const visible = (item: (typeof navSections)[number]["items"][number]) => {
+    if (BOTTOM_HREFS.has(item.href)) return false;
+    if (item.teacherOnly) return role === "TEACHER" || (role === "SUPER_ADMIN" && !!me?.teacherId);
+    if (permissions) return itemVisible(item.perm, permissions);
+    const allowed = NAV_PERMISSIONS[item.href];
+    return !allowed || allowed.includes(role);
+  };
+  const moreSections = navSections
+    .map(s => ({ ...s, items: s.items.filter(visible) }))
+    .filter(s => s.items.length > 0);
 
   return (
     <>
@@ -69,27 +72,36 @@ export function BottomNav() {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-4 gap-2">
-            {moreItems.map(item => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setShowMore(false)}
-                  className={cn(
-                    "flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl transition-colors",
-                    isActive
-                      ? "bg-indigo-100/80 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200"
-                      : "text-neutral-500 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10"
-                  )}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="text-[10px] font-medium text-center leading-tight">{item.label}</span>
-                </Link>
-              );
-            })}
+          <div className="space-y-3 max-h-[60dvh] overflow-y-auto">
+            {moreSections.map(section => (
+              <div key={section.id}>
+                <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider px-1 mb-1.5">
+                  {section.label}
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {section.items.map(item => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setShowMore(false)}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl transition-colors",
+                          isActive
+                            ? "bg-indigo-100/80 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200"
+                            : "text-neutral-500 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10"
+                        )}
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span className="text-[10px] font-medium text-center leading-tight">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10">

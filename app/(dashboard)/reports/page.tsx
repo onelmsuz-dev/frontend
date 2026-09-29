@@ -9,6 +9,7 @@ import {
 import { useChartColors } from "@/hooks/use-chart-colors";
 import { useDashboard } from "@/lib/hooks/useDashboard";
 import { useCourses } from "@/lib/hooks/useCourses";
+import { groupCourses, guruhlashKerak } from "@/lib/course-groups";
 import { useBranchQueryString } from "@/lib/contexts/branch-context";
 import { BranchFilter } from "@/components/layout/branch-filter";
 import { TrendingUp, Users, BookOpen, CalendarCheck, ChevronDown } from "lucide-react";
@@ -51,9 +52,16 @@ export default function ReportsPage() {
   const { data: reportsRaw } = useSWR(`/api/reports${branchQs}`, fetcher);
   const revenue: { label: string; kirim: number; chiqim: number }[] = reportsRaw?.revenue ?? [];
 
-  const courseDistribution = courses
-    .filter(c => c.studentCount > 0)
-    .map(c => ({ name: c.name, value: c.studentCount }));
+  // Kurs kesimi — va yo'nalishlar bo'lsa yo'nalish kesimi ham. 36 kursli
+  // markazda kurs bo'yicha doira o'qib bo'lmaydi; yo'nalish bo'yicha
+  // 4-5 bo'lak ma'noli bo'ladi. Ikki xil bo'lim bo'lmasa tugma chiqmaydi.
+  const yonalishGuruhlari = groupCourses(courses);
+  const yonalishBor = guruhlashKerak(yonalishGuruhlari);
+  const [kesim, setKesim] = useState<"kurs" | "yonalish">("kurs");
+  const courseDistribution = (yonalishBor && kesim === "yonalish"
+    ? yonalishGuruhlari.map(g => ({ name: g.name, value: g.courses.reduce((s, c) => s + (c.studentCount ?? 0), 0) }))
+    : courses.map(c => ({ name: c.name, value: c.studentCount ?? 0 })))
+    .filter(d => d.value > 0);
 
   return (
     <div>
@@ -147,7 +155,22 @@ export default function ReportsPage() {
           </div>
 
           <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
-            <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 mb-4">O'quvchilar bo'yicha kurs taqsimoti</p>
+            <div className="flex items-center justify-between mb-4 gap-2">
+              <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">
+                {kesim === "yonalish" && yonalishBor ? "O'quvchilar bo'yicha yo'nalish taqsimoti" : "O'quvchilar bo'yicha kurs taqsimoti"}
+              </p>
+              {yonalishBor && (
+                <div className="flex rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden text-[11px] font-semibold shrink-0">
+                  {([["kurs", "Kurslar"], ["yonalish", "Yo'nalishlar"]] as const).map(([k, l]) => (
+                    <button key={k} type="button" onClick={() => setKesim(k)}
+                      className={cn("px-2.5 h-7 transition-colors",
+                        kesim === k ? "bg-indigo-600 text-white" : "text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800")}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {courseDistribution.length === 0 ? (
               <div className="h-[220px] flex items-center justify-center text-neutral-400 text-sm">Ma'lumot yuklanmoqda...</div>
             ) : (
