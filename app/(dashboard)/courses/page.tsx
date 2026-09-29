@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import Link from "next/link";
-import { Search, BookOpen, Users, Wallet, Clock, Edit, Trash2, ChevronRight } from "lucide-react";
+import { Search, BookOpen, Users, Wallet, Clock, Edit, Trash2, ChevronRight, ChevronDown, Tags } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
-import { useCourses } from "@/lib/hooks/useCourses";
+import { useCourses, useCourseCategories } from "@/lib/hooks/useCourses";
+import { CourseCategoriesModal } from "@/components/courses/course-categories-modal";
+import { groupCourses, guruhlashKerak, BOSHQA } from "@/lib/course-groups";
 import { useBranch } from "@/lib/contexts/branch-context";
 import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
 import { mutate } from "swr";
@@ -41,6 +43,8 @@ const EMPTY = {
   name: "", description: "", duration: "", price: "", color: "bg-blue-500",
   // Qaysi filial uchun. Bo'sh = barcha filiallarga umumiy kurs.
   branchId: "",
+  // Yo'nalish (Tillar, IT...). Bo'sh = "Boshqa". Faqat tartib uchun.
+  categoryId: "",
   // To'lov rejimi va narxlari (M6) — bo'sh = markaz standarti / hosila narx.
   billingMode: "", lessonPrice: "", moduleLessons: "", modulePrice: "", coursePrice: "", durationMonths: "",
 };
@@ -60,8 +64,15 @@ export default function CoursesPage() {
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState("");
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  // Yo'nalishlar: ro'yxat oynasi, filtr chipi ("" = hammasi,
+  // "__boshqa__" = yo'nalishsiz, aks holda yo'nalish id) va yig'ilgan bo'limlar.
+  const [showCats,  setShowCats]  = useState(false);
+  const [catFilter, setCatFilter] = useState("");
+  const [yigilgan,  setYigilgan]  = useState<Record<string, boolean>>({});
 
   const { data: raw, isLoading } = useCourses();
+  const { data: catsRaw, mutate: mutateCats } = useCourseCategories();
+  const cats = catsRaw ?? [];
   const { activeBranchId, kopFilial } = useBranch();
   // Kurs darajasidagi to'lov rejimi — faqat bayroq yoqiq va markazga ochilgan rejimlar.
   const modesOn = useFeature("billing-modes") === true;
@@ -76,9 +87,19 @@ export default function CoursesPage() {
 
   const filtered = useMemo(() =>
     courses.filter(c =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.description ?? "").toLowerCase().includes(search.toLowerCase())
-    ), [courses, search]);
+      (catFilter === "" || (catFilter === "__boshqa__" ? !c.category : c.category?.id === catFilter)) &&
+      (c.name.toLowerCase().includes(search.toLowerCase()) ||
+       (c.description ?? "").toLowerCase().includes(search.toLowerCase()))
+    ), [courses, search, catFilter]);
+
+  // Yo'nalish bo'limlari. Butun ro'yxatda kamida ikki xil bo'lim bo'lsa
+  // filtr chiplari chiqadi; ko'rsatilayotgan ro'yxatda ikki xil bo'lim
+  // bo'lsa kartalar bo'lim-bo'lim chiziladi. Bitta yo'nalishli yoki
+  // yo'nalishsiz markazda sahifa avvalgidek tekis qoladi.
+  const hammaBolim = useMemo(() => groupCourses(courses), [courses]);
+  const chipBor    = guruhlashKerak(hammaBolim);
+  const bolimlar   = useMemo(() => groupCourses(filtered), [filtered]);
+  const bolimli    = guruhlashKerak(bolimlar);
 
   // Backend narxni `null` qilib yuboradi ("to'lov qabul qilmaydi"
   // o'qituvchi uchun) — interfeys ham pul qatorlarini umuman chizmasligi
@@ -101,7 +122,7 @@ export default function CoursesPage() {
   function openEdit(c: any) {
     setEditId(c.id);
     setForm({ name: c.name, description: c.description ?? "", duration: c.duration, price: String(c.price), color: c.color ?? "bg-blue-500",
-      branchId: c.branchId ?? "",
+      branchId: c.branchId ?? "", categoryId: c.categoryId ?? c.category?.id ?? "",
       billingMode: c.billingMode ?? "", lessonPrice: c.lessonPrice == null ? "" : String(c.lessonPrice),
       moduleLessons: c.moduleLessons == null ? "" : String(c.moduleLessons), modulePrice: c.modulePrice == null ? "" : String(c.modulePrice),
       coursePrice: c.coursePrice == null ? "" : String(c.coursePrice), durationMonths: c.durationMonths == null ? "" : String(c.durationMonths) });
@@ -122,6 +143,7 @@ export default function CoursesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name, description: form.description || undefined, duration: form.duration, price: parseFloat(form.price), color: form.color,
+          categoryId: form.categoryId || null,
           ...(kopFilial ? { branchId: form.branchId || undefined } : {}),
           ...(modesOn ? {
             billingMode: form.billingMode || null,
@@ -159,6 +181,76 @@ export default function CoursesPage() {
     } finally { setSaving(false); }
   }
 
+  // Bitta kurs kartasi — tekis ro'yxatda ham, yo'nalish bo'limida ham shu.
+  function karta(course: (typeof courses)[number]) {
+    return (
+
+                <div key={course.id}
+                  className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                  <div className={cn("h-1.5 w-full", course.color ?? "bg-blue-500")} />
+                  <div className="p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-[14px] text-neutral-900 dark:text-neutral-100">{course.name}</h3>
+                        <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">{course.description ?? "—"}</p>
+                        {course.category && !bolimli && (
+                          <span className="inline-flex items-center gap-1 mt-1.5 px-2 h-5 rounded-md bg-neutral-100 dark:bg-white/10 text-[10.5px] font-semibold text-neutral-500 dark:text-neutral-300">
+                            <Tags className="w-3 h-3" />{course.category.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-0.5 ml-2 shrink-0">
+                        {canUpdate && (
+                          <button onClick={() => openEdit(course)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => { setError(""); setDeleteTarget(course); }}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <Link href={`/courses/${course.id}`}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="glass-soft rounded-xl p-3">
+                        <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Clock className="w-3.5 h-3.5" /><span className="text-[11px]">Davomiyligi</span></div>
+                        <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course.duration}</p>
+                      </div>
+                      <div className="glass-soft rounded-xl p-3">
+                        <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Wallet className="w-3.5 h-3.5" /><span className="text-[11px]">Narxi</span></div>
+                        <p className="text-[13px] font-bold text-blue-700 dark:text-blue-400">
+                          {course.price != null ? formatCurrency(course.price) : "—"}
+                        </p>
+                      </div>
+                      <div className="glass-soft rounded-xl p-3">
+                        <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><BookOpen className="w-3.5 h-3.5" /><span className="text-[11px]">Guruhlar</span></div>
+                        <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course._count?.groups ?? 0} ta</p>
+                      </div>
+                      <div className="glass-soft rounded-xl p-3">
+                        <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Users className="w-3.5 h-3.5" /><span className="text-[11px]">O'quvchilar</span></div>
+                        <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course.studentCount ?? 0} ta</p>
+                      </div>
+                    </div>
+                    {course.price != null && (
+                      <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 flex items-center justify-between">
+                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Oylik daromad</span>
+                        <span className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(course.price * (course.studentCount ?? 0))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+    );
+  }
+
   return (
     <div>
       <TopHeader
@@ -191,6 +283,15 @@ export default function CoursesPage() {
         <FormField label="Tavsif" hint="Ixtiyoriy">
           <Input placeholder="Qisqacha tavsif..." value={form.description}
             onChange={e => setForm(p => ({...p, description: e.target.value}))} className="h-10" />
+        </FormField>
+
+        <FormField label="Yo'nalish"
+          hint={cats.length ? "Ixtiyoriy — kurslarni yo'nalish bo'yicha tartiblash uchun" : "Hali yo'nalish yo'q — sahifadagi «Yo'nalishlar» tugmasidan qo'shiladi"}>
+          <select value={form.categoryId} onChange={e => setForm(p => ({...p, categoryId: e.target.value}))}
+            className="w-full h-10 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-transparent px-3 text-[13px]">
+            <option value="">{BOSHQA}</option>
+            {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
         </FormField>
 
         {kopFilial && (
@@ -278,6 +379,17 @@ export default function CoursesPage() {
         {error && <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg">{error}</p>}
       </Modal>
 
+      <CourseCategoriesModal
+        open={showCats} onClose={() => setShowCats(false)}
+        categories={cats}
+        onChanged={() => {
+          mutateCats();
+          // Nomi o'zgarsa kartadagi yorliq ham yangilansin — kurslar ro'yxati
+          // `category`ni o'zi bilan olib keladi.
+          mutate((key: string) => typeof key === "string" && key.startsWith("/api/courses"),
+                 undefined, { revalidate: true });
+        }} />
+
       <ConfirmDeleteModal
         open={!!deleteTarget} onClose={() => { setDeleteTarget(null); setError(""); }}
         onConfirm={confirmDelete} loading={saving}
@@ -316,10 +428,33 @@ export default function CoursesPage() {
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <BranchFilter />
+          {canUpdate && (
+            <button type="button" onClick={() => setShowCats(true)}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-white/60 dark:border-white/10 text-[12px] font-semibold text-neutral-600 dark:text-neutral-300 hover:border-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              <Tags className="w-3.5 h-3.5" /> Yo&apos;nalishlar{cats.length ? ` · ${cats.length}` : ""}
+            </button>
+          )}
           <span className="text-xs text-neutral-400 dark:text-neutral-500 ml-auto">{filtered.length} ta kurs</span>
         </div>
 
-        {/* Cards */}
+        {/* Yo'nalish filtri — faqat kamida ikki xil bo'lim bo'lsa */}
+        {chipBor && (
+          <div className="flex flex-wrap gap-1.5">
+            {[{ id: "", name: "Barchasi", n: courses.length },
+              ...hammaBolim.map(g => ({ id: g.id || "__boshqa__", name: g.name, n: g.courses.length }))].map(ch => (
+              <button key={ch.id} type="button" onClick={() => setCatFilter(ch.id)}
+                className={cn("px-3 h-8 rounded-lg text-[12px] font-semibold border transition-all",
+                  catFilter === ch.id
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
+                {ch.name} <span className={cn("ml-1 text-[11px]", catFilter === ch.id ? "text-white/80" : "text-neutral-400")}>{ch.n}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Cards — bo'limli ko'rinishda bu panjara umuman chizilmaydi */}
+        {(isLoading || !bolimli) && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {isLoading
             ? Array.from({length:3}).map((_,i) => (
@@ -331,68 +466,32 @@ export default function CoursesPage() {
                   </div>
                 </div>
               ))
-            : filtered.map((course: any) => (
-                <div key={course.id}
-                  className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
-                  <div className={cn("h-1.5 w-full", course.color ?? "bg-blue-500")} />
-                  <div className="p-5">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-[14px] text-neutral-900 dark:text-neutral-100">{course.name}</h3>
-                        <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5">{course.description ?? "—"}</p>
-                      </div>
-                      <div className="flex gap-0.5 ml-2 shrink-0">
-                        {canUpdate && (
-                          <button onClick={() => openEdit(course)}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button onClick={() => { setError(""); setDeleteTarget(course); }}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <Link href={`/courses/${course.id}`}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </Link>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="glass-soft rounded-xl p-3">
-                        <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Clock className="w-3.5 h-3.5" /><span className="text-[11px]">Davomiyligi</span></div>
-                        <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course.duration}</p>
-                      </div>
-                      <div className="glass-soft rounded-xl p-3">
-                        <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Wallet className="w-3.5 h-3.5" /><span className="text-[11px]">Narxi</span></div>
-                        <p className="text-[13px] font-bold text-blue-700 dark:text-blue-400">
-                          {course.price != null ? formatCurrency(course.price) : "—"}
-                        </p>
-                      </div>
-                      <div className="glass-soft rounded-xl p-3">
-                        <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><BookOpen className="w-3.5 h-3.5" /><span className="text-[11px]">Guruhlar</span></div>
-                        <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course._count?.groups ?? 0} ta</p>
-                      </div>
-                      <div className="glass-soft rounded-xl p-3">
-                        <div className="flex items-center gap-1.5 text-neutral-500 dark:text-neutral-400 mb-1"><Users className="w-3.5 h-3.5" /><span className="text-[11px]">O'quvchilar</span></div>
-                        <p className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">{course.studentCount ?? 0} ta</p>
-                      </div>
-                    </div>
-                    {course.price != null && (
-                      <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 flex items-center justify-between">
-                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400">Oylik daromad</span>
-                        <span className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(course.price * (course.studentCount ?? 0))}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
+            : filtered.map(course => karta(course))
           }
         </div>
+        )}
+
+        {/* Yo'nalish bo'limlari — sarlavha bosilsa yig'iladi */}
+        {!isLoading && bolimli && bolimlar.map(g => {
+          const key = g.id || "__boshqa__";
+          const yopiq = !!yigilgan[key];
+          return (
+            <section key={key} className="space-y-3">
+              <button type="button" onClick={() => setYigilgan(p => ({ ...p, [key]: !yopiq }))}
+                className="w-full flex items-center gap-2 text-left group">
+                <ChevronDown className={cn("w-4 h-4 text-neutral-400 transition-transform", yopiq && "-rotate-90")} />
+                <h2 className="text-[13px] font-bold text-neutral-800 dark:text-neutral-100">{g.name}</h2>
+                <span className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500">{g.courses.length} ta kurs</span>
+                <span className="flex-1 h-px bg-neutral-200/70 dark:bg-white/10 ml-1" />
+              </button>
+              {!yopiq && (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {g.courses.map(course => karta(course))}
+                </div>
+              )}
+            </section>
+          );
+        })}
 
         {!isLoading && filtered.length === 0 && (
           <div className="flex flex-col items-center py-16 text-neutral-400 dark:text-neutral-600">

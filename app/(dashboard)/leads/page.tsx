@@ -19,6 +19,7 @@ import { fetcher as _fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 import { useLeadsPaged, useLeadAssignees, useLeadStages } from "@/lib/hooks/useLeads";
 import { TargetLeads } from "@/components/leads/target-leads";
+import { CourseChipGroups } from "@/components/courses/course-select";
 
 /**
  * FACEBOOK/INSTAGRAM TABI VAQTINCHA YASHIRILGAN (egasining qarori,
@@ -50,7 +51,7 @@ import { stageHue, defaultStage } from "@/lib/lead-stages";
 import { mutate } from "swr";
 import { DeletedColumn } from "@/components/leads/deleted-column";
 
-interface Course { id: string; name: string }
+interface Course { id: string; name: string; category?: { id: string; name: string; sortOrder?: number } | null }
 
 const EMPTY = { name: "", phone: "", source: "Instagram", course: "", courseId: "",
                 // Bitta odam bir nechta fanga (masalan Matematika +
@@ -528,8 +529,7 @@ export default function LeadsPage() {
           {courses.length === 0 ? (
             <p className="text-[12px] text-neutral-400">Hali kurs yaratilmagan</p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {courses.map((c) => (
+            <CourseChipGroups courses={courses} renderChip={(c) => (
                 <button key={c.id} type="button"
                   onClick={() => setForm(p => ({...p,
                     courseIds: p.courseIds.includes(c.id)
@@ -541,8 +541,7 @@ export default function LeadsPage() {
                       : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
                   {c.name}
                 </button>
-              ))}
-            </div>
+              )} />
           )}
         </FormField>
 
@@ -621,8 +620,7 @@ export default function LeadsPage() {
           {courses.length === 0 ? (
             <p className="text-[12px] text-neutral-400">Hali kurs yaratilmagan</p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {courses.map((c) => (
+            <CourseChipGroups courses={courses} renderChip={(c) => (
                 <button key={c.id} type="button"
                   onClick={() => setEditForm(p => ({...p,
                     courseIds: p.courseIds.includes(c.id)
@@ -634,8 +632,7 @@ export default function LeadsPage() {
                       : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
                   {c.name}
                 </button>
-              ))}
-            </div>
+              )} />
           )}
         </FormField>
         <FormField label="Izoh" hint="Ixtiyoriy">
@@ -676,8 +673,7 @@ export default function LeadsPage() {
         {courses.length === 0 ? (
           <p className="text-[12px] text-neutral-400">Hali kurs yaratilmagan</p>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {courses.map((c) => (
+          <CourseChipGroups courses={courses} renderChip={(c) => (
               <button key={c.id} type="button"
                 onClick={() => setPendingCourses(p => p.includes(c.id) ? p.filter(id => id !== c.id) : [...p, c.id])}
                 className={cn("px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-all",
@@ -686,8 +682,7 @@ export default function LeadsPage() {
                     : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400")}>
                 {c.name}
               </button>
-            ))}
-          </div>
+            )} />
         )}
         {dropError && <p className="text-[12px] text-red-600 dark:text-red-400 mt-2">{dropError}</p>}
       </Modal>

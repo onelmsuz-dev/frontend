@@ -26,3 +26,9 @@ export function useCourse(id: string) {
 export function useCreateCourse() {
   return useSWRMutation("/api/courses", poster);
 }
+
+/** Yo'nalishlar ro'yxati — markaz o'zi yuritadi (`/api/courses/categories`). */
+export function useCourseCategories() {
+  return useSWR<{ id: string; name: string; sortOrder: number; _count?: { courses: number } }[]>(
+    "/api/courses/categories", fetcher);
+}

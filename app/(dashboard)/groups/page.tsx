@@ -14,6 +14,7 @@ import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
 import { useCourses } from "@/lib/hooks/useCourses";
+import { CourseSelect } from "@/components/courses/course-select";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { useBranch } from "@/lib/contexts/branch-context";
@@ -387,11 +388,8 @@ function GroupsContent() {
 
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Kurs" required>
-            <select value={form.courseId} onChange={e => onCourseChange(e.target.value)} className={selectCls}
-              data-tour={TOUR_TARGETS.groupCourseSelect}>
-              <option value="">Tanlang...</option>
-              {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <CourseSelect courses={courses} value={form.courseId} onChange={onCourseChange} className={selectCls}
+              data-tour={TOUR_TARGETS.groupCourseSelect} />
           </FormField>
           <FormField label="O'qituvchi" required>
             <select value={form.teacherId} onChange={e => setForm(p => ({...p, teacherId: e.target.value}))} className={selectCls}

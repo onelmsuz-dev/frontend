@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { LOST_REASONS, useLeadStages } from "@/lib/hooks/useLeads";
 import { useCourses } from "@/lib/hooks/useCourses";
+import { CourseChipGroups } from "@/components/courses/course-select";
 import { resolveNextStage } from "@/lib/lead-stages";
 import { Phone, PhoneOff, X, Undo2, Loader2, BookOpen } from "lucide-react";
 import { TimeInput } from "@/components/ui/time-input";
@@ -88,7 +89,7 @@ export function CallOutcome({
   onDone: () => void;
 }) {
   const { data: coursesRaw } = useCourses();
-  const courses: { id: string; name: string }[] =
+  const courses: { id: string; name: string; category?: { id: string; name: string; sortOrder?: number } | null }[] =
     Array.isArray(coursesRaw) ? coursesRaw : (coursesRaw?.data ?? []);
 
   const { data: stagesRaw } = useLeadStages();
@@ -179,11 +180,12 @@ export function CallOutcome({
         {courses.length === 0 ? (
           <p className="text-[10px] text-neutral-400">Hali kurs yaratilmagan</p>
         ) : (
-          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+          <div className="max-h-32 overflow-y-auto">
             {/* TANLAB, KEYIN TASDIQLASH — bir necha fanga (masalan
                 Matematika + Ingliz tili) BIR VAQTDA yozilgan bo'lishi
-                mumkin, shuning uchun bitta bosishda yuborilmaydi. */}
-            {courses.map((c) => (
+                mumkin, shuning uchun bitta bosishda yuborilmaydi.
+                Yo'nalishlar bo'lsa chiplar shu bo'yicha bo'linadi. */}
+            <CourseChipGroups courses={courses} className="flex flex-wrap gap-1" renderChip={(c) => (
               <button key={c.id} type="button" disabled={!!busy}
                 onClick={() => setPickedCourses(p => p.includes(c.id)
                   ? p.filter(id => id !== c.id) : [...p, c.id])}
@@ -194,7 +196,7 @@ export function CallOutcome({
                 <BookOpen className="w-2.5 h-2.5" />
                 {c.name}
               </button>
-            ))}
+            )} />
           </div>
         )}
         <div className="flex gap-1">

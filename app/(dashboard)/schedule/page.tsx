@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { todayStr } from "@/lib/form-constants";
 import { useCourses } from "@/lib/hooks/useCourses";
+import { CourseSelect } from "@/components/courses/course-select";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { mutate } from "swr";
 import { businessToday } from "@/lib/time";
@@ -627,10 +628,8 @@ export default function SchedulePage() {
         </FormField>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Kurs">
-            <select value={groupForm.courseId} onChange={e => setGroupForm(p => ({...p, courseId: e.target.value}))} className={SELECT_CLS}>
-              <option value="">Kurs tanlang...</option>
-              {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <CourseSelect courses={courses} value={groupForm.courseId} placeholder="Kurs tanlang..."
+              onChange={v => setGroupForm(p => ({...p, courseId: v}))} className={SELECT_CLS} />
             <button type="button" onClick={() => { setShowQCourse(v => !v); setQCourseErr(""); }}
               className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
               <Plus className="w-3 h-3" /> Yangi kurs qo'shish
@@ -788,10 +787,8 @@ export default function SchedulePage() {
       >
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Kurs" required>
-            <select value={darsForm.courseId} onChange={e => setDarsForm(p => ({...p, courseId: e.target.value}))} className={SELECT_CLS}>
-              <option value="">Kurs tanlang...</option>
-              {courses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <CourseSelect courses={courses} value={darsForm.courseId} placeholder="Kurs tanlang..."
+              onChange={v => setDarsForm(p => ({...p, courseId: v}))} className={SELECT_CLS} />
           </FormField>
           <FormField label="O'qituvchi" required>
             <select value={darsForm.teacherId} onChange={e => setDarsForm(p => ({...p, teacherId: e.target.value}))} className={SELECT_CLS}>
