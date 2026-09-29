@@ -6,6 +6,7 @@ import { ListChecks, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatUzDate } from "@/lib/date-uz";
 import { useMyTasks, toggleReminderDone } from "@/lib/hooks/useReminders";
+import { useFeature } from "@/lib/hooks/useFeatures";
 
 /**
  * VAZIFALARIM — top-header'dagi belgi.
@@ -16,6 +17,10 @@ import { useMyTasks, toggleReminderDone } from "@/lib/hooks/useReminders";
  * ketardi. Belgi faqat MUDDATI O'TGAN yoki ochiq vazifa bo'lsa ko'rinadi.
  */
 export function MyTasksButton() {
+  // Bosqichma-bosqich chiqarish — hozircha faqat demo markazda. `useMyTasks`
+  // baribir chaqiriladi (Hook qoidasi — shartli chaqirib bo'lmaydi), lekin
+  // natija faqat bayroq yoqiq bo'lsa chiziladi.
+  const enabled = useFeature("reminders");
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const { data } = useMyTasks();
@@ -30,6 +35,8 @@ export function MyTasksButton() {
     if (open) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+
+  if (!enabled) return null;
 
   return (
     <div className="relative" ref={panelRef}>

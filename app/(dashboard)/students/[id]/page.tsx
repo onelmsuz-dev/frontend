@@ -50,6 +50,7 @@ import { EntityHistorySection } from "@/components/activity/entity-history-secti
 import { StudentSmsSection } from "@/components/students/student-sms-section";
 import { StudentDocumentsSection } from "@/components/students/student-documents-section";
 import { BalanceTrendChart } from "@/components/students/balance-trend-chart";
+import { useFeature } from "@/lib/hooks/useFeatures";
 
 function fmt(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -358,6 +359,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   // ko'rinib turardi.
   const { data: gamifCfg } = useGamificationSettings();
   const showGamification = gamifCfg?.active === true;
+  // Bosqichma-bosqich chiqarish — SMS/Fayllar/Vazifalar hozircha faqat
+  // demo markazda (egasining talabi, 2026-09-29). `undefined` — bayroq
+  // hali yuklanmagan, shu tabdorada miltillab ko'rinmasin deb yashirilgan.
+  const remindersOn = useFeature("reminders") === true;
+  const studentFilesOn = useFeature("student-files") === true;
 
   // To'lov uchun mos a'zoliklar (guruhni tashlab ketganlar chiqarib tashlanadi)
   const payableGroups: Membership[] = (student?.groups ?? []).filter(
@@ -1601,7 +1607,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     ? <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
                     : student.name[0]}
                 </div>
-                {canManageGroups && (
+                {/* Bosqichma-bosqich chiqarish — rasm yuklash hozircha
+                    faqat demo markazda. */}
+                {canManageGroups && studentFilesOn && (
                   <>
                     <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
                       onChange={e => uploadAvatar(e.target.files?.[0])} />
@@ -1693,8 +1701,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           />
 
           {/* ESLATMALAR — follow-up vazifalar ("3 kundan keyin
-              qo'ng'iroq qilish"). Izohdan farqi: bu muddatli VAZIFA. */}
-          <StudentReminders studentId={student.id} canEdit={canManageGroups} />
+              qo'ng'iroq qilish"). Izohdan farqi: bu muddatli VAZIFA.
+              Bosqichma-bosqich chiqarish — hozircha faqat demo markazda. */}
+          {remindersOn && <StudentReminders studentId={student.id} canEdit={canManageGroups} />}
         </div>
 
         {/* O'NG: tablar */}
@@ -1704,8 +1713,10 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               ...(canSeeMoney ? [{ id: "moliya", label: "Moliya", icon: DollarSign }] : []),
               { id: "guruhlar", label: "Guruhlar", icon: Users },
               ...(canSeeAttendance ? [{ id: "davomat", label: "Davomat", icon: Calendar }] : []),
-              { id: "sms", label: "SMS", icon: MessageSquare },
-              { id: "fayllar", label: "Fayllar", icon: FileText },
+              ...(studentFilesOn ? [
+                { id: "sms", label: "SMS", icon: MessageSquare },
+                { id: "fayllar", label: "Fayllar", icon: FileText },
+              ] : []),
               { id: "tarix", label: "Tarix", icon: History },
               ...(showGamification ? [{ id: "gamifikatsiya", label: "Gamifikatsiya", icon: Trophy }] : []),
             ].map(t => {
@@ -2306,9 +2317,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           </div>
           )}
 
-          {tab === "sms" && <StudentSmsSection studentId={student.id} />}
+          {studentFilesOn && tab === "sms" && <StudentSmsSection studentId={student.id} />}
 
-          {tab === "fayllar" && (
+          {studentFilesOn && tab === "fayllar" && (
             <StudentDocumentsSection studentId={student.id} canUpload={canManageGroups} />
           )}
 

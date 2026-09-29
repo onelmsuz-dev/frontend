@@ -7,6 +7,7 @@ import { ListChecks, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatUzDate } from "@/lib/date-uz";
 import { useMyTasks, toggleReminderDone, type ReminderStatus } from "@/lib/hooks/useReminders";
+import { useFeature } from "@/lib/hooks/useFeatures";
 
 const TABS: { v: "barchasi" | ReminderStatus; l: string }[] = [
   { v: "barchasi", l: "Barchasi" },
@@ -26,6 +27,7 @@ function Skeleton({ className }: { className?: string }) {
  * bitta o'quvchi ko'rinadi, bu yerda esa hammasi.
  */
 export default function MyTasksPage() {
+  const enabled = useFeature("reminders");
   const { data, isLoading } = useMyTasks();
   const all = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [tab, setTab] = useState<"barchasi" | ReminderStatus>("barchasi");
@@ -36,6 +38,21 @@ export default function MyTasksPage() {
   );
 
   const overdueCount = all.filter(t => t.status === "MUDDATI_OTGAN").length;
+
+  // Bosqichma-bosqich chiqarish — hozircha faqat demo markazda. Boshqa
+  // markazlarda backend `@Feature("reminders")` bilan 404 qaytaradi;
+  // shuni ochiq xato o'rniga tushunarli xabar bilan ko'rsatamiz.
+  if (enabled === false) {
+    return (
+      <div>
+        <TopHeader title="Vazifalarim" />
+        <div className="p-6 max-w-md mx-auto text-center text-neutral-400">
+          <ListChecks className="w-10 h-10 mx-auto mb-2 opacity-30" />
+          <p className="text-[13px]">Bu bo&apos;lim hali sinov bosqichida.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

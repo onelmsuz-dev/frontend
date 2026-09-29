@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { formatUzDate } from "@/lib/date-uz";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { useAllReminders, useStaffMembers } from "@/lib/hooks/useReminders";
+import { useFeature } from "@/lib/hooks/useFeatures";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -30,6 +31,7 @@ const STATUS_CFG = {
 export default function TasksReportPage() {
   const { me } = useMe();
   const canView = hasPerm(me?.permissions, "tasks.view");
+  const enabled = useFeature("reminders");
   const { data, isLoading } = useAllReminders();
   const { data: staffRaw } = useStaffMembers();
   const staff = useMemo(() => (Array.isArray(staffRaw) ? staffRaw : []), [staffRaw]);
@@ -66,6 +68,16 @@ export default function TasksReportPage() {
       <div className="p-5 flex flex-col items-center py-20 text-neutral-400">
         <AlertCircle className="w-10 h-10 mb-2 opacity-40" />
         <p className="text-sm">Bu sahifani ko&apos;rishga ruxsatingiz yo&apos;q</p>
+      </div>
+    );
+  }
+
+  // Bosqichma-bosqich chiqarish — hozircha faqat demo markazda.
+  if (enabled === false) {
+    return (
+      <div className="p-5 flex flex-col items-center py-20 text-neutral-400">
+        <ListChecks className="w-10 h-10 mb-2 opacity-30" />
+        <p className="text-sm">Bu bo&apos;lim hali sinov bosqichida.</p>
       </div>
     );
   }
