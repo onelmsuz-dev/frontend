@@ -24,7 +24,7 @@ import type { Branch, Room } from "@/types";
 import {
   Plus, Trash2, Users, Building, Bell, Type, Link2,
   MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket, Wallet, History, Percent,
-  CalendarOff,
+  CalendarOff, SlidersHorizontal, ChevronDown,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useRooms } from "@/lib/hooks/useRooms";
@@ -57,11 +57,16 @@ const WORK_DAYS = [
  * (bizning mijozimizning mijozi) va "OneRoom obunasi" (bizning
  * mijozimiz bizga to'laydi) — nomning o'zi kimga to'lov ekanini aytadi.
  */
+/**
+ * SOZLAMALAR — IKKI QAVATLI (2026-09-28, chap menyu bilan bir uslubda).
+ * Ilgari 15 bo'lim bitta ustunda, telefonda esa bitta uzun lentada edi.
+ * Endi 4 asosiy guruh; ochilgan guruhning ichida uning bo'limlari.
+ */
 const groups = [
-  { id: "markaz", label: "Markaz" },
-  { id: "pul",    label: "Pul va hisob" },
-  { id: "obuna",  label: "OneRoom obunasi" },
-  { id: "tizim",  label: "Tizim" },
+  { id: "markaz", label: "Markaz",          hint: "Ma'lumot, filiallar, xonalar, xodimlar", icon: Building },
+  { id: "pul",    label: "Pul va hisob",    hint: "To'lov rejimi, chegirmalar",              icon: Wallet },
+  { id: "obuna",  label: "OneRoom obunasi", hint: "Tarif va muddat",                         icon: CreditCard },
+  { id: "tizim",  label: "Tizim",           hint: "Ko'rinish, bildirishnoma, tarix",         icon: SlidersHorizontal },
 ] as const;
 
 const sections = [
@@ -124,7 +129,9 @@ export default function SettingsPage() {
 }
 
 function SettingsContent() {
-  const [activeSection, setActiveSection] = useState("xodimlar");
+  // Standart — "Markaz ma'lumoti": Xodimlar endi o'z bo'limiga ega, sozlamalar
+  // ichidagi nusxasi rollarni sozlash uchun qoladi.
+  const [activeSection, setActiveSection] = useState("markaz");
 
   // Bayroq va ruxsat ortidagi bo'limlar.
   //
@@ -369,44 +376,124 @@ function SettingsContent() {
           Ilgari `flex` doimiy edi va 208px lik yon menyu telefonda ekranning
           yarmini egallab, kontent qolgan tor joyga siqilib chiqib ketardi. */}
       <div className="p-4 lg:p-6 flex flex-col lg:flex-row gap-4 lg:gap-6">
-        {/* Bo'limlar — mobilda gorizontal lenta, desktopda yon menyu */}
-        <div className="lg:w-52 lg:shrink-0 -mx-1 px-1 lg:mx-0 lg:px-0">
-          <nav className="flex lg:flex-col gap-1.5 lg:gap-0.5 overflow-x-auto pb-1 lg:pb-0
-            [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {/* Guruh sarlavhalari FAQAT desktopda: mobil lenta gorizontal
-                aylanadi va u yerda sarlavha qatorni buzib, tablarni
-                topishni qiyinlashtirardi. */}
-            {groups.map(g => {
-              const items = visibleSections.filter(s => s.group === g.id);
-              if (items.length === 0) return null;
-              return (
-                <div key={g.id} className="contents lg:block">
-                  <p className="hidden lg:block text-[10px] font-bold uppercase tracking-wider
-                    text-neutral-400 dark:text-neutral-500 px-3 pt-4 pb-1.5 first:pt-0">
-                    {g.label}
-                  </p>
-                  {items.map(s => {
-                    const Icon = s.icon;
+        {/* BO'LIMLAR — IKKI QAVATLI.
+            Desktop: guruhlar akkordeon, faqat faol guruh ochiq; guruh
+            sarlavhasi bosilsa uning birinchi bo'limi ochiladi.
+            Telefon: birinchi qator — guruhlar, ikkinchi qator — faol
+            guruhning bo'limlari (ilgari 15 tab bitta lentada edi). */}
+        {(() => {
+          const guruhlar = groups
+            .map(g => ({ ...g, items: visibleSections.filter(s => s.group === g.id) }))
+            .filter(g => g.items.length > 0);
+          const faolGuruh = guruhlar.find(g => g.items.some(s => s.id === activeSection))?.id
+            ?? guruhlar[0]?.id ?? null;
+          const guruhgaOt = (g: (typeof guruhlar)[number]) => {
+            if (g.id === faolGuruh) return;
+            setActiveSection(g.items[0].id);
+          };
+          const faolItems = guruhlar.find(g => g.id === faolGuruh)?.items ?? [];
+          return (
+            <div className="lg:w-56 lg:shrink-0">
+              {/* ── Telefon: ikki qator ── */}
+              <div className="lg:hidden space-y-2">
+                <div className="flex p-1 gap-0.5 glass-soft rounded-xl overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {guruhlar.map(g => {
+                    const GIcon = g.icon;
+                    const on = g.id === faolGuruh;
                     return (
-                      <button key={s.id} onClick={() => setActiveSection(s.id)}
-                        data-tour={`settings-tab-${s.id}`}
+                      <button key={g.id} type="button" onClick={() => guruhgaOt(g)}
                         className={cn(
-                          "flex items-center gap-2.5 rounded-lg text-sm font-medium transition-colors",
-                          "shrink-0 whitespace-nowrap px-3 py-2.5 lg:w-full",
-                          activeSection === s.id
-                            ? "bg-indigo-600 text-white dark:bg-indigo-500"
-                            : "glass-soft lg:bg-transparent text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10"
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all shrink-0",
+                          on ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
+                             : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200",
                         )}>
-                        <Icon className="w-4 h-4 shrink-0" />
-                        {s.label}
+                        <GIcon className="w-3.5 h-3.5" />{g.label}
                       </button>
                     );
                   })}
                 </div>
-              );
-            })}
-          </nav>
-        </div>
+                {faolItems.length > 1 && (
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {faolItems.map(s => {
+                      const Icon = s.icon;
+                      const on = activeSection === s.id;
+                      return (
+                        <button key={s.id} type="button" onClick={() => setActiveSection(s.id)}
+                          data-tour={`settings-tab-${s.id}`}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg text-[13px] font-medium transition-colors shrink-0 whitespace-nowrap px-3 py-2",
+                            on ? "bg-indigo-600 text-white dark:bg-indigo-500"
+                               : "glass-soft text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10",
+                          )}>
+                          <Icon className="w-4 h-4 shrink-0" />{s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Desktop: akkordeon ── */}
+              <nav className="hidden lg:flex flex-col gap-1.5 sticky top-24">
+                {guruhlar.map(g => {
+                  const GIcon = g.icon;
+                  const ochiq = g.id === faolGuruh;
+                  const yolgiz = g.items.length === 1;
+                  return (
+                    <div key={g.id}
+                      className={cn("rounded-2xl border transition-colors",
+                        ochiq ? "glass-panel border-white/60 dark:border-white/10 shadow-sm"
+                              : "border-transparent hover:bg-white/40 dark:hover:bg-white/5")}>
+                      <button type="button" aria-expanded={ochiq}
+                        onClick={() => (yolgiz ? setActiveSection(g.items[0].id) : guruhgaOt(g))}
+                        className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-left transition-colors",
+                          ochiq ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-600 dark:text-neutral-400")}>
+                        <span className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors",
+                          ochiq ? "bg-indigo-100/80 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200"
+                                : "glass-soft text-neutral-500 dark:text-neutral-400")}>
+                          <GIcon className="w-4 h-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] font-semibold leading-tight">{g.label}</span>
+                          {!ochiq && (
+                            <span className="block text-[10.5px] text-neutral-400 dark:text-neutral-500 truncate mt-0.5">{g.hint}</span>
+                          )}
+                        </span>
+                        {!yolgiz && (
+                          <ChevronDown className={cn("w-3.5 h-3.5 shrink-0 opacity-60 transition-transform duration-200", ochiq && "rotate-180")} />
+                        )}
+                      </button>
+                      <div className={cn("grid transition-[grid-template-rows] duration-200 ease-out",
+                        ochiq && !yolgiz ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+                        <div className="overflow-hidden">
+                          <div className="px-2 pb-2 flex flex-col gap-0.5">
+                            {g.items.map(s => {
+                              const Icon = s.icon;
+                              const on = activeSection === s.id;
+                              return (
+                                <button key={s.id} type="button" onClick={() => setActiveSection(s.id)}
+                                  data-tour={`settings-tab-${s.id}`}
+                                  tabIndex={ochiq ? 0 : -1}
+                                  className={cn(
+                                    "w-full flex items-center gap-2.5 rounded-xl text-[13px] font-medium transition-colors px-3 py-2 text-left",
+                                    on ? "bg-indigo-600 text-white dark:bg-indigo-500 shadow-sm"
+                                       : "text-neutral-600 dark:text-neutral-400 hover:bg-white/70 dark:hover:bg-white/10",
+                                  )}>
+                                  <Icon className="w-4 h-4 shrink-0" />
+                                  <span className="truncate">{s.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </nav>
+            </div>
+          );
+        })()}
 
         <div className="flex-1 min-w-0 max-w-3xl space-y-4">
 
