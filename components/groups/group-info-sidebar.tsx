@@ -162,7 +162,7 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
           {group.room?.capacity != null && <Row icon={MapPin} label="Xona sig'imi" value={String(group.room.capacity)} />}
           <Row label="Mashg'ulotlar sanalari"
             value={`${formatUzDate(group.startDate)} — ${group.endDate ? formatUzDate(group.endDate) : "hozircha cheksiz"}`} />
-          <p className="text-[10.5px] text-neutral-400 pt-1">(id: {group.id})</p>
+          <p className="text-[10.5px] text-neutral-400 pt-1">(id: {group.groupNumber ?? group.id})</p>
         </dl>
 
         {(canUpdate || canDelete) && (
