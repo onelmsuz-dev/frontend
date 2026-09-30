@@ -160,7 +160,7 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
             value={`${(group.scheduleDays ?? []).map((d: string) => WEEKDAY_SHORT[d] ?? d).join(", ")} · ${group.startTime}`} />
           {group.room?.name && <Row icon={MapPin} label="Xona" value={group.room.name} />}
           {group.room?.capacity != null && <Row icon={MapPin} label="Xona sig'imi" value={String(group.room.capacity)} />}
-          <Row label="Mashg'ulotlar sanalari"
+          <Row label="Mashg'ulotlar sanalari" wrap
             value={`${formatUzDate(group.startDate)} — ${group.endDate ? formatUzDate(group.endDate) : "hozircha cheksiz"}`} />
           <p className="text-[10.5px] text-neutral-400 pt-1">(id: {group.groupNumber ?? group.id})</p>
         </dl>
@@ -401,12 +401,20 @@ function StudentHoverCard({ sg, rect }: { sg: any; rect: DOMRect }) {
   );
 }
 
-function Row({ icon: Icon, label, value }: { icon?: any; label: string; value: string }) {
+/**
+ * `wrap` — sana oralig'i kabi uzunroq qiymatlar uchun: `truncate`
+ * (bir qatorda "...") o'rniga ikkinchi qatorga tushadi. Standart
+ * (`truncate`) qisqa qiymatlar (kurs nomi, narx) uchun to'g'ri ishlaydi,
+ * lekin "Mashg'ulotlar sanalari" tor yon panelda "30.07.2026 ..." bo'lib
+ * kesilib qolardi — tugash sanasi umuman ko'rinmasdi (egasining talabi,
+ * 2026-09-30).
+ */
+function Row({ icon: Icon, label, value, wrap }: { icon?: any; label: string; value: string; wrap?: boolean }) {
   return (
     <div className="flex items-start gap-2 text-[12.5px]">
       {Icon && <Icon className="w-3.5 h-3.5 text-neutral-400 mt-0.5 shrink-0" />}
       <dt className="font-semibold text-neutral-700 dark:text-neutral-300 shrink-0">{label}:</dt>
-      <dd className="text-neutral-500 dark:text-neutral-400 min-w-0 truncate">{value}</dd>
+      <dd className={cn("text-neutral-500 dark:text-neutral-400 min-w-0", wrap ? "break-words" : "truncate")}>{value}</dd>
     </div>
   );
 }
