@@ -10,11 +10,15 @@ import { attendanceFrom } from "@/lib/attendance-from";
 import { businessToday, toDateStr } from "@/lib/time";
 import { UZ_MONTHS_SHORT, UZ_WEEKDAYS } from "@/lib/date-uz";
 
-type Status = "KELDI" | "KELMADI" | "KECH_KELDI" | "SABABLI";
+type Status = "KELDI" | "KELMADI" | "KECH_KELDI" | "SABABLI" | "SINOV_DARSI";
 type Rec = { studentId: string; date: string; status: Status; note?: string | null };
 
 const DOW_TO_VALUE = ["YAKSHANBA", "DUSHANBA", "SESHANBA", "CHORSHANBA", "PAYSHANBA", "JUMA", "SHANBA"];
+/** Popupda qo'lda tanlanadiganlar. `SINOV_DARSI` bu yerda YO'Q — uni backend
+ *  sinov o'quvchisi guruhga qo'shilganda o'zi yozadi, xodim tanlamaydi. */
 const STATUS_ORDER: Status[] = ["KELDI", "KECH_KELDI", "KELMADI", "SABABLI"];
+/** "Jami" taqsimotida ko'rsatiladiganlar — sinov darsi ham sanaladi. */
+const SUMMARY_ORDER: Status[] = [...STATUS_ORDER, "SINOV_DARSI"];
 /** Shu statuslarda SABABI bo'lishi mumkin — tanlanganda izoh so'raladi. */
 const NOTE_STATUSES: Status[] = ["KECH_KELDI", "SABABLI"];
 
@@ -23,6 +27,9 @@ const STATUS_CFG: Record<Status, { short: string; cls: string }> = {
   KECH_KELDI: { short: "Kech",    cls: "bg-amber-500 text-white" },
   KELMADI:    { short: "Yo'q",    cls: "bg-red-500 text-white" },
   SABABLI:    { short: "Sababli", cls: "bg-blue-500 text-white" },
+  // Ilgari bu kalit yo'q edi: sinov o'quvchisi bor guruh ochilganda
+  // `STATUS_CFG[status].cls` undefined'dan o'qib, butun sahifa yiqilardi.
+  SINOV_DARSI: { short: "Sinov",  cls: "bg-purple-500 text-white" },
 };
 
 const POPUP_W = 112;      // w-28
@@ -150,7 +157,7 @@ export function GroupAttendanceGrid({
 
   /** Shu sanada kim qanday belgilangan — "Jami" qatoridagi popup shundan quriladi. */
   function summaryForDate(ds: string) {
-    const counts: Record<Status, number> = { KELDI: 0, KECH_KELDI: 0, KELMADI: 0, SABABLI: 0 };
+    const counts: Record<Status, number> = { KELDI: 0, KECH_KELDI: 0, KELMADI: 0, SABABLI: 0, SINOV_DARSI: 0 };
     let marked = 0;
     let applicable = 0;
     for (const sg of roster) {
@@ -268,7 +275,7 @@ export function GroupAttendanceGrid({
             <p className="text-[10.5px] text-neutral-400">Hali belgilanmagan</p>
           ) : (
             <div className="space-y-1">
-              {STATUS_ORDER.map(st => counts[st] > 0 && (
+              {SUMMARY_ORDER.map(st => counts[st] > 0 && (
                 <div key={st} className="flex items-center justify-between gap-2 text-[10.5px] font-normal">
                   <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300">
                     <span className={cn("w-2 h-2 rounded-full shrink-0", STATUS_CFG[st].cls.split(" ")[0])} />
