@@ -103,11 +103,18 @@ export async function deleteReminder(id: string): Promise<string | null> {
  * "yangi guruh jadvalini tasdiqlash"). `studentId` berilsa backend
  * shu o'quvchiga biriktiradi (`/vazifalarim`da ixtiyoriy tanlov).
  */
-export async function createReminder(data: { text: string; dueDate?: string; assigneeId: string; studentId?: string }) {
-  const res = await fetch("/api/reminders", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  revalidateReminders();
-  return res.ok;
+export async function createReminder(
+  data: { text: string; dueDate?: string; assigneeId: string; studentId?: string },
+): Promise<string | null> {
+  try {
+    const res = await fetch("/api/reminders", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    return await xato(res);
+  } catch {
+    return "Serverga ulanib bo'lmadi";
+  } finally {
+    revalidateReminders();
+  }
 }
