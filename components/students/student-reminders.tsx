@@ -14,10 +14,13 @@ import { useMe } from "@/lib/hooks/useMe";
 const KEY = (studentId: string) => `/api/students/${studentId}/reminders`;
 
 /**
- * ESLATMALAR — xodim uchun follow-up ("3 kundan keyin qo'ng'iroq qilish").
+ * VAZIFALAR — xodim uchun follow-up ("3 kundan keyin qo'ng'iroq qilish").
  * Izohdan farqi: bu bajariladigan VAZIFA — muddat, biriktirilgan xodim va
  * belgi bilan; izoh esa erkin kontekst matni. Kimga biriktirilgan bo'lsa,
  * o'sha odam buni top-header'dagi "Vazifalarim" belgisida ham ko'radi.
+ *
+ * Ilgari bu bo'lim "Eslatmalar" deb atalardi — "Izoh" bilan juda yaqin
+ * turib, ikkalasini farqlash qiyin edi (egasining talabi, 2026-09-30).
  */
 export function StudentReminders({ studentId, canEdit }: { studentId: string; canEdit: boolean }) {
   const { me } = useMe();
@@ -51,7 +54,7 @@ export function StudentReminders({ studentId, canEdit }: { studentId: string; ca
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
-        setErr(d?.error ?? "Eslatma saqlanmadi");
+        setErr(d?.error ?? "Vazifa saqlanmadi");
         return;
       }
       setText(""); setDueDate(todayStr()); setAssigneeId(""); setShowForm(false);
@@ -86,10 +89,10 @@ export function StudentReminders({ studentId, canEdit }: { studentId: string; ca
         <h3 className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-500
           dark:text-neutral-400 uppercase tracking-wider">
           <Bell className="w-3.5 h-3.5" />
-          Eslatmalar
+          Vazifalar
         </h3>
         {canEdit && (
-          <button onClick={() => setShowForm(v => !v)} title="Eslatma qo'shish"
+          <button onClick={() => setShowForm(v => !v)} title="Vazifa qo'shish"
             className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400
               hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors">
             <Plus className="w-3.5 h-3.5" />
@@ -125,7 +128,7 @@ export function StudentReminders({ studentId, canEdit }: { studentId: string; ca
       {err && <p className="text-[11.5px] text-red-600 dark:text-red-400 mb-2">{err}</p>}
 
       {open.length === 0 && done.length === 0 && (
-        <p className="text-[12.5px] text-neutral-400">Eslatma yo&apos;q</p>
+        <p className="text-[12.5px] text-neutral-400">Vazifa yo&apos;q</p>
       )}
 
       {open.length > 0 && (

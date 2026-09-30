@@ -1718,8 +1718,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             onSaved={revalidateAll}
           />
 
-          {/* ESLATMALAR — follow-up vazifalar ("3 kundan keyin
-              qo'ng'iroq qilish"). Izohdan farqi: bu muddatli VAZIFA.
+          {/* VAZIFALAR — follow-up ("3 kundan keyin qo'ng'iroq qilish").
+              Izohdan farqi: bu muddatli VAZIFA (nomi ham shu — "Eslatma"
+              "Izoh" bilan juda yaqin turardi, egasining talabi, 2026-09-30).
               Bosqichma-bosqich chiqarish — hozircha faqat demo markazda. */}
           {remindersOn && canReminders && <StudentReminders studentId={student.id} canEdit={canAddReminder} />}
         </div>

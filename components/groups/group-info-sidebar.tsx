@@ -384,7 +384,7 @@ function StudentHoverCard({ sg, rect }: { sg: any; rect: DOMRect }) {
 
       {s.note && (
         <div className="mt-3 pt-2.5 border-t border-white/50 dark:border-white/10">
-          <p className="text-[10px] text-neutral-400 uppercase tracking-wider mb-0.5">Eslatma</p>
+          <p className="text-[10px] text-neutral-400 uppercase tracking-wider mb-0.5">Izoh</p>
           <p className="text-[12px] text-neutral-700 dark:text-neutral-200 leading-snug">{s.note}</p>
           {(s.noteByName || s.noteAt) && (
             <p className="text-[10.5px] text-neutral-400 mt-0.5">

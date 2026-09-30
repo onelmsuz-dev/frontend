@@ -27,9 +27,9 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 /**
- * MENING VAZIFALARIM — shu foydalanuvchiga biriktirilgan barcha eslatmalar,
+ * MENING VAZIFALARIM — shu foydalanuvchiga biriktirilgan barcha vazifalar,
  * qaysi o'quvchiga tegishli bo'lishidan qat'i nazar bitta ro'yxatda.
- * O'quvchi profilidagi "Eslatmalar" blokining o'zi — faqat u yerda faqat
+ * O'quvchi profilidagi "Vazifalar" blokining o'zi — faqat u yerda faqat
  * bitta o'quvchi ko'rinadi, bu yerda esa hammasi.
  */
 export default function MyTasksPage() {
