@@ -43,7 +43,8 @@ export default function MyTasksPage() {
   // UMUMAN yuborilmaydi (aks holda har foydalanuvchi har daqiqada
   // kerakmas 404 olib turardi).
   const { data, isLoading } = useMyTasks(enabled === true);
-  const { data: staffRaw } = useStaffMembers(enabled === true);
+  // Xodimlar ro'yxati faqat yaratish formasi uchun — ruxsatsiz xodimga 403 so'rov yubormaylik.
+  const { data: staffRaw } = useStaffMembers(enabled === true && canCreate);
   const staff = Array.isArray(staffRaw) ? staffRaw : [];
   const all = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [tab, setTab] = useState<"barchasi" | ReminderStatus>("barchasi");

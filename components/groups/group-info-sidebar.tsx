@@ -103,6 +103,8 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
     return (d as { error?: string })?.error ?? zaxira;
   }
 
+  const ketganSoni = students.filter(x => x.enrollmentStatus === "CHIQIB_KETGAN").length;
+
   const sorted = useMemo(() => {
     const list = [...students];
     if (sort === "az") list.sort((a, b) => (a.student?.name ?? "").localeCompare(b.student?.name ?? ""));
@@ -196,7 +198,13 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
             bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 outline-none">
           {SORTS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
         </select>
-        <span className="text-[11px] text-neutral-400">{students.length} ta</span>
+        {/* Guruh javobi endi chiqib ketganlarni ham qaytaradi (eski davomat
+            tarixi uchun) — son faqat HOZIRGI a'zolarni sanasin, ketganlar
+            alohida. Aks holda "15 ta" deb turib, 3 tasi allaqachon ketgan bo'lardi. */}
+        <span className="text-[11px] text-neutral-400">
+          {`${students.filter(x => x.enrollmentStatus !== "CHIQIB_KETGAN").length} ta`}
+          {ketganSoni > 0 && ` · ${ketganSoni} ketgan`}
+        </span>
       </div>
 
       {amalXato && (
