@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import useSWR, { mutate } from "swr";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
@@ -34,6 +34,12 @@ const TOOLTIP_H_EST = 90;
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
 
+/** Portal faqat brauzerda — effektda setState o'rniga (loyiha lint qoidasi). */
+const bosh = () => () => {};
+function useMounted() {
+  return useSyncExternalStore(bosh, () => true, () => false);
+}
+
 /**
  * DAVOMAT — OY JADVALI (sana × o'quvchi).
  *
@@ -59,14 +65,16 @@ export function GroupAttendanceGrid({
   students: any[];
   canMark: boolean;
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   const today = useMemo(() => businessToday(), []);
   const todayStr = toDateStr(today);
 
   const [view, setView] = useState(() => ({ year: today.getFullYear(), month: today.getMonth() }));
   const [savingCell, setSavingCell] = useState<string | null>(null);
+  // Server rad etsa (dars hali boshlanmagan, dars kuni emas...) — sabab
+  // ekranda. Ilgari javob tekshirilmasdi va belgi jimgina saqlanmasdi.
+  const [saveErr, setSaveErr] = useState("");
 
   // ── Belgilash popup (bosish bilan) ──
   const [openCell, setOpenCell] = useState<{ key: string; sg: any; ds: string } | null>(null);
@@ -116,7 +124,11 @@ export function GroupAttendanceGrid({
   const recordMap = useMemo(() => {
     const m = new Map<string, { status: Status; note: string | null }>();
     const records = Array.isArray(data) ? data : [];
-    for (const r of records) m.set(`${r.studentId}|${r.date}`, { status: r.status, note: r.note ?? null });
+    // Backend sanani to'liq ISO ("2026-09-29T00:00:00.000Z") qaytaradi, jadval
+    // esa "YYYY-MM-DD" bilan qidiradi. Davomat UTC yarim tunida saqlanadi,
+    // shuning uchun birinchi 10 belgi — aynan dars kuni. Ilgari to'liq satr
+    // kalit bo'lib, hech bir belgi jadvalda ko'rinmasdi.
+    for (const r of records) m.set(`${r.studentId}|${String(r.date).slice(0, 10)}`, { status: r.status, note: r.note ?? null });
     return m;
   }, [data]);
 
@@ -157,15 +169,22 @@ export function GroupAttendanceGrid({
     setOpenCell(null);
     setPendingStatus(null);
     setSavingCell(key);
+    setSaveErr("");
     try {
-      await fetch("/api/attendance", {
+      const res = await fetch("/api/attendance", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           groupId, date: dateStr,
           records: [{ studentGroupId: sg.id, studentId: sg.studentId, status, note }],
         }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setSaveErr(d?.error ?? "Davomat saqlanmadi");
+      }
       mutate(`/api/attendance?groupId=${groupId}&month=${monthKey}`);
+    } catch {
+      setSaveErr("Serverga ulanib bo'lmadi");
     } finally {
       setSavingCell(null);
     }
@@ -299,6 +318,12 @@ export function GroupAttendanceGrid({
           </button>
         </div>
       </div>
+
+      {saveErr && (
+        <p className="text-[12px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-5 py-2 border-b border-white/50 dark:border-white/10">
+          {saveErr}
+        </p>
+      )}
 
       {roster.length === 0 ? (
         <p className="text-[12px] text-neutral-400 px-5 py-8 text-center">Guruhda o&apos;quvchi yo&apos;q</p>

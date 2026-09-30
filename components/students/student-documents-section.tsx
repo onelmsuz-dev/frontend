@@ -5,19 +5,19 @@ import useSWR, { mutate } from "swr";
 import { FileText, Upload, Download, Trash2, Image as ImageIcon, File as FileIcon } from "lucide-react";
 import { fetcher } from "@/lib/fetcher";
 import { formatUzDate } from "@/lib/date-uz";
+import { compressImage, readAsDataUrl, UPLOAD_MAX_BYTES } from "@/lib/image-compress";
 
+/** Ro'yxatdagi fayl — MAZMUNSIZ (mazmun yuklab olishda alohida so'raladi). */
 interface Doc {
   id: string;
   name: string;
   type: string;
   size: number;
-  dataUrl: string;
   uploadedAt: string;
   uploadedBy: string;
 }
 
 const KEY = (studentId: string) => `/api/students/${studentId}/documents`;
-const MAX_SIZE = 5 * 1024 * 1024;
 
 function fmtSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -31,19 +31,17 @@ function docIcon(type: string) {
   return FileIcon;
 }
 
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+/** Rasm nomi JPEG'ga aylangach kengaytmasi ham mos bo'lsin. */
+function jpgNomi(name: string): string {
+  return /\.(jpe?g)$/i.test(name) ? name : `${name.replace(/\.[^.]+$/, "")}.jpg`;
 }
 
 /**
- * FAYLLAR — shartnoma, pasport nusxasi va h.k. Mock backend fayllarni
- * xotirada data-URL sifatida saqlaydi (haqiqiy disk/bulut yo'q) — faqat
- * dizayn maketi uchun, kichik fayllarga mo'ljallangan.
+ * FAYLLAR — shartnoma, pasport nusxasi va h.k. Fayl bazaga base64 bo'lib
+ * yoziladi (alohida fayl-saqlash xizmati yo'q). So'rov Vercel proksisidan
+ * o'tadi va u 4.5 MB dan kattasini o'tkazmaydi — shuning uchun rasm
+ * yuborishdan oldin kichraytiriladi, boshqa fayl 3 MB bilan cheklanadi,
+ * ro'yxat esa mazmunsiz keladi (`lib/image-compress.ts`).
  */
 export function StudentDocumentsSection({ studentId, canUpload }: { studentId: string; canUpload: boolean }) {
   const { data, isLoading } = useSWR<Doc[]>(KEY(studentId), fetcher);
@@ -55,21 +53,56 @@ export function StudentDocumentsSection({ studentId, canUpload }: { studentId: s
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     const file = files[0];
-    if (file.size > MAX_SIZE) { setErr("Fayl 5 MB dan katta bo'lmasligi kerak"); return; }
     setErr(""); setUploading(true);
     try {
-      const dataUrl = await readAsDataUrl(file);
-      await fetch(KEY(studentId), {
+      // Rasm — kichraytiriladi (pasport nusxasi o'qiladigan bo'lib qoladi).
+      const siqilgan = await compressImage(file, { maxSide: 1800, quality: 0.85 });
+      const payload = siqilgan
+        ? { name: jpgNomi(file.name), type: siqilgan.type, size: siqilgan.size, dataUrl: siqilgan.dataUrl }
+        : file.size > UPLOAD_MAX_BYTES
+          ? null
+          : { name: file.name, type: file.type, size: file.size, dataUrl: await readAsDataUrl(file) };
+      if (!payload) { setErr("Fayl 3 MB dan katta bo'lmasligi kerak (rasmlar o'zi kichraytiriladi)"); return; }
+
+      const res = await fetch(KEY(studentId), {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, type: file.type, size: file.size, dataUrl }),
+        body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setErr(res.status === 413 ? "Fayl juda katta" : d?.error ?? "Yuklab bo'lmadi");
+        return;
+      }
       mutate(KEY(studentId));
     } catch { setErr("Yuklab bo'lmadi"); }
     finally { setUploading(false); if (inputRef.current) inputRef.current.value = ""; }
   }
 
+  /** Mazmun faqat shu yerda so'raladi — ro'yxat javobi yengil qoladi. */
+  async function download(d: Doc) {
+    setErr("");
+    try {
+      const res = await fetch(`${KEY(studentId)}/${d.id}`);
+      const full = await res.json().catch(() => null);
+      if (!res.ok || !full?.dataUrl) { setErr(full?.error ?? "Faylni ochib bo'lmadi"); return; }
+      const a = document.createElement("a");
+      a.href = full.dataUrl;
+      a.download = d.name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch { setErr("Serverga ulanib bo'lmadi"); }
+  }
+
   async function remove(docId: string) {
-    await fetch(`${KEY(studentId)}/${docId}`, { method: "DELETE" });
+    setErr("");
+    try {
+      const res = await fetch(`${KEY(studentId)}/${docId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setErr(d?.error ?? "O'chirib bo'lmadi");
+      }
+    } catch { setErr("Serverga ulanib bo'lmadi"); }
     mutate(KEY(studentId));
   }
 
@@ -116,11 +149,11 @@ export function StudentDocumentsSection({ studentId, canUpload }: { studentId: s
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <a href={d.dataUrl} download={d.name} title="Yuklab olish"
+                  <button onClick={() => download(d)} title="Yuklab olish"
                     className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400
                       hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors">
                     <Download className="w-3.5 h-3.5" />
-                  </a>
+                  </button>
                   {canUpload && (
                     <button onClick={() => remove(d.id)} title="O'chirish"
                       className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400

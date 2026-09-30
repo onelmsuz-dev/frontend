@@ -9,6 +9,7 @@ import { formatUzDate } from "@/lib/date-uz";
 import { todayStr } from "@/lib/form-constants";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useStaffMembers, toggleReminderDone, deleteReminder, type Reminder } from "@/lib/hooks/useReminders";
+import { useMe } from "@/lib/hooks/useMe";
 
 const KEY = (studentId: string) => `/api/students/${studentId}/reminders`;
 
@@ -19,9 +20,12 @@ const KEY = (studentId: string) => `/api/students/${studentId}/reminders`;
  * o'sha odam buni top-header'dagi "Vazifalarim" belgisida ham ko'radi.
  */
 export function StudentReminders({ studentId, canEdit }: { studentId: string; canEdit: boolean }) {
+  const { me } = useMe();
   const { data } = useSWR<Reminder[]>(KEY(studentId), fetcher);
-  const { data: staffRaw } = useStaffMembers();
-  const staff = Array.isArray(staffRaw) ? staffRaw : [];
+  // Xodimlar ro'yxati faqat vazifa BERA oladiganga kerak (backend ham shunday).
+  const { data: staffRaw } = useStaffMembers(canEdit);
+  // O'zi ro'yxatda takrorlanmasin — birinchi variant allaqachon "O'zimga".
+  const staff = (Array.isArray(staffRaw) ? staffRaw : []).filter(s => s.id !== me?.id);
   const all = Array.isArray(data) ? data : [];
   const open = all.filter(r => !r.done);
   const done = all.filter(r => r.done);
@@ -29,32 +33,50 @@ export function StudentReminders({ studentId, canEdit }: { studentId: string; ca
   const [showForm, setShowForm] = useState(false);
   const [text, setText] = useState("");
   const [dueDate, setDueDate] = useState(todayStr());
+  // "" — "O'zimga": backend bo'sh ijrochini yaratuvchining o'zi deb oladi.
+  // Ilgari birinchi variant biror xodim edi, lekin holat "" qolardi va
+  // xodim yuborilmasdi — vazifa 400 bilan jimgina yo'qolardi.
   const [assigneeId, setAssigneeId] = useState("");
   const [saving, setSaving] = useState(false);
   const [showDone, setShowDone] = useState(false);
+  const [err, setErr] = useState("");
 
   async function submit() {
     if (!text.trim()) return;
-    setSaving(true);
+    setSaving(true); setErr("");
     try {
-      await fetch(KEY(studentId), {
+      const res = await fetch(KEY(studentId), {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.trim(), dueDate, assigneeId: assigneeId || undefined }),
+        body: JSON.stringify({ text: text.trim(), dueDate, ...(assigneeId ? { assigneeId } : {}) }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setErr(d?.error ?? "Eslatma saqlanmadi");
+        return;
+      }
       setText(""); setDueDate(todayStr()); setAssigneeId(""); setShowForm(false);
       mutate(KEY(studentId));
+    } catch {
+      setErr("Serverga ulanib bo'lmadi");
     } finally { setSaving(false); }
   }
 
   async function toggle(r: Reminder) {
-    await toggleReminderDone(r.id, !r.done);
+    setErr("");
+    const e = await toggleReminderDone(r.id, !r.done);
+    if (e) setErr(e);
     mutate(KEY(studentId));
   }
 
   async function remove(r: Reminder) {
-    await deleteReminder(r.id);
+    setErr("");
+    const e = await deleteReminder(r.id);
+    if (e) setErr(e);
     mutate(KEY(studentId));
   }
+
+  /** Belgilash: boshqaruvchi yoki vazifa o'ziga biriktirilgan xodim. */
+  const canToggle = (r: Reminder) => canEdit || r.assigneeId === me?.id;
 
   const today = todayStr();
 
@@ -87,6 +109,7 @@ export function StudentReminders({ studentId, canEdit }: { studentId: string; ca
             <select value={assigneeId} onChange={e => setAssigneeId(e.target.value)}
               className="h-9 flex-1 min-w-0 px-2.5 text-[12px] rounded-xl border border-white/60 dark:border-white/10
                 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 outline-none">
+              <option value="">O&apos;zimga</option>
               {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
@@ -99,6 +122,8 @@ export function StudentReminders({ studentId, canEdit }: { studentId: string; ca
         </div>
       )}
 
+      {err && <p className="text-[11.5px] text-red-600 dark:text-red-400 mb-2">{err}</p>}
+
       {open.length === 0 && done.length === 0 && (
         <p className="text-[12.5px] text-neutral-400">Eslatma yo&apos;q</p>
       )}
@@ -109,7 +134,7 @@ export function StudentReminders({ studentId, canEdit }: { studentId: string; ca
             const overdue = r.status === "MUDDATI_OTGAN";
             return (
               <li key={r.id} className="flex items-start gap-2.5 group">
-                <button onClick={() => toggle(r)} disabled={!canEdit}
+                <button onClick={() => toggle(r)} disabled={!canToggle(r)}
                   title="Bajarildi deb belgilash"
                   className="w-4 h-4 mt-0.5 shrink-0 rounded border-2 border-neutral-300 dark:border-neutral-600
                     hover:border-green-500 transition-colors disabled:cursor-not-allowed" />
@@ -153,7 +178,7 @@ export function StudentReminders({ studentId, canEdit }: { studentId: string; ca
             <ul className="space-y-1.5 mt-1.5">
               {done.map(r => (
                 <li key={r.id} className="flex items-center gap-2.5">
-                  <button onClick={() => toggle(r)} disabled={!canEdit}
+                  <button onClick={() => toggle(r)} disabled={!canToggle(r)}
                     className="w-4 h-4 shrink-0 rounded bg-green-500 border-2 border-green-500
                       flex items-center justify-center disabled:cursor-not-allowed">
                     <Check className="w-2.5 h-2.5 text-white" />

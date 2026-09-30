@@ -51,6 +51,7 @@ import { StudentSmsSection } from "@/components/students/student-sms-section";
 import { StudentDocumentsSection } from "@/components/students/student-documents-section";
 import { BalanceTrendChart } from "@/components/students/balance-trend-chart";
 import { useFeature } from "@/lib/hooks/useFeatures";
+import { compressImage } from "@/lib/image-compress";
 
 function fmt(v: number) {
   return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
@@ -364,6 +365,16 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   // hali yuklanmagan, shu tabdorada miltillab ko'rinmasin deb yashirilgan.
   const remindersOn = useFeature("reminders") === true;
   const studentFilesOn = useFeature("student-files") === true;
+  // RUXSATLAR — backend `@Perm` bilan AYNAN bir xil ("kamida bittasi").
+  // Tab/tugma ruxsatsiz ko'rinsa, bosilganda 403 olib bo'sh ro'yxat
+  // ko'rsatardi — xodim "funksiya ishlamayapti" deb o'ylardi.
+  const perms = me?.permissions;
+  const canReminders = hasPerm(perms, "reminders.view") || hasPerm(perms, "reminders.viewAll") || canManageGroups;
+  const canAddReminder = hasPerm(perms, "reminders.create") || canManageGroups;
+  const canSeeDocs = hasPerm(perms, "documents.view") || hasPerm(perms, "documents.manage") || canManageGroups;
+  const canManageDocs = hasPerm(perms, "documents.manage") || canManageGroups;
+  const canSeeSms = hasPerm(perms, "sms.view");
+  const canSeeHistory = hasPerm(perms, "activity.view");
 
   // To'lov uchun mos a'zoliklar (guruhni tashlab ketganlar chiqarib tashlanadi)
   const payableGroups: Membership[] = (student?.groups ?? []).filter(
@@ -407,24 +418,30 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   }
   const unarchiveStudent = () => setArchived(false);
 
-  // ── Profil rasmi — data-URL sifatida saqlanadi (mock). ──────────────────────
+  // ── Profil rasmi — `Student.avatar`, base64 data-URL. ─────────────────────
+  // 400 px gacha kichraytiriladi: telefon rasmi (3–6 MB) Vercel proksisidan
+  // o'tmasdi, o'tganda ham har profil ochilganda megabaytlab yuklanardi.
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarErr, setAvatarErr] = useState("");
   const avatarInputRef = useRef<HTMLInputElement>(null);
   async function uploadAvatar(file: File | undefined) {
     if (!file) return;
-    setAvatarUploading(true);
+    setAvatarUploading(true); setAvatarErr("");
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      await fetch(`/api/students/${id}`, {
+      const siqilgan = await compressImage(file, { maxSide: 400, quality: 0.85 });
+      if (!siqilgan) { setAvatarErr("Bu rasmni ochib bo'lmadi — JPG yoki PNG tanlang"); return; }
+      const res = await fetch(`/api/students/${id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatar: dataUrl }),
+        body: JSON.stringify({ avatar: siqilgan.dataUrl }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setAvatarErr(d?.error ?? "Rasm saqlanmadi");
+        return;
+      }
       revalidateAll();
+    } catch {
+      setAvatarErr("Serverga ulanib bo'lmadi");
     } finally {
       setAvatarUploading(false);
       if (avatarInputRef.current) avatarInputRef.current.value = "";
@@ -1629,6 +1646,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 </span>
               </div>
             </div>
+            {avatarErr && <p className="text-[11.5px] text-red-600 dark:text-red-400 -mt-2 mb-3">{avatarErr}</p>}
 
             <div className="space-y-2">
               <a href={`tel:${student.phone}`}
@@ -1703,7 +1721,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           {/* ESLATMALAR — follow-up vazifalar ("3 kundan keyin
               qo'ng'iroq qilish"). Izohdan farqi: bu muddatli VAZIFA.
               Bosqichma-bosqich chiqarish — hozircha faqat demo markazda. */}
-          {remindersOn && <StudentReminders studentId={student.id} canEdit={canManageGroups} />}
+          {remindersOn && canReminders && <StudentReminders studentId={student.id} canEdit={canAddReminder} />}
         </div>
 
         {/* O'NG: tablar */}
@@ -1713,11 +1731,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               ...(canSeeMoney ? [{ id: "moliya", label: "Moliya", icon: DollarSign }] : []),
               { id: "guruhlar", label: "Guruhlar", icon: Users },
               ...(canSeeAttendance ? [{ id: "davomat", label: "Davomat", icon: Calendar }] : []),
-              ...(studentFilesOn ? [
-                { id: "sms", label: "SMS", icon: MessageSquare },
-                { id: "fayllar", label: "Fayllar", icon: FileText },
-              ] : []),
-              { id: "tarix", label: "Tarix", icon: History },
+              ...(studentFilesOn && canSeeSms ? [{ id: "sms", label: "SMS", icon: MessageSquare }] : []),
+              ...(studentFilesOn && canSeeDocs ? [{ id: "fayllar", label: "Fayllar", icon: FileText }] : []),
+              ...(canSeeHistory ? [{ id: "tarix", label: "Tarix", icon: History }] : []),
               ...(showGamification ? [{ id: "gamifikatsiya", label: "Gamifikatsiya", icon: Trophy }] : []),
             ].map(t => {
               const Icon = t.icon;
@@ -2317,14 +2333,16 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           </div>
           )}
 
-          {studentFilesOn && tab === "sms" && <StudentSmsSection studentId={student.id} />}
+          {studentFilesOn && canSeeSms && tab === "sms" && <StudentSmsSection studentId={student.id} />}
 
-          {studentFilesOn && tab === "fayllar" && (
-            <StudentDocumentsSection studentId={student.id} canUpload={canManageGroups} />
+          {studentFilesOn && canSeeDocs && tab === "fayllar" && (
+            <StudentDocumentsSection studentId={student.id} canUpload={canManageDocs} />
           )}
 
-          {tab === "tarix" && (
-            <EntityHistorySection entity="students" entityId={student.id}
+          {/* `entity` — jurnaldagi NOM ("Student"), URL segmenti emas. Ilgari
+              "students" yuborilardi va tab har doim bo'sh chiqardi. */}
+          {canSeeHistory && tab === "tarix" && (
+            <EntityHistorySection entity="Student" entityId={student.id}
               emptyHint="O'quvchi bilan bog'liq harakatlar (qo'shilishi, to'lovlar, guruh almashtirish...) shu yerda ko'rinadi." />
           )}
 

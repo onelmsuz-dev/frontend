@@ -17,13 +17,12 @@ import { useFeature } from "@/lib/hooks/useFeatures";
  * ketardi. Belgi faqat MUDDATI O'TGAN yoki ochiq vazifa bo'lsa ko'rinadi.
  */
 export function MyTasksButton() {
-  // Bosqichma-bosqich chiqarish — hozircha faqat demo markazda. `useMyTasks`
-  // baribir chaqiriladi (Hook qoidasi — shartli chaqirib bo'lmaydi), lekin
-  // natija faqat bayroq yoqiq bo'lsa chiziladi.
+  // Bayroq o'chiq bo'lsa so'rov UMUMAN ketmaydi (SWR kaliti `null`) —
+  // ilgari har bir foydalanuvchi har daqiqada 404 olib turardi.
   const enabled = useFeature("reminders");
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { data } = useMyTasks();
+  const { data } = useMyTasks(enabled === true);
   const tasks = Array.isArray(data) ? data : [];
   const openTasks = tasks.filter(t => !t.done);
   const overdueCount = openTasks.filter(t => t.status === "MUDDATI_OTGAN").length;
@@ -61,7 +60,8 @@ export function MyTasksButton() {
             <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Vazifalarim</h3>
             {overdueCount > 0 && (
               <span className="flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400">
-                <AlertTriangle className="w-3 h-3" /> {overdueCount} muddati o&apos;tgan
+                <AlertTriangle className="w-3 h-3" />
+                {`${overdueCount} muddati o'tgan`}
               </span>
             )}
           </div>
@@ -81,10 +81,12 @@ export function MyTasksButton() {
                   <div className="min-w-0 flex-1">
                     <p className="text-[12.5px] text-neutral-800 dark:text-neutral-200 leading-snug">{t.text}</p>
                     <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                      <Link href={`/students/${t.studentId}`} onClick={() => setOpen(false)}
-                        className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline">
-                        {t.studentName}
-                      </Link>
+                      {t.studentId && (
+                        <Link href={`/students/${t.studentId}`} onClick={() => setOpen(false)}
+                          className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline">
+                          {t.studentName}
+                        </Link>
+                      )}
                       {t.dueDate && (
                         <span className={cn("text-[11px]", t.status === "MUDDATI_OTGAN" ? "text-red-500 font-semibold" : "text-neutral-400")}>
                           · {formatUzDate(t.dueDate)}

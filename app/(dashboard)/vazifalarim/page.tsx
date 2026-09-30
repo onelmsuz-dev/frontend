@@ -28,7 +28,7 @@ function Skeleton({ className }: { className?: string }) {
  */
 export default function MyTasksPage() {
   const enabled = useFeature("reminders");
-  const { data, isLoading } = useMyTasks();
+  const { data, isLoading } = useMyTasks(enabled === true);
   const all = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [tab, setTab] = useState<"barchasi" | ReminderStatus>("barchasi");
 
@@ -100,10 +100,12 @@ export default function MyTasksPage() {
                       {t.text}
                     </p>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
-                      <Link href={`/students/${t.studentId}`}
-                        className="text-[11.5px] text-indigo-600 dark:text-indigo-400 hover:underline">
-                        {t.studentName}
-                      </Link>
+                      {t.studentId && (
+                        <Link href={`/students/${t.studentId}`}
+                          className="text-[11.5px] text-indigo-600 dark:text-indigo-400 hover:underline">
+                          {t.studentName}
+                        </Link>
+                      )}
                       {t.dueDate && (
                         <span className={cn("text-[11px]", t.status === "MUDDATI_OTGAN" ? "text-red-500 font-semibold flex items-center gap-1" : "text-neutral-400")}>
                           {t.status === "MUDDATI_OTGAN" && <AlertTriangle className="w-3 h-3" />}
