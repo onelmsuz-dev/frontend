@@ -65,19 +65,6 @@ const ENROLL_CFG: Record<string, { label: string; cls: string }> = {
   CHIQIB_KETGAN:  { label: "Ketgan", cls: "bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-500" },
 };
 
-/**
- * QARZ NUQTACHASI — telefon raqami oldida. `pay` (`PAY_STATUS_CFG`)
- * hisoblab chiqilardi-yu, qatorda hech qayerda ko'rsatilmasdi — xodim
- * qarzdorni bilish uchun har safar kartochkani ochishga majbur bo'lardi
- * (egasining talabi, 2026-09-30).
- */
-const PAY_DOT: Record<string, string> = {
-  TOLANDI:       "bg-green-500",
-  QARZDOR:       "bg-red-500",
-  SINOVDA:       "bg-neutral-300 dark:bg-neutral-600",
-  HISOBLANMAGAN: "bg-neutral-300 dark:bg-neutral-600",
-};
-
 const selectCls =
   "text-xs h-9 px-2.5 rounded-lg border border-white/60 dark:border-white/10 glass-soft " +
   "text-neutral-700 dark:text-neutral-300 outline-none focus:border-indigo-500 transition-colors";
@@ -558,12 +545,8 @@ export default function StudentsPage() {
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <p className="text-[13px] text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                            <span title={pay.label}
-                              className={cn("w-1.5 h-1.5 rounded-full shrink-0", PAY_DOT[payKey])} />
-                            {s.phone}
-                          </p>
-                          {s.parentPhone && <p className="text-[11px] text-neutral-400 pl-3">Ota: {s.parentPhone}</p>}
+                          <p className="text-[13px] text-neutral-700 dark:text-neutral-300">{s.phone}</p>
+                          {s.parentPhone && <p className="text-[11px] text-neutral-400">Ota: {s.parentPhone}</p>}
                         </TableCell>
                         <TableCell>
                           {/* BARCHA guruhlar. Bitta o'quvchi bir nechta fanga

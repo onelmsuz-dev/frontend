@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Pencil, Trash2, UserPlus, Clock, MapPin, Wallet, GraduationCap,
-  MoreVertical, UserX, UserCheck, Snowflake, UserRound,
+  MoreVertical, UserX, UserCheck, Snowflake, UserRound, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mutate } from "swr";
@@ -14,6 +15,7 @@ import { formatCurrency } from "@/lib/money";
 import { WEEKDAY_SHORT } from "@/lib/form-constants";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { activeFreeze, type FreezeLike } from "@/lib/freeze";
+import { payStatusFromBalance, PAY_STATUS_CFG } from "@/lib/payment-status";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
@@ -21,6 +23,12 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+/** Portal faqat brauzerda — effektda setState o'rniga (loyiha lint qoidasi). */
+const bosh = () => () => {};
+function useMounted() {
+  return useSyncExternalStore(bosh, () => true, () => false);
+}
 
 /**
  * QATOR HOLATI — 5 xil holat bor va hammasi bir qarashda ajralib
@@ -71,6 +79,14 @@ interface Props {
 export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelete, status, onAddStudent, onChanged }: Props) {
   const router = useRouter();
   const teacher = group.teacher?.user;
+  const mounted = useMounted();
+
+  // O'QUVCHI USTIGA BORGANDA — tezkor ma'lumot kartochkasi (telefon,
+  // balans, qarz holati, qo'shilgan/faollashtirilgan sana, eslatma).
+  // Ilgari bu faqat profilni ochib ko'rilardi (egasining talabi,
+  // 2026-09-30). Ro'yxatning o'zi (ism, holat belgisi) o'zgarmaydi —
+  // shu ustiga QO'SHILADI.
+  const [hover, setHover] = useState<{ sg: any; rect: DOMRect } | null>(null);
 
   const [sort, setSort] = useState("az");
   const [showEdit, setShowEdit] = useState(false);
@@ -200,7 +216,9 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
               const cfg = STATUS_CFG[rowStatus(sg)];
               const StatusIcon = cfg.icon;
               return (
-                <li key={sg.id} className="flex items-center gap-2.5 px-4 py-2 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
+                <li key={sg.id} className="flex items-center gap-2.5 px-4 py-2 hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
+                  onMouseEnter={(e) => setHover({ sg, rect: e.currentTarget.getBoundingClientRect() })}
+                  onMouseLeave={() => setHover(h => (h?.sg === sg ? null : h))}>
                   <span className="text-[11px] text-neutral-400 w-4 text-right shrink-0">{i + 1}.</span>
                   {/* Ism O'Z QATORIDA, to'liq eni bilan — belgi va telefon
                       pastki kichik qatorga tushirilgan. Ilgari hammasi bitta
@@ -264,6 +282,8 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
         )}
       </div>
 
+      {hover && mounted && createPortal(<StudentHoverCard sg={hover.sg} rect={hover.rect} />, document.body)}
+
       {showEdit && (
         <EditGroupModal group={group} groupId={groupId} onClose={() => setShowEdit(false)} onSaved={() => { setShowEdit(false); onChanged(); }} />
       )}
@@ -290,6 +310,91 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
           <span className="font-semibold text-neutral-700 dark:text-neutral-300">{removeTarget?.student?.name}</span> shu guruhdan chiqariladi.
         </>}
       />
+    </div>
+  );
+}
+
+const HOVER_CARD_W = 288; // w-72
+
+/** Ekran chetidan chiqib ketmaydigan `position: fixed` koordinata. */
+function hoverCardPos(rect: DOMRect, heightEst: number) {
+  const showAbove = rect.bottom + heightEst > window.innerHeight && rect.top - heightEst > 8;
+  const top = showAbove ? Math.max(8, rect.top - heightEst - 6) : Math.min(rect.bottom + 6, window.innerHeight - heightEst - 8);
+  const left = Math.min(rect.right + 10, window.innerWidth - HOVER_CARD_W - 8);
+  return { top, left };
+}
+
+/**
+ * O'QUVCHI TEZKOR KARTOCHKASI — ro'yxatdagi qatorga sichqoncha borganda.
+ * Profilga kirmasdan turib eng ko'p so'raladigan narsalar: aloqa, qarz,
+ * qachon qo'shilgan/faollashgan, so'nggi eslatma.
+ */
+function StudentHoverCard({ sg, rect }: { sg: any; rect: DOMRect }) {
+  const s = sg.student ?? {};
+  const cfg = STATUS_CFG[rowStatus(sg)];
+  const StatusIcon = cfg.icon;
+  const payKey = payStatusFromBalance(s.balance, sg.enrollmentStatus);
+  const pay = PAY_STATUS_CFG[payKey];
+  const heightEst = 190 + (s.note ? 60 : 0) + (sg.activatedAt ? 22 : 0);
+
+  return (
+    <div style={{ position: "fixed", zIndex: 130, width: HOVER_CARD_W, ...hoverCardPos(rect, heightEst) }}
+      className="rounded-2xl glass-strong border border-white/60 dark:border-white/10 shadow-xl p-4 pointer-events-none">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[14px] font-bold text-neutral-900 dark:text-neutral-100 truncate">{s.name}</p>
+        <span className="text-[10px] text-neutral-400 shrink-0">id: {s.id}</span>
+      </div>
+
+      <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+        <span className={cn("inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full", cfg.cls)}>
+          {StatusIcon && <StatusIcon className="w-2.5 h-2.5" />}
+          {cfg.label}
+        </span>
+        <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded-full", pay.cls)}>{pay.label}</span>
+      </div>
+
+      <dl className="space-y-1 mt-3 text-[12px]">
+        {s.phone && (
+          <div className="flex items-center justify-between gap-2">
+            <dt className="text-neutral-400">Telefon</dt>
+            <dd className="text-neutral-700 dark:text-neutral-300 font-medium">{s.phone}</dd>
+          </div>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <dt className="text-neutral-400">Balans</dt>
+          <dd className={cn("font-semibold", (s.balance ?? 0) < 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400")}>
+            {formatCurrency(s.balance ?? 0)}
+          </dd>
+        </div>
+        {s.joinedAt && (
+          <div className="flex items-center justify-between gap-2">
+            <dt className="text-neutral-400">Qo&apos;shilgan sana</dt>
+            <dd className="text-neutral-700 dark:text-neutral-300">{formatUzDate(s.joinedAt)}</dd>
+          </div>
+        )}
+        {sg.activatedAt && (
+          <div className="flex items-center justify-between gap-2">
+            <dt className="text-neutral-400">Faollashtirilgan</dt>
+            <dd className="text-neutral-700 dark:text-neutral-300">{formatUzDate(sg.activatedAt)}</dd>
+          </div>
+        )}
+      </dl>
+
+      {s.note && (
+        <div className="mt-3 pt-2.5 border-t border-white/50 dark:border-white/10">
+          <p className="text-[10px] text-neutral-400 uppercase tracking-wider mb-0.5">Eslatma</p>
+          <p className="text-[12px] text-neutral-700 dark:text-neutral-200 leading-snug">{s.note}</p>
+          {(s.noteByName || s.noteAt) && (
+            <p className="text-[10.5px] text-neutral-400 mt-0.5">
+              {s.noteByName}{s.noteByName && s.noteAt ? " · " : ""}{s.noteAt ? formatUzDate(s.noteAt) : ""}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center justify-end gap-1 text-[12px] font-semibold text-indigo-600 dark:text-indigo-400">
+        Profilga o&apos;tish <ArrowRight className="w-3 h-3" />
+      </div>
     </div>
   );
 }
