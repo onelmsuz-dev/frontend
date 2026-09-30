@@ -342,7 +342,9 @@ function StudentHoverCard({ sg, rect }: { sg: any; rect: DOMRect }) {
       className="rounded-2xl glass-strong border border-white/60 dark:border-white/10 shadow-xl p-4 pointer-events-none">
       <div className="flex items-start justify-between gap-2">
         <p className="text-[14px] font-bold text-neutral-900 dark:text-neutral-100 truncate">{s.name}</p>
-        <span className="text-[10px] text-neutral-400 shrink-0">id: {s.id}</span>
+        {s.studentNumber != null && (
+          <span className="text-[10px] text-neutral-400 shrink-0">id: {s.studentNumber}</span>
+        )}
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
