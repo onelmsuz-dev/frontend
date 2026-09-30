@@ -31,7 +31,7 @@ export const navSections: NavSection[] = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, perm: "dashboard.view" },
       // Xodimlarga biriktirilgan follow-up vazifalar bo'yicha hisobot —
       // kim nechtasini bajargan, nechtasi muddatidan o'tib ketgan.
-      { href: "/vazifalar", label: "Vazifalar hisoboti", icon: ClipboardCheck, perm: "tasks.view" },
+      { href: "/vazifalar", label: "Vazifalar hisoboti", icon: ClipboardCheck, perm: "reminders.viewAll" },
     ],
   },
   {

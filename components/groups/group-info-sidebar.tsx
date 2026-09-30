@@ -78,6 +78,14 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
   const [deleting, setDeleting] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<any>(null);
   const [removing, setRemoving] = useState(false);
+  // Server rad etgan amal sababi (masalan pul tarixi bor guruh o'chmaydi).
+  // Ilgari javob tekshirilmasdi — bosilgan tugma hech narsa qilmagandek edi.
+  const [amalXato, setAmalXato] = useState("");
+
+  async function xatoMatni(res: Response, zaxira: string) {
+    const d = await res.json().catch(() => ({}));
+    return (d as { error?: string })?.error ?? zaxira;
+  }
 
   const sorted = useMemo(() => {
     const list = [...students];
@@ -89,13 +97,16 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
 
   async function removeFromGroup() {
     if (!removeTarget) return;
-    setRemoving(true);
+    setRemoving(true); setAmalXato("");
     try {
-      await fetch(`/api/student-groups/${removeTarget.id}`, {
+      const res = await fetch(`/api/student-groups/${removeTarget.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enrollmentStatus: "CHIQIB_KETGAN" }),
       });
+      if (!res.ok) setAmalXato(await xatoMatni(res, "Guruhdan chiqarib bo'lmadi"));
       onChanged();
+    } catch {
+      setAmalXato("Serverga ulanib bo'lmadi");
     } finally {
       setRemoving(false);
       setRemoveTarget(null);
@@ -103,10 +114,14 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
   }
 
   async function deleteGroup() {
-    setDeleting(true);
+    setDeleting(true); setAmalXato("");
     try {
       const res = await fetch(`/api/groups/${groupId}`, { method: "DELETE" });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setAmalXato(await xatoMatni(res, "Guruhni o'chirib bo'lmadi"));
+        setShowDelete(false);
+        return;
+      }
       mutate((k: string) => typeof k === "string" && k.startsWith("/api/groups"), undefined, { revalidate: true });
       router.push("/groups");
     } finally {
@@ -168,6 +183,12 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
         <span className="text-[11px] text-neutral-400">{students.length} ta</span>
       </div>
 
+      {amalXato && (
+        <p className="text-[12px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-xl px-3 py-2">
+          {amalXato}
+        </p>
+      )}
+
       {/* Numbered roster */}
       <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
         {sorted.length === 0 ? (
@@ -215,10 +236,14 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
                         </DropdownMenuItem>
                         {sg.enrollmentStatus === "SINOV" && (
                           <DropdownMenuItem onClick={async () => {
-                            await fetch(`/api/student-groups/${sg.id}`, {
-                              method: "PATCH", headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ enrollmentStatus: "FAOL" }),
-                            });
+                            setAmalXato("");
+                            try {
+                              const res = await fetch(`/api/student-groups/${sg.id}`, {
+                                method: "PATCH", headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ enrollmentStatus: "FAOL" }),
+                              });
+                              if (!res.ok) setAmalXato(await xatoMatni(res, "Faollashtirib bo'lmadi"));
+                            } catch { setAmalXato("Serverga ulanib bo'lmadi"); }
                             onChanged();
                           }}>
                             <UserCheck className="w-3.5 h-3.5" /> Faollashtirish
@@ -250,7 +275,8 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
         loading={deleting}
         title="Guruhni o'chirish"
         description={<>
-          <span className="font-semibold text-neutral-700 dark:text-neutral-300">{group.name}</span> guruhi butunlay o&apos;chiriladi. Bu amalni ortga qaytarib bo&apos;lmaydi.
+          <span className="font-semibold text-neutral-700 dark:text-neutral-300">{group.name}</span>
+          {" guruhi butunlay o'chiriladi. Bu amalni ortga qaytarib bo'lmaydi."}
         </>}
       />
 

@@ -39,8 +39,11 @@ export default function MyTasksPage() {
   // berilgan vazifani ko'rib, bajarilgan deb belgilay oladi, yangisini
   // yarata olmaydi (egasining talabi, 2026-09-30).
   const canCreate = hasPerm(me?.permissions, "reminders.create");
-  const { data, isLoading } = useMyTasks();
-  const { data: staffRaw } = useStaffMembers();
+  // `enabled === true` — bayroq hali noma'lum yoki o'chiq bo'lsa so'rov
+  // UMUMAN yuborilmaydi (aks holda har foydalanuvchi har daqiqada
+  // kerakmas 404 olib turardi).
+  const { data, isLoading } = useMyTasks(enabled === true);
+  const { data: staffRaw } = useStaffMembers(enabled === true);
   const staff = Array.isArray(staffRaw) ? staffRaw : [];
   const all = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [tab, setTab] = useState<"barchasi" | ReminderStatus>("barchasi");
@@ -50,12 +53,14 @@ export default function MyTasksPage() {
   const [dueDate, setDueDate] = useState(todayStr());
   const [assigneeId, setAssigneeId] = useState("");
   const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
 
   async function submit() {
     if (!text.trim() || !assigneeId) return;
-    setSaving(true);
+    setSaving(true); setErr("");
     try {
-      await createReminder({ text: text.trim(), dueDate, assigneeId });
+      const e = await createReminder({ text: text.trim(), dueDate, assigneeId });
+      if (e) { setErr(e); return; }
       setText(""); setDueDate(todayStr()); setAssigneeId(""); setShowForm(false);
       mutate("/api/reminders?assigneeId=me");
     } finally { setSaving(false); }
@@ -112,6 +117,7 @@ export default function MyTasksPage() {
               <Plus className="w-3.5 h-3.5" />
               {saving ? "Saqlanmoqda..." : "Qo'shish"}
             </button>
+            {err && <p className="text-[11.5px] text-red-600 dark:text-red-400">{err}</p>}
           </div>
         )}
 

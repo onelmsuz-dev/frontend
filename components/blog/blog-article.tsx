@@ -18,7 +18,7 @@ export function articleMetadata(slug: string, locale: Locale): Metadata {
   return {
     title: `${post.title} | OneRoom`, description: post.description,
     alternates: alternatesFor(`/blog/${post.slug}`, locale),
-    openGraph: { type: "article", ...(locale === "uz" ? {} : openGraphLocale(locale)), title: post.title, description: post.description, url, publishedTime: post.date, images: [{ url: post.image, width: 1600, height: 900, alt: post.imageAlt }] },
+    openGraph: { type: "article", ...(locale === "uz" ? {} : openGraphLocale(locale)), title: post.title, description: post.description, url, publishedTime: post.date, images: [{ url: post.image, width: post.imageWidth ?? 1600, height: post.imageHeight ?? 900, alt: post.imageAlt }] },
     twitter: { card: "summary_large_image", title: post.title, description: post.description, images: [post.image] },
     robots: { index: true, follow: true, googleBot: { "max-image-preview": "large" } },
   };
@@ -43,7 +43,7 @@ export function BlogArticle({ slug, locale }: { slug: string; locale: Locale }) 
       <span className="blog-category">{post.category}</span><h1>{post.title}</h1>
       <div className="blog-article-byline"><Link href={localizePath("/", locale)}>{post.author}</Link><span>·</span><time dateTime={post.date}>{post.dateLabel}</time><span>·</span><span><Clock3 size={15} aria-hidden /> {ui.readingTime(post.readingMinutes)}</span></div>
     </header>
-    <Image className="blog-article-cover" src={post.image} alt={post.imageAlt} width={1600} height={900} priority sizes="(max-width: 1200px) 100vw, 1200px" />
+    <Image className="blog-article-cover" src={post.image} alt={post.imageAlt} width={post.imageWidth ?? 1600} height={post.imageHeight ?? 900} priority sizes="(max-width: 1200px) 100vw, 1200px" />
     <div className="blog-reading">
       {/* Mundarija: yopiq turadigan yagona qator (sticky emas, matnni qoplamaydi); bosilganda ochiladi. */}
       <details className="blog-toc">

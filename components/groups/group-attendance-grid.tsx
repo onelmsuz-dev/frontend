@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import useSWR, { mutate } from "swr";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
@@ -10,11 +10,15 @@ import { attendanceFrom } from "@/lib/attendance-from";
 import { businessToday, toDateStr } from "@/lib/time";
 import { UZ_MONTHS_SHORT, UZ_WEEKDAYS } from "@/lib/date-uz";
 
-type Status = "KELDI" | "KELMADI" | "KECH_KELDI" | "SABABLI";
+type Status = "KELDI" | "KELMADI" | "KECH_KELDI" | "SABABLI" | "SINOV_DARSI";
 type Rec = { studentId: string; date: string; status: Status; note?: string | null };
 
 const DOW_TO_VALUE = ["YAKSHANBA", "DUSHANBA", "SESHANBA", "CHORSHANBA", "PAYSHANBA", "JUMA", "SHANBA"];
+/** Popupda qo'lda tanlanadiganlar. `SINOV_DARSI` bu yerda YO'Q — uni backend
+ *  sinov o'quvchisi guruhga qo'shilganda o'zi yozadi, xodim tanlamaydi. */
 const STATUS_ORDER: Status[] = ["KELDI", "KECH_KELDI", "KELMADI", "SABABLI"];
+/** "Jami" taqsimotida ko'rsatiladiganlar — sinov darsi ham sanaladi. */
+const SUMMARY_ORDER: Status[] = [...STATUS_ORDER, "SINOV_DARSI"];
 /** Shu statuslarda SABABI bo'lishi mumkin — tanlanganda izoh so'raladi. */
 const NOTE_STATUSES: Status[] = ["KECH_KELDI", "SABABLI"];
 
@@ -23,6 +27,9 @@ const STATUS_CFG: Record<Status, { short: string; cls: string }> = {
   KECH_KELDI: { short: "Kech",    cls: "bg-amber-500 text-white" },
   KELMADI:    { short: "Yo'q",    cls: "bg-red-500 text-white" },
   SABABLI:    { short: "Sababli", cls: "bg-blue-500 text-white" },
+  // Ilgari bu kalit yo'q edi: sinov o'quvchisi bor guruh ochilganda
+  // `STATUS_CFG[status].cls` undefined'dan o'qib, butun sahifa yiqilardi.
+  SINOV_DARSI: { short: "Sinov",  cls: "bg-purple-500 text-white" },
 };
 
 const POPUP_W = 112;      // w-28
@@ -33,6 +40,12 @@ const TOOLTIP_W = 144;    // w-36
 const TOOLTIP_H_EST = 90;
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
+
+/** Portal faqat brauzerda — effektda setState o'rniga (loyiha lint qoidasi). */
+const bosh = () => () => {};
+function useMounted() {
+  return useSyncExternalStore(bosh, () => true, () => false);
+}
 
 /**
  * DAVOMAT — OY JADVALI (sana × o'quvchi).
@@ -59,14 +72,16 @@ export function GroupAttendanceGrid({
   students: any[];
   canMark: boolean;
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   const today = useMemo(() => businessToday(), []);
   const todayStr = toDateStr(today);
 
   const [view, setView] = useState(() => ({ year: today.getFullYear(), month: today.getMonth() }));
   const [savingCell, setSavingCell] = useState<string | null>(null);
+  // Server rad etsa (dars hali boshlanmagan, dars kuni emas...) — sabab
+  // ekranda. Ilgari javob tekshirilmasdi va belgi jimgina saqlanmasdi.
+  const [saveErr, setSaveErr] = useState("");
 
   // ── Belgilash popup (bosish bilan) ──
   const [openCell, setOpenCell] = useState<{ key: string; sg: any; ds: string } | null>(null);
@@ -116,7 +131,11 @@ export function GroupAttendanceGrid({
   const recordMap = useMemo(() => {
     const m = new Map<string, { status: Status; note: string | null }>();
     const records = Array.isArray(data) ? data : [];
-    for (const r of records) m.set(`${r.studentId}|${r.date}`, { status: r.status, note: r.note ?? null });
+    // Backend sanani to'liq ISO ("2026-09-29T00:00:00.000Z") qaytaradi, jadval
+    // esa "YYYY-MM-DD" bilan qidiradi. Davomat UTC yarim tunida saqlanadi,
+    // shuning uchun birinchi 10 belgi — aynan dars kuni. Ilgari to'liq satr
+    // kalit bo'lib, hech bir belgi jadvalda ko'rinmasdi.
+    for (const r of records) m.set(`${r.studentId}|${String(r.date).slice(0, 10)}`, { status: r.status, note: r.note ?? null });
     return m;
   }, [data]);
 
@@ -151,7 +170,7 @@ export function GroupAttendanceGrid({
 
   /** Shu sanada kim qanday belgilangan — "Jami" qatoridagi popup shundan quriladi. */
   function summaryForDate(ds: string) {
-    const counts: Record<Status, number> = { KELDI: 0, KECH_KELDI: 0, KELMADI: 0, SABABLI: 0 };
+    const counts: Record<Status, number> = { KELDI: 0, KECH_KELDI: 0, KELMADI: 0, SABABLI: 0, SINOV_DARSI: 0 };
     let marked = 0;
     let applicable = 0;
     for (const sg of roster) {
@@ -170,15 +189,22 @@ export function GroupAttendanceGrid({
     setOpenCell(null);
     setPendingStatus(null);
     setSavingCell(key);
+    setSaveErr("");
     try {
-      await fetch("/api/attendance", {
+      const res = await fetch("/api/attendance", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           groupId, date: dateStr,
           records: [{ studentGroupId: sg.id, studentId: sg.studentId, status, note }],
         }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setSaveErr(d?.error ?? "Davomat saqlanmadi");
+      }
       mutate(`/api/attendance?groupId=${groupId}&month=${monthKey}`);
+    } catch {
+      setSaveErr("Serverga ulanib bo'lmadi");
     } finally {
       setSavingCell(null);
     }
@@ -262,7 +288,7 @@ export function GroupAttendanceGrid({
             <p className="text-[10.5px] text-neutral-400">Hali belgilanmagan</p>
           ) : (
             <div className="space-y-1">
-              {STATUS_ORDER.map(st => counts[st] > 0 && (
+              {SUMMARY_ORDER.map(st => counts[st] > 0 && (
                 <div key={st} className="flex items-center justify-between gap-2 text-[10.5px] font-normal">
                   <span className="flex items-center gap-1.5 text-neutral-600 dark:text-neutral-300">
                     <span className={cn("w-2 h-2 rounded-full shrink-0", STATUS_CFG[st].cls.split(" ")[0])} />
@@ -312,6 +338,12 @@ export function GroupAttendanceGrid({
           </button>
         </div>
       </div>
+
+      {saveErr && (
+        <p className="text-[12px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-5 py-2 border-b border-white/50 dark:border-white/10">
+          {saveErr}
+        </p>
+      )}
 
       {roster.length === 0 ? (
         <p className="text-[12px] text-neutral-400 px-5 py-8 text-center">Guruhda o&apos;quvchi yo&apos;q</p>

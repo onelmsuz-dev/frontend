@@ -59,6 +59,9 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
    */
   const canSeeAttendance  = hasPerm(me?.permissions, "attendance.view");
   const canMarkAttendance = hasPerm(me?.permissions, "attendance.mark");
+  // Tarix backendda `activity.view` bilan — ruxsatsiz xodimga tab bo'sh
+  // chiqardi, shuning uchun umuman ko'rsatilmaydi.
+  const canSeeHistory = hasPerm(me?.permissions, "activity.view");
 
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("davomat");
 
@@ -185,7 +188,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         {/* ── O'NG USTUN ── */}
         <div className="min-w-0 space-y-4">
           <nav className="flex items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {TABS.map(t => {
+            {TABS.filter(t => t.id !== "tarix" || canSeeHistory).map(t => {
               const Icon = t.icon;
               const active = tab === t.id;
               return (
@@ -232,8 +235,10 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
             <GroupTabPlaceholder icon={FileCheck2} title="Imtihonlar"
               note="Guruh imtihonlari va natijalari shu yerda ko'rinadi." />
           )}
-          {tab === "tarix" && (
-            <EntityHistorySection entity="groups" entityId={id}
+          {/* `entity` — jurnaldagi NOM ("Group"). Ilgari "groups" yuborilardi
+              va tab har doim bo'sh chiqardi. */}
+          {tab === "tarix" && canSeeHistory && (
+            <EntityHistorySection entity="Group" entityId={id}
               emptyHint="Guruh bilan bog'liq harakatlar shu yerda ko'rinadi." />
           )}
           {tab === "izoh" && <GroupNotesSection groupId={id} canUpdate={canUpdate} />}

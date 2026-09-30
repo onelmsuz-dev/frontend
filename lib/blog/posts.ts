@@ -1,3 +1,6 @@
+import excel from "@/content/blog/excel-yoki-crm.json";
+import excelRu from "@/content/blog/excel-yoki-crm.ru.json";
+import excelEn from "@/content/blog/excel-yoki-crm.en.json";
 import crm from "@/content/blog/crm-tanlash.json";
 import crmRu from "@/content/blog/crm-tanlash.ru.json";
 import crmEn from "@/content/blog/crm-tanlash.en.json";
@@ -18,6 +21,8 @@ interface RawPost {
   date: string;
   author: string;
   image: string;
+  imageWidth?: number;
+  imageHeight?: number;
   text: Record<Locale, PostText>;
 }
 
@@ -26,10 +31,46 @@ export interface Post extends PostText {
   date: string;
   author: string;
   image: string;
+  imageWidth?: number;
+  imageHeight?: number;
   readingMinutes: number;
 }
 
 const RAW: RawPost[] = [
+  {
+    slug: "excel-yoki-crm",
+    date: "2026-09-30",
+    author: "OneRoom",
+    image: "/blog/excel-yoki-crm.png",
+    imageWidth: 1677,
+    imageHeight: 938,
+    text: {
+      uz: {
+        title: "Excel yoki CRM: o‘quv markazi qachon tizimga o‘tishi kerak?",
+        description: "O‘quv markaziga Excel yetarlimi yoki CRM kerakmi? Kundalik vazifalar taqqoslanishi, bir haftalik tekshiruv jadvali va qaror qabul qilish mezonlari.",
+        category: "CRM va boshqaruv",
+        dateLabel: "30-sentabr, 2026",
+        imageAlt: "Excel jadvallari va OneRoom boshqaruv kartochkalari taqqoslangan, ‘Excelmi yoki CRM?’ yozuvli tasvir",
+        markdown: excel.markdown,
+      },
+      ru: {
+        title: "Excel или CRM: когда учебному центру пора переходить на систему?",
+        description: "Достаточно ли учебному центру Excel? Сравнение задач, таблица наблюдений на неделю и критерии решения о переходе на CRM.",
+        category: "CRM и управление",
+        dateLabel: "30 сентября 2026",
+        imageAlt: "Таблицы Excel и карточки управления OneRoom с надписью на узбекском ‘Excelmi yoki CRM?’",
+        markdown: excelRu.markdown,
+      },
+      en: {
+        title: "Excel or CRM: When Should a Learning Center Switch?",
+        description: "Is Excel enough for your learning center? Compare everyday tasks, use a one-week observation table and decide when to try a CRM.",
+        category: "CRM & management",
+        dateLabel: "September 30, 2026",
+        imageAlt: "Excel spreadsheets beside OneRoom management cards, with the Uzbek heading ‘Excelmi yoki CRM?’",
+        markdown: excelEn.markdown,
+      },
+    },
+  },
   {
     slug: "oquv-markazi-crm-tanlash",
     date: "2026-09-21",
@@ -72,6 +113,8 @@ function view(p: RawPost, locale: Locale): Post {
     date: p.date,
     author: p.author,
     image: p.image,
+    imageWidth: p.imageWidth,
+    imageHeight: p.imageHeight,
     ...text,
     readingMinutes: Math.ceil(text.markdown.split(/\s+/).length / 200),
   };

@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatUzDate } from "@/lib/date-uz";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
-import { useAllReminders, useStaffMembers } from "@/lib/hooks/useReminders";
+import { useOpenReminders, useRemindersReport } from "@/lib/hooks/useReminders";
 import { useFeature } from "@/lib/hooks/useFeatures";
 
 function Skeleton({ className }: { className?: string }) {
@@ -24,43 +24,39 @@ const STATUS_CFG = {
 
 /**
  * VAZIFALAR HISOBOTI — CEO uchun: kim nechta vazifani bajargan, nechtasi
- * jarayonda, nechtasi muddatidan o'tib ketgan. `StudentReminders` va
- * "Mening vazifalarim" bilan BIR MANBADAN (`/api/reminders`) — uch joyda
- * uchta xil raqam chiqmasligi uchun.
+ * jarayonda, nechtasi muddatidan o'tib ketgan.
+ *
+ * SONLAR backenddan (`/api/reminders/report`) — butun jadval bo'yicha.
+ * Ilgari ro'yxat so'rovidan sanalardi va u 50 ta bilan cheklangani uchun
+ * 50 dan keyin hisobot jimgina noto'g'ri chiqardi. Ro'yxatda faqat OCHIQ
+ * vazifalar (muddati bo'yicha). Ruxsat — `reminders.viewAll` (ilgari
+ * mavjud bo'lmagan `tasks.view` edi, sahifa faqat egasiga ochilardi).
  */
 export default function TasksReportPage() {
   const { me } = useMe();
-  const canView = hasPerm(me?.permissions, "tasks.view");
+  const canView = hasPerm(me?.permissions, "reminders.viewAll");
   const enabled = useFeature("reminders");
-  const { data, isLoading } = useAllReminders();
-  const { data: staffRaw } = useStaffMembers();
-  const staff = useMemo(() => (Array.isArray(staffRaw) ? staffRaw : []), [staffRaw]);
-  const all = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+  const yuklansin = canView && enabled === true;
+  const { data: report, isLoading } = useRemindersReport(yuklansin);
+  const { data: openRaw } = useOpenReminders(yuklansin);
 
-  const totals = useMemo(() => ({
-    jami: all.length,
-    bajarilgan: all.filter(t => t.status === "BAJARILGAN").length,
-    jarayonda: all.filter(t => t.status === "JARAYONDA").length,
-    muddatiOtgan: all.filter(t => t.status === "MUDDATI_OTGAN").length,
-  }), [all]);
+  const totals = {
+    jami: report?.total ?? 0,
+    bajarilgan: report?.done ?? 0,
+    jarayonda: report?.open ?? 0,
+    muddatiOtgan: report?.overdue ?? 0,
+  };
 
-  const byAssignee = useMemo(() => {
-    return staff.map(s => {
-      const mine = all.filter(t => t.assigneeId === s.id);
-      return {
-        id: s.id, name: s.name,
-        jami: mine.length,
-        bajarilgan: mine.filter(t => t.status === "BAJARILGAN").length,
-        jarayonda: mine.filter(t => t.status === "JARAYONDA").length,
-        muddatiOtgan: mine.filter(t => t.status === "MUDDATI_OTGAN").length,
-      };
-    }).filter(s => s.jami > 0)
-      .sort((a, b) => b.muddatiOtgan - a.muddatiOtgan || b.jami - a.jami);
-  }, [staff, all]);
+  const byAssignee = useMemo(() => (report?.byAssignee ?? []).map(a => ({
+    id: a.assigneeId, name: a.assigneeName,
+    jami: a.done + a.open + a.overdue,
+    bajarilgan: a.done, jarayonda: a.open, muddatiOtgan: a.overdue,
+  })).sort((a, b) => b.muddatiOtgan - a.muddatiOtgan || b.jami - a.jami), [report]);
 
   const openSorted = useMemo(
-    () => all.filter(t => !t.done).sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")),
-    [all],
+    () => (Array.isArray(openRaw) ? openRaw : [])
+      .sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")),
+    [openRaw],
   );
 
   if (!canView) {
@@ -153,9 +149,11 @@ export default function TasksReportPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] text-neutral-800 dark:text-neutral-200 leading-snug">{t.text}</p>
                       <div className="flex items-center gap-2 flex-wrap mt-1">
-                        <Link href={`/students/${t.studentId}`} className="text-[11.5px] text-indigo-600 dark:text-indigo-400 hover:underline">
-                          {t.studentName}
-                        </Link>
+                        {t.studentId && (
+                          <Link href={`/students/${t.studentId}`} className="text-[11.5px] text-indigo-600 dark:text-indigo-400 hover:underline">
+                            {t.studentName}
+                          </Link>
+                        )}
                         <span className="text-[11px] text-neutral-400">· {t.assigneeName}</span>
                         {t.dueDate && <span className="text-[11px] text-neutral-400">· {formatUzDate(t.dueDate)}</span>}
                       </div>
