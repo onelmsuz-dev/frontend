@@ -2,12 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { mutate } from "swr";
 import { TopHeader } from "@/components/layout/top-header";
-import { ListChecks, AlertTriangle } from "lucide-react";
+import { ListChecks, AlertTriangle, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatUzDate } from "@/lib/date-uz";
-import { useMyTasks, toggleReminderDone, type ReminderStatus } from "@/lib/hooks/useReminders";
+import { todayStr } from "@/lib/form-constants";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  useMyTasks, useStaffMembers, toggleReminderDone, createReminder, type ReminderStatus,
+} from "@/lib/hooks/useReminders";
 import { useFeature } from "@/lib/hooks/useFeatures";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
 
 const TABS: { v: "barchasi" | ReminderStatus; l: string }[] = [
   { v: "barchasi", l: "Barchasi" },
@@ -28,9 +34,32 @@ function Skeleton({ className }: { className?: string }) {
  */
 export default function MyTasksPage() {
   const enabled = useFeature("reminders");
+  const { me } = useMe();
+  // Admin va admin ruxsat bergan xodimlar — boshqalar faqat o'ziga
+  // berilgan vazifani ko'rib, bajarilgan deb belgilay oladi, yangisini
+  // yarata olmaydi (egasining talabi, 2026-09-30).
+  const canCreate = hasPerm(me?.permissions, "reminders.create");
   const { data, isLoading } = useMyTasks();
+  const { data: staffRaw } = useStaffMembers();
+  const staff = Array.isArray(staffRaw) ? staffRaw : [];
   const all = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const [tab, setTab] = useState<"barchasi" | ReminderStatus>("barchasi");
+
+  const [showForm, setShowForm] = useState(false);
+  const [text, setText] = useState("");
+  const [dueDate, setDueDate] = useState(todayStr());
+  const [assigneeId, setAssigneeId] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    if (!text.trim() || !assigneeId) return;
+    setSaving(true);
+    try {
+      await createReminder({ text: text.trim(), dueDate, assigneeId });
+      setText(""); setDueDate(todayStr()); setAssigneeId(""); setShowForm(false);
+      mutate("/api/reminders?assigneeId=me");
+    } finally { setSaving(false); }
+  }
 
   const filtered = useMemo(
     () => tab === "barchasi" ? all : all.filter(t => t.status === tab),
@@ -56,9 +85,36 @@ export default function MyTasksPage() {
 
   return (
     <div>
-      <TopHeader title="Vazifalarim" subtitle="Sizga biriktirilgan follow-up ishlar" />
+      <TopHeader title="Vazifalarim" subtitle="Sizga biriktirilgan follow-up ishlar"
+        action={canCreate ? { label: "Vazifa qo'shish", onClick: () => setShowForm(v => !v) } : undefined} />
 
       <div className="p-5 space-y-4">
+        {canCreate && showForm && (
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4 space-y-2">
+            <input value={text} onChange={e => setText(e.target.value)}
+              placeholder="Masalan: yangi guruh jadvalini tasdiqlash"
+              className="w-full px-3 py-2 text-[12.5px] rounded-xl border border-white/60 dark:border-white/10
+                bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400
+                outline-none focus:border-indigo-400 transition-colors" />
+            <div className="flex items-center gap-2">
+              <DatePicker value={dueDate} min={todayStr()} onChange={setDueDate} />
+              <select value={assigneeId} onChange={e => setAssigneeId(e.target.value)}
+                className="h-9 flex-1 min-w-0 px-2.5 text-[12px] rounded-xl border border-white/60 dark:border-white/10
+                  bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 outline-none">
+                <option value="">Kimga biriktirilsin?</option>
+                {staff.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <button onClick={submit} disabled={saving || !text.trim() || !assigneeId}
+              className="w-full h-9 rounded-xl text-[12px] font-semibold bg-indigo-600 hover:bg-indigo-700
+                disabled:bg-neutral-200 disabled:dark:bg-neutral-800 disabled:text-neutral-400
+                disabled:cursor-not-allowed text-white transition-colors flex items-center justify-center gap-1.5">
+              <Plus className="w-3.5 h-3.5" />
+              {saving ? "Saqlanmoqda..." : "Qo'shish"}
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {TABS.map(t => (
             <button key={t.v} onClick={() => setTab(t.v)}
@@ -100,10 +156,12 @@ export default function MyTasksPage() {
                       {t.text}
                     </p>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
-                      <Link href={`/students/${t.studentId}`}
-                        className="text-[11.5px] text-indigo-600 dark:text-indigo-400 hover:underline">
-                        {t.studentName}
-                      </Link>
+                      {t.studentId && (
+                        <Link href={`/students/${t.studentId}`}
+                          className="text-[11.5px] text-indigo-600 dark:text-indigo-400 hover:underline">
+                          {t.studentName}
+                        </Link>
+                      )}
                       {t.dueDate && (
                         <span className={cn("text-[11px]", t.status === "MUDDATI_OTGAN" ? "text-red-500 font-semibold flex items-center gap-1" : "text-neutral-400")}>
                           {t.status === "MUDDATI_OTGAN" && <AlertTriangle className="w-3 h-3" />}

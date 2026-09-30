@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Pencil, Trash2, UserPlus, Clock, MapPin, Wallet, GraduationCap,
-  Phone, MoreVertical, UserX, UserCheck, Snowflake,
+  MoreVertical, UserX, UserCheck, Snowflake, UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mutate } from "swr";
@@ -211,7 +211,7 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="min-w-[190px]">
                         <DropdownMenuItem onClick={() => router.push(`/students/${s?.id}`)}>
-                          <Phone className="w-3.5 h-3.5" /> Profilni ochish
+                          <UserRound className="w-3.5 h-3.5" /> Profilni ochish
                         </DropdownMenuItem>
                         {sg.enrollmentStatus === "SINOV" && (
                           <DropdownMenuItem onClick={async () => {

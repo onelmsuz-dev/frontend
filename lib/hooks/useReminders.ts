@@ -54,3 +54,17 @@ export async function deleteReminder(id: string) {
   await fetch(`/api/reminders/${id}`, { method: "DELETE" });
   revalidateReminders();
 }
+
+/**
+ * UMUMIY VAZIFA — o'quvchiga bog'liq bo'lmasligi ham mumkin (masalan
+ * "yangi guruh jadvalini tasdiqlash"). `studentId` berilsa backend
+ * shu o'quvchiga biriktiradi (`/vazifalarim`da ixtiyoriy tanlov).
+ */
+export async function createReminder(data: { text: string; dueDate?: string; assigneeId: string; studentId?: string }) {
+  const res = await fetch("/api/reminders", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  revalidateReminders();
+  return res.ok;
+}

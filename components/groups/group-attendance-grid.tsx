@@ -134,7 +134,20 @@ export function GroupAttendanceGrid({
     return out;
   }, [view, isCurrentMonth, today, scheduleDays]);
 
-  const roster = students.filter((sg: any) => sg.enrollmentStatus !== "CHIQIB_KETGAN");
+  /**
+   * ESKI A'ZOLAR — boshqa guruhga o'tgan yoki chiqarilgan o'quvchi butunlay
+   * yashirilsa, o'sha oydagi haqiqiy davomat tarixi ham (yozuvlar bazada
+   * bor bo'lsa ham) ko'rinmay qolardi — jadvalda qatorning o'zi yo'q edi
+   * (egasining talabi, 2026-09-30). Shuning uchun "Chiqib ketgan" o'quvchi
+   * FAQAT shu oyda hali guruhda bo'lgan bo'lsa (chiqqan sanasi shu oy
+   * boshidan keyin) ro'yxatda qoladi — yillar oldin ketgan bitiruvchilar
+   * bilan jadval cheksiz cho'zilib ketmasin.
+   */
+  const roster = students.filter((sg: any) => {
+    if (sg.enrollmentStatus !== "CHIQIB_KETGAN") return true;
+    if (!sg.leftAt) return false;
+    return toDateStr(new Date(sg.leftAt)) >= `${monthKey}-01`;
+  });
 
   /** Shu sanada kim qanday belgilangan — "Jami" qatoridagi popup shundan quriladi. */
   function summaryForDate(ds: string) {
@@ -338,7 +351,18 @@ export function GroupAttendanceGrid({
                 return (
                   <tr key={sg.id} className="hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
                     <td className="sticky left-0 z-10 glass-strong px-4 py-1.5 whitespace-nowrap">
-                      <span className="text-[12.5px] font-medium text-neutral-800 dark:text-neutral-200">{s?.name}</span>
+                      <span className={cn("text-[12.5px] font-medium",
+                        sg.enrollmentStatus === "CHIQIB_KETGAN"
+                          ? "text-neutral-400 dark:text-neutral-500"
+                          : "text-neutral-800 dark:text-neutral-200")}>
+                        {s?.name}
+                      </span>
+                      {sg.enrollmentStatus === "CHIQIB_KETGAN" && (
+                        <span className="ml-1.5 text-[9.5px] px-1.5 py-0.5 rounded-full font-semibold
+                          bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+                          Ketgan
+                        </span>
+                      )}
                     </td>
                     {dates.map(d => {
                       const ds = toDateStr(d);
