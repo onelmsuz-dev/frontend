@@ -19,12 +19,12 @@ import { ActivitySection } from "@/components/settings/activity-section";
 import { TrashSection } from "@/components/settings/trash-section";
 import { AppearanceSection } from "@/components/settings/appearance-section";
 import { TargetPageSection } from "@/components/settings/target-page-section";
+import { SETTINGS_GROUPS as groups, visibleSettingsSections } from "@/components/settings/settings-sections";
 import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
 import type { Branch, Room } from "@/types";
 import {
-  Plus, Trash2, Users, Building, Bell, Type, Link2,
-  MapPin, DoorOpen, Phone, CreditCard, MessageSquare, Rocket, Wallet, History, Percent,
-  CalendarOff, SlidersHorizontal, ChevronDown,
+  Plus, Trash2, Building, Bell,
+  MapPin, DoorOpen, Phone, MessageSquare, ChevronDown,
 } from "lucide-react";
 import { useBranches } from "@/lib/hooks/useBranches";
 import { useRooms } from "@/lib/hooks/useRooms";
@@ -44,73 +44,8 @@ const WORK_DAYS = [
   { v: "YAKSHANBA", l: "Yak" },
 ];
 
-/**
- * BO'LIMLAR — GURUHLANGAN.
- *
- * Ilgari 11 ta tab bitta tekis ro'yxatda turardi va eng chalkashtiradigan
- * juftlik YONMA-YON edi: "Tarif" (markazning OneRoom'ga to'lovi) va
- * "To'lov qoidalari" (o'quvchidan qanday pul olish). Ikkalasi ham "to'lov"
- * so'zi bilan boshlanardi, ikkalasi ham pul haqida — lekin butunlay
- * boshqa narsa. Markaz egalari shu ikkitasini adashtirar edi.
- *
- * Endi guruhlangan va nomlar aniqlashtirilgan: "O'quvchi to'lovlari"
- * (bizning mijozimizning mijozi) va "OneRoom obunasi" (bizning
- * mijozimiz bizga to'laydi) — nomning o'zi kimga to'lov ekanini aytadi.
- */
-/**
- * SOZLAMALAR — IKKI QAVATLI (2026-09-28, chap menyu bilan bir uslubda).
- * Ilgari 15 bo'lim bitta ustunda, telefonda esa bitta uzun lentada edi.
- * Endi 4 asosiy guruh; ochilgan guruhning ichida uning bo'limlari.
- */
-const groups = [
-  { id: "markaz", label: "Markaz",          hint: "Ma'lumot, filiallar, xonalar, xodimlar", icon: Building },
-  { id: "pul",    label: "Pul va hisob",    hint: "To'lov rejimi, chegirmalar",              icon: Wallet },
-  { id: "obuna",  label: "OneRoom obunasi", hint: "Tarif va muddat",                         icon: CreditCard },
-  { id: "tizim",  label: "Tizim",           hint: "Ko'rinish, bildirishnoma, tarix",         icon: SlidersHorizontal },
-] as const;
-
-const sections = [
-  // ─ Markaz: markazning o'zi haqida ─
-  { id: "markaz",        label: "Markaz ma'lumoti", icon: Building,  group: "markaz" },
-  { id: "filliallar",    label: "Filiallar",        icon: MapPin,    group: "markaz" },
-  { id: "xonalar",       label: "Xonalar",          icon: DoorOpen,  group: "markaz" },
-  { id: "xodimlar",      label: "Xodimlar",         icon: Users,     group: "markaz" },
-  // Bayram DARS SONINI o'zgartiradi, dars soni esa "necha darsga kelgan"
-  // hisobining maxraji — ya'ni pulga tegadi. Shuning uchun o'z ruxsat kaliti.
-  { id: "bayramlar",     label: "Bayram kunlari",   icon: CalendarOff, group: "markaz",
-    perm: "holidays.view" },
-  // Target sozlamasi — markazning reklamadagi yuzi. "Markaz" guruhida,
-  // chunki u markazning O'ZI haqida, pul yoki tizim sozlamasi emas.
-  // Lidlardagi "Target" tabi bilan BIR ruxsat: ikkalasi ham reklama ishi.
-  { id: "ariza",         label: "Target sozlamasi", icon: Link2,     group: "markaz",
-    perm: "leads.target" },
-
-  // ─ Pul: O'QUVCHIDAN qanday pul olinadi ─
-  { id: "tolov",         label: "O'quvchi to'lovlari", icon: Wallet, group: "pul" },
-  { id: "chegirma",      label: "Chegirmalar", icon: Percent, group: "pul",
-    feature: "discounts", perm: "discounts.view" },
-
-  // ─ Obuna: MARKAZ BIZGA qancha to'laydi ─
-  { id: "tarif",         label: "Tarif va muddat", icon: CreditCard, group: "obuna" },
-
-  // ─ Tizim ─
-  // Ko'rinish BILDIRISHNOMADAN OLDIN: "yozuv kichik" shikoyati bilan
-  // kelgan odam uni birinchi ko'rishi kerak, pastga qidirib emas.
-  { id: "korinish",      label: "Ko'rinish", icon: Type, group: "tizim" },
-  { id: "bildirishnoma", label: "Bildirishnomalar", icon: Bell, group: "tizim" },
-  // Yo'l ko'rsatuvchi bayrog'i o'chiq markazda bu tab ko'rsatilmaydi
-  // (quyida `visibleSections` da filtrlanadi).
-  { id: "organish",      label: "Yo'l ko'rsatuvchi", icon: Rocket, group: "tizim",
-    feature: "onboarding" },
-  // Harakatlar tarixi ham bayroq ortida chiqariladi va qo'shimcha ravishda
-  // `activity.view` ruxsatini talab qiladi — jurnalda kim qachon nima
-  // qilgani turadi, uni har bir xodimga ochib qo'yish markaz ichidagi
-  // munosabatga aralashish bo'lardi.
-  { id: "harakatlar",    label: "So'nggi harakatlar", icon: History, group: "tizim",
-    feature: "activity", perm: "activity.view" },
-  { id: "korzinka",      label: "Korzinka", icon: Trash2, group: "tizim",
-    feature: "trash", perm: "trash.view" },
-];
+// Bo'limlar ro'yxati va ularning ko'rinish qoidasi `settings-sections.ts` da:
+// tepadagi qidiruv ham aynan shundan o'qiydi (2026-10-01).
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-lg", className)} />;
@@ -143,12 +78,7 @@ function SettingsContent() {
   };
   useEffect(() => () => { if (hoverTimer.current) window.clearTimeout(hoverTimer.current); }, []);
 
-  // Bayroq va ruxsat ortidagi bo'limlar.
-  //
-  // Ilgari bu filtr FAQAT onboarding'ni bilardi (`|| onboardingEnabled`) —
-  // ya'ni bayroq ortidagi ikkinchi bo'lim qo'shilgan zahoti u ham
-  // onboarding bayrog'iga bog'lanib qolardi. Endi har bo'lim o'z kalitini
-  // ko'rsatadi va tekshiruv umumiy.
+  // Bayroq va ruxsat ortidagi bo'limlar — filtr `visibleSettingsSections` da.
   /**
    * Ariza sahifasining havolasi uchun subdomen — manzil satridan.
    * `useState` ning DANGASA boshlang'ichi: effekt ichida holat
@@ -177,17 +107,8 @@ function SettingsContent() {
    */
   const blocked = me?.subscriptionBlocked === true;
 
-  const visibleSections = useMemo(() => sections.filter((s) => {
-    if (blocked) return s.id === "tarif";
-    const key = "feature" in s ? (s.feature as string) : null;
-    if (key) {
-      const on = key === "onboarding" ? onboardingEnabled : features?.[key];
-      // `undefined` = bayroqlar hali yuklanmagan — tab ko'rsatilmaydi.
-      // Ko'rsatib keyin yo'qotish sakrashga olib kelardi.
-      if (!on) return false;
-    }
-    if ("perm" in s && !hasPerm(me?.permissions, s.perm as string)) return false;
-    return true;
+  const visibleSections = useMemo(() => visibleSettingsSections({
+    blocked, features, onboardingEnabled, permissions: me?.permissions,
   }), [blocked, features, onboardingEnabled, me?.permissions]);
 
   // Boshqa sahifadan aniq bo'limga o'tish: /settings?tab=xonalar (masalan
@@ -220,6 +141,28 @@ function SettingsContent() {
       setActiveSection(tab);
     }
   }, [searchParams, visibleSections]);
+
+  /**
+   * BO'LIM TANLASH — MANZIL HAM YANGILANADI (2026-10-01).
+   *
+   * Ilgari tugma faqat ichki holatni o'zgartirardi, `?tab=` esa manzilda
+   * eskisicha qolardi. `/settings?tab=xonalar` dan kelib boshqa bo'limga
+   * o'tgan odam tepadagi qidiruvdan yoki bannerdan YANA "Xonalar" ni
+   * tanlasa, hech narsa bo'lmasdi: manzil o'zgarmagan, effekt yonmaydi.
+   * Endi manzil doim ochiq bo'limni ko'rsatadi — har qanday `?tab=`
+   * havolasi ishlaydi, sahifa yangilansa ham bo'lim saqlanadi.
+   *
+   * `history.replaceState` — `router.replace` emas: serverga so'rov
+   * yubormaydi va tarixga qadam qo'shmaydi. Next uni `useSearchParams`
+   * bilan sinxronlaydi, shuning uchun yuqoridagi effekt ham ziddiyatsiz.
+   */
+  const bolimniOch = (id: string) => {
+    setActiveSection(id);
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("tab") === id) return;
+    url.searchParams.set("tab", id);
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  };
 
   // Tarif bloklangan bo'lsa — to'lov bo'limiga to'g'ridan-to'g'ri yo'naltiramiz.
   //
@@ -399,7 +342,7 @@ function SettingsContent() {
             ?? guruhlar[0]?.id ?? null;
           const guruhgaOt = (g: (typeof guruhlar)[number]) => {
             if (g.id === faolGuruh) return;
-            setActiveSection(g.items[0].id);
+            bolimniOch(g.items[0].id);
           };
           const faolItems = guruhlar.find(g => g.id === faolGuruh)?.items ?? [];
           return (
@@ -428,7 +371,7 @@ function SettingsContent() {
                       const Icon = s.icon;
                       const on = activeSection === s.id;
                       return (
-                        <button key={s.id} type="button" onClick={() => setActiveSection(s.id)}
+                        <button key={s.id} type="button" onClick={() => bolimniOch(s.id)}
                           data-tour={`settings-tab-${s.id}`}
                           className={cn(
                             "flex items-center gap-2 rounded-lg text-[13px] font-medium transition-colors shrink-0 whitespace-nowrap px-3 py-2",
@@ -459,7 +402,7 @@ function SettingsContent() {
                         : ochiq ? "glass-soft border-white/50 dark:border-white/10"
                               : "border-transparent hover:bg-white/40 dark:hover:bg-white/5")}>
                       <button type="button" aria-expanded={ochiq}
-                        onClick={() => { setHoverGuruh(null); if (yolgiz) setActiveSection(g.items[0].id); else guruhgaOt(g); }}
+                        onClick={() => { setHoverGuruh(null); if (yolgiz) bolimniOch(g.items[0].id); else guruhgaOt(g); }}
                         className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-left transition-colors",
                           ochiq ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-600 dark:text-neutral-400")}>
                         <span className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors",
@@ -486,7 +429,7 @@ function SettingsContent() {
                               const on = activeSection === s.id;
                               return (
                                 <button key={s.id} type="button"
-                                  onClick={() => { setHoverGuruh(null); setActiveSection(s.id); }}
+                                  onClick={() => { setHoverGuruh(null); bolimniOch(s.id); }}
                                   data-tour={`settings-tab-${s.id}`}
                                   tabIndex={ochiq ? 0 : -1}
                                   className={cn(
@@ -646,7 +589,7 @@ function SettingsContent() {
               sozlamalarning eng ko'p ochiladigan bo'limi. */}
           {activeSection === "ariza" && (
             <TargetPageSection subdomain={subdomain}
-              onBack={() => setActiveSection("xodimlar")} />
+              onBack={() => bolimniOch("xodimlar")} />
           )}
 
           {activeSection === "korinish" && (

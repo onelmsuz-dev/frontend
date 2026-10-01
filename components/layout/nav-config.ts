@@ -4,6 +4,8 @@ import {
   Home, Megaphone, Layers, Banknote, MessageSquare, Trophy,
   TrendingDown, UserCog, ClipboardCheck, type LucideIcon,
 } from "lucide-react";
+import { NAV_PERMISSIONS } from "@/lib/permissions";
+import type { Role } from "@/types/roles";
 
 export interface NavItem {
   href: string;
@@ -89,6 +91,25 @@ export function itemVisible(perm: NavItem["perm"], permissions: string[] | undef
   if (permissions.includes("*")) return true;
   const list = Array.isArray(perm) ? perm : [perm];
   return list.some((p) => permissions.includes(p));
+}
+
+/**
+ * Menyu bandi shu foydalanuvchiga ko'rinadimi.
+ *
+ * Chap menyu ham, tepadagi qidiruv ham SHUNDAN o'qiydi: qidiruv menyuda
+ * yo'q sahifani taklif qilmasligi kerak (2026-10-01).
+ */
+export function navItemVisible(
+  item: NavItem,
+  who: { role: Role; permissions: string[] | undefined; teacherId?: string | null },
+): boolean {
+  // SUPER_ADMIN o'zini o'qituvchi qilib qo'shgan bo'lsa (Jadval → "O'zimni
+  // qo'shish"), teacherId mavjud bo'ladi va u ham "Oyligim"ni ko'rishi kerak.
+  if (item.teacherOnly) return who.role === "TEACHER" || (who.role === "SUPER_ADMIN" && !!who.teacherId);
+  if (who.permissions) return itemVisible(item.perm, who.permissions);
+  // Ruxsatlar hali yuklanmagan — rol bo'yicha taxminiy ro'yxat.
+  const allowed = NAV_PERMISSIONS[item.href];
+  return !allowed || allowed.includes(who.role);
 }
 
 /**

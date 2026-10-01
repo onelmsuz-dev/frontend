@@ -6,10 +6,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { navSections, itemVisible, type NavItem, type NavSection } from "@/components/layout/nav-config";
+import { navSections, navItemVisible, type NavItem, type NavSection } from "@/components/layout/nav-config";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useSession, signOut } from "next-auth/react";
-import { NAV_PERMISSIONS } from "@/lib/permissions";
 import { useMe } from "@/lib/hooks/useMe";
 import type { Role } from "@/types/roles";
 
@@ -96,14 +95,10 @@ export function TorNav() {
   const almashtir = () => setModeRaw(wide ? "rail" : "wide");
 
   // ── ruxsat bo'yicha filtr (yuklanmaguncha role fallback) ─────────────
-  const visible = useCallback((item: NavItem) => {
-    // SUPER_ADMIN o'zini o'qituvchi qilib qo'shgan bo'lsa (Jadval → "O'zimni
-    // qo'shish"), teacherId mavjud bo'ladi va u ham "Oyligim"ni ko'rishi kerak.
-    if (item.teacherOnly) return role === "TEACHER" || (role === "SUPER_ADMIN" && !!me?.teacherId);
-    if (permissions) return itemVisible(item.perm, permissions);
-    const allowed = NAV_PERMISSIONS[item.href];
-    return !allowed || allowed.includes(role);
-  }, [role, permissions, me?.teacherId]);
+  // Qoida `navItemVisible` da — tepadagi qidiruv ham aynan shundan o'qiydi.
+  const visible = useCallback(
+    (item: NavItem) => navItemVisible(item, { role, permissions, teacherId: me?.teacherId }),
+    [role, permissions, me?.teacherId]);
 
   const sections = useMemo(() => navSections
     .map(s => ({ ...s, items: s.items.filter(visible) }))

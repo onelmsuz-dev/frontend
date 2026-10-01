@@ -1,11 +1,12 @@
 "use client";
 
-import { ReactNode, useState, useRef, useEffect } from "react";
+import { ReactNode, useState, useRef, useEffect, useMemo } from "react";
 import {
   Bell, Search, Plus, DollarSign, UserPlus, Users,
   Check, BookOpen, X,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useNotifications, type Notification } from "@/lib/hooks/useNotifications";
 import { useLeadStages } from "@/lib/hooks/useLeads";
@@ -15,6 +16,11 @@ import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { BranchHeaderControls } from "@/components/layout/branch-header-controls";
 import { FullscreenToggle } from "@/components/fullscreen-toggle";
 import { MyTasksButton } from "@/components/layout/my-tasks-button";
+import { bolimlarniTop } from "@/components/layout/search-index";
+import { useMe } from "@/lib/hooks/useMe";
+import { useFeatures } from "@/lib/hooks/useFeatures";
+import { useOnboardingCtx } from "@/lib/contexts/onboarding-context";
+import type { Role } from "@/types/roles";
 
 interface TopHeaderProps {
   title: string;
@@ -58,6 +64,8 @@ type SearchResult = {
   leads:    { id: string; name: string; phone: string; stageId: string }[];
 };
 
+const BOSH_NATIJA: SearchResult = { students: [], groups: [], leads: [] };
+
 const STATUS_BADGE: Record<string, string> = {
   ACTIVE: "bg-green-100 text-green-700",
   UPCOMING: "bg-blue-100 text-blue-700",
@@ -76,17 +84,51 @@ function useDebounce<T>(value: T, delay: number): T {
   return debounced;
 }
 
+/** Ro'yxat sarlavhasi — natija guruhlari ustida. */
+function GuruhSarlavha({ children }: { children: ReactNode }) {
+  return (
+    <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-white/50 dark:border-white/10">
+      {children}
+    </p>
+  );
+}
+
+/**
+ * HEADER'DAGI UMUMIY QIDIRUV.
+ *
+ * 2026-10-01 gacha uchta kamchilik bor edi (sozlamalardan kelgan shikoyat:
+ * "bir narsa yozib Enter bossa — not found"):
+ *  1. Faqat serverdagi o'quvchi/guruh/lid qidirilardi — sozlamalar
+ *     bo'limlari va sahifalar umuman yo'q edi. Endi "Bo'limlar" guruhi
+ *     brauzerning o'zida, darhol (`search-index.ts`).
+ *  2. Enter hech narsa qilmasdi. Endi Enter belgilangan natijani ochadi,
+ *     ↑/↓ yuradi, Esc yopadi. Natija hali kelmagan bo'lsa, kelgach ochiladi.
+ *  3. Yozish davom etganda eski bo'sh javob YANGI so'z bilan "topilmadi"
+ *     deb ko'rsatilardi (natija kelguncha); server xato qaytarsa esa
+ *     (sessiya tugagan, ruxsat yo'q) javob natija deb o'qilib, sahifa
+ *     yiqilardi. Endi javob qaysi so'zga tegishli ekani saqlanadi va
+ *     faqat o'shanda ko'rsatiladi; xato alohida yoziladi.
+ */
 function GlobalSearch() {
+  const router   = useRouter();
+  const pathname = usePathname();
+  const { me } = useMe();
+  const features = useFeatures().data;
+  const { enabled: onboardingEnabled } = useOnboardingCtx();
   const { data: stagesData } = useLeadStages();
   const stagesById = Object.fromEntries((stagesData ?? []).map((s) => [s.id, s]));
-  const [query,      setQuery]      = useState("");
-  const [results,    setResults]    = useState<SearchResult | null>(null);
-  const [loading,    setLoading]    = useState(false);
-  const [open,       setOpen]       = useState(false);
-  const [expanded,   setExpanded]   = useState(false);
+
+  const [query,    setQuery]    = useState("");
+  const [server,   setServer]   = useState<{ q: string; res: SearchResult | null } | null>(null);
+  const [open,     setOpen]     = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [faol,     setFaol]     = useState(0);
+  // Natija kelmasdan Enter bosilgan so'z — javob kelishi bilan birinchisi ochiladi.
+  const [enterKutadi, setEnterKutadi] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef     = useRef<HTMLInputElement>(null);
   const debouncedQ   = useDebounce(query, 300);
+  const q = query.trim();
 
   useEffect(() => {
     if (!open) return;
@@ -100,28 +142,115 @@ function GlobalSearch() {
   }, [open]);
 
   useEffect(() => {
-    if (debouncedQ.length < 2) { setResults(null); return; }
+    const so = debouncedQ.trim();
+    if (so.length < 2) return;
     let cancelled = false;
-    setLoading(true);
-    fetch(`/api/search?q=${encodeURIComponent(debouncedQ)}`)
-      .then(r => r.json())
-      .then(d => { if (!cancelled) { setResults(d); setLoading(false); } })
-      .catch(() => { if (!cancelled) setLoading(false); });
+    fetch(`/api/search?q=${encodeURIComponent(so)}`)
+      .then(async (r) => {
+        // Ruxsat yo'q (`dashboard.view` siz rol) — xato emas: serverdan
+        // natija yo'q, lekin bo'limlar baribir ko'rinadi.
+        if (r.status === 403) return BOSH_NATIJA;
+        if (!r.ok) throw new Error(String(r.status));
+        const d = await r.json();
+        return {
+          students: Array.isArray(d?.students) ? d.students : [],
+          groups:   Array.isArray(d?.groups)   ? d.groups   : [],
+          leads:    Array.isArray(d?.leads)    ? d.leads    : [],
+        } as SearchResult;
+      })
+      .then((res) => { if (!cancelled) setServer({ q: so, res }); })
+      .catch(() => { if (!cancelled) setServer({ q: so, res: null }); });
     return () => { cancelled = true; };
   }, [debouncedQ]);
 
-  const hasResults = results && (
-    results.students.length + results.groups.length + results.leads.length > 0
-  );
-  const showPanel = open && (query.length >= 2);
+  const bolimlar = useMemo(() => q.length < 2 ? [] : bolimlarniTop(q, {
+    role: (me?.role ?? "TEACHER") as Role,
+    permissions: me?.permissions,
+    teacherId: me?.teacherId,
+    blocked: me?.subscriptionBlocked === true,
+    features,
+    onboardingEnabled,
+    onSettings: pathname?.startsWith("/settings") ?? false,
+  }), [q, me, features, onboardingEnabled, pathname]);
 
-  function clear() { setQuery(""); setResults(null); setOpen(false); setExpanded(false); }
+  // Server javobi FAQAT shu so'z uchun bo'lsa ko'rsatiladi.
+  const javob     = server && server.q === q ? server : null;
+  const kutilmoqda = q.length >= 2 && !javob;
+  const res       = javob?.res ?? null;
+  const xato      = !!javob && javob.res === null;
+
+  /** Klaviatura tartibi — ekrandagi tartib bilan bir xil. */
+  const items = useMemo(() => [
+    ...bolimlar.map((b) => ({ key: b.key, href: b.href })),
+    ...(res?.students ?? []).map((s) => ({ key: `s:${s.id}`, href: `/students/${s.id}` })),
+    ...(res?.groups ?? []).map((g) => ({ key: `g:${g.id}`, href: `/groups/${g.id}` })),
+    ...(res?.leads ?? []).map((l) => ({ key: `l:${l.id}`, href: "/leads" })),
+  ], [bolimlar, res]);
+  const faolIdx = items.length ? Math.min(faol, items.length - 1) : -1;
+  const faolKey = faolIdx >= 0 ? items[faolIdx].key : null;
+  const showPanel = open && q.length >= 2;
+
+  function clear() {
+    setQuery(""); setServer(null); setOpen(false); setExpanded(false);
+    setFaol(0); setEnterKutadi(null);
+  }
+
+  function och(href: string) {
+    clear();
+    inputRef.current?.blur();
+    router.push(href);
+  }
+
+  // Enter natija kelmasdan bosilgan bo'lsa — javob kelgach birinchisini ochamiz.
+  useEffect(() => {
+    if (!enterKutadi || enterKutadi !== q || kutilmoqda) return;
+    const birinchi = items[0];
+    if (birinchi) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      och(birinchi.href);
+    } else {
+      setEnterKutadi(null);
+    }
+    // `och` har renderda yangi — kuzatilmaydi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enterKutadi, q, kutilmoqda, items]);
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") {
+      setOpen(false);
+      inputRef.current?.blur();
+      return;
+    }
+    if (q.length < 2) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      setOpen(true);
+      if (!items.length) return;
+      const d = e.key === "ArrowDown" ? 1 : -1;
+      setFaol((faolIdx + d + items.length) % items.length);
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      setOpen(true);
+      if (faolIdx >= 0 && (bolimlar.length > 0 || !kutilmoqda)) och(items[faolIdx].href);
+      else if (kutilmoqda) setEnterKutadi(q);
+    }
+  }
+
+  const qatorCls = (key: string) => cn(
+    "flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/50 dark:hover:bg-white/5",
+    faolKey === key && "bg-white/60 dark:bg-white/10",
+  );
+  const hechNarsa = !kutilmoqda && !xato && bolimlar.length === 0
+    && (res?.students.length ?? 0) + (res?.groups.length ?? 0) + (res?.leads.length ?? 0) === 0;
 
   return (
     <div className="relative" ref={containerRef}>
       {/* Mobile: icon button to expand */}
       {!expanded && (
         <button
+          aria-label="Qidirish"
           className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
           onClick={() => { setExpanded(true); setTimeout(() => inputRef.current?.focus(), 50); }}
         >
@@ -135,21 +264,26 @@ function GlobalSearch() {
         <input
           ref={inputRef}
           value={query}
-          onChange={e => { setQuery(e.target.value); setOpen(true); }}
+          onChange={e => { setQuery(e.target.value); setOpen(true); setFaol(0); setEnterKutadi(null); }}
           onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          role="combobox"
+          aria-expanded={showPanel}
+          aria-controls="global-search-panel"
+          aria-autocomplete="list"
           placeholder="Qidirish..."
           className="glass-soft pl-9 pr-8 h-9 w-44 sm:w-56 text-[13px] border border-white/60 dark:border-white/10 rounded-full
             text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none
             focus:border-indigo-300 dark:focus:border-indigo-400/40 transition-colors"
         />
         {query && (
-          <button onClick={clear}
+          <button onClick={clear} aria-label="Tozalash"
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors">
             <X className="w-3.5 h-3.5" />
           </button>
         )}
         {!query && expanded && (
-          <button onClick={() => setExpanded(false)}
+          <button onClick={() => setExpanded(false)} aria-label="Yopish"
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors lg:hidden">
             <X className="w-3.5 h-3.5" />
           </button>
@@ -157,94 +291,108 @@ function GlobalSearch() {
       </div>
 
       {showPanel && (
-        <div className="absolute right-0 top-full mt-1.5 glass-strong w-80
-          border border-white/60 dark:border-white/10 rounded-3xl shadow-xl z-50 overflow-hidden">
+        <div id="global-search-panel" role="listbox"
+          className="absolute right-0 top-full mt-1.5 glass-strong w-80 max-h-[70vh] overflow-y-auto
+          border border-white/60 dark:border-white/10 rounded-3xl shadow-xl z-50">
 
-          {loading && (
-            <div className="px-4 py-6 text-center text-[12px] text-neutral-400">Qidirilmoqda...</div>
-          )}
-
-          {!loading && !hasResults && results && (
-            <div className="px-4 py-6 text-center text-[12px] text-neutral-400">
-              &quot;{query}&quot; bo'yicha natija topilmadi
+          {bolimlar.length > 0 && (
+            <div>
+              <GuruhSarlavha>Bo&apos;limlar</GuruhSarlavha>
+              {bolimlar.map(b => {
+                const Icon = b.icon;
+                return (
+                  <Link key={b.key} href={b.href} onClick={clear} role="option"
+                    aria-selected={faolKey === b.key} className={qatorCls(b.key)}>
+                    <div className="w-7 h-7 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+                      <Icon className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-300" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{b.label}</p>
+                      <p className="text-[11px] text-neutral-400 truncate">{b.where}</p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
 
-          {!loading && hasResults && (
-            <>
-              {results!.students.length > 0 && (
-                <div>
-                  <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-white/50 dark:border-white/10">
-                    O'quvchilar
-                  </p>
-                  {results!.students.map(s => (
-                    <Link key={s.id} href={`/students/${s.id}`} onClick={clear}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
-                      <div className={cn("w-7 h-7 rounded-xl flex items-center justify-center text-white text-[11px] font-bold shrink-0",
-                        s.isActive ? "bg-gradient-to-br from-blue-400 to-indigo-500" : "bg-gradient-to-br from-amber-400 to-orange-400")}>
-                        {s.name[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{s.name}</p>
-                        <p className="text-[11px] text-neutral-400">{s.phone}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
+          {kutilmoqda && (
+            <div className="px-4 py-4 text-center text-[12px] text-neutral-400">Qidirilmoqda...</div>
+          )}
 
-              {results!.groups.length > 0 && (
-                <div>
-                  <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-white/50 dark:border-white/10">
-                    Guruhlar
-                  </p>
-                  {results!.groups.map(g => (
-                    <Link key={g.id} href={`/groups/${g.id}`} onClick={clear}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
-                      <div className="w-7 h-7 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                        <BookOpen className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{g.name}</p>
-                        <p className="text-[11px] text-neutral-400">{g.course?.name}</p>
-                      </div>
-                      <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0",
-                        STATUS_BADGE[g.status] ?? "bg-neutral-100 text-neutral-500")}>
-                        {STATUS_LABEL[g.status] ?? g.status}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              )}
+          {xato && (
+            <div className="px-4 py-4 text-center text-[12px] text-red-500">Qidiruv ishlamadi. Birozdan keyin qayta urinib ko&apos;ring.</div>
+          )}
 
-              {results!.leads.length > 0 && (
-                <div>
-                  <p className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400 border-b border-white/50 dark:border-white/10">
-                    Arizalar (CRM)
-                  </p>
-                  {results!.leads.map(l => {
-                    const stage = stagesById[l.stageId];
-                    const hue = stage ? stageHue(stage.color) : null;
-                    return (
-                      <Link key={l.id} href="/leads" onClick={clear}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
-                        <div className="w-7 h-7 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                          <UserPlus className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{l.name}</p>
-                          <p className="text-[11px] text-neutral-400">{l.phone}</p>
-                        </div>
-                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0",
-                          hue?.badge ?? "bg-neutral-100 text-neutral-500")}>
-                          {stage?.name ?? "—"}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </>
+          {hechNarsa && (
+            <div className="px-4 py-6 text-center text-[12px] text-neutral-400">&quot;{q}&quot; bo&apos;yicha natija topilmadi</div>
+          )}
+
+          {res && res.students.length > 0 && (
+            <div>
+              <GuruhSarlavha>O&apos;quvchilar</GuruhSarlavha>
+              {res.students.map(s => (
+                <Link key={s.id} href={`/students/${s.id}`} onClick={clear} role="option"
+                  aria-selected={faolKey === `s:${s.id}`} className={qatorCls(`s:${s.id}`)}>
+                  <div className={cn("w-7 h-7 rounded-xl flex items-center justify-center text-white text-[11px] font-bold shrink-0",
+                    s.isActive ? "bg-gradient-to-br from-blue-400 to-indigo-500" : "bg-gradient-to-br from-amber-400 to-orange-400")}>
+                    {s.name[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{s.name}</p>
+                    <p className="text-[11px] text-neutral-400">{s.phone}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {res && res.groups.length > 0 && (
+            <div>
+              <GuruhSarlavha>Guruhlar</GuruhSarlavha>
+              {res.groups.map(g => (
+                <Link key={g.id} href={`/groups/${g.id}`} onClick={clear} role="option"
+                  aria-selected={faolKey === `g:${g.id}`} className={qatorCls(`g:${g.id}`)}>
+                  <div className="w-7 h-7 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                    <BookOpen className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{g.name}</p>
+                    <p className="text-[11px] text-neutral-400">{g.course?.name}</p>
+                  </div>
+                  <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0",
+                    STATUS_BADGE[g.status] ?? "bg-neutral-100 text-neutral-500")}>
+                    {STATUS_LABEL[g.status] ?? g.status}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {res && res.leads.length > 0 && (
+            <div>
+              <GuruhSarlavha>Arizalar (CRM)</GuruhSarlavha>
+              {res.leads.map(l => {
+                const stage = stagesById[l.stageId];
+                const hue = stage ? stageHue(stage.color) : null;
+                return (
+                  <Link key={l.id} href="/leads" onClick={clear} role="option"
+                    aria-selected={faolKey === `l:${l.id}`} className={qatorCls(`l:${l.id}`)}>
+                    <div className="w-7 h-7 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                      <UserPlus className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">{l.name}</p>
+                      <p className="text-[11px] text-neutral-400">{l.phone}</p>
+                    </div>
+                    <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-semibold shrink-0",
+                      hue?.badge ?? "bg-neutral-100 text-neutral-500")}>
+                      {stage?.name ?? "—"}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
