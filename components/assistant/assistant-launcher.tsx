@@ -33,7 +33,7 @@ export function AssistantLauncher() {
         title={open ? undefined : "OneRoom yordamchi"}
         onClick={() => { setYuklandi(true); setOpen((o) => !o); }}
         className={cn(
-          "fixed z-[65] right-4 bottom-[92px] lg:bottom-6 lg:right-6",
+          "assistant-launcher fixed z-[65] right-4 bottom-[92px] lg:bottom-6 lg:right-6",
           "w-12 h-12 lg:w-14 lg:h-14 rounded-full grid place-items-center text-white",
           "bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500",
           "shadow-lg shadow-indigo-500/35 ring-4 ring-white/60 dark:ring-white/10",

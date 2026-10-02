@@ -560,9 +560,14 @@ export default function AttendancePage() {
         )}
       </div>
 
-      {/* Sticky save bar */}
+      {/* Sticky save bar.
+          TELEFONDA PASTKI MENYU TEPASIDA. Ilgari `bottom-0` edi va menyu
+          (`fixed bottom-3 z-[60]`) uning ustini yopib turardi — "Saqlash"
+          bosilganda menyu bosilardi, yordamchi o'qituvchilar davomatni
+          saqlay olmasdi (Mudarris, 2026-10-02). `data-bottom-bar` — AI
+          tugmasi shu panel ustiga chiqmasligi uchun (globals.css). */}
       {students.length > 0 && canMark && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-t border-white/60 dark:border-white/10 px-5 py-3 flex items-center gap-3">
+        <div data-bottom-bar className="fixed z-30 bottom-[84px] left-3 right-3 rounded-2xl border shadow-lg lg:bottom-0 lg:left-0 lg:right-0 lg:rounded-none lg:shadow-none lg:border-t bg-white/95 dark:bg-neutral-900/95 backdrop-blur border-white/60 dark:border-white/10 px-4 lg:px-5 py-3 flex items-center gap-3">
           <div className="text-[12px] text-neutral-500 dark:text-neutral-400">
             {stats.unmarked > 0
               ? <><strong className="text-neutral-700 dark:text-neutral-200">{stats.unmarked}</strong> ta belgilanmagan</>

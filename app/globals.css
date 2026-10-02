@@ -169,6 +169,15 @@ html[data-font] .bottom-nav-label {
   font-size: calc(10px * min(var(--font-scale, 1), 1.15));
 }
 
+/* Telefonda sahifada pastki amal paneli (`data-bottom-bar`, masalan davomat
+   "Saqlash") bo'lsa, AI yordamchi tugmasi uning ustiga chiqmasin — yuqoriroq
+   ko'tariladi. Kompyuterda panel pastki chekkada, tugma o'z joyida. */
+@media (max-width: 1023px) {
+  body:has([data-bottom-bar]) .assistant-launcher {
+    bottom: 156px;
+  }
+}
+
 
 @layer base {
   * {
