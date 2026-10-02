@@ -243,8 +243,8 @@ export function BillingSettings({
             },
             {
               v: true,
-              l: "Qolgan kunlarga mutanosib",
-              d: "Oyning yarmidan qo'shilsa — taxminan yarmini to'laydi.",
+              l: "O'tgan darslar ayiriladi",
+              d: "1 dars narxi = oylik ÷ oydagi darslar soni. Qo'shilguncha o'tib ketgan darslar ayiriladi.",
             },
           ]).map(o => (
             <button key={String(o.v)} type="button" onClick={() => setProrate(o.v)}

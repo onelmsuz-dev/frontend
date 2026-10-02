@@ -148,6 +148,10 @@ function Satr({ q, guruhNomi, fmt }: {
         <span className="text-neutral-400">
           {" · "}{formatUzDate(it.createdAt ?? it.date ?? null)}
         </span>
+        {/* Birinchi oy to'liq bo'lmasa — nechta dars ayirilgani (2026-10-02). */}
+        {kind === "charge" && it.reason === "ACTIVATION" && it.note && (
+          <span className="block text-[10.5px] text-neutral-400 mt-0.5">{it.note}</span>
+        )}
       </span>
       <span className={cn("text-[11.5px] font-semibold shrink-0 tabular-nums",
         summa >= 0
