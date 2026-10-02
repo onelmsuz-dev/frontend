@@ -10,7 +10,7 @@ import { FullscreenToggle } from "@/components/fullscreen-toggle";
 import {
   LayoutDashboard, Building2, CreditCard, LogOut, ShieldCheck,
   Settings, Users, BarChart3, MessageSquare, Rocket, History, Wallet,
-  Menu, X,
+  Coins, Menu, X,
 } from "lucide-react";
 
 const SECTIONS = [
@@ -19,6 +19,7 @@ const SECTIONS = [
     items: [
       { href: "/admode",       label: "Dashboard",   icon: LayoutDashboard },
       { href: "/admode/stats", label: "Statistika",  icon: BarChart3 },
+      { href: "/admode/moliya", label: "Foyda va xarajatlar", icon: Coins },
     ],
   },
   {
