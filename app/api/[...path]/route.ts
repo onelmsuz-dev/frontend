@@ -50,6 +50,12 @@ async function handler(
   const hasBody = method !== "GET" && method !== "HEAD";
   const body = hasBody ? Buffer.from(await req.arrayBuffer()) : undefined;
 
+  // AI yordamchi oqimi: brauzer "To'xtatish" ni bossa yoki oynani yopsa,
+  // backenddagi so'rov ham uzilsin — aks holda Gemini javobni oxirigacha
+  // yozib, kvotani behuda yeyardi. Faqat shu yo'lda: boshqa (yozuvchi)
+  // so'rovlarni yarim yo'lda uzish xavfli.
+  const isAssistantStream = path[0] === "assistant" && path[1] === "chat";
+
   let backendRes: Response;
   try {
     backendRes = await fetch(target, {
@@ -58,12 +64,27 @@ async function handler(
       body,
       cache: "no-store",
       redirect: "manual",
+      ...(isAssistantStream ? { signal: req.signal } : {}),
     });
   } catch {
     return NextResponse.json(
       { error: "Backend bilan bog'lanib bo'lmadi" },
       { status: 502 },
     );
+  }
+
+  // OQIM (SSE) — buferlanmaydi, bo'lakma-bo'lak o'tadi. `arrayBuffer()`
+  // javob TUGAGUNCHA kutardi va chat matni bir zumda yaxlit tushardi.
+  const ct0 = backendRes.headers.get("content-type") ?? "";
+  if (ct0.startsWith("text/event-stream") && backendRes.body) {
+    return new Response(backendRes.body, {
+      status: backendRes.status,
+      headers: {
+        "content-type": ct0,
+        "cache-control": "no-cache, no-transform",
+        "x-accel-buffering": "no",
+      },
+    });
   }
 
   const resBody = await backendRes.arrayBuffer();

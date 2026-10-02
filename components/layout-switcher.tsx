@@ -5,6 +5,7 @@ import { SubscriptionGate } from "@/components/subscription-gate";
 import { SubscriptionBanner } from "@/components/subscription-banner";
 import { OnboardingMount } from "@/components/onboarding/onboarding-mount";
 import { ScheduleDrawer } from "@/components/schedule/schedule-drawer";
+import { AssistantLauncher } from "@/components/assistant/assistant-launcher";
 
 export function LayoutSwitcher({ children }: { children: React.ReactNode }) {
   return (
@@ -32,6 +33,8 @@ export function LayoutSwitcher({ children }: { children: React.ReactNode }) {
               yubormaydi; `schedule.view` ruxsati yo'q bo'lsa umuman
               chizilmaydi. */}
           <ScheduleDrawer />
+          {/* AI YORDAMCHI — bayroq ortida; o'chiq markazda hech narsa chizilmaydi. */}
+          <AssistantLauncher />
         </div>
       </OnboardingMount>
     </BranchProvider>
