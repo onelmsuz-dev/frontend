@@ -148,8 +148,9 @@ function Satr({ q, guruhNomi, fmt }: {
         <span className="text-neutral-400">
           {" · "}{formatUzDate(it.createdAt ?? it.date ?? null)}
         </span>
-        {/* Birinchi oy to'liq bo'lmasa — nechta dars ayirilgani (2026-10-02). */}
-        {kind === "charge" && it.reason === "ACTIVATION" && it.note && (
+        {/* Izoh — birinchi oy to'liq bo'lmasa nechta dars ayirilgani, qo'lda
+            qarzda esa uning sababi (2026-10-02). */}
+        {kind === "charge" && (it.reason === "ACTIVATION" || it.reason === "MANUAL") && it.note && (
           <span className="block text-[10.5px] text-neutral-400 mt-0.5">{it.note}</span>
         )}
       </span>
