@@ -16,6 +16,8 @@ export interface FinanceReport {
     expenses: number | null;
     profit: number | null;
     paymentCount: number;
+    /** Ijtimoiy (bepul) o'quvchilar — ma'lumot, pulga kirmaydi. */
+    social?: { students: number; amount: number };
   };
   prev: { label: string; collected: number; expenses: number | null; profit: number | null };
   change: { collected: number | null; expenses: number | null; profit: number | null };

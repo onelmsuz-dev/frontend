@@ -33,9 +33,11 @@ interface Discount {
   groupName: string | null; courseName: string | null;
   startsAt: string | null; endsAt: string | null;
   isActive: boolean; liveNow: boolean; note: string;
+  kind?: "IJTIMOIY" | "KELISHUV" | "AKSIYA" | "BOSHQA";
   studentCount: number; createdByName: string; createdAt: string;
 }
 
+const KIND_UI = { IJTIMOIY: "Ijtimoiy", KELISHUV: "Kelishuv", AKSIYA: "Aksiya", BOSHQA: "Boshqa" } as const;
 const SCOPE_UI: Record<string, { label: string; icon: typeof Globe }> = {
   HAMMA:     { label: "Barcha o'quvchilar", icon: Globe },
   GURUH:     { label: "Guruh",              icon: Users },
@@ -171,6 +173,14 @@ export function DiscountsSection() {
                         <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
                           {d.type === "FOIZ" ? `−${d.value}%` : `−${fmt(d.value)} so'm`}
                         </span>
+                        {d.kind && d.kind !== "BOSHQA" && (
+                          <span className={cn("rounded-md px-1.5 py-px text-[10px] font-medium",
+                            d.kind === "IJTIMOIY"
+                              ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400")}>
+                            {KIND_UI[d.kind]}
+                          </span>
+                        )}
                         {!d.isActive && (
                           <span className="rounded-md bg-neutral-100 dark:bg-neutral-800 px-1.5 py-px
                                            text-[10px] font-medium text-neutral-500 dark:text-neutral-400">
@@ -301,6 +311,7 @@ function DiscountModal({ editId, onClose, onDone }: {
   const [groupIds, setGroupIds] = useState<string[]>([]);
   /** Chegirma o'qituvchi maosh asosini kamaytiradimi (standart — ha). */
   const [maoshgaTasir, setMaoshgaTasir] = useState(true);
+  const [kind, setKind] = useState<"IJTIMOIY" | "KELISHUV" | "AKSIYA" | "BOSHQA">("BOSHQA");
   const [picked, setPicked] = useState<string[]>([]);
   const [q, setQ] = useState("");
   const [startsAt, setStartsAt] = useState("");
@@ -322,6 +333,7 @@ function DiscountModal({ editId, onClose, onDone }: {
     setPicked(mavjud.studentIds ?? []);
     setGroupIds(mavjud.groupIds ?? []);
     setMaoshgaTasir(mavjud.affectsTeacherSalary !== false);
+    setKind(mavjud.kind ?? "BOSHQA");
     setStartsAt(String(mavjud.startsAt ?? "").slice(0, 10));
     setEndsAt(String(mavjud.endsAt ?? "").slice(0, 10));
     setNoteText(mavjud.note ?? "");
@@ -411,14 +423,16 @@ function DiscountModal({ editId, onClose, onDone }: {
             endsAt:   endsAt || null,
             note:     noteText,
             ...(scope === "TANLANGAN" ? { studentIds: picked, groupIds } : {}),
-            affectsTeacherSalary: maoshgaTasir,
+            kind,
+            affectsTeacherSalary: kind === "IJTIMOIY" ? true : maoshgaTasir,
           }
         : {
             name, type, value: Number(value), scope,
             ...(scope === "GURUH" ? { groupId } : {}),
             ...(scope === "KURS"  ? { courseId } : {}),
             ...(scope === "TANLANGAN" ? { studentIds: picked, groupIds } : {}),
-            affectsTeacherSalary: maoshgaTasir,
+            kind,
+            affectsTeacherSalary: kind === "IJTIMOIY" ? true : maoshgaTasir,
             ...(startsAt ? { startsAt } : {}),
             ...(endsAt   ? { endsAt }   : {}),
             ...(noteText ? { note: noteText } : {}),
@@ -463,6 +477,29 @@ function DiscountModal({ editId, onClose, onDone }: {
               className={inputCls} />
           </Field>
 
+          {/* SABAB TURI — "Ijtimoiy" bo'lsa hech kim foyda ko'rmaydi: faqat
+              tanlangan o'quvchilarga, o'qituvchi savoli so'ralmaydi. */}
+          <Field label="Sabab turi">
+            <div className="grid grid-cols-4 gap-1.5">
+              {(Object.keys(KIND_UI) as (keyof typeof KIND_UI)[]).map((k) => (
+                <button key={k} type="button"
+                  onClick={() => { setKind(k); if (k === "IJTIMOIY") { setMaoshgaTasir(true); if (!editId) setScope("TANLANGAN"); } }}
+                  className={cn("rounded-xl px-2 py-2 text-xs font-medium transition-colors",
+                    kind === k
+                      ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300")}>
+                  {KIND_UI[k]}
+                </button>
+              ))}
+            </div>
+            {kind === "IJTIMOIY" && (
+              <p className="mt-1.5 text-[11px] leading-relaxed text-emerald-700 dark:text-emerald-300">
+                Kam ta&apos;minlangan oila uchun: faqat tanlangan o&apos;quvchilarga, o&apos;qituvchi
+                foizidan ayiriladi, o&apos;quvchi boshiga maoshlarda sanalmaydi, hisobotda alohida ko&apos;rinadi.
+              </p>
+            )}
+          </Field>
+
           <div className="grid grid-cols-2 gap-3">
             <Field label="Turi">
               <div className="flex gap-1.5">
@@ -490,9 +527,10 @@ function DiscountModal({ editId, onClose, onDone }: {
               {(Object.keys(SCOPE_UI) as (keyof typeof SCOPE_UI)[]).map((s) => {
                 const Icon = SCOPE_UI[s].icon;
                 return (
-                  <button key={s} onClick={() => !editId && setScope(s as any)} disabled={!!editId}
+                  <button key={s} onClick={() => !editId && setScope(s as any)}
+                    disabled={!!editId || (kind === "IJTIMOIY" && s !== "TANLANGAN")}
                     className={cn("flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors",
-                      editId && "cursor-not-allowed opacity-60",
+                      (editId || (kind === "IJTIMOIY" && s !== "TANLANGAN")) && "cursor-not-allowed opacity-60",
                       scope === s
                         ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
                         : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300")}>
@@ -615,8 +653,9 @@ function DiscountModal({ editId, onClose, onDone }: {
             </Field>
           )}
 
-          {/* O'QITUVCHI OYLIGI — chegirma uning foiziga tushsinmi. */}
-          <Field label="O'qituvchi oyligi">
+          {/* O'QITUVCHI OYLIGI — chegirma uning foiziga tushsinmi. Ijtimoiyda
+              savol yo'q: har doim ayiriladi. */}
+          {kind !== "IJTIMOIY" && <Field label="O'qituvchi oyligi">
             <button type="button" onClick={() => setMaoshgaTasir((v) => !v)}
               className={cn("w-full flex items-start gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-colors",
                 maoshgaTasir
@@ -639,7 +678,7 @@ function DiscountModal({ editId, onClose, onDone }: {
                 </span>
               </span>
             </button>
-          </Field>
+          </Field>}
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Boshlanishi">

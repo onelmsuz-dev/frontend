@@ -8,6 +8,7 @@ import { TopHeader } from "@/components/layout/top-header";
 import { GroupDebtBreakdown } from "@/components/students/group-debt-breakdown";
 import { BalanceBreakdown } from "@/components/students/balance-breakdown";
 import { OneTimeDiscount } from "@/components/students/one-time-discount";
+import { PermanentDiscount } from "@/components/students/permanent-discount";
 import { PaymentEdit } from "@/components/students/payment-edit";
 import { PayActions, type MoneyGroup } from "@/components/students/money-actions";
 import { ReceiptModal } from "@/components/payments/receipt-modal";
@@ -1765,7 +1766,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 <div className="flex items-center gap-3">
                   {/* Bir martalik chegirma — MAVJUD qarzni kamaytiradi.
                       Sozlamalardagi qoida esa faqat kelajakka ta'sir qiladi. */}
-                  {hasPerm(me?.permissions, "discounts.manage") && (
+                  {hasPerm(me?.permissions, "discounts.manage") && (<>
                     <OneTimeDiscount
                       studentId={student.id}
                       studentName={student.name}
@@ -1780,7 +1781,15 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                       }))}
                       onDone={() => mutate(`/api/students/${student.id}`)}
                     />
-                  )}
+                    {/* Doimiy chegirma — sozlamalardagi qoida, lekin kartochkadan
+                        (ijtimoiy holat uchun; bir martalik har oy qaytarilmasin). */}
+                    <PermanentDiscount
+                      studentId={student.id}
+                      studentName={student.name}
+                      groups={activeSgs.map((sg) => ({ groupId: sg.groupId, name: sg.group?.name ?? "Guruh" }))}
+                      onDone={() => mutate(`/api/students/${student.id}`)}
+                    />
+                  </>)}
                   {/* TO'LOV + o'q: qaytarish va qarzdorlikka kiritish (2026-09-24). */}
                   <PayActions
                     studentId={student.id}

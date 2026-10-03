@@ -104,6 +104,12 @@ export function FinanceInsights() {
                 Kutilgan summa — faol o&apos;quvchilarning kurs narxlari yig&apos;indisi.
                 {rate < 70 && " Yig'ilish past — qarzdorlar ro'yxatini ko'rib chiqing."}
               </p>
+              {month.social && month.social.students > 0 && (
+                <p className="text-[11px] text-neutral-400 mt-1" data-ijtimoiy>
+                  Ijtimoiy chegirma: {month.social.students}{" "}o&apos;quvchi bepul yoki imtiyozli
+                  o&apos;qiyapti · {fmt(month.social.amount)} — kutilgan tushum va foydaga kirmaydi.
+                </p>
+              )}
             </>
           )}
         </div>

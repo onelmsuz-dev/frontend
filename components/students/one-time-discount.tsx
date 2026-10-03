@@ -72,7 +72,7 @@ export function OneTimeDiscount({
       <button onClick={() => { setErr(""); setOpen(true); }}
         className="flex items-center gap-1 text-[11px] font-semibold
                    text-emerald-600 dark:text-emerald-400 hover:underline">
-        <Gift className="w-3 h-3" /> Chegirma
+        <Gift className="w-3 h-3" /> Bir martalik chegirma
       </button>
 
       <Modal
