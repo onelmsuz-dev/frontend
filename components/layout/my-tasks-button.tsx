@@ -38,8 +38,11 @@ export function MyTasksButton() {
   if (!enabled) return null;
 
   return (
-    <div className="relative" ref={panelRef}>
-      <button onClick={() => setOpen(v => !v)} title="Vazifalarim"
+    // Telefonda (tor panel) ochiq vazifa bo'lmasa belgi yashiriladi —
+    // bo'sh tugma sahifa sarlavhasining joyini olmasin. Vazifa paydo
+    // bo'lishi bilan qaytadi.
+    <div className={cn("relative", openTasks.length === 0 && "hidden @md:block")} ref={panelRef}>
+      <button onClick={() => setOpen(v => !v)} title="Vazifalarim" aria-label="Vazifalarim"
         className="relative w-9 h-9 flex items-center justify-center rounded-xl transition-colors
           text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-300
           hover:bg-white/60 dark:hover:bg-white/10">

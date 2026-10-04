@@ -246,20 +246,27 @@ function GlobalSearch() {
     && (res?.students.length ?? 0) + (res?.groups.length ?? 0) + (res?.leads.length ?? 0) === 0;
 
   return (
-    <div className="relative" ref={containerRef}>
-      {/* Mobile: icon button to expand */}
+    // Tor panelda `static`: ochilgan qidiruv va natijalar oynasi butun
+    // PANELGA nisbatan joylashadi (pastdagi `absolute inset-0`).
+    <div className="@min-[58rem]:relative" ref={containerRef}>
+      {/* Tor panel: ikonka, bosilganda qidiruv ochiladi */}
       {!expanded && (
         <button
           aria-label="Qidirish"
-          className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
+          className="@min-[58rem]:hidden w-9 h-9 flex items-center justify-center rounded-xl text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100 hover:bg-white/60 dark:hover:bg-white/10 transition-colors"
           onClick={() => { setExpanded(true); setTimeout(() => inputRef.current?.focus(), 50); }}
         >
           <Search className="w-4 h-4" />
         </button>
       )}
 
-      {/* Desktop always visible, mobile only when expanded */}
-      <div className={cn(!expanded && "hidden lg:block")}>
+      {/* Keng panelda doim ko'rinadi. Tor panelda ochilganda PANELNING
+          USTINI to'liq yopadi — ilgari maydon boshqa tugmalar qatoriga
+          qo'shilib, sarlavhani va asosiy tugmani ekrandan surib chiqarardi. */}
+      <div className={cn(expanded
+        ? "@max-[58rem]:absolute @max-[58rem]:inset-0 @max-[58rem]:z-10 @max-[58rem]:flex @max-[58rem]:items-center @max-[58rem]:px-3 @max-[58rem]:rounded-[inherit] @max-[58rem]:bg-[#f6f8ff] dark:@max-[58rem]:bg-[#17181f]"
+        : "hidden @min-[58rem]:block")}>
+       <div className="relative w-full @min-[58rem]:w-auto">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
         <input
           ref={inputRef}
@@ -272,7 +279,7 @@ function GlobalSearch() {
           aria-controls="global-search-panel"
           aria-autocomplete="list"
           placeholder="Qidirish..."
-          className="glass-soft pl-9 pr-8 h-9 w-44 sm:w-56 text-[13px] border border-white/60 dark:border-white/10 rounded-full
+          className="glass-soft pl-9 pr-8 h-9 w-full @min-[58rem]:w-56 text-[13px] border border-white/60 dark:border-white/10 rounded-full
             text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 outline-none
             focus:border-indigo-300 dark:focus:border-indigo-400/40 transition-colors"
         />
@@ -284,15 +291,16 @@ function GlobalSearch() {
         )}
         {!query && expanded && (
           <button onClick={() => setExpanded(false)} aria-label="Yopish"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors lg:hidden">
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors @min-[58rem]:hidden">
             <X className="w-3.5 h-3.5" />
           </button>
         )}
+       </div>
       </div>
 
       {showPanel && (
         <div id="global-search-panel" role="listbox"
-          className="absolute right-0 top-full mt-1.5 glass-strong w-80 max-h-[70vh] overflow-y-auto
+          className="absolute right-3 @min-[58rem]:right-0 top-full mt-1.5 glass-strong w-[min(20rem,calc(100%-1.5rem))] @min-[58rem]:w-80 max-h-[70vh] overflow-y-auto
           border border-white/60 dark:border-white/10 rounded-3xl shadow-xl z-50">
 
           {bolimlar.length > 0 && (
@@ -418,9 +426,29 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
   }, [showNotif]);
 
   return (
-    <header className="glass-panel sticky top-0 z-30 mb-3 flex h-[56px] items-center justify-between border-b border-white/60 dark:border-white/10 px-4
+    // `@container` — tugmalar EKRAN kengligiga emas, PANELNING o'z kengligiga
+    // qarab ixchamlashadi. Ekran bo'yicha (`lg:`) qilinganda chap menyu keng
+    // ochilgan planshet/noutbukda panel torayib, sarlavha yo'qolar va asosiy
+    // tugma o'ngdan kesilardi. Bosqichlar:
+    //   tor (<42rem)  — hammasi ikonka: filial, qidiruv, asosiy tugma "+"
+    //   @2xl (42rem)  — filial nomi, to'liq ekran tugmasi
+    //   @3xl (48rem)  — asosiy tugma yozuvi bilan
+    //   58rem         — qidiruv maydoni ochiq
+    // FON TO'LIQ (shaffof emas). `glass-panel` 55% shaffof edi: sahifa
+    // aylantirilganda kartalar va matn panel ostidan ko'rinib, sarlavha va
+    // tugmalar bilan chalkashib ketardi. Ranglar — shisha panelning toza fon
+    // ustidagi ko'rinishiga teng, ya'ni tinch holatda farq sezilmaydi.
+    <header className="@container glass-panel bg-[#f6f8ff]! dark:bg-[#17181f]! sticky top-0 z-30 mb-3 flex h-[56px] items-center justify-between border-b border-white/60 dark:border-white/10 px-4
       lg:top-4 lg:mx-5 lg:mb-1 lg:h-[64px] lg:rounded-3xl lg:border lg:border-white/60 lg:dark:border-white/10 lg:px-5">
-      <div className="min-w-0 flex-1 mr-3">
+      {/* PANEL USTIDAGI TIRQISH — kompyuterda panel ekran tepasidan 16px pastda
+          "suzadi"; sahifa aylantirilganda kontent shu tirqishdan ko'rinib, panel
+          ustidan chiqib turgandek bo'lardi. Ikki qatlam uni sahifa foni bilan
+          yopadi (asos rang + gradient). `bg-fixed` — gradient oynaga nisbatan
+          chiziladi, ya'ni orqadagi fon bilan aniq ustma-ust tushadi va yamoq
+          sezilmaydi. Telefonda panel tepaga yopishgan — tirqish yo'q. */}
+      <span aria-hidden className="app-bg-base pointer-events-none absolute -inset-x-5 -top-[17px] hidden h-4 lg:block" />
+      <span aria-hidden className="app-bg-split bg-fixed pointer-events-none absolute -inset-x-5 -top-[17px] hidden h-4 lg:block" />
+      <div className="min-w-0 flex-1 mr-2 @2xl:mr-3">
         <h1 className="font-semibold text-[16px] lg:text-[18px] text-neutral-900 dark:text-neutral-100 tracking-tight leading-none truncate">
           {title}
         </h1>
@@ -429,16 +457,16 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
         )}
       </div>
 
-      <div className="flex items-center gap-1.5 lg:gap-2 shrink-0">
+      <div className="flex items-center gap-1 @2xl:gap-2 shrink-0">
         <BranchHeaderControls />
         <GlobalSearch />
-        <FullscreenToggle className="hidden sm:flex w-9 h-9 rounded-xl" />
+        <FullscreenToggle className="hidden @2xl:flex w-9 h-9 rounded-xl" />
 
         <MyTasksButton />
 
         {/* Bell */}
         <div className="relative" ref={panelRef}>
-          <button onClick={() => setShowNotif(v => !v)}
+          <button onClick={() => setShowNotif(v => !v)} aria-label="Bildirishnomalar" title="Bildirishnomalar"
             className="relative w-9 h-9 flex items-center justify-center rounded-xl transition-colors
               text-neutral-500 hover:text-indigo-600 dark:text-neutral-400 dark:hover:text-indigo-300
               hover:bg-white/60 dark:hover:bg-white/10">
@@ -466,7 +494,7 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
                 {unread > 0 && (
                   <button onClick={markAllRead}
                     className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400 font-semibold hover:underline">
-                    <Check className="w-3 h-3" /> Barchasini o'qildi
+                    <Check className="w-3 h-3" />{" "}Barchasini o&apos;qildi
                   </button>
                 )}
               </div>
@@ -475,7 +503,7 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
                 {items.length === 0 ? (
                   <div className="flex flex-col items-center py-10 text-neutral-400">
                     <Bell className="w-8 h-8 mb-2 opacity-30" />
-                    <p className="text-[12px]">Bildirishnomalar yo'q</p>
+                    <p className="text-[12px]">Bildirishnomalar yo&apos;q</p>
                   </div>
                 ) : (
                   items.map((n: Notification) => (
@@ -507,18 +535,19 @@ export function TopHeader({ title, subtitle, action }: TopHeaderProps) {
 
         {action && (
           <>
-            {/* Mobile: icon only */}
+            {/* Tor panel: faqat ikonka (nomi `aria-label`/`title` da) */}
             <button
               onClick={action.onClick}
+              aria-label={action.label} title={action.label}
               data-tour={TOUR_TARGETS.headerAction}
-              className="lg:hidden w-9 h-9 flex items-center justify-center rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+              className="@3xl:hidden w-9 h-9 shrink-0 flex items-center justify-center rounded-2xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
             </button>
-            {/* Desktop: label + icon */}
+            {/* Keng panel: yozuv + ikonka */}
             <Button size="sm" onClick={action.onClick}
               data-tour={TOUR_TARGETS.headerAction}
-              className="hidden lg:flex gap-1.5 h-9 px-4 text-[13px] bg-indigo-600 hover:bg-indigo-700
+              className="hidden @3xl:flex gap-1.5 h-9 px-4 text-[13px] bg-indigo-600 hover:bg-indigo-700
                 text-white rounded-2xl shadow-sm">
               <Plus className="w-3.5 h-3.5" />
               {action.label}

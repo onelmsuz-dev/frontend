@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -212,6 +213,29 @@ export function TorNav() {
 
   const flySection = fly ? sections.find(s => s.id === fly.id) ?? null : null;
 
+  // ── balandlikka moslashish: menyu HECH QACHON aylanmasin ─────────────
+  // Qatorlar soni ma'lum, bo'sh joy esa `nav` konteynerining balandligi
+  // (`100cqh`) — qator balandligi shu ikkisidan chiqadi: joy yetsa to'liq
+  // o'lcham, yetmasa hammasi BARAVAR siqiladi. Ichki sahifa qatori guruh
+  // sarlavhasining 0.8 qismi (40px → 32px).
+  const olcham = useMemo(() => {
+    if (!wide) {
+      const n = Math.max(1, sections.length);
+      return `clamp(40px, calc((100cqh - ${(n - 1) * 4 + 1}px) / ${n}), 56px)`;
+    }
+    let birlik = 0;
+    let oraliq = Math.max(0, sections.length - 1) * 4 + 1;
+    for (const s of sections) {
+      birlik += 1;
+      const n = s.items.length;
+      if (n > 1 && (ochiq.has(s.id) || hoverGuruh === s.id)) {
+        birlik += n * 0.8;
+        oraliq += 4 + (n - 1) * 2;
+      }
+    }
+    return `clamp(22px, calc((100cqh - ${oraliq}px) / ${birlik.toFixed(2)}), 40px)`;
+  }, [wide, sections, ochiq, hoverGuruh]);
+
   // ── umumiy pastki qism ───────────────────────────────────────────────
   const chiqish = async () => {
     const loginUrl = (typeof window !== "undefined" ? window.location.origin : "") + "/login";
@@ -226,19 +250,25 @@ export function TorNav() {
         // `rail-wide` — shrift kattalashtirilganda menyu ham kengaysin (globals.css).
         wide ? "rail-wide w-[220px]" : "w-[76px]",
       )}>
-        {/* Logo */}
+        {/* Logo — landing bilan bir xil belgi. Fayl oq fonli (shaffof emas),
+            shu sabab ikkala mavzuda ham oq plitka ustida turadi: shisha panelda
+            `mix-blend-multiply` oqni to'liq yo'qotmaydi, xira kvadrat qolardi. */}
         <div className={cn("h-[60px] shrink-0 flex items-center", wide ? "px-4 gap-2.5" : "justify-center")}>
-          <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 border border-indigo-300/50 bg-indigo-100/70 text-indigo-600 dark:border-indigo-400/30 dark:bg-indigo-400/10 dark:text-indigo-300">
-            <span className="font-bold text-[15px]">O</span>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 overflow-hidden bg-white ring-1 ring-black/[0.06] dark:ring-white/10">
+            <Image src="/logo.png" alt="OneRoom" width={28} height={23} priority />
           </div>
           {wide && (
-            <span className="rail-label-in flex-1 font-semibold text-[15px] text-neutral-900 dark:text-neutral-100 whitespace-nowrap">
-              OneRoom
+            <span className="rail-label-in flex-1 font-bold text-[17px] tracking-[-0.03em] text-neutral-900 dark:text-neutral-100 whitespace-nowrap">
+              One<span className="text-blue-600 dark:text-blue-400">Room</span>
             </span>
           )}
         </div>
 
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-1 flex flex-col gap-1 px-2">
+        {/* `min-h-0` + `container-type: size` — qatorlar shu balandlikka qarab
+            o'lchanadi. Aylanish faqat ehtiyot chorasi (juda past oyna): odatda
+            hamma narsa sig'adi, shu sabab chiziq ko'rsatilmaydi. */}
+        <nav style={{ "--u": olcham } as React.CSSProperties}
+          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-1 flex flex-col gap-1 px-2 no-scrollbar [container-type:size]">
           {wide ? sections.map(section => {
             const SIcon = section.icon;
             const faol = section.id === activeSectionId;
@@ -249,20 +279,20 @@ export function TorNav() {
               const isActive = isActiveHref(pathname, item.href);
               return (
                 <Link key={section.id} href={item.href}
-                  className={cn("flex items-center h-10 rounded-2xl transition-colors px-3 gap-3", isActive ? ACTIVE_ITEM : IDLE_ITEM)}>
+                  className={cn("flex items-center h-(--u) shrink-0 rounded-2xl transition-colors px-3 gap-3", isActive ? ACTIVE_ITEM : IDLE_ITEM)}>
                   <SIcon className="w-[18px] h-[18px] shrink-0" />
                   <span className="text-[13px] whitespace-nowrap">{item.label}</span>
                 </Link>
               );
             }
             return (
-              <div key={section.id}
+              <div key={section.id} className="shrink-0"
                 onMouseEnter={() => { if (!ochiq.has(section.id)) hoverKech(section.id, 80); }}
                 onMouseLeave={() => hoverKech(null, 160)}>
                 <button type="button" aria-expanded={ochiqmi}
                   onClick={() => { setHoverGuruh(null); toggleOchiq(section.id); }}
                   className={cn(
-                    "w-full flex items-center h-10 rounded-2xl transition-colors px-3 gap-3",
+                    "w-full flex items-center h-(--u) rounded-2xl transition-colors px-3 gap-3",
                     faol && !ochiqmi ? ACTIVE_ITEM : IDLE_ITEM,
                   )}>
                   <SIcon className="w-[18px] h-[18px] shrink-0" />
@@ -277,7 +307,7 @@ export function TorNav() {
                         const isActive = isActiveHref(pathname, item.href);
                         return (
                           <Link key={item.href} href={item.href}
-                            className={cn("flex items-center h-8 rounded-xl transition-colors px-2.5 gap-2.5", isActive ? ACTIVE_ITEM : IDLE_ITEM)}>
+                            className={cn("flex items-center h-[calc(var(--u)*0.8)] rounded-xl transition-colors px-2.5 gap-2.5", isActive ? ACTIVE_ITEM : IDLE_ITEM)}>
                             <Icon className="w-4 h-4 shrink-0" />
                             <span className="text-[12.5px] whitespace-nowrap">{item.label}</span>
                           </Link>
@@ -300,7 +330,7 @@ export function TorNav() {
                 onMouseEnter={hoverIn(section)} onMouseLeave={hoverOut}
                 onClick={railClick(section)} onKeyDown={railKey(section)}
                 className={cn(
-                  "w-full flex flex-col items-center justify-center gap-1 h-[56px] rounded-2xl transition-colors outline-none",
+                  "w-full flex flex-col items-center justify-center gap-1 h-(--u) shrink-0 rounded-2xl transition-colors outline-none",
                   "focus-visible:ring-2 focus-visible:ring-indigo-400/60",
                   faol ? ACTIVE_ITEM : ochiqFly ? "bg-white/70 text-neutral-900 dark:bg-white/10 dark:text-neutral-100" : IDLE_ITEM,
                 )}>
@@ -311,18 +341,21 @@ export function TorNav() {
           })}
         </nav>
 
-        {/* Pastki qism: rejim, mavzu, profil, chiqish */}
+        {/* Pastki qism: profil, rejim, mavzu, chiqish. Keng rejimda uchta
+            amal BITTA qatorda — to'rt qavat menyuning joyini yeb, kichik
+            ekranda uni aylanishga majbur qilardi. */}
         <div className="pb-3 pt-2 border-t border-white/50 dark:border-white/10 shrink-0 flex flex-col gap-1 px-2">
-          <button type="button" onClick={almashtir} title={wide ? "Tor menyu" : "Keng menyu"}
-            className={cn("w-full flex items-center h-9 rounded-2xl transition-colors", wide ? "px-3 gap-3" : "justify-center", IDLE_ITEM)}>
-            {wide ? <ChevronLeft className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />}
-            {wide && <span className="rail-label-in text-[12px] font-medium whitespace-nowrap">Yig&apos;ish</span>}
-          </button>
-
-          <div className={cn("flex items-center h-10 rounded-2xl transition-colors hover:bg-white/50 dark:hover:bg-white/5", wide ? "px-2.5 gap-3" : "justify-center")}>
-            <ThemeToggle />
-            {wide && <span className="rail-label-in text-[13px] font-medium whitespace-nowrap text-neutral-500 dark:text-neutral-400">Mavzu</span>}
-          </div>
+          {!wide && (
+            <>
+              <button type="button" onClick={almashtir} title="Keng menyu"
+                className={cn("w-full flex items-center justify-center h-9 rounded-2xl transition-colors", IDLE_ITEM)}>
+                <ChevronRight className="w-4 h-4 shrink-0" />
+              </button>
+              <div className="flex items-center justify-center h-10 rounded-2xl transition-colors hover:bg-white/50 dark:hover:bg-white/5">
+                <ThemeToggle />
+              </div>
+            </>
+          )}
 
           <div className={cn("flex items-center h-10 rounded-2xl transition-colors hover:bg-white/50 dark:hover:bg-white/5", wide ? "px-2 gap-3" : "justify-center")}
             title={wide ? undefined : `${session?.user?.name ?? "Foydalanuvchi"} · ${ROLE_LABELS[role]}`}>
@@ -337,12 +370,25 @@ export function TorNav() {
             )}
           </div>
 
-          <button type="button" onClick={chiqish} title="Chiqish"
-            className={cn("w-full flex items-center h-9 rounded-2xl transition-colors", wide ? "px-3 gap-3" : "justify-center",
-              "text-red-500 hover:text-red-600 hover:bg-red-50/70 dark:hover:bg-red-900/20")}>
-            <LogOut className="w-4 h-4 shrink-0" />
-            {wide && <span className="rail-label-in text-[13px] font-medium whitespace-nowrap">Chiqish</span>}
-          </button>
+          {wide ? (
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={almashtir} title="Tor menyu"
+                className={cn("min-w-0 flex-1 flex items-center h-9 rounded-2xl transition-colors px-3 gap-3", IDLE_ITEM)}>
+                <ChevronLeft className="w-4 h-4 shrink-0" />
+                <span className="rail-label-in text-[12px] font-medium whitespace-nowrap">Yig&apos;ish</span>
+              </button>
+              <ThemeToggle />
+              <button type="button" onClick={chiqish} title="Chiqish" aria-label="Chiqish"
+                className="w-9 h-9 shrink-0 flex items-center justify-center rounded-2xl transition-colors text-red-500 hover:text-red-600 hover:bg-red-50/70 dark:hover:bg-red-900/20">
+                <LogOut className="w-4 h-4 shrink-0" />
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={chiqish} title="Chiqish" aria-label="Chiqish"
+              className="w-full flex items-center justify-center h-9 rounded-2xl transition-colors text-red-500 hover:text-red-600 hover:bg-red-50/70 dark:hover:bg-red-900/20">
+              <LogOut className="w-4 h-4 shrink-0" />
+            </button>
+          )}
         </div>
       </aside>
 

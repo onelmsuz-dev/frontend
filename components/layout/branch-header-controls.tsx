@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { ChevronDown, Plus, Check } from "lucide-react";
+import { ChevronDown, Plus, Check, MapPin } from "lucide-react";
 import { mutate } from "swr";
 import { useBranch } from "@/lib/contexts/branch-context";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
@@ -84,27 +84,37 @@ export function BranchHeaderControls() {
         <button
           type="button"
           onClick={() => setShowPay(true)}
-          className="inline-flex items-center h-9 px-3 sm:px-4 rounded-lg bg-[#5B6FD6] hover:bg-[#4d60c4] text-white text-[11px] sm:text-[12px] font-bold tracking-wide transition-colors shrink-0"
+          className="inline-flex items-center h-9 px-2.5 @2xl:px-4 rounded-lg bg-[#5B6FD6] hover:bg-[#4d60c4] text-white text-[11px] @2xl:text-[12px] font-bold tracking-wide transition-colors shrink-0"
         >
           TO&apos;LOV
         </button>
       )}
 
       <DropdownMenu>
+        {/* Tor panelda (telefon, keng menyuli planshet) faqat ikonka: filial
+            nomi 120–160px joy olib, sahifa sarlavhasini siqib chiqarardi.
+            Bitta filial tanlangan bo'lsa ikonkada nuqta yonadi — filtr
+            yoqilgani nom ko'rinmasa ham bilinib tursin. */}
         <DropdownMenuTrigger
+          aria-label={`Filial: ${activeBranch?.name ?? "Barcha filiallar"}`}
+          title={activeBranch?.name ?? "Barcha filiallar"}
           className={cn(
-            "inline-flex items-center gap-1 h-9 px-2 sm:px-3 rounded-lg",
+            "relative inline-flex items-center justify-center gap-1 h-9 w-9 @2xl:w-auto @2xl:px-3 rounded-lg shrink-0",
             "text-[13px] font-medium text-neutral-700 dark:text-neutral-200",
             "hover:bg-white/60 dark:hover:bg-white/10 transition-colors outline-none",
           )}
         >
-          <span className="max-w-[120px] sm:max-w-[160px] truncate">
+          <MapPin className="w-4 h-4 text-neutral-500 dark:text-neutral-400 @2xl:hidden" />
+          {activeBranchId !== null && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-500 @2xl:hidden" />
+          )}
+          <span className="hidden @2xl:inline max-w-[160px] truncate">
             {isLoading
               ? "..."
               : activeBranch?.name
                 ?? (branches.length === 0 ? "Filial yo'q" : "Barcha filiallar")}
           </span>
-          <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
+          <ChevronDown className="hidden @2xl:block w-4 h-4 text-neutral-400 shrink-0" />
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="end" className="min-w-[200px]">

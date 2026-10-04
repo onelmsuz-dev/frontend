@@ -82,12 +82,12 @@ export function ScheduleDrawer() {
           telefonda pastki menyudan tepada turadi. */}
       {!ochiq && (
         <button type="button" onClick={() => setOchiq(true)}
-          title="Bugungi jadval"
+          title="Bugungi jadval" aria-label="Bugungi jadval"
           className="fixed right-0 top-1/2 -translate-y-1/2 z-40
-            flex items-center justify-center w-9 h-16 rounded-l-xl
+            flex items-center justify-center w-5 lg:w-9 h-16 rounded-l-xl
             bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg
             transition-colors">
-          <CalendarClock className="w-4 h-4" />
+          <CalendarClock className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
         </button>
       )}
 

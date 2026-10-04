@@ -192,7 +192,13 @@ html[data-font] .bottom-nav-label {
     font-family: var(--font-jakarta), system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
+    /* `hidden` EMAS: `html` da ham `overflow-x: hidden` turgani uchun `body`
+       niki oynaga ko'chmaydi va `body` o'zi aylanish konteyneriga aylanadi
+       (`overflow-y` avtomatik `auto` bo'ladi). Shunda ichidagi har qanday
+       `position: sticky` oynaga emas, hech qachon aylanmaydigan `body` ga
+       yopishardi — chap menyu sahifa bilan birga tepaga chiqib ketardi.
+       `clip` gorizontal toshishni xuddi shunday kesadi, konteyner yaratmaydi. */
+    overflow-x: clip;
   }
 }
 
@@ -329,6 +335,7 @@ tbody tr + tr {
   );
 }
 
+
 @layer utilities {
   /* Main frosted surface — cards, panels, sidebar, header */
   .glass-panel {
@@ -434,6 +441,32 @@ select optgroup {
  * kontrasti past edi. Qorong'i rejimda biroz to'yingan fon beramiz. */
 .dark select {
   background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* OCHILMA BELGISI (pastga strelka) — o'zimizniki.
+ *
+ * Brauzerning o'z strelkasi select'ning o'ng chetiga TAQALIB turardi:
+ * uning joyini CSS bilan surib bo'lmaydi, `padding-right` ham unga ta'sir
+ * qilmaydi. Yumaloq burchakli (`rounded-xl`) filtrlarda belgi burchakka
+ * kirib qolgandek ko'rinardi.
+ *
+ * Shuning uchun native belgi o'chiriladi (`appearance: none`) va o'rniga
+ * fon rasmi sifatida chevron qo'yiladi — chetdan 10px ichkarida, matn esa
+ * unga yetib bormaydi (`padding-right`). Rang neytral kulrang: yorug' va
+ * qorong'i mavzuda birdek o'qiladi.
+ *
+ * `multiple`/`size` li ro'yxatlarga tegilmaydi — ularda strelka yo'q.
+ * Fon RANGI ga tegmaymiz (faqat `background-image`), aks holda har bir
+ * sahifadagi `bg-*` / `glass-soft` klasslari bekor bo'lardi. */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  background-size: 0.875rem 0.875rem;
+  padding-right: 2.125rem;
+  text-overflow: ellipsis;
 }
 
 /* ─── "Yo'l ko'rsatuvchi" (onboarding) turi ─────────────────────────────────

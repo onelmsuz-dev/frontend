@@ -146,8 +146,10 @@ export function BottomNav() {
       )}
 
       {/* `bottom` — uy indikatori bor telefonlarda xavfsiz zonadan pastga tushmaydi. */}
+      {/* Fon TO'LIQ (shaffof emas) — `glass-strong` (85%) ostidan sahifa matni ko'rinib,
+          menyu yozuvlari bilan ustma-ust tushardi va o'qilmasdi. */}
       <nav aria-label="Asosiy menyu"
-        className="glass-strong fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 z-[60] lg:hidden rounded-3xl border border-white/60 dark:border-white/10 shadow-xl flex items-stretch overflow-hidden">
+        className="glass-strong bg-white! dark:bg-[rgb(20_18_26)]! fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 right-3 z-[60] lg:hidden rounded-3xl border border-white/60 dark:border-white/10 shadow-xl flex items-stretch overflow-hidden">
         {bottomItems.map((item) => {
           const Icon = item.icon;
           const isActive = faol(item.href);
