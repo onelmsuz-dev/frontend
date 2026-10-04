@@ -1,24 +1,20 @@
 /*
- * Kirish pardasi. Sukut bo'yicha YASHIRIN — faqat `<html data-intro>` bo'lganda
- * ko'rinadi, shunda animatsiyani ko'rgan odamga sahifa yangilanganda lip etmaydi.
- * Logo animatsiyasi element ko'ringan paytda boshlanadi.
+ * Kirish pardasi. Sukut bo'yicha KO'RINADI va butun ekranni yopadi — birinchi
+ * kirishda kabinetdan oldin chiziladigan narsa shu. Animatsiyani ko'rgan odamda
+ * uni skript (`intro-splash.tsx`) birinchi chizilishdan oldin yashiradi.
  */
 .overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   background: var(--background);
   transition: opacity 400ms ease;
 }
 
-:global(html[data-intro]) .overlay {
-  display: flex;
-}
-
-:global(html[data-intro="out"]) .overlay {
+.out {
   opacity: 0;
   pointer-events: none;
 }
