@@ -1,0 +1,24 @@
+/*
+ * Kirish pardasi. Sukut bo'yicha YASHIRIN — faqat `<html data-intro>` bo'lganda
+ * ko'rinadi, shunda animatsiyani ko'rgan odamga sahifa yangilanganda lip etmaydi.
+ * Logo animatsiyasi element ko'ringan paytda boshlanadi.
+ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
+  transition: opacity 400ms ease;
+}
+
+:global(html[data-intro]) .overlay {
+  display: flex;
+}
+
+:global(html[data-intro="out"]) .overlay {
+  opacity: 0;
+  pointer-events: none;
+}

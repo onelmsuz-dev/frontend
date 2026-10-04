@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { IntroSplash } from "@/components/brand/intro-splash";
 import { LayoutSwitcher } from "@/components/layout-switcher";
 
 // SEO faqat landing sahifalar uchun — ilova ekranlari (avtorizatsiya talab
@@ -9,5 +10,10 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <LayoutSwitcher>{children}</LayoutSwitcher>;
+  return (
+    <>
+      <IntroSplash />
+      <LayoutSwitcher>{children}</LayoutSwitcher>
+    </>
+  );
 }

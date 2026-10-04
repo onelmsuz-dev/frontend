@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { IntroReset } from "@/components/brand/intro-splash";
 
 // `/login` sahifasi client komponent bo'lgani uchun o'zi metadata eksport
 // qila olmaydi — shu sabab qobiq layout kerak. Qidiruvda chiqmasligi kerak:
@@ -8,5 +9,10 @@ export const metadata: Metadata = {
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <IntroReset />
+      {children}
+    </>
+  );
 }
