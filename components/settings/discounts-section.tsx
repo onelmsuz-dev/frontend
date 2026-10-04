@@ -659,9 +659,9 @@ function DiscountModal({ editId, onClose, onDone }: {
           )}
 
           <p className="text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400 -mt-1">
-          {"Qoida boshlanish sanasidan boshlab (bo'sh bo'lsa bugundan) "}
-          <strong>allaqachon yozilgan joriy davrga ham</strong>
-          {" qo'llanadi: farq chegirma qatori bilan qoplanadi. O'tgan, tugagan davrlarga tegilmaydi."}
+          {editId
+            ? "Tahrir faqat keyingi hisoblarga ta'sir qiladi; allaqachon yozilgan davrga qo'llash uchun yangi qoida yarating."
+            : "Qoida boshlanish sanasi tushgan, allaqachon yozilgan davrga ham qo'llanadi (butun davr bo'yicha): farq chegirma qatori bilan qoplanadi. Tugagan davrlarga tegilmaydi. Qoida o'chirilsa ochiq davr kompensatsiyasi bekor bo'ladi."}
         </p>
         {/* O'QITUVCHI OYLIGI — chegirma uning foiziga tushsinmi. Ijtimoiyda
               savol yo'q: har doim ayiriladi. */}

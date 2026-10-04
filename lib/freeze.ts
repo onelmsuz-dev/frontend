@@ -16,13 +16,18 @@ export interface FreezeLike {
   to?: string | Date | null;
 }
 
+import { businessTodayStr } from "@/lib/time";
+
+// Muzlatish `from`/`to` bazada kun o'zligi (UTC yarim tun); "bugun" esa
+// BIZNES kuni — brauzer UTC kuni 00:00–05:00 (Toshkent) oralig'ida bir kun
+// orqada qolib ogohlantirishni yashirardi (2026-10-04).
 function kun(d: string | Date): string {
   return (typeof d === "string" ? d : d.toISOString()).slice(0, 10);
 }
 
 /** Bugun (yoki berilgan kun) muzlatish oralig'iga tushadimi. */
 export function activeFreeze<T extends FreezeLike>(
-  freezes: T[] | null | undefined, today: string = kun(new Date()),
+  freezes: T[] | null | undefined, today: string = businessTodayStr(),
 ): T | null {
   if (!freezes?.length) return null;
   return freezes.find((f) => kun(f.from) <= today && (f.to == null || kun(f.to) > today)) ?? null;

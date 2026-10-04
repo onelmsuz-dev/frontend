@@ -392,6 +392,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     payableGroups.find((g: Membership) => g.groupId === selectedPayGroupId)?.freezes);
   /** Muzlatilgan guruhga to'lov — xodim ataylab tasdiqlashi shart. */
   const [muzTasdiq, setMuzTasdiq] = useState(false);
+  /** Oyna qaysi yo'l bilan yopilmasin (X, Bekor, muvaffaqiyat) — tasdiq o'chadi. */
+  const yopPayModal = () => { setShowPayModal(false); setMuzTasdiq(false); };
 
   async function setArchived(archived: boolean) {
     setArchiving(true); setArchiveErr("");
@@ -518,7 +520,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       if (!res.ok) { setPayErr(data.error ?? "Xatolik"); return; }
       revalidateAll();
       mutate(`/api/materials/student/${id}`);
-      setShowPayModal(false);
+      yopPayModal();
       setMaterial(false); setMaterialKat(""); setMaterialQarzga(false);
       setQarzYopish(false);
       setPayForm({ amount: "", method: "NAQD", note: "", groupId: "" });
@@ -553,7 +555,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       const data = await res.json();
       if (!res.ok) { setPayErr(data.error ?? "Xatolik"); return; }
       revalidateAll();
-      setShowPayModal(false);
+      yopPayModal();
       setPayForm({ amount: "", method: "NAQD", note: "", groupId: "" });
     } catch { setPayErr("Serverga ulanib bo'lmadi"); }
     finally { setPaying(false); }
@@ -892,7 +894,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
       />
 
       {/* Payment modal */}
-      <Modal open={showPayModal} onClose={() => setShowPayModal(false)}
+      <Modal open={showPayModal} onClose={() => yopPayModal()}
         title={material ? "Qo'shimcha to'lov" : "To'lov qabul qilish"}
         subtitle={student.name}
         footer={
@@ -905,7 +907,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     : materialQarzga ? "Qarzga yozish" : "Qabul qilish")
                 : "Qabul qilish"}
             </Button>
-            <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => setShowPayModal(false)}>Bekor</Button>
+            <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={() => yopPayModal()}>Bekor</Button>
           </>
         }>
         {/* GURUH TANLASH — faqat KURS to'lovida. Qo'shimcha to'lov
@@ -930,6 +932,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             (Doniyorjon, 2026-10-04). Bitta guruhda ham ko'rinadi. */}
         {!material && selectedPayGroupId && (() => {
           const q = ledgerRows.find((r) => r.groupId === selectedPayGroupId);
+          const umumiy = ledgerRows.find((r) => r.groupId === null);   // guruhsiz savat
           const nom = payableGroups.find((g: Membership) => g.groupId === selectedPayGroupId)?.group?.name ?? "Guruh";
           return (
             <p className="text-[12px] -mt-2" data-guruh-qarzi>
@@ -938,7 +941,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 ? <span className="font-semibold text-red-600 dark:text-red-400">{fmt(q.debt)} qarz</span>
                 : q && q.advance > 0
                   ? <span className="font-semibold text-green-600 dark:text-green-400">{fmt(q.advance)} avans</span>
-                  : <span className="text-neutral-500 dark:text-neutral-400">qarz yo&apos;q</span>}
+                  : umumiy && umumiy.debt > 0
+                    ? <span className="text-neutral-500 dark:text-neutral-400">guruhda qarz yo&apos;q · guruhsiz qarz <b className="text-red-600 dark:text-red-400">{fmt(umumiy.debt)}</b></span>
+                    : <span className="text-neutral-500 dark:text-neutral-400">qarz yo&apos;q</span>}
             </p>
           );
         })()}

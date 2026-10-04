@@ -285,6 +285,7 @@ export function AcceptPaymentModal({
               autoFocus={!defaultStudentId}
               onChange={(s) => {
                 setTanlov(s);
+                setMuzTasdiq(false);   // yangi o'quvchi — eski tasdiq o'tmasin
                 // Guruh tanlovi eski o'quvchiniki bo'lib qolmasin.
                 setPayForm(p => ({ ...p, studentId: s?.id ?? "", groupId: "" }));
                 setPayFormErr("");
@@ -319,6 +320,7 @@ export function AcceptPaymentModal({
               ham ko'rinadi: select yashirin, lekin qarz savol tug'diradi. */}
           {!forMaterials && selectedGroupId && (() => {
             const q = guruhQarzlari.find(r => r.groupId === selectedGroupId);
+            const umumiy = guruhQarzlari.find(r => r.groupId === null);   // guruhsiz savat (qo'lda qarz, boshlang'ich qoldiq)
             const nom = payableGroups.find(g => g.groupId === selectedGroupId)?.group?.name ?? "Guruh";
             return (
               <p className="text-[12px] -mt-1" data-guruh-qarzi>
@@ -327,7 +329,9 @@ export function AcceptPaymentModal({
                   ? <span className="font-semibold text-red-600 dark:text-red-400">{formatCurrency(q.debt)} qarz</span>
                   : q && q.advance > 0
                     ? <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(q.advance)} avans</span>
-                    : <span className="text-neutral-500 dark:text-neutral-400">qarz yo&apos;q</span>}
+                    : umumiy && umumiy.debt > 0
+                      ? <span className="text-neutral-500 dark:text-neutral-400">guruhda qarz yo&apos;q · guruhsiz qarz <b className="text-red-600 dark:text-red-400">{formatCurrency(umumiy.debt)}</b></span>
+                      : <span className="text-neutral-500 dark:text-neutral-400">qarz yo&apos;q</span>}
               </p>
             );
           })()}

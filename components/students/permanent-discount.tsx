@@ -99,9 +99,14 @@ export function PermanentDiscount({ studentId, studentName, groups = [], onDone 
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error ?? "Saqlab bo'lmadi");
-      setQollandi(j?.applied?.periods
-        ? `Mavjud qarzga ham qo'llandi: ${Number(j.applied.amount).toLocaleString("uz-UZ")} so'm (${j.applied.periods} davr)`
-        : "Yozilgan davr topilmadi — keyingi hisoblardan qo'llanadi");
+      const a = j?.applied;
+      setQollandi(a?.periods
+        ? `Mavjud qarzga ham qo'llandi: ${Number(a.amount).toLocaleString("uz-UZ")} so'm (${a.periods} davr)`
+        : a?.kelishilgan
+          ? "Kelishilgan alohida narxi bor a'zolikka qoida qo'llanmaydi"
+          : a?.xato
+            ? `Qoida saqlandi, mavjud davrga qo'llashda xato: ${a.xato}`
+            : "Mavjud davrga qo'shimcha farq topilmadi (qarz yo'q yoki chegirma allaqachon shundan kam emas) — keyingi hisoblardan qo'llanadi");
       await mutate();
       onDone();
       setValue(kind === "IJTIMOIY" ? "100" : ""); setNote(""); setEndsAt(""); setGroupId("");
