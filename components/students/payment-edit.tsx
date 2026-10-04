@@ -9,6 +9,7 @@ import {
   SELECTABLE_METHODS, methodGridCls, methodShort,
 } from "@/lib/payment-methods";
 import { formatUzDate } from "@/lib/date-uz";
+import { formatNumber } from "@/lib/money";
 
 /**
  * TO'LOVNI TUZATISH VA O'CHIRISH.
@@ -23,7 +24,7 @@ import { formatUzDate } from "@/lib/date-uz";
  * va javob jurnaldan topilishi kerak.
  */
 
-const fmt = (v: number) => new Intl.NumberFormat("uz-UZ").format(v);
+const fmt = (v: number) => formatNumber(v);
 
 export interface PaymentRow {
   id: string; amount: number; method: string;

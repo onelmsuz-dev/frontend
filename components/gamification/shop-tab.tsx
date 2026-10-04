@@ -16,12 +16,13 @@ import {
   useRewards, useGamificationSettings, costInLessons, monthlyEarning,
   KIND_LABELS, KIND_COLORS, type Reward, type RewardKind,
 } from "@/lib/hooks/useGamification";
+import { formatCurrency } from "@/lib/money";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
 
-const fmtSom = (v: number) => new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
+const fmtSom = (v: number) => formatCurrency(v);
 
 const KIND_ICONS: Record<RewardKind, typeof Gift> = {
   PHYSICAL: Gift, DISCOUNT: Percent, PRIVILEGE: Sparkles,

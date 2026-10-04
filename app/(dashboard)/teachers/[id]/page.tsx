@@ -10,11 +10,12 @@ import {
   AlertCircle, CheckCircle, XCircle,
 } from "lucide-react";
 import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
+import { formatCurrency } from "@/lib/money";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 function fmt(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
+  return formatCurrency(v);
 }
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;

@@ -15,8 +15,9 @@ import {
   KIND_LABELS, KIND_COLORS, STATUS_LABELS, STATUS_COLORS,
 } from "@/lib/hooks/useGamification";
 import { formatUzDate } from "@/lib/date-uz";
+import { formatCurrency } from "@/lib/money";
 
-const fmtSom = (v: number) => new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
+const fmtSom = (v: number) => formatCurrency(v);
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-800 rounded-xl", className)} />;

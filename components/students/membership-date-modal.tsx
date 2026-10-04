@@ -10,6 +10,7 @@ import { todayStr } from "@/lib/form-constants";
 import { Input } from "@/components/ui/input";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { formatUzDate } from "@/lib/date-uz";
+import { formatNumber } from "@/lib/money";
 
 /**
  * GURUHGA QO'SHILGAN SANANI TUZATISH.
@@ -130,7 +131,7 @@ export function MembershipDateModal({
 
           {canPrice && (
             <div className="grid grid-cols-2 gap-3 mt-3">
-              <FormField label="Kelishilgan narx (so'm)" hint={info?.coursePrice != null ? `Kurs narxi: ${Math.round(info.coursePrice).toLocaleString("ru-RU")}` : "Bo'sh — kurs narxi"}>
+              <FormField label="Kelishilgan narx (so'm)" hint={info?.coursePrice != null ? `Kurs narxi: ${formatNumber(Math.round(info.coursePrice))}` : "Bo'sh — kurs narxi"}>
                 <Input type="number" inputMode="numeric" value={price} placeholder="Bo'sh — kurs narxi"
                   onChange={(e) => setPrice(e.target.value)} className="h-10" />
               </FormField>

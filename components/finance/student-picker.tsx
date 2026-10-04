@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, X, Loader2, AlertCircle } from "lucide-react";
 import { useStudents } from "@/lib/hooks/useStudents";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/money";
 
 /**
  * TO'LOV UCHUN O'QUVCHI TANLASH — QIDIRUV BILAN.
@@ -21,8 +22,7 @@ import { cn } from "@/lib/utils";
  * qarab, keyin summani yozardi.
  */
 
-const fmt = (v: number) =>
-  new Intl.NumberFormat("uz-UZ").format(Math.round(Math.abs(v)));
+const fmt = (v: number) => formatNumber(Math.round(Math.abs(v)));
 
 export interface PickedStudent {
   id: string;

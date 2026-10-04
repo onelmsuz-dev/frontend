@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 import { useTeacherSummary } from "@/lib/hooks/usePanel";
 import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
 import { Wallet, Users, BookOpen, TrendingUp, CheckCircle2, Clock } from "lucide-react";
+import { formatCurrency } from "@/lib/money";
 
 function fmtMoney(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
+  return formatCurrency(v);
 }
 
 const UZ_MONTHS = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SELECTABLE_METHODS, methodGridCls } from "@/lib/payment-methods";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/money";
 
 /**
  * "TO'LOV" TUGMASI + QO'SHIMCHA AMALLAR (Doniyorjon, 2026-09-24).
@@ -27,7 +28,7 @@ import { cn } from "@/lib/utils";
  * bir qatorda, markaz egasining qarori. Ruxsat bo'lmasa o'q chizilmaydi.
  */
 
-const fmt = (v: number) => new Intl.NumberFormat("uz-UZ").format(Math.round(v));
+const fmt = (v: number) => formatNumber(Math.round(v));
 
 export interface MoneyGroup {
   groupId: string;

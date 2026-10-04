@@ -53,9 +53,10 @@ import { StudentDocumentsSection } from "@/components/students/student-documents
 import { BalanceTrendChart } from "@/components/students/balance-trend-chart";
 import { useFeature } from "@/lib/hooks/useFeatures";
 import { compressImage } from "@/lib/image-compress";
+import { formatCurrency, formatNumber } from "@/lib/money";
 
 function fmt(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
+  return formatCurrency(v);
 }
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -1127,7 +1128,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               <span className="flex-1">
                 <span className="block text-[13px] font-medium">To&apos;liq qarz qolsin</span>
                 <span className="block text-[11px] text-neutral-500 dark:text-neutral-400">
-                  {exitInfo.settlement.charged.toLocaleString("uz-UZ")}{" "}so&apos;m qarzdor bo&apos;lib qoladi
+                  {formatNumber(exitInfo.settlement.charged)}{" "}so&apos;m qarzdor bo&apos;lib qoladi
                 </span>
               </span>
             </label>
@@ -1159,8 +1160,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                   className="w-full h-9 px-3 rounded-lg text-[13px] bg-white dark:bg-neutral-900
                     border border-neutral-200 dark:border-white/10" />
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-                  {Math.max(exitInfo.settlement.charged
-                    - (Number(exitKeep.replace(/\s/g, "")) || 0), 0).toLocaleString("uz-UZ")}
+                  {formatNumber(Math.max(exitInfo.settlement.charged
+                    - (Number(exitKeep.replace(/\s/g, "")) || 0), 0))}
                   {" "}so&apos;m kechiriladi
                 </p>
                 <p className="text-[11px] text-neutral-400 mt-1">
@@ -1236,12 +1237,12 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             <div className="flex items-center justify-between text-[13px] mb-2">
               <span className="text-neutral-500 dark:text-neutral-400">Qarzi</span>
               <b className="text-red-600 dark:text-red-400">
-                {preview.debt.toLocaleString("uz-UZ")}{" "}so&apos;m
+                {formatNumber(preview.debt)}{" "}so&apos;m
               </b>
             </div>
 
             {([
-              ["QOLSIN",      "Qarzi qolsin",                  `${preview.debt.toLocaleString("uz-UZ")} so'm qarzdor bo'lib qoladi`],
+              ["QOLSIN",      "Qarzi qolsin",                  `${formatNumber(preview.debt)} so'm qarzdor bo'lib qoladi`],
               ["QISMAN",      "Faqat qatnashgan darslar uchun", "Summani kiritasiz, qolgani kechiriladi"],
               ["KECHIRILSIN", "Butunlay kechirilsin",           "Hisobi 0 ga tushadi"],
             ] as const).map(([qiymat, sarlavha, izoh]) => (
@@ -1268,7 +1269,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 {preview.settlement.items.map((it, i) => (
                   <p key={i} className="text-[11px] text-neutral-500 dark:text-neutral-400">
                     {it.groupName}: {it.suggested !== null
-                      ? <>{it.attended}/{it.totalLessons} dars → <b>{it.suggested.toLocaleString("uz-UZ")}</b></>
+                      ? <>{it.attended}/{it.totalLessons} dars → <b>{formatNumber(it.suggested)}</b></>
                       : <span className="text-amber-600 dark:text-amber-400">{it.reason}</span>}
                   </p>
                 ))}
@@ -1283,11 +1284,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                     border border-neutral-200 dark:border-white/10" />
                 {qismanNotogri ? (
                   <p className="text-[11px] text-red-600 dark:text-red-400 mt-1">
-                    Summa 0 dan {preview.debt.toLocaleString("uz-UZ")}{" "}gacha bo&apos;lishi kerak
+                    Summa 0 dan {formatNumber(preview.debt)}{" "}gacha bo&apos;lishi kerak
                   </p>
                 ) : (
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
-                    {kechiriladi.toLocaleString("uz-UZ")}{" "}so&apos;m kechiriladi
+                    {formatNumber(kechiriladi)}{" "}so&apos;m kechiriladi
                   </p>
                 )}
               </div>
@@ -1296,7 +1297,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         )}
         {!previewLoading && preview && preview.credit > 0 && (
           <p className="text-[12px] text-amber-600 dark:text-amber-400 mt-3">
-            Diqqat: hisobida <b>{preview.credit.toLocaleString("uz-UZ")} so&apos;m</b> ortiqcha
+            Diqqat: hisobida <b>{formatNumber(preview.credit)} so&apos;m</b> ortiqcha
             pul bor. Uni qaytarish alohida hal qilinadi — bu oyna faqat qarz
             bilan ishlaydi.
           </p>

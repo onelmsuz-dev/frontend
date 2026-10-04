@@ -16,9 +16,10 @@ import {
 } from "@/lib/hooks/useSubscription";
 import { CheckCircle2, AlertTriangle, Clock, Users, Building, UserCog, Receipt } from "lucide-react";
 import { formatUzDate } from "@/lib/date-uz";
+import { formatCurrency } from "@/lib/money";
 
 function fmtMoney(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
+  return formatCurrency(v);
 }
 
 const STATUS_LABEL: Record<string, string> = {

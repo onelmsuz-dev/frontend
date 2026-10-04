@@ -11,6 +11,7 @@ import {
   Power, Trash2, Info, AlertCircle, Gift, Pencil,
 } from "lucide-react";
 import { formatUzDate } from "@/lib/date-uz";
+import { formatNumber } from "@/lib/money";
 
 /**
  * SOZLAMALAR → CHEGIRMALAR.
@@ -45,7 +46,7 @@ const SCOPE_UI: Record<string, { label: string; icon: typeof Globe }> = {
   TANLANGAN: { label: "Tanlangan",          icon: UserCheck },
 };
 
-const fmt = (v: number) => new Intl.NumberFormat("uz-UZ").format(v);
+const fmt = (v: number) => formatNumber(v);
 
 export function DiscountsSection() {
   const { me } = useMe();

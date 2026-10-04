@@ -1,3 +1,4 @@
+import { formatCurrency } from "@/lib/money";
 // O'qituvchi maosh hisoblash usullari — backend SalaryType enum bilan mos.
 
 export type SalaryType = "PERCENT" | "FIXED" | "PER_LESSON" | "PER_STUDENT";
@@ -56,11 +57,7 @@ export const SALARY_CFG: Record<SalaryType, SalaryTypeCfg> = Object.fromEntries(
 ) as Record<SalaryType, SalaryTypeCfg>;
 
 function fmtSom(v: number): string {
-  return new Intl.NumberFormat("uz-UZ", {
-    style: "currency",
-    currency: "UZS",
-    maximumFractionDigits: 0,
-  }).format(v);
+  return formatCurrency(v);
 }
 
 /** O'qituvchi maoshini usuliga qarab chiroyli ko'rsatadi: "30%", "3 000 000 so'm", "150 000 so'm/dars". */

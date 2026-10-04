@@ -24,9 +24,10 @@ import {
 import { useStudents } from "@/lib/hooks/useStudents";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { formatUzDate } from "@/lib/date-uz";
+import { formatCurrency } from "@/lib/money";
 
 function fmtMoney(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
+  return formatCurrency(v);
 }
 
 type Audience = "students" | "parents" | "teachers";

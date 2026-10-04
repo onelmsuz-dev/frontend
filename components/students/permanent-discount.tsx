@@ -10,6 +10,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { fetcher } from "@/lib/fetcher";
 import { formatUzDate } from "@/lib/date-uz";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/money";
 
 /**
  * DOIMIY CHEGIRMA — o'quvchi kartochkasidan (2026-10-03).
@@ -37,7 +38,7 @@ interface Rule {
   groupIds: string[]; affectsTeacherSalary: boolean; note: string;
 }
 
-const fmt = (v: number) => new Intl.NumberFormat("uz-UZ").format(v);
+const fmt = (v: number) => formatNumber(v);
 const inputCls = "w-full h-9 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 text-[13px] outline-none focus:border-indigo-400";
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {

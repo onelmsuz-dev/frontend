@@ -8,11 +8,12 @@ import { cn } from "@/lib/utils";
 import {
   ArrowLeft, BookOpen, Users, DollarSign, Clock, AlertCircle,
 } from "lucide-react";
+import { formatCurrency } from "@/lib/money";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 function fmt(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
+  return formatCurrency(v);
 }
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;

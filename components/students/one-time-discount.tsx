@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Gift, Loader2, AlertTriangle } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { formatNumber } from "@/lib/money";
 
 /**
  * BIR MARTALIK CHEGIRMA — mavjud qarzni kamaytiradi.
@@ -23,7 +24,7 @@ import { Button } from "@/components/ui/button";
  * qoladi va daromad hisoboti ham to'g'ri chiqadi.
  */
 
-const fmt = (v: number) => new Intl.NumberFormat("uz-UZ").format(v);
+const fmt = (v: number) => formatNumber(v);
 
 export function OneTimeDiscount({
   studentId, studentName, balance, groups = [], onDone,

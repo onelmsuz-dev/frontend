@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { todayStr } from "@/lib/form-constants";
 import { fetcher } from "@/lib/fetcher";
+import { formatNumber } from "@/lib/money";
 
 /**
  * A'ZOLIKNI MUZLATISH.
@@ -53,7 +54,7 @@ export function FreezeModal({
   );
   const hisob = preview?.settlement ?? null;
   const hisoblanadi = !!hisob && !hisob.reason && hisob.totalLessons > 0 && hisob.refund > 0;
-  const fmt = (n: number) => `${Math.round(n).toLocaleString("ru-RU")} so'm`;
+  const fmt = (n: number) => `${formatNumber(Math.round(n))} so'm`;
 
   async function save() {
     if (!membership || !from) return;

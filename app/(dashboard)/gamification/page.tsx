@@ -25,6 +25,7 @@ import { useMe } from "@/lib/hooks/useMe";
 import { ShopTab } from "@/components/gamification/shop-tab";
 import { RedemptionsTab } from "@/components/gamification/redemptions-tab";
 import { fmtMonthYear } from "@/lib/date-uz";
+import { formatNumber } from "@/lib/money";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -629,7 +630,7 @@ function SettingsTab() {
         </div>
         <p className="text-[11px] text-neutral-400">
           Faqat &quot;To&apos;lovga chegirma&quot; turidagi sovg&apos;a narxini avtomatik hisoblashda ishlatiladi.
-          Masalan {s.discountRate} bo&apos;lsa, 1000 coin = {(1000 * s.discountRate).toLocaleString("uz-UZ")}{" "}so&apos;m.
+          Masalan {s.discountRate} bo&apos;lsa, 1000 coin = {formatNumber((1000 * s.discountRate))}{" "}so&apos;m.
         </p>
       </div>
 

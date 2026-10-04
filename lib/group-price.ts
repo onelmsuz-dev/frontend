@@ -1,3 +1,4 @@
+import { formatNumber } from "@/lib/money";
 /**
  * GURUH NARXINI ODAM TILIDA KO'RSATISH.
  *
@@ -59,5 +60,5 @@ export function guruhNarxi(
 /** "600 000 so'm / oylik" — kartochkalarda aynan shu satr chiqadi. */
 export function narxMatni(n: GuruhNarxi | null): string | null {
   if (!n) return null;
-  return `${n.summa.toLocaleString("uz-UZ")} so'm / ${n.yorliq}`;
+  return `${formatNumber(n.summa)} so'm / ${n.yorliq}`;
 }

@@ -12,6 +12,7 @@ import { attendanceFrom, kunUz } from "@/lib/attendance-from";
 import { ATTENDANCE_GRACE_MINUTES } from "@/lib/form-constants";
 import { businessMinutesOfDay, businessToday } from "@/lib/time";
 import { StudentInfoPopover } from "./student-info-popover";
+import { formatNumber } from "@/lib/money";
 
 type Status = "KELDI" | "KELMADI" | "KECH_KELDI" | "SABABLI";
 
@@ -30,7 +31,7 @@ function toDateStr(d: Date) {
 }
 function addDays(d: Date, n: number) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
 function fmtMoney(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(Math.abs(v));
+  return formatNumber(Math.abs(v));
 }
 
 interface Props {
