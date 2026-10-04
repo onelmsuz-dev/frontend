@@ -11,21 +11,21 @@ import { useDashboard } from "@/lib/hooks/useDashboard";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { groupCourses, guruhlashKerak } from "@/lib/course-groups";
 import { useBranchQueryString } from "@/lib/contexts/branch-context";
-import { BranchFilter } from "@/components/layout/branch-filter";
 import { TrendingUp, Users, BookOpen, CalendarCheck, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OverviewSections } from "@/components/reports/overview-sections";
 import useSWR from "swr";
+import { formatCompact } from "@/lib/money";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
-function formatCurrency(v: number) {
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M so'm`;
-  if (v >= 1_000) return `${(v / 1_000).toFixed(0)}K so'm`;
-  return `${v} so'm`;
-}
+// Ilgari shu sahifaning O'Z formati bor edi ("29.8M so'm", "500K so'm") —
+// panelning boshqa joylaridagi "mln"/"ming" bilan mos kelmasdi.
+const formatCurrency = (v: number) => `${formatCompact(v)} soʻm`;
 
-const PIE_COLORS = ["#6366f1", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4"];
+// 10 ta bir-biridan uzoq rang: ilgari 6 ta edi va 7-kurs birinchisi bilan
+// AYNAN bir xil rangda chiqib, diagrammada ikkalasini ajratib bo'lmasdi.
+const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#14b8a6", "#a855f7"];
 
 const DATE_RANGES: { label: string; months: number }[] = [
   { label: "Bu oy",         months: 1 },
@@ -104,7 +104,6 @@ export default function ReportsPage() {
             )}
           </div>
 
-          <BranchFilter className="rounded-xl" />
         </div>
 
         {/* KPI stats */}
@@ -142,7 +141,7 @@ export default function ReportsPage() {
                 <BarChart data={revenue}>
                   <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
                   <XAxis dataKey="label" tick={{ fontSize: 12, fill: chart.axis }} />
-                  <YAxis tick={{ fontSize: 11, fill: chart.axis }} tickFormatter={v => `${(v / 1000000).toFixed(0)}M`} />
+                  <YAxis tick={{ fontSize: 11, fill: chart.axis }} tickFormatter={v => formatCompact(v)} />
                   <Tooltip
                     formatter={(v: unknown) => formatCurrency(v as number)}
                     contentStyle={{ background: chart.tooltip, border: `1px solid ${chart.tooltipBorder}`, borderRadius: 8, color: chart.tooltipText }}

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { TopHeader } from "@/components/layout/top-header";
-import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
+import { BranchPicker } from "@/components/layout/branch-filter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,10 @@ import { FormField } from "@/components/ui/form-field";
 import { Segmented, GenderPicker } from "@/components/ui/segmented";
 import { SALARY_TYPES, SALARY_CFG, salaryDisplay, type SalaryType } from "@/lib/salary";
 import { todayStr } from "@/lib/form-constants";
+import { formatCurrency } from "@/lib/money";
 
 function fmt(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
+  return formatCurrency(v);
 }
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -53,7 +54,7 @@ export default function TeachersPage() {
   const { me } = useMe();
   const canCreate = hasPerm(me?.permissions, "teachers.create");
   const [search,      setSearch]      = useState("");
-  const [viewMode,    setViewMode]    = useState<ViewMode>("grid");
+  const [viewMode,    setViewMode]    = useState<ViewMode>("list"); // standart — ro'yxat: bir ekranga 3 barobar ko'p o'qituvchi sig'adi
   const [showModal,   setShowModal]   = useState(false);
   const [editTarget,  setEditTarget]  = useState<any>(null);
   const [deleteTarget,setDeleteTarget]= useState<any>(null);
@@ -365,38 +366,29 @@ export default function TeachersPage() {
       />
 
       <div className="p-5 space-y-5">
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { l: "Jami", v: stats.jami, icon: Users, bg: "bg-blue-50 dark:bg-blue-950/40", text: "text-blue-600" },
-            { l: "Faol", v: stats.faol, icon: BookOpen, bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-600" },
-            { l: "Jami guruhlar", v: stats.guruhlar, icon: Users, bg: "bg-purple-50 dark:bg-purple-950/40", text: "text-purple-600" },
-          ].map(s => {
-            const Icon = s.icon;
-            return (
-              <div key={s.l} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
-                  <Icon className={cn("w-4.5 h-4.5", s.text)} />
-                </div>
-                {isLoading ? <Skeleton className="h-6 w-10 mb-1" />
-                  : <p className="text-[22px] font-black text-neutral-900 dark:text-neutral-100 leading-none">{s.v}</p>}
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{s.l}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        {/* Filters — tor ekranda qidiruv to'liq qator, qolganlari ostiga o'raladi */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <Input placeholder="Ism, fan, telefon..." className="pl-9 h-9 text-sm w-64"
+            <Input placeholder="Ism, fan, telefon..." className="pl-9 h-9 text-sm w-full"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <BranchFilter />
+          {/* UMUMIY SONLAR — ilgari uchta katta kartochka edi. Filial — tepa
+              paneldagi tanlagich shu ro'yxatni ham toraytiradi. */}
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+            {isLoading ? "…" : (
+              <>
+                <b className="font-bold text-neutral-800 dark:text-neutral-200">{stats.jami}</b>{" "}o&apos;qituvchi
+                <span className="mx-1.5 text-neutral-300 dark:text-neutral-600">·</span>
+                <b className="font-bold text-neutral-800 dark:text-neutral-200">{stats.faol}</b>{" "}faol
+                <span className="mx-1.5 text-neutral-300 dark:text-neutral-600">·</span>
+                <b className="font-bold text-neutral-800 dark:text-neutral-200">{stats.guruhlar}</b>{" "}guruh
+              </>
+            )}
+          </p>
           <div className="flex p-1 gap-0.5 glass-soft rounded-xl ml-auto">
             {([["grid", LayoutGrid], ["list", List]] as [ViewMode, any][]).map(([id, Icon]) => (
-              <button key={id} onClick={() => setViewMode(id)}
+              <button key={id} onClick={() => setViewMode(id)} title={id === "grid" ? "Kartalar" : "Ro\'yxat"} aria-label={id === "grid" ? "Kartalar ko\'rinishi" : "Ro\'yxat ko\'rinishi"} aria-pressed={viewMode === id}
                 className={cn("w-8 h-7 flex items-center justify-center rounded-lg transition-all",
                   viewMode === id ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
                     : "text-neutral-400 hover:text-neutral-600")}>
@@ -455,9 +447,9 @@ export default function TeachersPage() {
                       <p className="text-[11px] text-neutral-400">{t.phone}</p>
                       {/* Amal tugmalari karta bosilishini ishga tushirmasligi kerak */}
                       <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
-                        <a href={`tel:${t.phone}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 transition-colors"><Phone className="w-3.5 h-3.5" /></a>
-                        <button onClick={() => openEdit(t)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"><Pencil className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => { setError(""); setDeleteTarget(t); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                        <a href={`tel:${t.phone}`} title="Qo'ng'iroq" aria-label={`${t.user?.name ?? ""} — qo'ng'iroq`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 transition-colors"><Phone className="w-3.5 h-3.5" /></a>
+                        <button onClick={() => openEdit(t)} title="Tahrirlash" aria-label={`${t.user?.name ?? ""} — tahrirlash`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"><Pencil className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => { setError(""); setDeleteTarget(t); }} title="O'chirish" aria-label={`${t.user?.name ?? ""} — o'chirish`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </div>
                   </div>
@@ -514,9 +506,9 @@ export default function TeachersPage() {
                         <TableCell className="text-right">
                           {/* Amal tugmalari qator bosilishini ishga tushirmasligi kerak */}
                           <div className="flex items-center justify-end gap-0.5" onClick={e => e.stopPropagation()}>
-                            <a href={`tel:${t.phone}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 transition-colors"><Phone className="w-3.5 h-3.5" /></a>
-                            <button onClick={() => openEdit(t)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"><Pencil className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => { setError(""); setDeleteTarget(t); }} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                            <a href={`tel:${t.phone}`} title="Qo'ng'iroq" aria-label={`${t.user?.name ?? ""} — qo'ng'iroq`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 transition-colors"><Phone className="w-3.5 h-3.5" /></a>
+                            <button onClick={() => openEdit(t)} title="Tahrirlash" aria-label={`${t.user?.name ?? ""} — tahrirlash`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"><Pencil className="w-3.5 h-3.5" /></button>
+                            <button onClick={() => { setError(""); setDeleteTarget(t); }} title="O'chirish" aria-label={`${t.user?.name ?? ""} — o'chirish`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>
                         </TableCell>
                       </TableRow>

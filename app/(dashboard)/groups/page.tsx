@@ -8,11 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import Link from "next/link";
-import { Search, Users, Clock, CalendarDays, BookOpen, TrendingUp, Edit, Trash2, ChevronRight, MapPin, Plus, AlertTriangle } from "lucide-react";
+import { Search, Users, Clock, BookOpen, Edit, Trash2, Plus, AlertTriangle, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useGroups } from "@/lib/hooks/useGroups";
-import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
+import { BranchPicker } from "@/components/layout/branch-filter";
 import { useCourses } from "@/lib/hooks/useCourses";
 import { CourseSelect } from "@/components/courses/course-select";
 import { useTeachers } from "@/lib/hooks/useTeachers";
@@ -26,6 +29,7 @@ import { useFeature } from "@/lib/hooks/useFeatures";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { TimeInput } from "@/components/ui/time-input";
+import { formatNumber } from "@/lib/money";
 
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
   ACTIVE:    { label: "Faol",    cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -536,7 +540,7 @@ function GroupsContent() {
               <span className="block font-semibold mb-1">Bu guruhda pul tarixi bor</span>
               <span className="block">
                 {deleteInfo.students} ta o&apos;quvchi ·{" "}
-                {deleteInfo.chargeCount}{" "}ta hisob ({deleteInfo.charged.toLocaleString("uz-UZ")}{" "}so&apos;m)
+                {deleteInfo.chargeCount}{" "}ta hisob ({formatNumber(deleteInfo.charged)}{" "}so&apos;m)
                 {deleteInfo.paymentCount > 0 && <>{" "}· {deleteInfo.paymentCount} ta to&apos;lov</>}
               </span>
               <span className="block mt-2 text-[11px] opacity-90">
@@ -558,33 +562,16 @@ function GroupsContent() {
       />
 
       <div className="p-5 space-y-5">
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { l: "Faol guruhlar", v: stats.faol, icon: TrendingUp, bg: "bg-green-50 dark:bg-green-950/40",   text: "text-green-600" },
-            { l: "Jami o'quvchi", v: stats.jami, icon: Users,      bg: "bg-blue-50 dark:bg-blue-950/40",     text: "text-blue-600" },
-            { l: "Bo'sh joylar",  v: stats.bosh, icon: BookOpen,   bg: "bg-orange-50 dark:bg-orange-950/40", text: "text-orange-600" },
-          ].map(s => {
-            const Icon = s.icon;
-            return (
-              <div key={s.l} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
-                  <Icon className={cn("w-4.5 h-4.5", s.text)} />
-                </div>
-                {isLoading ? <Skeleton className="h-6 w-10 mb-1" />
-                  : <p className="text-[22px] font-black text-neutral-900 dark:text-neutral-100 leading-none">{s.v}</p>}
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{s.l}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex p-1 gap-0.5 glass-soft rounded-xl">
+        {/* BIR QATOR: holat yorliqlari (soni bilan) + qidiruv + umumiy sonlar.
+            Ilgari tepada uchta katta kartochka (Faol guruhlar, Jami o'quvchi,
+            Bo'sh joylar) turardi — "Faol" soni yorliqda ham bor edi. Endi
+            qolgan ikki son shu qatorning o'ng tomonida, kartochkalarsiz.
+            Filial — tepa paneldagi tanlagich shu ro'yxatni ham toraytiradi. */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex max-w-full p-1 gap-0.5 glass-soft rounded-xl overflow-x-auto no-scrollbar">
             {STATUS_TABS.map(t => (
-              <button key={t.v} onClick={() => setStatusTab(t.v)}
-                className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+              <button key={t.v} onClick={() => setStatusTab(t.v)} aria-pressed={statusTab === t.v}
+                className={cn("shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
                   statusTab === t.v
                     ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
                     : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700")}>
@@ -592,13 +579,26 @@ function GroupsContent() {
               </button>
             ))}
           </div>
-          <div className="relative">
+          <div className="relative min-w-0 flex-1 sm:flex-none sm:w-60">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <Input placeholder="Guruh, o'qituvchi..." className="pl-9 h-9 text-sm w-60"
+            <Input placeholder="Guruh, o'qituvchi..." className="pl-9 h-9 text-sm w-full"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <BranchFilter />
-          <span className="ml-auto text-xs text-neutral-400">{filtered.length} ta guruh</span>
+          <p className="ml-auto text-xs text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+            {isLoading ? "…" : (
+              <>
+                <b className="font-bold text-neutral-800 dark:text-neutral-200">{stats.jami}</b>{" "}o&apos;quvchi
+                <span className="mx-1.5 text-neutral-300 dark:text-neutral-600">·</span>
+                <b className="font-bold text-neutral-800 dark:text-neutral-200">{stats.bosh}</b>{" "}bo&apos;sh joy
+                {filtered.length !== groups.length && (
+                  <>
+                    <span className="mx-1.5 text-neutral-300 dark:text-neutral-600">·</span>
+                    {filtered.length}{" "}ta ko&apos;rsatilmoqda
+                  </>
+                )}
+              </>
+            )}
+          </p>
         </div>
 
         {/* Cards */}
@@ -617,83 +617,97 @@ function GroupsContent() {
                 const barColor  = occ >= 100 ? "bg-red-500" : occ >= 80 ? "bg-amber-500" : "bg-green-500";
                 const days      = (g.scheduleDays ?? []).map((d: string) => WEEKDAY_SHORT[d] ?? d).join(", ");
                 return (
+                  /* IXCHAM KARTA. Ilgari 6 qavat edi (nom, kurs, narx, o'qituvchi,
+                     kunlar, vaqt+xona) + alohida "To'lganlik" sarlavhasi. Endi:
+                     nom · kurs va narx bir qatorda · o'qituvchi · kun/vaqt/xona bir
+                     qatorda · to'lganlik chizig'i soni bilan. Hech narsa
+                     yo'qolmadi — faqat qatorlar birlashdi. Tahrirlash/o'chirish
+                     "⋯" menyusida (o'chirish alohida va qizil). */
                   <div key={g.id} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-[14px] text-neutral-900 dark:text-neutral-100 truncate">{g.name}</h3>
-                        <p className="text-[12px] text-blue-600 dark:text-blue-400 mt-0.5">{g.course?.name}</p>
-                        {/* NARX — ro'yxatda ko'rinmasdi, har safar kursni
-                            ochish kerak bo'lardi. Rejim guruh yoki kursdan
-                            olinadi; ikkalasi ham bo'sh bo'lsa markaz
-                            standarti (oylik) — narx maydoni ham o'sha. */}
-                        {canSeeMoney && (() => {
-                          const n = guruhNarxi(g.billingMode ?? g.course?.billingMode, g.course);
-                          return n && (
-                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
-                              {narxMatni(n)}
-                            </p>
-                          );
-                        })()}
-                      </div>
-                      <div className="flex items-center gap-1 ml-2">
-                        <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold shrink-0", cfg.cls)}>{cfg.label}</span>
-                        {canUpdate && (
-                          <button onClick={() => openEdit(g)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-orange-600 hover:bg-orange-50 transition-colors">
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {canDelete && (
-                          <button onClick={() => openDelete(g)} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <Link href={`/groups/${g.id}`} className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </Link>
-                      </div>
+                    <div className="flex items-start gap-2">
+                      <Link href={`/groups/${g.id}`} className="min-w-0 flex-1 group/nom">
+                        <h3 className="font-bold text-[14px] text-neutral-900 dark:text-neutral-100 truncate group-hover/nom:text-indigo-600 dark:group-hover/nom:text-indigo-400 transition-colors">{g.name}</h3>
+                        <p className="text-[12px] mt-0.5 truncate">
+                          <span className="text-blue-600 dark:text-blue-400">{g.course?.name}</span>
+                          {/* NARX — rejim guruh yoki kursdan olinadi; ikkalasi ham
+                              bo'sh bo'lsa markaz standarti (oylik). */}
+                          {canSeeMoney && (() => {
+                            const n = guruhNarxi(g.billingMode ?? g.course?.billingMode, g.course);
+                            return n && (
+                              <span className="text-neutral-500 dark:text-neutral-400">
+                                <span className="mx-1.5 text-neutral-300 dark:text-neutral-600">·</span>{narxMatni(n)}
+                              </span>
+                            );
+                          })()}
+                        </p>
+                      </Link>
+                      <span className={cn("text-[11px] px-2.5 py-1 rounded-lg font-semibold shrink-0", cfg.cls)}>{cfg.label}</span>
+                      {(canUpdate || canDelete) && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger aria-label={`${g.name} — amallar`} title="Amallar"
+                            className="-mr-1.5 w-7 h-7 shrink-0 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white/70 dark:hover:bg-white/10 transition-colors outline-none">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="min-w-[170px]">
+                            {canUpdate && (
+                              <DropdownMenuItem onClick={() => openEdit(g)}>
+                                <Edit className="w-3.5 h-3.5" />{" "}Tahrirlash
+                              </DropdownMenuItem>
+                            )}
+                            {canUpdate && canDelete && <DropdownMenuSeparator />}
+                            {canDelete && (
+                              <DropdownMenuItem variant="destructive" onClick={() => openDelete(g)}>
+                                <Trash2 className="w-3.5 h-3.5" />{" "}O&apos;chirish
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
-                    <div className="space-y-2 mb-3">
+                    <Link href={`/groups/${g.id}`} className="block mt-2.5 space-y-1.5">
                       <div className="flex items-center gap-2 text-[12px] text-neutral-600 dark:text-neutral-400">
-                        <Users className="w-3.5 h-3.5 shrink-0 text-neutral-400" />{g.teacher?.user?.name ?? "—"}
+                        <Users className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
+                        <span className="truncate">{g.teacher?.user?.name ?? "—"}</span>
                       </div>
                       <div className="flex items-center gap-2 text-[12px] text-neutral-600 dark:text-neutral-400">
-                        <CalendarDays className="w-3.5 h-3.5 shrink-0 text-neutral-400" />{days || "—"}
-                      </div>
-                      <div className="flex items-center gap-2 text-[12px] text-neutral-600 dark:text-neutral-400">
-                        <Clock className="w-3.5 h-3.5 shrink-0 text-neutral-400" />{g.startTime} – {g.endTime}
-                        {g.room?.name
-                          ? <><MapPin className="w-3.5 h-3.5 shrink-0 text-neutral-400 ml-2" />{g.room.name}</>
-                          : null}
-                      </div>
-                      {/* Xonasiz guruh — jadvalda to'qnashuvni tekshirib
-                          bo'lmaydi. Bosilganda xonalar sozlamasiga o'tadi. */}
-                      {!g.roomId && (canManageRooms ? (
-                        <Link href="/settings?tab=xonalar"
-                          onClick={e => e.stopPropagation()}
-                          className="flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg w-fit
-                            bg-amber-50 text-amber-700 hover:bg-amber-100
-                            dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50 transition-colors">
-                          <AlertTriangle className="w-3 h-3" />
-                          Xona biriktirilmagan — xona qo&apos;shish
-                        </Link>
-                      ) : (
-                        // Sozlamalarga kira olmaydigan xodimga havola
-                        // berilmaydi — u yerda baribir 403 oladi.
-                        <span className="flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg w-fit
-                          bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                          <AlertTriangle className="w-3 h-3" />
-                          Xona biriktirilmagan
+                        <Clock className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
+                        <span className="truncate">
+                          {days || "—"}
+                          <span className="mx-1.5 text-neutral-300 dark:text-neutral-600">·</span>
+                          {g.startTime}–{g.endTime}
+                          {g.room?.name && (
+                            <>
+                              <span className="mx-1.5 text-neutral-300 dark:text-neutral-600">·</span>
+                              {g.room.name}
+                            </>
+                          )}
                         </span>
-                      ))}
-                    </div>
-                    <div className="border-t border-white/50 dark:border-white/10 pt-3">
-                      <div className="flex items-center justify-between text-[11px] mb-1.5">
-                        <span className="text-neutral-500">To'lganlik</span>
-                        <span className="font-bold text-neutral-700 dark:text-neutral-300">{cnt}/{max} ({occ}%)</span>
                       </div>
-                      <div className="h-1.5 glass-soft rounded-full overflow-hidden">
+                    </Link>
+                    {/* Xonasiz guruh — jadvalda to'qnashuvni tekshirib
+                        bo'lmaydi. Bosilganda xonalar sozlamasiga o'tadi. */}
+                    {!g.roomId && (canManageRooms ? (
+                      <Link href="/settings?tab=xonalar"
+                        className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg w-fit
+                          bg-amber-50 text-amber-700 hover:bg-amber-100
+                          dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50 transition-colors">
+                        <AlertTriangle className="w-3 h-3" />
+                        Xona biriktirilmagan — xona qo&apos;shish
+                      </Link>
+                    ) : (
+                      // Sozlamalarga kira olmaydigan xodimga havola
+                      // berilmaydi — u yerda baribir 403 oladi.
+                      <span className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-lg w-fit
+                        bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                        <AlertTriangle className="w-3 h-3" />
+                        Xona biriktirilmagan
+                      </span>
+                    ))}
+                    <div className="mt-3 flex items-center gap-2.5" title={`To'lganlik: ${cnt}/${max} (${occ}%)`}>
+                      <div className="h-1.5 flex-1 glass-soft rounded-full overflow-hidden">
                         <div className={cn("h-full rounded-full transition-all", barColor)} style={{ width: `${Math.min(occ, 100)}%` }} />
                       </div>
+                      <span className="shrink-0 text-[11px] font-bold tabular-nums text-neutral-700 dark:text-neutral-300">{cnt}/{max}</span>
                     </div>
                   </div>
                 );

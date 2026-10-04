@@ -15,9 +15,11 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Search, Phone, MessageSquare, Edit, GraduationCap, CheckCircle, DollarSign, Trash2, UserMinus, UserPlus,
-  UserRoundX, Plus,
-  UserCheck, Clock, Upload, Download, X,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Search, Phone, MessageSquare, Edit, GraduationCap, Trash2, Plus,
+  UserCheck, Upload, Download, X, MoreHorizontal, SlidersHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
@@ -29,14 +31,18 @@ import { payStatusFromBalance, PAY_STATUS_CFG } from "@/lib/payment-status";
 import { toCsv, downloadFile, exportPhone } from "@/lib/csv";
 import { mutate } from "swr";
 import { formatUzDate } from "@/lib/date-uz";
+import { formatCurrency, formatNumber } from "@/lib/money";
 
 function fmt(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { style: "currency", currency: "UZS", maximumFractionDigits: 0 }).format(v);
+  return formatCurrency(v);
 }
 /** Kartochka uchun — valyuta prefiksisiz, yorliqda "so'm" deb yozilgan. */
 function fmtSum(v: number) {
-  return new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v);
+  return formatNumber(v);
 }
+/** Bir martada chiziladigan qatorlar soni. */
+const SAHIFA_OLCHAMI = 50;
+
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
 }
@@ -129,6 +135,8 @@ export default function StudentsPage() {
   // Qatordagi SMS tugmasi: shu o'quvchini tanlab, ommaviy paneldagi SMS
   // oynasini ochadi — yuborish mantiqi bitta joyda qoladi.
   const [smsOpen,      setSmsOpen]      = useState(false);
+  /** Qo'shimcha filtrlar paneli (guruh, o'qituvchi, to'lov, sana) ochiqmi. */
+  const [showFilters,  setShowFilters]  = useState(false);
   /** Tashqaridan ochiladigan ommaviy amal (jadvaldagi "+ Guruh" tugmasi). */
   const [bulkAction,   setBulkAction]   = useState<string | null>(null);
   /** "+ Guruh" orqali ochilganini eslab qolamiz (tanlovni tozalash uchun). */
@@ -146,6 +154,18 @@ export default function StudentsPage() {
     joinedFrom: joinedFrom || undefined,
     joinedTo:   joinedTo   || undefined,
   });
+  // HOLAT YORLIQLARIDAGI SANOQ uchun — xuddi shu filtrlar, faqat HOLATSIZ.
+  // Yorliq bosilganda ro'yxat torayadi; sanoq ham shu ro'yxatdan olinsa,
+  // qolgan yorliqlar 0 bo'lib qolardi. Holat tanlanmaganda kalit yuqoridagi
+  // so'rov bilan bir xil — SWR bitta so'rov yuboradi.
+  const { data: sanoqRaw, isLoading: sanoqLoading } = useStudents({
+    search,
+    groupId:   filterGroup   !== "barchasi" ? filterGroup   : undefined,
+    teacherId: filterTeacher !== "barchasi" ? filterTeacher : undefined,
+    debt:      filterDebt    !== "barchasi" ? filterDebt    : undefined,
+    joinedFrom: joinedFrom || undefined,
+    joinedTo:   joinedTo   || undefined,
+  });
   const { data: groupsRaw }   = useGroups({ status: "ACTIVE,UPCOMING" });
   const { data: teachersRaw } = useTeachers();
 
@@ -154,6 +174,8 @@ export default function StudentsPage() {
   // effekt HAR renderda ishga tushib, cheksiz aylanishga olib kelardi.
   const students: any[] = useMemo(
     () => (Array.isArray(studentsRaw) ? studentsRaw : []), [studentsRaw]);
+  const sanoq: any[] = useMemo(
+    () => (Array.isArray(sanoqRaw) ? sanoqRaw : []), [sanoqRaw]);
   const groups: any[] = useMemo(
     () => (Array.isArray(groupsRaw) ? groupsRaw : []), [groupsRaw]);
   const teachers: any[] = useMemo(
@@ -162,8 +184,8 @@ export default function StudentsPage() {
   const stats = useMemo(() => ({
     // "Jami" — ro'yxatdagi HAMMA o'quvchi (ketganlar ham). Ilgari faqat
     // guruhi borlar sanalar va yangi qo'shilganlar hisobga kirmasdi.
-    jami:  students.length,
-    yangi: students.filter(s => enrollOf(s) === "YANGI").length,
+    jami:  sanoq.length,
+    yangi: sanoq.filter(s => enrollOf(s) === "YANGI").length,
     // "Guruhsiz" KARTASI backenddagi "GURUHSIZ" filtri bilan BIR XIL
     // hisoblashi kerak: hozir hech qaysi guruhda faol/sinov emas (arxiv
     // bo'lmasa) — `enrollOf()`dagi tor "YANGI"/"GURUHSIZ" ajratimidan
@@ -171,12 +193,28 @@ export default function StudentsPage() {
     // qoladi — u yerda "hech qachon guruhga tushmagan" va "guruhdan
     // chiqqan"ni alohida ko'rsatish foydali, faqat bu kartaning
     // yig'indisiga kirmasligi kerak emas edi.
-    guruhsiz: students.filter(s => !s.archivedAt && activeGroupsOf(s).length === 0).length,
-    sinov: students.filter(s => enrollOf(s) === "SINOV").length,
-    faol:  students.filter(s => enrollOf(s) === "FAOL").length,
-    ketgan: students.filter(s => enrollOf(s) === "CHIQIB_KETGAN").length,
-    qarz:  students.filter(s => s.balance < 0).reduce((sum, s) => sum + Math.abs(s.balance), 0),
-  }), [students]);
+    guruhsiz: sanoq.filter(s => !s.archivedAt && activeGroupsOf(s).length === 0).length,
+    // FAOL / SINOV — server filtri bilan AYNAN bir xil qoida: shu holatdagi
+    // KAMIDA BITTA a'zoligi bor o'quvchi (`groups: { some: … }`). Ilgari
+    // `enrollOf()` (yagona "eng kuchli" holat) bilan sanalardi: bir guruhda
+    // faol, ikkinchisida sinovdagi o'quvchi faqat "Faol"ga tushar, yorliqda
+    // "Sinov 9" yozilib, bosilganda esa 10 ta qator chiqardi. Endi yorliqdagi
+    // son bosilgandagi ro'yxat soniga teng (bunday o'quvchi ikkalasida sanaladi).
+    sinov: sanoq.filter(s => (s.groups ?? []).some((g: { enrollmentStatus?: string }) => g.enrollmentStatus === "SINOV")).length,
+    faol:  sanoq.filter(s => (s.groups ?? []).some((g: { enrollmentStatus?: string }) => g.enrollmentStatus === "FAOL")).length,
+    ketgan: sanoq.filter(s => enrollOf(s) === "CHIQIB_KETGAN").length,
+    qarz:  sanoq.filter(s => s.balance < 0).reduce((sum, s) => sum + Math.abs(s.balance), 0),
+  }), [sanoq]);
+
+  // BO'LIB KO'RSATISH. Ro'yxat ilgari to'liq chizilardi: 120 o'quvchi —
+  // 6600px sahifa, katta markazda (1000 gacha) esa brauzer sezilarli
+  // sekinlashardi. Endi avval SAHIFA_OLCHAMI ta qator, qolgani tugma bilan.
+  // Filtr o'zgarsa hisob boshidan boshlanadi — `imzo` shuni kuzatadi
+  // (effektda `setState` chaqirmaslik uchun holat imzo bilan birga saqlanadi).
+  const imzo = [search, filterEnroll, filterGroup, filterTeacher, filterDebt, joinedFrom, joinedTo].join("|");
+  const [korsatish, setKorsatish] = useState({ imzo, soni: SAHIFA_OLCHAMI });
+  const limit = korsatish.imzo === imzo ? korsatish.soni : SAHIFA_OLCHAMI;
+  const korinadigan = useMemo(() => students.slice(0, limit), [students, limit]);
 
   // Tanlov EKRANDAGI ro'yxatdan hosil qilinadi, `selectedIds` dan emas.
   // Shu sabab filtr o'zgarib, ba'zi o'quvchilar ko'rinmay qolsa, ommaviy
@@ -184,13 +222,15 @@ export default function StudentsPage() {
   // ta'sir qilinmaydi. (Effekt bilan sinxronlash o'rniga — shunchaki
   // hisoblab olamiz.)
   const selected = useMemo(
-    () => students.filter(s => selectedIds.has(s.id)).map(s => ({ id: s.id, name: s.name })),
-    [students, selectedIds],
+    () => korinadigan.filter(s => selectedIds.has(s.id)).map(s => ({ id: s.id, name: s.name })),
+    [korinadigan, selectedIds],
   );
-  const allSelected = students.length > 0 && selected.length === students.length;
+  // "Hammasini tanlash" — faqat CHIZILGAN qatorlar: foydalanuvchi ko'rmayotgan
+  // (hali ochilmagan) o'quvchiga ommaviy amal tegmasligi kerak.
+  const allSelected = korinadigan.length > 0 && korinadigan.every(s => selectedIds.has(s.id));
 
   function toggleAll() {
-    setSelectedIds(allSelected ? new Set() : new Set(students.map(s => s.id)));
+    setSelectedIds(allSelected ? new Set() : new Set(korinadigan.map(s => s.id)));
   }
   function toggleOne(id: string) {
     setSelectedIds(prev => {
@@ -280,6 +320,11 @@ export default function StudentsPage() {
     filterTeacher !== "barchasi" || filterDebt !== "barchasi" || !!search ||
     !!joinedFrom || !!joinedTo;
 
+  /** Panel ichidagi (yashirin turadigan) filtrlardan nechtasi yoqilgan. */
+  const qoshimchaFiltr =
+    (filterGroup !== "barchasi" ? 1 : 0) + (filterTeacher !== "barchasi" ? 1 : 0) +
+    (filterDebt !== "barchasi" ? 1 : 0) + (joinedFrom || joinedTo ? 1 : 0);
+
   function clearFilters() {
     setSearch(""); setFilterEnroll("barchasi"); setFilterGroup("barchasi");
     setFilterTeacher("barchasi"); setFilterDebt("barchasi");
@@ -291,8 +336,8 @@ export default function StudentsPage() {
       <TopHeader
         title="O'quvchilar"
         subtitle={isLoading ? "Yuklanmoqda..." : filtersOn
-          ? `${stats.jami} ta o'quvchi (filtr bo'yicha)`
-          : `Jami ${stats.jami} ta o'quvchi`}
+          ? `${students.length} ta o'quvchi (filtr bo'yicha)`
+          : `Jami ${students.length} ta o'quvchi`}
         action={canCreate ? { label: "Yangi o'quvchi", onClick: openCreate } : undefined}
       />
 
@@ -320,90 +365,114 @@ export default function StudentsPage() {
       {/* Tanlov faol bo'lganda suzuvchi panel oxirgi qatorni yopmasligi uchun
           pastdan joy ajratamiz. */}
       <div className={cn("p-5 space-y-5", selected.length > 0 && "pb-28 lg:pb-24")}>
-        {/* Stats */}
-        {filtersOn && (
-          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 -mb-2">
-            Ko&apos;rsatkichlar tanlangan filtr bo&apos;yicha hisoblangan
-          </p>
-        )}
-        <div className={cn("grid grid-cols-2 gap-3", canSeeMoney ? "md:grid-cols-3 xl:grid-cols-7" : "md:grid-cols-3 xl:grid-cols-6")}>
-          {[
-            // "Jami" ro'yxatdagi qatorlardan sanaladi, ro'yxat esa serverda
-            // 1000 ta bilan cheklangan — chegaraga yetilsa raqam yolg'on
-            // bo'lib qolmasligi uchun "1000+" deb yoziladi.
-            { label: "Jami",      value: stats.jami >= 1000 ? "1000+" : stats.jami, icon: GraduationCap, bg: "bg-blue-50 dark:bg-blue-950/40",   text: "text-blue-600 dark:text-blue-400" },
-            { label: "Yangi",     value: stats.yangi,      icon: UserPlus,      bg: "bg-indigo-50 dark:bg-indigo-950/40", text: "text-indigo-600 dark:text-indigo-400" },
-            { label: "Faol",      value: stats.faol,       icon: CheckCircle,   bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-600 dark:text-green-400" },
-            { label: "Sinov",     value: stats.sinov,      icon: Clock,         bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-600 dark:text-amber-400" },
-            { label: "Guruhsiz",  value: stats.guruhsiz,   icon: UserRoundX,    bg: "bg-orange-50 dark:bg-orange-950/40", text: "text-orange-600 dark:text-orange-400" },
-            { label: "Ketgan",    value: stats.ketgan,     icon: UserMinus,     bg: "bg-neutral-100 dark:bg-neutral-800/60", text: "text-neutral-500 dark:text-neutral-400" },
-            ...(canSeeMoney
-              ? [{ label: "Jami qarz (so'm)", value: fmtSum(stats.qarz), icon: DollarSign, bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-600 dark:text-red-400" }]
-              : []),
-          ].map(s => {
-            const Icon = s.icon;
-            return (
-              <div key={s.label} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
-                  <Icon className={cn("w-4 h-4", s.text)} />
-                </div>
-                {isLoading ? <Skeleton className="h-6 w-12 mb-1" />
-                  : (
-                    // Pul summasi kartochkaga sig'may, o'ng chetidan kesilib
-                    // ketardi ("UZS 2,000,000"). Endi raqam kartochka eniga
-                    // qarab kichrayadi va "UZS" prefiksisiz yoziladi —
-                    // yorliqning o'zi "Jami qarz" deb turibdi.
-                    <p className={cn(
-                      "font-black text-neutral-900 dark:text-neutral-100 leading-none tabular-nums truncate",
-                      typeof s.value === "string" && s.value.length > 7
-                        ? "text-[16px] xl:text-[18px]"
-                        : "text-[22px]",
-                    )}>
-                      {s.value}
-                    </p>
-                  )}
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{s.label}</p>
-              </div>
-            );
-          })}
+        {/* HOLAT YORLIQLARI — sanoq va filtr BIR JOYDA.
+            Ilgari tepada 7 ta katta kartochka (Jami, Yangi, Faol, …) va
+            pastda xuddi shu nomli filtr tugmalari alohida turardi: bir xil
+            ma'lumot ikki marta, birinchi ekranning uchdan biri. Endi har bir
+            yorliq sonni ko'rsatadi VA bosilganda ro'yxatni shu holatga
+            toraytiradi. */}
+        <div className="flex flex-wrap items-center gap-2"
+          title={qoshimchaFiltr > 0 || search ? "Sonlar tanlangan filtr bo'yicha hisoblangan" : undefined}>
+          <div className="flex min-w-0 max-w-full gap-0.5 overflow-x-auto no-scrollbar glass-soft p-1 rounded-xl">
+            {[
+              // "Jami" ro'yxatdagi qatorlardan sanaladi, ro'yxat esa serverda
+              // 1000 ta bilan cheklangan — chegaraga yetilsa raqam yolg'on
+              // bo'lib qolmasligi uchun "1000+" deb yoziladi.
+              { v: "barchasi", l: "Barchasi", n: stats.jami >= 1000 ? "1000+" : stats.jami },
+              { v: "YANGI",    l: "Yangi",    n: stats.yangi },
+              { v: "FAOL",     l: "Faol",     n: stats.faol },
+              { v: "SINOV",    l: "Sinov",    n: stats.sinov },
+              { v: "GURUHSIZ", l: "Guruhsiz", n: stats.guruhsiz },
+              { v: "KETGAN",   l: "Ketgan",   n: stats.ketgan },
+            ].map(f => {
+              const faol = filterEnroll === f.v;
+              return (
+                <button key={f.v} onClick={() => setFilterEnroll(f.v)} aria-pressed={faol}
+                  className={cn("shrink-0 flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12.5px] font-semibold whitespace-nowrap transition-colors",
+                    faol
+                      ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
+                      : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+                  {f.l}
+                  <span className={cn("tabular-nums text-[11.5px] font-bold",
+                    faol ? "text-indigo-600 dark:text-indigo-300" : "text-neutral-400 dark:text-neutral-500")}>
+                    {sanoqLoading ? "·" : f.n}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* JAMI QARZ — bosilsa faqat qarzdorlar qoladi (yana bosilsa qaytadi). */}
+          {canSeeMoney && (stats.qarz > 0 || filterDebt === "qarzdor") && (
+            <button onClick={() => setFilterDebt(filterDebt === "qarzdor" ? "barchasi" : "qarzdor")}
+              aria-pressed={filterDebt === "qarzdor"}
+              title={filterDebt === "qarzdor" ? "Hammasini ko'rsatish" : "Faqat qarzdorlarni ko'rsatish"}
+              className={cn("ml-auto shrink-0 flex items-center gap-1.5 h-10 px-3.5 rounded-xl text-[12.5px] font-semibold whitespace-nowrap border transition-colors",
+                filterDebt === "qarzdor"
+                  ? "bg-red-600 border-red-600 text-white"
+                  : "border-red-200/80 dark:border-red-400/20 bg-red-50/70 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:bg-red-100/80 dark:hover:bg-red-900/30")}>
+              Jami qarz
+              <span className="tabular-nums font-bold">{sanoqLoading ? "·" : fmtSum(stats.qarz)}</span>
+              so&apos;m
+            </button>
+          )}
         </div>
 
-        {/* FILTRLAR — ikki ATAYLAB ajratilgan qator.
-            Ilgari hammasi bitta `flex-wrap` da edi va ekran eniga qarab
-            o'zi turlicha o'ralardi: goh bir qator, goh "Eksport/Import"
-            yolg'iz pastga tushib, oraliqda katta bo'shliq qolardi.
-            Endi tartib har doim bir xil:
-              1-qator: qidiruv + holat chiplari
-              2-qator: ochiluvchi filtrlar + (o'ngda) sanoq va amallar */}
+        {/* QIDIRUV + FILTRLAR. Bir qator: qidiruv doim ko'rinadi, qolgan
+            filtrlar (filial, guruh, o'qituvchi, to'lov, qabul sanasi) "Filtrlar"
+            tugmasi ortida — kamdan-kam ishlatiladi, lekin ilgari har doim
+            ikkinchi qatorni to'liq egallardi. Nechtasi yoqilgani tugmada
+            ko'rinadi, ya'ni panel yopiq bo'lsa ham filtr "yashirinib" qolmaydi. */}
         <div className="space-y-2.5">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="relative">
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1 sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <Input placeholder="Ism, telefon..." className="pl-9 h-9 text-sm w-52"
+            <Input placeholder="Ism, telefon..." className="pl-9 h-9 text-sm w-full"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
 
-          <div className="flex gap-1.5 flex-wrap">
-            {[
-              { v: "barchasi", l: "Barchasi" },
-              { v: "YANGI",    l: "Yangi" },
-              { v: "SINOV",    l: "Sinov" },
-              { v: "FAOL",     l: "Faol" },
-              { v: "GURUHSIZ", l: "Guruhsiz" },
-              { v: "KETGAN",   l: "Ketgan" },
-            ].map(f => (
-              <button key={f.v} onClick={() => setFilterEnroll(f.v)}
-                className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                  filterEnroll === f.v
-                    ? "bg-indigo-600 text-white dark:bg-indigo-500 border-indigo-600"
-                    : "glass-panel text-neutral-600 dark:text-neutral-400 border-white/60 dark:border-white/10 hover:border-neutral-400")}>
-                {f.l}
-              </button>
-            ))}
-          </div>
+          <button onClick={() => setShowFilters(v => !v)} aria-expanded={showFilters}
+            className={cn("shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold border transition-colors",
+              showFilters || qoshimchaFiltr > 0
+                ? "border-indigo-300 dark:border-indigo-400/40 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+                : "glass-soft border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:border-neutral-300")}>
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            Filtrlar
+            {qoshimchaFiltr > 0 && (
+              <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center">
+                {qoshimchaFiltr}
+              </span>
+            )}
+          </button>
+
+          {filtersOn && (
+            <button onClick={clearFilters}
+              className="shrink-0 flex items-center gap-1 h-9 px-2.5 rounded-lg text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
+              <X className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Tozalash</span>
+            </button>
+          )}
+
+          {/* Eksport / Import — kunda bir ishlatiladigan amallar, menyuda. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger aria-label="Eksport va import" title="Eksport va import"
+              className="ml-auto shrink-0 w-9 h-9 flex items-center justify-center rounded-lg glass-soft border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:border-neutral-300 transition-colors outline-none">
+              <MoreHorizontal className="w-4 h-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[210px]">
+              <DropdownMenuItem onClick={exportCsv} disabled={students.length === 0}>
+                <Download className="w-3.5 h-3.5" /> Eksport (CSV) — {students.length} ta
+              </DropdownMenuItem>
+              {canCreate && (
+                <DropdownMenuItem onClick={() => setShowImport(true)}>
+                  <Upload className="w-3.5 h-3.5" />{" "}Excel&apos;dan import
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        {showFilters && (
+        <div className="flex items-center gap-2.5 flex-wrap glass-soft border border-white/60 dark:border-white/10 rounded-2xl p-3">
           <BranchFilter />
 
           <select value={filterGroup} onChange={e => setFilterGroup(e.target.value)} className={selectCls}>
@@ -435,29 +504,8 @@ export default function StudentsPage() {
               placeholder="Gacha" className="h-9 w-32 text-xs"
               onChange={setJoinedTo} />
           </div>
-
-          {filtersOn && (
-            <button onClick={clearFilters}
-              className="flex items-center gap-1 h-9 px-2.5 rounded-lg text-xs font-semibold text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
-              <X className="w-3.5 h-3.5" /> Tozalash
-            </button>
-          )}
-
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-xs text-neutral-400">{students.length} ta</span>
-            <button onClick={exportCsv} disabled={students.length === 0}
-              title="Ekrandagi ro'yxatni CSV qilib yuklab olish"
-              className="flex items-center gap-1.5 h-9 px-2.5 rounded-lg text-xs font-semibold glass-soft text-neutral-600 dark:text-neutral-300 hover:bg-white/70 dark:hover:bg-white/10 transition-colors disabled:opacity-40">
-              <Download className="w-3.5 h-3.5" /> Eksport
-            </button>
-            {canCreate && (
-              <button onClick={() => setShowImport(true)}
-                className="flex items-center gap-1.5 h-9 px-2.5 rounded-lg text-xs font-semibold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
-                <Upload className="w-3.5 h-3.5" /> Import
-              </button>
-            )}
-          </div>
         </div>
+        )}
         </div>
 
         {/* Jadval */}
@@ -474,7 +522,9 @@ export default function StudentsPage() {
                       className="accent-indigo-600 w-3.5 h-3.5 align-middle cursor-pointer disabled:opacity-40" />
                   </TableHead>
                 )}
-                {["O'quvchi", "Telefon", "Guruhlar", "O'qituvchi", "Holat",
+                {/* "O'qituvchi" ustuni yo'q: u guruhdan kelib chiqadi — guruh
+                    yorlig'i ustiga borilganda va o'quvchi profilida ko'rinadi. */}
+                {["O'quvchi", "Telefon", "Guruhlar", "Holat",
                   ...(canSeeMoney ? ["To'lov"] : []), ""].map(h => (
                   <TableHead key={h} className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">{h}</TableHead>
                 ))}
@@ -484,20 +534,17 @@ export default function StudentsPage() {
               {isLoading
                 ? Array.from({length: 5}).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({length: 6 + (canSeeMoney ? 1 : 0) + (canUpdate ? 1 : 0)}).map((_, j) => (
+                      {Array.from({length: 5 + (canSeeMoney ? 1 : 0) + (canUpdate ? 1 : 0)}).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-3 w-full" /></TableCell>
                       ))}
                     </TableRow>
                   ))
-                : students.map((s: any, sIdx: number) => {
+                : korinadigan.map((s: any, sIdx: number) => {
                     const gs      = activeGroupsOf(s);
                     const enrollK = enrollOf(s);
                     const enroll  = ENROLL_CFG[enrollK];
                     const payKey  = payStatusFromBalance(s.balance, enrollK);
                     const pay     = PAY_STATUS_CFG[payKey];
-                    const teacherNames = [...new Set(
-                      gs.map((g: any) => g.group?.teacher?.user?.name).filter(Boolean),
-                    )] as string[];
                     const isSel = selectedIds.has(s.id);
                     const hasTrial = gs.some((g: any) => g.enrollmentStatus === "SINOV");
                     return (
@@ -531,22 +578,19 @@ export default function StudentsPage() {
                             )}>
                               {s.name[0]}
                             </div>
-                            <div>
-                              <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 group-hover/name:text-indigo-600 dark:group-hover/name:text-indigo-400 transition-colors flex items-center gap-1.5 flex-wrap">
-                                {s.name}
-                              </p>
-                              {/* Qabul sanasi — tahrirlanadigan biznes sanasi.
-                                  Eski yozuvlarda bo'sh bo'lishi mumkin, o'shanda
-                                  yozuv yaratilgan sana ko'rsatiladi. */}
-                              <p className="text-[11px] text-neutral-400">
-                                {formatUzDate(s.joinedAt ?? s.createdAt)}
-                              </p>
-                            </div>
+                            {/* BIR QATOR. Qabul sanasi (tahrirlanadigan biznes sanasi;
+                                eski yozuvda bo'sh bo'lsa — yaratilgan sana) ism
+                                ustiga borilganda va profilda ko'rinadi. */}
+                            <p title={`Qabul sanasi: ${formatUzDate(s.joinedAt ?? s.createdAt)}`}
+                              className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 group-hover/name:text-indigo-600 dark:group-hover/name:text-indigo-400 transition-colors whitespace-nowrap">
+                              {s.name}
+                            </p>
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <p className="text-[13px] text-neutral-700 dark:text-neutral-300">{s.phone}</p>
-                          {s.parentPhone && <p className="text-[11px] text-neutral-400">Ota: {s.parentPhone}</p>}
+                          {/* Ota-ona raqami — raqam ustiga borilganda va profilda. */}
+                          <p title={s.parentPhone ? `Ota-ona: ${s.parentPhone}` : undefined}
+                            className="text-[13px] text-neutral-700 dark:text-neutral-300 whitespace-nowrap tabular-nums">{s.phone}</p>
                         </TableCell>
                         <TableCell>
                           {/* BARCHA guruhlar. Bitta o'quvchi bir nechta fanga
@@ -571,6 +615,8 @@ export default function StudentsPage() {
                               <div className="flex flex-wrap gap-1 max-w-[220px]">
                                 {gs.map((g: any) => (
                                   <span key={g.id}
+                                    title={[g.group?.teacher?.user?.name && `O'qituvchi: ${g.group.teacher.user.name}`,
+                                      g.enrollmentStatus === "SINOV" && "Sinov darsida"].filter(Boolean).join(" · ") || undefined}
                                     className={cn("text-[11px] px-2 py-0.5 rounded-lg font-medium whitespace-nowrap",
                                       g.enrollmentStatus === "SINOV"
                                         ? "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
@@ -580,21 +626,6 @@ export default function StudentsPage() {
                                 ))}
                               </div>
                             )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-[13px] text-neutral-500 dark:text-neutral-400"
-                            // O'qituvchi ALOHIDA biriktirilmaydi — u guruh
-                            // orqali keladi. Shuning uchun bu yerda "+" yo'q,
-                            // faqat sababi tushuntiriladi.
-                            title={teacherNames.length === 0
-                              ? (gs.length === 0
-                                  ? "O'qituvchi guruh orqali biriktiriladi"
-                                  : "Guruhga o'qituvchi biriktirilmagan")
-                              : undefined}>
-                            {teacherNames.length === 0 ? "—"
-                              : teacherNames.length === 1 ? teacherNames[0]
-                              : `${teacherNames[0]} +${teacherNames.length - 1}`}
-                          </span>
                         </TableCell>
                         <TableCell>
                           <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-semibold", enroll?.cls)}>
@@ -621,28 +652,38 @@ export default function StudentsPage() {
                                 {activating === s.id ? "..." : "Faollashtirish"}
                               </button>
                             )}
-                            {canUpdate && (
-                              <button onClick={() => openEdit(s)} title="Tahrirlash"
-                                className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition-colors">
-                                <Edit className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            <a href={`tel:${s.phone}`} title="Qo'ng'iroq"
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
-                              <Phone className="w-3.5 h-3.5" />
-                            </a>
-                            {canSendSms && (
-                              <button onClick={() => smsToOne(s.id)} title="SMS yuborish"
-                                className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                                <MessageSquare className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            {canDelete && (
-                              <button onClick={() => setDeleteTarget(s)} title="O'chirish"
-                                className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                            {/* AMALLAR — bitta menyuda. Ilgari har qatorda 4 ta ikonka
+                                (120 qator × 4) turardi va "O'chirish" tahrirlash bilan
+                                yonma-yon edi. Endi o'chirish ajratilgan va qizil. */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger aria-label={`${s.name} — amallar`} title="Amallar"
+                                className="w-8 h-8 flex items-center justify-center rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-white/70 dark:hover:bg-white/10 data-popup-open:bg-white/70 dark:data-popup-open:bg-white/10 transition-colors outline-none">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="min-w-[180px]">
+                                {canUpdate && (
+                                  <DropdownMenuItem onClick={() => openEdit(s)}>
+                                    <Edit className="w-3.5 h-3.5" /> Tahrirlash
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onClick={() => { window.location.href = `tel:${s.phone}`; }}>
+                                  <Phone className="w-3.5 h-3.5" />{" "}Qo&apos;ng&apos;iroq qilish
+                                </DropdownMenuItem>
+                                {canSendSms && (
+                                  <DropdownMenuItem onClick={() => smsToOne(s.id)}>
+                                    <MessageSquare className="w-3.5 h-3.5" /> SMS yuborish
+                                  </DropdownMenuItem>
+                                )}
+                                {canDelete && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem variant="destructive" onClick={() => setDeleteTarget(s)}>
+                                      <Trash2 className="w-3.5 h-3.5" />{" "}O&apos;chirish
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -652,6 +693,21 @@ export default function StudentsPage() {
             </TableBody>
           </Table>
           </div>
+          {!isLoading && students.length > korinadigan.length && (
+            <div className="flex flex-wrap items-center justify-center gap-2 px-4 py-3 border-t border-white/50 dark:border-white/10">
+              <span className="text-[12px] text-neutral-500 dark:text-neutral-400">
+                {korinadigan.length}{" "}/ {students.length}{" "}ta ko&apos;rsatilmoqda
+              </span>
+              <button onClick={() => setKorsatish({ imzo, soni: limit + SAHIFA_OLCHAMI })}
+                className="h-8 px-3 rounded-lg text-[12px] font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                Yana {Math.min(SAHIFA_OLCHAMI, students.length - korinadigan.length)}{" "}ta
+              </button>
+              <button onClick={() => setKorsatish({ imzo, soni: students.length })}
+                className="h-8 px-3 rounded-lg text-[12px] font-semibold glass-soft text-neutral-600 dark:text-neutral-300 hover:bg-white/70 dark:hover:bg-white/10 transition-colors">
+                Hammasini ko&apos;rsatish
+              </button>
+            </div>
+          )}
           {!isLoading && students.length === 0 && (
             <div className="flex flex-col items-center py-16 text-neutral-400">
               <GraduationCap className="w-10 h-10 mb-2 opacity-30" />

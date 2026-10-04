@@ -9,7 +9,7 @@ import { CallOutcome, StepBack } from "@/components/leads/call-outcome";
 import { AssigneePicker } from "@/components/leads/assignee-picker";
 import { LOST_REASON_UZ, type LeadStage } from "@/lib/hooks/useLeads";
 import { resolvePrevStage, defaultStage } from "@/lib/lead-stages";
-import { fmtRelative } from "@/lib/date-uz";
+import { fmtRelative, fmtDateTime } from "@/lib/date-uz";
 import { dueHolat, dueMatn } from "@/lib/lead-due";
 
 export interface Lead {
@@ -47,6 +47,9 @@ export interface Lead {
  * qaysi bosqich" (sortOrder bo'yicha navigatsiya, backend bilan bir
  * xil algoritm — `lib/lead-stages.ts`).
  */
+/** "Kecha 20:25" → "Kecha", "22.09.2026 20:25" → "22.09.2026". Nisbiy ("3 kun oldin") o'zgarmaydi. */
+const soatsiz = (matn: string) => matn.replace(/\s\d{1,2}:\d{2}$/, "");
+
 export function LeadCard({ lead, stage, stages, onDelete, onEdit, onOpen, onConvert, onRefresh }: {
   lead: Lead;
   stage: LeadStage;
@@ -115,19 +118,24 @@ export function LeadCard({ lead, stage, stages, onDelete, onEdit, onOpen, onConv
           {/* YOSHI VA SOVUQLIGI. Ilgari o'nta kartochka bir xil ko'rinardi —
               bugun kelgani ham, besh hafta turgani ham. Endi bir qarashda
               ko'rinadi va ro'yxatni saralab o'tirish shart emas. */}
-          <p className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate">
+          {/* Kartada SOATSIZ: "22.09.2026 20:25 qo'shilgan" tor kartaga sig'may
+              "…20:25 qo…" bo'lib kesilardi. Aniq vaqt — ustiga borilganda. */}
+          <p className="text-[10px] text-neutral-400 dark:text-neutral-500 truncate"
+            title={lead.lastContactAt
+              ? `Oxirgi aloqa: ${fmtDateTime(lead.lastContactAt)}`
+              : lead.createdAt ? `Qo'shilgan: ${fmtDateTime(lead.createdAt)}` : undefined}>
             {lead.lastContactAt
-              ? `oxirgi aloqa ${fmtRelative(lead.lastContactAt)}`
-              : lead.createdAt ? `${fmtRelative(lead.createdAt)} qo'shilgan` : ""}
+              ? `oxirgi aloqa ${soatsiz(fmtRelative(lead.lastContactAt))}`
+              : lead.createdAt ? `${soatsiz(fmtRelative(lead.createdAt))} qo'shilgan` : ""}
             {lead.contactAttempts ? ` · ${lead.contactAttempts}-urinish` : ""}
             {lead._count?.comments ? ` · 💬 ${lead._count.comments}` : ""}
           </p>
         </div>
-        <button onClick={() => onDelete(lead)}
+        <button onClick={() => onDelete(lead)} title="O'chirish" aria-label={`${lead.name} — o'chirish`}
           className="w-5 h-5 flex items-center justify-center rounded-md text-neutral-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0">
           <Trash2 className="w-3 h-3" />
         </button>
-        <button onClick={() => onEdit(lead)}
+        <button onClick={() => onEdit(lead)} title="Tahrirlash" aria-label={`${lead.name} — tahrirlash`}
           className="w-5 h-5 flex items-center justify-center rounded-md text-neutral-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors shrink-0">
           <Pencil className="w-3 h-3" />
         </button>

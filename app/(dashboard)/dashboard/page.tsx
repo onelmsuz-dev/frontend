@@ -2,12 +2,13 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
   GraduationCap, Users, Wallet, Target, UserCheck, TrendingUp,
-  CreditCard, AlertTriangle, UserSquare2, Trophy,
+  CreditCard, UserSquare2, Trophy,
 } from "lucide-react";
 import { useChartColors } from "@/hooks/use-chart-colors";
 import { TopHeader } from "@/components/layout/top-header";
@@ -22,7 +23,7 @@ import { stageHue } from "@/lib/lead-stages";
 import { useBranchQueryString, useBranch } from "@/lib/contexts/branch-context";
 import useSWR from "swr";
 import { OnboardingChecklist } from "@/components/onboarding/onboarding-checklist";
-import { formatCurrency } from "@/lib/money";
+import { formatCompact, formatCurrency } from "@/lib/money";
 import { formatUzDate } from "@/lib/date-uz";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { birinchiOchiq } from "@/components/layout/nav-config";
@@ -115,20 +116,20 @@ function OwnerDashboardPage() {
   const STAT_CARDS = [
     {
       perm: "students.view",
-      title: "Jami o'quvchi", value: statsLoading ? null : stats?.studentCount ?? 0,
+      href: "/students", title: "Jami o'quvchi", value: statsLoading ? null : stats?.studentCount ?? 0,
       change: statsLoading ? null : stats?.newStudentsThisMonth > 0 ? `+${stats.newStudentsThisMonth} bu oy` : "Bu oy o'zgarish yo'q",
       up: (stats?.newStudentsThisMonth ?? 0) >= 0,
       icon: GraduationCap, bg: "bg-indigo-50 dark:bg-indigo-950/40", text: "text-indigo-600 dark:text-indigo-400",
     },
     {
       perm: "groups.view",
-      title: "Faol guruhlar", value: statsLoading ? null : stats?.groupCount ?? 0,
+      href: "/groups", title: "Faol guruhlar", value: statsLoading ? null : stats?.groupCount ?? 0,
       change: null, up: true,
       icon: Users, bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-600 dark:text-emerald-400",
     },
     {
       perm: "payments.view",
-      title: "Oylik daromad", value: statsLoading ? null : formatCurrency(stats?.monthlyRevenue ?? 0),
+      href: "/finance", title: "Oylik daromad", value: statsLoading ? null : formatCurrency(stats?.monthlyRevenue ?? 0),
       change: statsLoading ? null : stats?.revenueChange != null
         ? `${stats.revenueChange >= 0 ? "+" : ""}${stats.revenueChange}% o'tgan oyga`
         : null,
@@ -137,22 +138,22 @@ function OwnerDashboardPage() {
     },
     {
       perm: "leads.view",
-      title: "Yangi lidlar", value: statsLoading ? null : stats?.leadCount ?? 0,
+      href: "/leads", title: "Yangi lidlar", value: statsLoading ? null : stats?.leadCount ?? 0,
       change: statsLoading ? null : stats?.newLeadsThisMonth > 0 ? `+${stats.newLeadsThisMonth} bu oy` : null,
       up: (stats?.newLeadsThisMonth ?? 0) >= 0,
       icon: Target, bg: "bg-pink-50 dark:bg-pink-950/40", text: "text-pink-600 dark:text-pink-400",
     },
     {
       perm: "teachers.view",
-      title: "O'qituvchilar", value: statsLoading ? null : stats?.teacherCount ?? 0,
+      href: "/teachers", title: "O'qituvchilar", value: statsLoading ? null : stats?.teacherCount ?? 0,
       change: null, up: true,
       icon: TrendingUp, bg: "bg-violet-50 dark:bg-violet-950/40", text: "text-violet-600 dark:text-violet-400",
     },
     {
       perm: "payments.view",
-      title: "Qarzdorlar", value: statsLoading ? null : stats?.debtorCount ?? 0,
+      href: "/finance?tab=qarzdorlar", title: "Qarzdorlar", value: statsLoading ? null : stats?.debtorCount ?? 0,
       change: (stats?.debtorCount ?? 0) > 0 ? "Nazorat qiling" : null,
-      up: false,
+      up: false, alert: (stats?.debtorCount ?? 0) > 0,
       icon: UserCheck, bg: "bg-teal-50 dark:bg-teal-950/40", text: "text-teal-600 dark:text-teal-400",
     },
     /* SOTUVCHI/OPERATOR uchun — markazning umumiy soni emas, O'ZINING
@@ -160,13 +161,13 @@ function OwnerDashboardPage() {
        egasida ham): "mening lidlarim" hammaga ma'noli raqam. */
     {
       perm: "leads.view",
-      title: "Menga biriktirilgan", value: statsLoading ? null : stats?.myLeadCount ?? 0,
+      href: "/leads", title: "Menga biriktirilgan", value: statsLoading ? null : stats?.myLeadCount ?? 0,
       change: null, up: true,
       icon: UserSquare2, bg: "bg-sky-50 dark:bg-sky-950/40", text: "text-sky-600 dark:text-sky-400",
     },
     {
       perm: "leads.view",
-      title: "Bu oy o'quvchiga aylangan", value: statsLoading ? null : stats?.myWonThisMonth ?? 0,
+      href: "/leads", title: "Bu oy o'quvchiga aylangan", value: statsLoading ? null : stats?.myWonThisMonth ?? 0,
       change: null, up: true,
       icon: Trophy, bg: "bg-lime-50 dark:bg-lime-950/40", text: "text-lime-600 dark:text-lime-400",
     },
@@ -185,59 +186,50 @@ function OwnerDashboardPage() {
             (yoki bayroq o'chiq bo'lsa) o'zi hech narsa chizmaydi. */}
         <OnboardingChecklist />
 
-        {/* KPI Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+        {/* KPI — IXCHAM PLITKALAR. Ilgari har bir ko'rsatkich ~175px balandlikdagi
+            kartochka edi (ikonka ustida, raqam, yozuv, o'zgarish — to'rt qavat) va
+            8 tasi birinchi ekranning yarmini egallab, grafikni pastga surardi.
+            Endi ikonka yonda, raqam va yozuv ikki qatorda (~64px). Har bir plitka
+            o'z bo'limiga olib boradi.
+            QARZDORLAR: ilgari shu son pastda alohida qizil ogohlantirish bo'lib
+            yana bir marta takrorlanardi — endi plitkaning o'zi qizil va bosilsa
+            qarzdorlar ro'yxatini ochadi. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5">
           {STAT_CARDS.map(s => {
             const Icon = s.icon;
+            const alert = "alert" in s && s.alert;
             return (
-              <div key={s.title}
-                className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4
-                  min-w-0 overflow-hidden">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
-                  <Icon className={cn("w-4.5 h-4.5", s.text)} />
+              <Link key={s.title} href={s.href}
+                title={[s.title, s.change].filter(Boolean).join(" · ")}
+                className={cn("glass-panel border rounded-2xl px-3.5 py-3 min-w-0 flex items-center gap-3 transition-colors",
+                  alert
+                    ? "border-red-200 dark:border-red-400/25 bg-red-50/70! dark:bg-red-950/30! hover:border-red-300"
+                    : "border-white/60 dark:border-white/10 hover:border-indigo-200 dark:hover:border-indigo-400/30")}>
+                <div className={cn("hidden sm:flex w-9 h-9 rounded-xl items-center justify-center shrink-0",
+                  alert ? "bg-red-100 dark:bg-red-900/40" : s.bg)}>
+                  <Icon className={cn("w-4.5 h-4.5", alert ? "text-red-600 dark:text-red-400" : s.text)} />
                 </div>
-                {s.value === null
-                  ? <Skeleton className="h-6 w-12 mb-1" />
-                  /* TOR EKRAN. "Oylik daromad" eng uzun qiymat va telefonda
-                     ikki ustunli setkada kartaga sig'mas edi. Uch qatlam
-                     himoya: mobilda kichikroq shrift, `leading-tight` (ikki
-                     qatorga tushsa siqilib ketmasin) va `break-words`
-                     (o'ralishga ruxsat). Raqam ichidagi bo'shliqlar
-                     uzilmas — `lib/money.ts` ga qarang, shuning uchun
-                     "7 500 000" o'rtasidan bo'linmaydi. */
-                  : <p className="text-[18px] sm:text-[22px] font-black text-neutral-900
-                      dark:text-neutral-100 leading-tight break-words">{s.value}</p>
-                }
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{s.title}</p>
-                {s.change && (
-                  <p className={cn("text-[10px] font-semibold mt-0.5", s.up ? "text-emerald-500" : "text-red-500")}>
-                    {s.change}
+                <div className="min-w-0 flex-1">
+                  {s.value === null
+                    ? <Skeleton className="h-5 w-12 mb-1" />
+                    /* Raqam ichidagi bo'shliqlar uzilmas (`lib/money.ts`),
+                       sig'masa kesilmaydi — telefonda shrift kichrayadi. */
+                    : <p className={cn("text-[15px] sm:text-[17px] font-black leading-tight tabular-nums truncate",
+                        alert ? "text-red-700 dark:text-red-300" : "text-neutral-900 dark:text-neutral-100")}>{s.value}</p>
+                  }
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">
+                    {s.title}
+                    {s.change && (
+                      <span className={cn("font-semibold", s.up ? "text-emerald-600 dark:text-emerald-400" : "text-red-500")}>
+                        {" · "}{s.change}
+                      </span>
+                    )}
                   </p>
-                )}
-              </div>
+                </div>
+              </Link>
             );
           })}
         </div>
-
-        {/* Alert: debtors */}
-        {pulKor && !statsLoading && (stats?.debtorCount ?? 0) > 0 && (
-          /* Telefonda bir qatorga sig'masdi: matn o'ralib, "Ko'rish"
-             havolasi uning ustiga chiqib qolardi. Tor ekranda ustun
-             bo'lib joylashadi, `sm` dan boshlab avvalgidek bir qator. */
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3
-            rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-            <div className="flex items-start gap-3 min-w-0">
-              <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700 dark:text-red-300">
-                <span className="font-bold">{stats?.debtorCount} ta o'quvchi</span> to'lovni kechiktirmoqda — moliya bo'limiga o'ting
-              </p>
-            </div>
-            <a href="/finance?tab=qarzdorlar" className="sm:ml-auto self-start sm:self-auto
-              text-xs font-semibold text-red-600 dark:text-red-400 hover:underline shrink-0">
-              Ko'rish →
-            </a>
-          </div>
-        )}
 
         {/* Kirim/chiqim grafigi — ma'lumot HAQIQIY (`/api/reports` →
             `reports.service.revenue()`: oy bo'yicha `Payment` va
@@ -271,7 +263,7 @@ function OwnerDashboardPage() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 12, fill: chart.axis }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: chart.axis }} tickFormatter={v => `${(v/1_000_000).toFixed(0)}M`} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: chart.axis }} tickFormatter={v => formatCompact(v)} axisLine={false} tickLine={false} />
               <Tooltip
                 formatter={(v: unknown) => formatCurrency(v as number)}
                 contentStyle={{ background: chart.tooltip, border: `1px solid ${chart.tooltipBorder}`, borderRadius: 10, color: chart.tooltipText }}

@@ -407,7 +407,9 @@ export function GroupAttendanceGrid({
                       return (
                         <td key={ds} className="px-2 py-1.5 text-center">
                           {!applicable ? (
-                            <span className="inline-block w-14 h-5" />
+                            // `align-middle` — bo'sh inline-blok asos chiziqqa o'tirib,
+                            // qatorni belgilangan qatorlardan ~5px baland qilardi.
+                            <span className="inline-block align-middle w-14 h-5" />
                           ) : (
                             <button
                               data-cell-trigger={key}
@@ -427,7 +429,7 @@ export function GroupAttendanceGrid({
                                   setNoteText("");
                                 }
                               }}
-                              className={cn("relative inline-flex items-center justify-center w-14 h-5 rounded-md text-[10px] font-semibold transition-opacity",
+                              className={cn("relative inline-flex align-middle items-center justify-center w-14 h-5 rounded-md text-[10px] font-semibold transition-opacity",
                                 status
                                   ? STATUS_CFG[status].cls
                                   : "border border-dashed border-neutral-300 dark:border-neutral-700",

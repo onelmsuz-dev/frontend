@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { TopHeader } from "@/components/layout/top-header";
-import { BranchFilter } from "@/components/layout/branch-filter";
 import {
   ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, FileCheck,
   Save, Users, CalendarDays, Eraser, Check,
@@ -318,9 +317,8 @@ export default function AttendancePage() {
               kunIdx={kunIdx} onKun={kunniTanla} compact hammasiBilan />
           </div>
 
-          {/* Filial — guruhlar ro'yxatini toraytiradi. Bitta filialli
-              markazda umuman chizilmaydi. */}
-          <BranchFilter className="mb-1" />
+          {/* Filial tanlagich bu yerda YO'Q — tepa paneldagi tanlagich guruhlar
+              ro'yxatini ham toraytiradi; ikkinchisi faqat takror edi. */}
 
           <div className="flex gap-1.5 flex-wrap">
             {groupsLoading

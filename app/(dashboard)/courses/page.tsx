@@ -14,7 +14,7 @@ import { useCourses, useCourseCategories } from "@/lib/hooks/useCourses";
 import { CourseCategoriesModal } from "@/components/courses/course-categories-modal";
 import { groupCourses, guruhlashKerak, BOSHQA } from "@/lib/course-groups";
 import { useBranch } from "@/lib/contexts/branch-context";
-import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
+import { BranchPicker } from "@/components/layout/branch-filter";
 import { mutate } from "swr";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { useFeature } from "@/lib/hooks/useFeatures";
@@ -201,18 +201,18 @@ export default function CoursesPage() {
                       </div>
                       <div className="flex gap-0.5 ml-2 shrink-0">
                         {canUpdate && (
-                          <button onClick={() => openEdit(course)}
+                          <button onClick={() => openEdit(course)} title="Tahrirlash" aria-label={`${course.name} — tahrirlash`}
                             className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                             <Edit className="w-3.5 h-3.5" />
                           </button>
                         )}
                         {canDelete && (
-                          <button onClick={() => { setError(""); setDeleteTarget(course); }}
+                          <button onClick={() => { setError(""); setDeleteTarget(course); }} title="O'chirish" aria-label={`${course.name} — o'chirish`}
                             className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
-                        <Link href={`/courses/${course.id}`}
+                        <Link href={`/courses/${course.id}`} title="Ochish" aria-label={`${course.name} — ochish`}
                           className="w-7 h-7 flex items-center justify-center rounded-lg text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                           <ChevronRight className="w-3.5 h-3.5" />
                         </Link>
@@ -400,7 +400,9 @@ export default function CoursesPage() {
 
       <div className="p-5 space-y-5">
         {/* Stats */}
-        <div className={cn("grid gap-3", canSeeMoney ? "grid-cols-3" : "grid-cols-2")}>
+        {/* Telefonda ikki ustun: pul kartasi to'liq qatorni oladi — uch ustunda
+            "65 350 000 so'm" sig'may, karta ekrandan chiqib ketardi. */}
+        <div className={cn("grid gap-3 grid-cols-2", canSeeMoney && "sm:grid-cols-3")}>
           {[
             { label: "Jami kurs",     value: stats.jami,                    icon: BookOpen, bg: "bg-blue-50 dark:bg-blue-950/40",    text: "text-blue-600 dark:text-blue-400" },
             { label: "Jami o'quvchi", value: stats.oquvchi,                 icon: Users,    bg: "bg-green-50 dark:bg-green-950/40",  text: "text-green-600 dark:text-green-400" },
@@ -408,26 +410,26 @@ export default function CoursesPage() {
           ].map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
+              <div key={s.label} className={cn("min-w-0 glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4",
+                s.icon === Wallet && "col-span-2 sm:col-span-1")}>
                 <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
                   <Icon className={cn("w-4.5 h-4.5", s.text)} />
                 </div>
                 {isLoading ? <Skeleton className="h-6 w-12 mb-1" />
-                  : <p className="text-[22px] font-black text-neutral-900 dark:text-neutral-100 leading-none">{s.value}</p>}
+                  : <p className="text-[22px] font-black text-neutral-900 dark:text-neutral-100 leading-none truncate">{s.value}</p>}
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{s.label}</p>
               </div>
             );
           })}
         </div>
 
-        {/* Search */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        {/* Search — tor ekranda qidiruv to'liq qator, qolganlari ostiga o'raladi */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <Input placeholder="Kurs nomi yoki tavsif..." className="pl-9 h-9 text-sm w-64"
+            <Input placeholder="Kurs nomi yoki tavsif..." className="pl-9 h-9 text-sm w-full"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <BranchFilter />
           {canUpdate && (
             <button type="button" onClick={() => setShowCats(true)}
               className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-white/60 dark:border-white/10 text-[12px] font-semibold text-neutral-600 dark:text-neutral-300 hover:border-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">

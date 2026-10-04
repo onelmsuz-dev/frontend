@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { TopHeader } from "@/components/layout/top-header";
@@ -19,11 +19,10 @@ import { businessToday } from "@/lib/time";
 import { useOrganization } from "@/lib/hooks/useOrganization";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { RoomGrid } from "@/components/schedule/room-grid";
-import { BranchFilter } from "@/components/layout/branch-filter";
 import { courseBlockColor, GROUP_COLORS, blockColorFor } from "@/lib/course-colors";
 import {
   ChevronLeft, ChevronRight, CalendarDays, LayoutGrid, List, ChevronDown, Plus,
-  DoorOpen,
+  DoorOpen, Minimize2,
 } from "lucide-react";
 import { TimeInput } from "@/components/ui/time-input";
 
@@ -55,6 +54,40 @@ const TIME_W        = 52;
 const LANE_MIN_W    = 132;
 /** Bo'sh yoki bitta darsli kun ustunining eng kichik eni. */
 const DAY_MIN_W     = 120;
+/**
+ * "SIG'DIRISH" REJIMI — butun hafta BIR EKRANDA.
+ *
+ * Standart ko'rinishda ustun yo'laklar soniga qarab kengayadi (yuqoridagi
+ * `LANE_MIN_W` — egasining talabi: parallel darslar to'liq o'qilsin). Buning
+ * narxi: 4–5 parallel guruhli markazda hafta 3000px dan oshadi va ekranga
+ * faqat 2 kun sig'adi — "bu hafta umuman qanday" degan savolga javob olish
+ * uchun yonga surish kerak.
+ *
+ * Bu rejim IXTIYORIY va standart holatda O'CHIQ: yoqilsa kunlar ekran
+ * eniga sig'adigan qilib torayadi, blokda faqat guruh nomi qoladi (vaqt, xona
+ * va o'qituvchi — ustiga borilganda yoki kunni ochganda). Tanlov eslab qolinadi.
+ */
+const FIT_KEY       = "schedule:fit";
+const FIT_EVENT     = "schedule:fit";
+/** Sig'dirish rejimida kun ustunining eng kichik eni (telefonda yonga surilsin). */
+const DAY_FIT_MIN_W = 64;
+function useFit(): [boolean, (v: boolean) => void] {
+  const subscribe = useCallback((cb: () => void) => {
+    window.addEventListener("storage", cb);
+    window.addEventListener(FIT_EVENT, cb);
+    return () => { window.removeEventListener("storage", cb); window.removeEventListener(FIT_EVENT, cb); };
+  }, []);
+  const fit = useSyncExternalStore(
+    subscribe,
+    () => { try { return window.localStorage.getItem(FIT_KEY) === "1"; } catch { return false; } },
+    () => false,
+  );
+  const set = useCallback((v: boolean) => {
+    try { window.localStorage.setItem(FIT_KEY, v ? "1" : "0"); } catch { /* jim */ }
+    window.dispatchEvent(new Event(FIT_EVENT));
+  }, []);
+  return [fit, set];
+}
 
 const DAY_MAP: Record<string, string> = {
   DUSHANBA: "Dushanba", SESHANBA: "Seshanba", CHORSHANBA: "Chorshanba",
@@ -239,6 +272,7 @@ export default function SchedulePage() {
   const isAdmin = session?.user?.role === "SUPER_ADMIN";
 
   const [view,        setView]        = useState<ViewMode>("hafta");
+  const [fit, setFit] = useFit();
   const [selDay,      setSelDay]      = useState(new Date(today));
   const [weekStart,   setWeekStart]   = useState(getMondayOf(today));
   const [monthDate,   setMonthDate]   = useState(new Date(today));
@@ -580,9 +614,15 @@ export default function SchedulePage() {
   const weekLayout = useMemo(() => weekDays.map((d) => {
     const lay = layoutOverlaps(entriesOn(d));
     const lanes = lay.reduce((m, x) => Math.max(m, x.cols), 1);
-    return { lay, minW: Math.max(DAY_MIN_W, lanes * LANE_MIN_W) };
+    return { lay, lanes, minW: Math.max(DAY_MIN_W, lanes * LANE_MIN_W) };
   }), [weekDays, entriesOn]);
-  const weekMinW = TIME_W + weekLayout.reduce((n, w) => n + w.minW, 0);
+  const weekMinW = fit
+    ? TIME_W + weekLayout.length * DAY_FIT_MIN_W
+    : TIME_W + weekLayout.reduce((n, w) => n + w.minW, 0);
+  /** Kun ustunining eni. Sig'dirishda — yo'laklar soniga MUTANOSIB ulush. */
+  const kunFlex = (i: number) => fit
+    ? `${weekLayout[i]?.lanes ?? 1} 1 ${DAY_FIT_MIN_W}px`
+    : `1 0 ${weekLayout[i]?.minW ?? DAY_MIN_W}px`;
   const kunIsToday = sameDay(selDay, today);
 
   const SELECT_CLS = "w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none focus:border-neutral-900 dark:focus:border-neutral-400 transition-colors";
@@ -849,8 +889,13 @@ export default function SchedulePage() {
         lg:rounded-2xl lg:border lg:border-white/60 lg:dark:border-white/10">
 
       {/* ── Toolbar ────────────────────────────────────────────────────────── */}
-      <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-white/50 dark:border-white/10 glass-panel">
-        <div className="flex p-1 gap-0.5 glass-soft rounded-xl">
+      {/* `flex-wrap` — sig'magan tugma keyingi qatorga tushadi. Ilgari qator
+          o'ralmas edi va ota `overflow-hidden` bo'lgani uchun "Dars qo'shish",
+          "Guruh qo'shish" va filial tanlash planshet/telefonda ekrandan
+          tashqarida qolib, ularga umuman yetib bo'lmasdi. Telefonda tartib:
+          ko'rinish + qo'shish tugmalari → sana → filial. */}
+      <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2.5 border-b border-white/50 dark:border-white/10 glass-panel">
+        <div className="order-1 flex p-1 gap-0.5 glass-soft rounded-xl">
           {([
             ["kun",   "Kun",   List],
             ["hafta", "Hafta", LayoutGrid],
@@ -859,14 +904,15 @@ export default function SchedulePage() {
             // "2-xona bo'shmi" degan savolga javob beradi.
             ["xona",  "Xonalar", DoorOpen],
           ] as [ViewMode, string, React.ComponentType<{className?:string}>][]).map(([id,label,Icon]) => (
-            <button key={id} onClick={() => setView(id)}
+            <button key={id} onClick={() => setView(id)} title={label} aria-label={label} aria-pressed={view===id}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
                 view===id
                   ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
                   : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
               )}>
-              <Icon className="w-3.5 h-3.5" />{label}
+              {/* Telefonda faqat tanlangan ko'rinishning nomi yoziladi */}
+              <Icon className="w-3.5 h-3.5" /><span className={cn(view !== id && "hidden sm:inline")}>{label}</span>
             </button>
           ))}
         </div>
@@ -876,24 +922,24 @@ export default function SchedulePage() {
             kunning hodisalari emas: "oldinga/orqaga" u yerda hech
             narsani o'zgartirmasdi va faqat chalg'itardi. */}
         {view !== "xona" && (
-        <div className="relative flex items-center gap-1 ml-2">
-          <button onClick={onPrev}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors">
+        <div className="order-3 lg:order-2 relative flex items-center gap-1 min-w-0 grow basis-[220px] sm:grow-0 sm:basis-auto lg:ml-2">
+          <button onClick={onPrev} aria-label="Oldingi" title="Oldingi"
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors">
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button onClick={openPicker}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors",
               "text-[13px] font-semibold text-neutral-700 dark:text-neutral-200",
-              "min-w-[200px] justify-center",
+              "min-w-0 flex-1 sm:flex-none sm:min-w-[200px] justify-center whitespace-nowrap",
               pickerOpen ? "glass-soft" : "hover:bg-white/60 dark:hover:bg-white/10"
             )}>
             <CalendarDays className="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-500 shrink-0" />
             {navLabel}
             <ChevronDown className={cn("w-3 h-3 text-neutral-400 shrink-0 transition-transform", pickerOpen && "rotate-180")} />
           </button>
-          <button onClick={onNext}
-            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors">
+          <button onClick={onNext} aria-label="Keyingi" title="Keyingi"
+            className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg hover:bg-white/60 dark:hover:bg-white/10 text-neutral-500 transition-colors">
             <ChevronRight className="w-4 h-4" />
           </button>
 
@@ -912,28 +958,41 @@ export default function SchedulePage() {
         </div>
         )}
 
+        {/* SIG'DIRISH — faqat hafta ko'rinishida ma'noli (izoh: `FIT_KEY`). */}
+        {view === "hafta" && (
+        <button onClick={() => setFit(!fit)} aria-pressed={fit}
+          title={fit ? "Batafsil ko'rinishga qaytish (ustunlar kengayadi)" : "Butun haftani bir ekranga sig'dirish"}
+          className={cn("order-4 lg:order-3 shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-colors",
+            fit
+              ? "border-indigo-300 dark:border-indigo-400/40 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+              : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10")}>
+          <Minimize2 className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Sig&apos;dirish</span>
+        </button>
+        )}
+
         {view !== "xona" && (
         <button onClick={goToday}
-          className="px-3 py-1.5 text-xs font-semibold rounded-xl border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
+          className="order-4 lg:order-3 shrink-0 px-3 py-1.5 text-xs font-semibold rounded-xl border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
           Bugun
         </button>
         )}
 
-        {/* Filial — guruhlar ham, xonalar ham shu bo'yicha toraydi. */}
-        <BranchFilter className="rounded-xl" />
+        {/* Filial tanlagich bu yerda YO'Q — tepa paneldagi tanlagich shu sahifani
+            ham toraytiradi (bitta umumiy holat); ikkinchisi faqat takror edi. */}
 
         {/* Two buttons side by side — admin only */}
         {isAdmin && (
-          <div className="ml-auto flex items-center gap-2">
+          <div className="order-2 lg:order-5 ml-auto flex items-center gap-1.5 sm:gap-2">
             <button onClick={openDarsModal}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors">
               <Plus className="w-3.5 h-3.5" />
-              Dars qo'shish
+              <span>Dars<span className="hidden sm:inline"> qo&apos;shish</span></span>
             </button>
             <button onClick={openGroupModal}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/60 dark:border-white/10 text-neutral-700 dark:text-neutral-300 text-xs font-semibold hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
               <Plus className="w-3.5 h-3.5" />
-              Guruh qo'shish
+              <span>Guruh<span className="hidden sm:inline"> qo&apos;shish</span></span>
             </button>
           </div>
         )}
@@ -1085,7 +1144,7 @@ export default function SchedulePage() {
               const isSel   = sameDay(d, selDay) && !isToday;
               return (
                 <button key={i} onClick={() => { setSelDay(new Date(d)); setView("kun"); }}
-                  style={{ flex: `1 0 ${weekLayout[i]?.minW ?? DAY_MIN_W}px` }}
+                  style={{ flex: kunFlex(i) }}
                   className={cn(
                     "flex flex-col items-center justify-center py-3 gap-px",
                     "border-r border-white/50 dark:border-white/10 last:border-r-0 cursor-pointer transition-colors",
@@ -1123,7 +1182,7 @@ export default function SchedulePage() {
                 <div key={ci}
                   className={cn("relative border-r border-white/50 dark:border-white/10 last:border-r-0",
                     isToday && "bg-blue-50/25 dark:bg-blue-900/10", isSel && "bg-neutral-50/80 dark:bg-neutral-800/30")}
-                  style={{ height: TOTAL_H, flex: `1 0 ${kunJoy?.minW ?? DAY_MIN_W}px` }}>
+                  style={{ height: TOTAL_H, flex: kunFlex(ci) }}>
                   {HOURS.map((_,i) => <div key={i} className="absolute inset-x-0 border-t border-white/50 dark:border-white/10" style={{ top: i*HOUR_H }} />)}
                   {HOURS.slice(0,-1).map((_,i) => <div key={`h${i}`} className="absolute inset-x-0 border-t border-dashed border-white/50 dark:border-white/10" style={{ top: i*HOUR_H+HOUR_H/2 }} />)}
                   {(kunJoy?.lay ?? []).map(({ item: entry, col, cols }) => {
@@ -1137,7 +1196,7 @@ export default function SchedulePage() {
                       <div key={entry.id}
                         role="link"
                         tabIndex={0}
-                        title={`${entry.groupName} · ${entry.time}–${entry.endTime} — guruhni ochish`}
+                        title={`${entry.groupName} · ${entry.time}–${entry.endTime} · ${entry.room} · ${entry.teacherName} — guruhni ochish`}
                         onClick={() => router.push(`/groups/${entry.groupId}`)}
                         onKeyDown={(e) => { if (e.key === "Enter") router.push(`/groups/${entry.groupId}`); }}
                         className={cn("absolute rounded-lg overflow-hidden cursor-pointer border border-l-[3px] shadow-sm transition-all hover:brightness-95 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500",
@@ -1147,11 +1206,15 @@ export default function SchedulePage() {
                           left: `calc(${col * w}% + 4px)`,
                           width: `calc(${w}% - ${cols > 1 ? 6 : 8}px)`,
                         }}>
-                        <div className="px-2 py-1.5 h-full flex flex-col overflow-hidden">
-                          <p className={cn("font-bold truncate leading-tight", compact?"text-[10px]":"text-[12px]")}>
+                        <div className={cn("h-full flex flex-col overflow-hidden", fit ? "px-1 py-1" : "px-2 py-1.5")}>
+                          {/* Sig'dirishda nom KESILMAYDI, o'raladi — tor blokda
+                              "Ingl…" o'rniga nomning sig'gan qismi ko'rinadi. */}
+                          <p className={cn("font-bold leading-tight",
+                            fit ? "text-[10px] break-words" : "truncate",
+                            !fit && (compact ? "text-[10px]" : "text-[12px]"))}>
                             {entry.groupName}
                           </p>
-                          {!compact && (
+                          {!compact && !fit && (
                             <>
                               <p className="text-[10px] opacity-60 mt-0.5 tabular-nums">{entry.time}–{entry.endTime}</p>
                               <p className="text-[10px] opacity-55 truncate mt-0.5">{entry.room} · {entry.teacherName}</p>

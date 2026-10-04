@@ -58,7 +58,7 @@ export function KanbanColumn({
             {total != null && total > leads.length ? `${leads.length}/${total}` : leads.length}
           </span>
         </div>
-        <button onClick={onAdd}
+        <button onClick={onAdd} title="Shu bosqichga lid qo'shish" aria-label={`${stage.name} — lid qo'shish`}
           className={cn("w-6 h-6 flex items-center justify-center rounded-lg hover:bg-white/40 dark:hover:bg-black/20 transition-colors shrink-0", hue.text)}>
           <Plus className="w-3.5 h-3.5" />
         </button>

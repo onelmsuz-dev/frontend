@@ -12,7 +12,10 @@ import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { FormField } from "@/components/ui/form-field";
 import {
-  Search, Plus, ChevronRight, AlertCircle, Upload, LayoutGrid, Radio, Target, Settings2, Users,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Search, Plus, AlertCircle, Upload, LayoutGrid, Radio, Target, Settings2, Users, MoreHorizontal,
 } from "lucide-react";
 import useSWR from "swr";
 import { fetcher as _fetcher } from "@/lib/fetcher";
@@ -45,9 +48,8 @@ import { StageManagerModal } from "@/components/leads/stage-manager-modal";
 import { SalesStats } from "@/components/leads/sales-stats";
 import { DistributeModal } from "@/components/leads/distribute-modal";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
-import { BranchFilter } from "@/components/layout/branch-filter";
 import { useFeature } from "@/lib/hooks/useFeatures";
-import { stageHue, defaultStage } from "@/lib/lead-stages";
+import { defaultStage } from "@/lib/lead-stages";
 import { mutate } from "swr";
 import { DeletedColumn } from "@/components/leads/deleted-column";
 
@@ -392,9 +394,6 @@ export default function LeadsPage() {
     return m;
   }, [filteredLeads]);
   const getCol = (stageId: string) => byStage.get(stageId) ?? [];
-  const totalByStage = useMemo(() =>
-    Object.fromEntries(stages.map((s) => [s.id, leads.filter((l) => l.stageId === s.id).length])),
-    [leads, stages]);
 
   return (
     <div>
@@ -722,31 +721,11 @@ export default function LeadsPage() {
 
       {tab === "board" && (
       <div className="p-5">
-        {/* Pipeline summary */}
-        <div className="flex items-center gap-2 mb-5 flex-wrap">
-          {stages.map((s, i) => {
-            const hue = stageHue(s.color);
-            return (
-              <div key={s.id} className="flex items-center gap-1.5">
-                <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[12px] font-semibold", hue.headerBg, hue.text, "border-current/20")}>
-                  <span className={cn("w-2 h-2 rounded-full", hue.dot)} />
-                  {s.name}
-                  <span className="font-black">{isLoading ? "…" : totalByStage[s.id] ?? 0}</span>
-                </div>
-                {i < stages.length - 1 && <ChevronRight className="w-3 h-3 text-neutral-300 dark:text-neutral-700" />}
-              </div>
-            );
-          })}
-          {bosqichSozlay && (
-            <button onClick={() => setShowStages(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold
-                         glass-soft text-neutral-500 dark:text-neutral-400 hover:text-indigo-600
-                         border border-dashed border-neutral-300 dark:border-neutral-600 transition-colors">
-              <Settings2 className="w-3.5 h-3.5" /> Bosqichlarni sozlash
-            </button>
-          )}
-        </div>
-
+        {/* BOSQICHLAR XULOSASI bu yerda YO'Q: har bir bosqichning nomi va soni
+            pastdagi ustun sarlavhasida turibdi (`20/45` ko'rinishida — yuklangan
+            va jami). Tepadagi alohida chiplar qatori aynan shu ma'lumotni
+            takrorlab, taxtani bir qator pastga surardi. "Bosqichlarni sozlash"
+            pastdagi "⋯" menyusiga ko'chdi. */}
         {/* Bugun qo'ng'iroq qilinadiganlar — taxtadan YUQORIDA. */}
         <DueStrip onOpen={(id) => {
           const l = leads.find((x) => x.id === id);
@@ -760,7 +739,8 @@ export default function LeadsPage() {
             <Input placeholder="Ism, telefon, maktab, kurs..." className="pl-9 h-9 text-sm"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <BranchFilter className="rounded-xl text-[12px] font-medium shrink-0" />
+          {/* Filial — tepa paneldagi tanlagich shu ro'yxatni ham toraytiradi
+              (bitta umumiy holat), shuning uchun bu yerda takrorlanmaydi. */}
 
           {/* SOTUVCHI FILTRI — faqat boshqalarning lidini ko'ra oladigan
               odamga ma'noli. Oddiy sotuvchida ro'yxat o'zidan iborat
@@ -777,13 +757,6 @@ export default function LeadsPage() {
             </select>
           )}
 
-          <button onClick={() => setShowImport(true)}
-            className="flex items-center gap-1.5 h-9 px-3 rounded-xl text-[12px] font-semibold
-                       glass-soft text-neutral-600 dark:text-neutral-300
-                       hover:bg-white/70 dark:hover:bg-white/10 transition-colors shrink-0">
-            <Upload className="w-3.5 h-3.5" />{" "}Excel&apos;dan import
-          </button>
-
           {/* TAQSIMLASH — importdan keyingi birinchi ish. Import
               tugmasining YONIDA turibdi, chunki oqim shu: 1000 tasini
               kirit → 5 operatorga bo'l. */}
@@ -796,23 +769,41 @@ export default function LeadsPage() {
             </button>
           )}
 
-          {/* O'CHIRILGANLAR — tugma emas, SWITCH: holat saqlanib turadi
-              va xodim ustunni ochib qo'yib ishlashda davom etadi. */}
-          {ochiraOladi && (
-            <button type="button" role="switch" aria-checked={ochirilganlar}
-              onClick={() => setOchirilganlar(v => !v)}
-              className={cn("flex items-center gap-2 h-9 px-3 rounded-xl text-[12px] font-semibold",
-                "transition-colors shrink-0 border",
-                ochirilganlar
-                  ? "bg-neutral-800 text-white border-neutral-800 dark:bg-white/15 dark:border-white/20"
-                  : "glass-soft text-neutral-600 dark:text-neutral-300 border-white/60 dark:border-white/10 hover:bg-white/70 dark:hover:bg-white/10")}>
-              <span className={cn("w-7 h-4 rounded-full p-0.5 flex transition-colors shrink-0",
-                ochirilganlar ? "bg-emerald-500 justify-end" : "bg-neutral-300 dark:bg-neutral-600 justify-start")}>
-                <span className="w-3 h-3 rounded-full bg-white" />
-              </span>
-              O&apos;chirilganlar
-            </button>
-          )}
+          {/* KAM ISHLATILADIGAN AMALLAR — bitta menyuda. Ilgari import,
+              "O'chirilganlar" kaliti va bosqich sozlamasi doim ochiq turib,
+              qidiruv qatorini uch barobar uzaytirardi.
+              O'CHIRILGANLAR hali ham KALIT (holat saqlanadi): yoqilgan bo'lsa
+              menyu tugmasida nuqta yonadi va bandda belgi turadi. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger aria-label="Qo'shimcha amallar" title="Qo'shimcha amallar"
+              className="relative ml-auto shrink-0 w-9 h-9 flex items-center justify-center rounded-xl glass-soft border border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:bg-white/70 dark:hover:bg-white/10 transition-colors outline-none">
+              <MoreHorizontal className="w-4 h-4" />
+              {ochirilganlar && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500" />}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[230px]">
+              <DropdownMenuItem onClick={() => setShowImport(true)}>
+                <Upload className="w-3.5 h-3.5" />{" "}Excel&apos;dan import
+              </DropdownMenuItem>
+              {bosqichSozlay && (
+                <DropdownMenuItem onClick={() => setShowStages(true)}>
+                  <Settings2 className="w-3.5 h-3.5" />{" "}Bosqichlarni sozlash
+                </DropdownMenuItem>
+              )}
+              {ochiraOladi && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem closeOnClick={false} onClick={() => setOchirilganlar(v => !v)}
+                    role="menuitemcheckbox" aria-checked={ochirilganlar}>
+                    <span className={cn("w-7 h-4 rounded-full p-0.5 flex transition-colors shrink-0",
+                      ochirilganlar ? "bg-emerald-500 justify-end" : "bg-neutral-300 dark:bg-neutral-600 justify-start")}>
+                      <span className="w-3 h-3 rounded-full bg-white" />
+                    </span>
+                    O&apos;chirilganlarni ko&apos;rsatish
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Sotuvchilar hisoboti — o'zi ruxsatni tekshiradi va yo'q bo'lsa

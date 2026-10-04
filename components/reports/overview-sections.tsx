@@ -12,12 +12,9 @@ import {
 } from "lucide-react";
 import { useOverviewReport, type OverviewReport } from "@/lib/hooks/useReports";
 import { stageHue } from "@/lib/lead-stages";
+import { formatCompact } from "@/lib/money";
 
-const fmtShort = (v: number) => {
-  if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} mln`;
-  if (Math.abs(v) >= 1_000) return `${Math.round(v / 1_000)} ming`;
-  return String(Math.round(v));
-};
+const fmtShort = (v: number) => formatCompact(v);
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;

@@ -371,7 +371,7 @@ export default function FinancePage() {
       <div className="p-5 space-y-5">
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
           {[
             { label: "Jami tushum",       value: formatCurrency(totalPayments), icon: TrendingUp,  bg: "bg-emerald-50 dark:bg-emerald-950/40",  text: "text-emerald-600 dark:text-emerald-400", hint: undefined as string | undefined },
             { label: "Xarajatlar",        value: formatCurrency(totalExpenses), icon: TrendingDown, bg: "bg-red-50 dark:bg-red-950/40",           text: "text-red-600 dark:text-red-400", hint: undefined as string | undefined },
@@ -382,19 +382,27 @@ export default function FinancePage() {
           ].map(s => {
             const Icon = s.icon;
             return (
+              /* IXCHAM PLITKA (dashboard bilan bir xil): ikonka yonda, raqam va
+                 yozuv ikki qatorda. Ilgari ikonka ustida turib, har bir karta
+                 ~120px balandlik olardi. */
               <div key={s.label}
-                className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", s.bg)}>
+                className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl px-3.5 py-3 min-w-0 flex items-center gap-3">
+                <div className={cn("hidden sm:flex w-9 h-9 rounded-xl items-center justify-center shrink-0", s.bg)}>
                   <Icon className={cn("w-4.5 h-4.5", s.text)} />
                 </div>
-                {paymentsLoading
-                  ? <Skeleton className="h-5 w-24 mb-1" />
-                  : <p className="text-[18px] font-black text-neutral-900 dark:text-neutral-100 leading-none">{s.value}</p>
-                }
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">{s.label}</p>
-                {s.hint && (
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-0.5">{s.hint}</p>
-                )}
+                <div className="min-w-0 flex-1">
+                  {paymentsLoading
+                    ? <Skeleton className="h-5 w-24 mb-1" />
+                    : <p className="text-[15px] sm:text-[16px] font-black text-neutral-900 dark:text-neutral-100 leading-tight tabular-nums truncate"
+                        title={String(s.value)}>{s.value}</p>
+                  }
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 truncate">
+                    {s.label}
+                    {s.hint && (
+                      <span className="text-amber-600 dark:text-amber-400 font-semibold">{" · "}{s.hint}</span>
+                    )}
+                  </p>
+                </div>
               </div>
             );
           })}
@@ -404,11 +412,13 @@ export default function FinancePage() {
         <FinanceInsights />
 
         {/* Tabs */}
-        <div className="flex gap-0.5 glass-soft p-1 rounded-xl w-fit">
+        {/* Telefonda uchta tab ekrandan keng — sig'masa yon tomonga suriladi
+            (ilgari oxirgi tab ekrandan tashqarida qolib, bosib bo'lmasdi). */}
+        <div className="flex gap-0.5 glass-soft p-1 rounded-xl w-fit max-w-full overflow-x-auto no-scrollbar">
           {TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "px-4 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                "shrink-0 whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-lg text-sm font-medium transition-colors",
                 activeTab === tab.id
                   ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
                   : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"

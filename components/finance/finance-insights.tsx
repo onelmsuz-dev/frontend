@@ -7,17 +7,18 @@ import {
   CreditCard, Phone, ArrowRight,
 } from "lucide-react";
 import { useFinanceReport, METHOD_LABELS, METHOD_COLORS } from "@/lib/hooks/useReports";
+import { formatCompact, formatCurrency } from "@/lib/money";
 
 const fmt = (v: number) =>
-  new Intl.NumberFormat("uz-UZ", { maximumFractionDigits: 0 }).format(v) + " so'm";
+  formatCurrency(v);
+/** "Eng katta qarzdorlar" blokida nechta qator chiziladi. */
+const TOP_QARZDOR = 5;
 const fmtShort = (v: number | null | undefined) => {
   // Xarajat va foyda faqat hisobot/xarajat huquqi bilan keladi — kassirga
   // server `null` yuboradi (raqam yashiriladi, 0 emas).
   if (v == null) return "—";
 
-  if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)} mln`;
-  if (Math.abs(v) >= 1_000) return `${Math.round(v / 1_000)} ming`;
-  return String(Math.round(v));
+  return formatCompact(v);
 };
 
 function Skeleton({ className }: { className?: string }) {
@@ -150,7 +151,10 @@ export function FinanceInsights() {
 
           {debt.top.length === 0 ? (
             <div className="py-10 text-center text-sm text-neutral-400">Qarzdor yo&apos;q 🎉</div>
-          ) : debt.top.map(d => (
+          /* Eng katta 5 tasi — to'liq ro'yxat "Qarzdorlar" tabida turibdi
+             (pastdagi havola). Ilgari 10 tasi chizilib, sahifani ikki barobar
+             uzaytirar va pastdagi tab bilan takrorlanardi. */
+          ) : debt.top.slice(0, TOP_QARZDOR).map(d => (
             <div key={d.id}
               className="flex items-center gap-3 px-5 py-2.5 border-b border-white/50 dark:border-white/10 last:border-0 hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
               <Link href={`/students/${d.id}`}
@@ -177,7 +181,7 @@ export function FinanceInsights() {
             </div>
           ))}
 
-          {debt.count > debt.top.length && (
+          {debt.count > Math.min(TOP_QARZDOR, debt.top.length) && (
             <Link href="/finance?tab=qarzdorlar"
               className="flex items-center justify-center gap-1 px-5 py-2.5 text-[12px] font-semibold text-teal-600 dark:text-teal-400 hover:underline border-t border-white/50 dark:border-white/10">
               Barcha {debt.count} ta qarzdor <ArrowRight className="w-3 h-3" />
