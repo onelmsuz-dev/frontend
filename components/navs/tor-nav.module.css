@@ -1,0 +1,175 @@
+/* CHAP MENYU — "OROLCHA". Izohlar `tor-nav.tsx` boshida. */
+
+.slot {
+  --ease: cubic-bezier(0.22, 0.9, 0.24, 1);
+  --t: 0.36s;
+  --w-rail: 68px;
+  --w-open: calc(268px * var(--font-scale, 1));
+  --panel: rgba(250, 251, 255, 0.96);
+  --line: rgba(255, 255, 255, 0.7);
+  --sep: rgba(15, 23, 42, 0.07);
+  --text: #111827;
+  --muted: #667085;
+  --faint: #9aa3b2;
+  --acc: #4f46e5;
+  --acc-bg: #eceefe;
+  --hover: rgba(15, 23, 42, 0.045);
+  /* Oqimdagi JOY — orolcha bilan BIRGA kengayadi: menyu ochilganda sahifa
+     ustidan yopilmaydi, kontent yoniga suriladi va yangi enga moslashadi
+     (kartalar qayta taqsimlanadi, tepa panel ixchamlashadi). Ikkalasi bir xil
+     davomiylik, egri chiziq va kechikishda — bitta harakat bo'lib ko'rinadi. */
+  position: sticky;
+  top: 1rem;
+  z-index: 40;
+  display: none;
+  flex-shrink: 0;
+  width: var(--w-rail);
+  height: calc(100dvh - 2rem);
+  transition: width var(--t) var(--ease);
+}
+@media (min-width: 1024px) { .slot { display: block; } }
+/* OCHIQ holat — `data-open` (komponent hisoblaydi): qadalgan, sichqoncha
+   PANEL ustida yoki klaviatura fokusi ichkarida. CSS `:hover` ATAYLAB
+   ishlatilmaydi: u tutqichni ham qamrardi — sichqoncha tutqichga borishi
+   bilan menyu ochilib, tutqich 200px nariga "qochib" ketar va uni bosib
+   bo'lmasdi. */
+.slot[data-open="true"] { width: var(--w-open); }
+:global(.dark) .slot {
+  --panel: rgba(21, 23, 31, 0.96);
+  --line: rgba(255, 255, 255, 0.1);
+  --sep: rgba(255, 255, 255, 0.08);
+  --text: #eceef4;
+  --muted: #9aa3b5;
+  --faint: #6b7385;
+  --acc: #a5b0ff;
+  --acc-bg: rgba(129, 140, 248, 0.16);
+  --hover: rgba(255, 255, 255, 0.06);
+}
+
+.island {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: flex;
+  flex-direction: column;
+  width: var(--w-rail);
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 6px 20px -14px rgba(23, 28, 56, 0.3);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.35;
+  transition: width var(--t) var(--ease), box-shadow var(--t) var(--ease);
+}
+.slot[data-open="true"] .island { width: var(--w-open); }
+/* Qadalmagan (vaqtincha ochilgan) holatda soya kuchliroq — "suzib turibdi". */
+.slot[data-open="true"]:not([data-pinned="true"]) .island {
+  box-shadow: 0 14px 36px -18px rgba(23, 28, 56, 0.34), 0 2px 6px rgba(23, 28, 56, 0.05);
+}
+
+/* OCHIQ/YOPIQ KALITI — panelning o'ng chetidagi dumaloq tutqich. Panel bilan
+   birga siljiydi va tor holatda ham ko'rinadi. Ikkala holatda ham strelka:
+   yopiqda o'ngga ("ochish"), ochiqda chapga ("yopish") qaraydi. */
+.handle {
+  position: absolute; z-index: 2; top: 18px; right: -12px; display: grid; place-items: center;
+  width: 24px; height: 24px; padding: 0; border-radius: 50%; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--sep); color: var(--muted);
+  box-shadow: 0 2px 8px -2px rgba(23, 28, 56, 0.25);
+  transition: color 0.18s, background-color 0.18s, transform 0.25s var(--ease), border-color 0.18s;
+}
+.handle:hover { color: var(--acc); border-color: var(--acc); }
+.handle:active svg { scale: 0.85; }
+.handle:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+.handle[aria-pressed="true"] { color: var(--acc); }
+/* TOOLTIP — tutqichning o'ng tomonida, kontent ustida. */
+.handle::after {
+  content: attr(data-tip); position: absolute; left: calc(100% + 10px); top: 50%; z-index: 3;
+  padding: 6px 10px; border-radius: 9px; white-space: nowrap; pointer-events: none;
+  font-size: 12px; font-weight: 600; line-height: 1; color: #fff; background: #1f2433;
+  box-shadow: 0 8px 20px -8px rgba(15, 18, 32, 0.5);
+  opacity: 0; transform: translate(-4px, -50%);
+  transition: opacity 0.16s ease, transform 0.2s var(--ease);
+}
+:global(.dark) .handle::after { color: #111827; background: #eceef4; }
+.handle:hover::after, .handle:focus-visible::after { opacity: 1; transform: translate(0, -50%); transition-delay: 0.25s; }
+.handle svg { transform: rotate(180deg); transition: transform var(--t) var(--ease); }
+.handle[aria-pressed="true"] svg { transform: rotate(0deg); }
+
+/* Asosiy uslublar FAQAT o'z elementlarimizga: modul CSS qatlamsiz bo'lgani
+   uchun umumiy `button` qoidasi ichkaridagi tayyor komponentlarning (mavzu
+   tugmasi) Tailwind sinflarini bosib ketardi. */
+.accHead, .sub, .iconBtn, .brand { font: inherit; background: none; border: 0; cursor: pointer; text-align: left; text-decoration: none; }
+.accHead:focus-visible, .sub:focus-visible, .iconBtn:focus-visible, .brand:focus-visible { outline: 2px solid var(--acc); outline-offset: -2px; }
+
+/* ── bosh qism ── */
+.head { display: flex; align-items: center; flex-shrink: 0; height: 60px; padding: 0 15px; }
+.brand { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 0; color: inherit; border-radius: 12px; white-space: nowrap; }
+.logo { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; background: #fff; box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.07); }
+.brandText { font-size: 17px; font-weight: 700; letter-spacing: -0.03em; }
+.brandText b { color: #2563eb; font-weight: 700; }
+:global(.dark) .brandText b { color: #7aa2ff; }
+.iconBtn { padding: 0; display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 10px; color: var(--muted); transition: background-color 0.18s, color 0.18s; }
+.iconBtn:hover { background: var(--hover); color: var(--text); }
+.iconBtn[aria-pressed="true"] { color: var(--acc); background: var(--acc-bg); }
+.danger { color: #ef4444; }
+.danger:hover { color: #dc2626; background: rgba(239, 68, 68, 0.1); }
+
+/* ── ro'yxat ── */
+.scroll { position: relative; flex: 1; min-height: 0; overflow: hidden auto; padding: 2px 0 10px; scrollbar-width: none; }
+.scroll::-webkit-scrollbar { display: none; }
+
+/* SIRPANUVCHI BELGI — bitta element, `--y`/`--h` bilan joylashadi. */
+.glide {
+  position: absolute; left: 9px; right: 9px; top: 0; z-index: 0;
+  height: var(--h, 0); transform: translateY(var(--y, 0));
+  border-radius: 13px; background: var(--acc-bg); pointer-events: none;
+  transition: transform var(--t) var(--ease), height var(--t) var(--ease), opacity 0.2s;
+}
+.glide::before {
+  content: ""; position: absolute; left: 0; top: 50%; width: 3px; height: 46%;
+  border-radius: 3px; background: var(--acc); transform: translate(-1px, -50%);
+}
+
+.acc { position: relative; z-index: 1; }
+.accHead {
+  display: flex; align-items: center; gap: 12px; width: calc(100% - 18px); height: 42px; margin: 2px 9px 0; padding: 0 13px;
+  border-radius: 13px; color: var(--muted); white-space: nowrap; transition: color 0.18s, background-color 0.18s;
+}
+.accHead:hover { color: var(--text); background: var(--hover); }
+.accHead[data-here="true"] { color: var(--acc); font-weight: 600; }
+.accHead[data-active="true"] { background: none; }
+.icon { flex-shrink: 0; transition: transform 0.25s var(--ease); }
+.accHead:active .icon { transform: scale(0.88); }
+.label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.chev { flex-shrink: 0; opacity: 0.55; transition: transform var(--t) var(--ease), opacity 0.2s; }
+.acc[data-open="true"] .chev { transform: rotate(180deg); }
+.accBody { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--t) var(--ease); }
+.accInner { min-height: 0; overflow: hidden; }
+.sub {
+  display: flex; align-items: center; width: calc(100% - 18px); height: 34px; margin: 0 9px; padding: 0 12px 0 44px;
+  border-radius: 11px; color: var(--muted); font-size: 13px; white-space: nowrap; transition: color 0.18s, background-color 0.18s;
+}
+.sub:hover { color: var(--text); background: var(--hover); }
+.sub[data-active="true"] { color: var(--acc); font-weight: 600; background: none; }
+
+/* ── pastki qism ── */
+.foot { flex-shrink: 0; padding: 6px 0 8px; border-top: 1px solid var(--sep); }
+.row { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px 0 16px; white-space: nowrap; }
+.avatar { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; font-size: 13px; font-weight: 700; }
+.themeCell { display: grid; place-items: center; width: 36px; flex-shrink: 0; }
+.rowLabel { color: var(--muted); font-size: 13px; }
+.who { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.who b { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.who small { font-size: 11px; color: var(--faint); }
+
+/* ── YIG'IQ HOLAT: yozuvlar yo'q, ichki ro'yxat yopiq ── */
+.fade { transition: opacity 0.2s, transform var(--t) var(--ease); }
+.slot:not([data-open="true"]) .fade { opacity: 0; transform: translateX(-8px); pointer-events: none; }
+.slot[data-open="true"] .acc[data-open="true"] .accBody { grid-template-rows: 1fr; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slot, .slot *, .slot *::before { transition-duration: 0.01ms !important; transition-delay: 0s !important; }
+}
