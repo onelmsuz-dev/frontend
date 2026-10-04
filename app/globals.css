@@ -390,6 +390,29 @@ tbody tr + tr {
   animation: rail-label-in 180ms ease 140ms both;
 }
 
+/* ─── Telefonda maydonga yozganda sahifa ZOOM bo'lmasin ─────────────────────
+ *
+ * iOS Safari fokusdagi maydon shrifti 16px dan kichik bo'lsa sahifani o'zi
+ * kattalashtiradi va yozib bo'lgach sahifa qiyshaygan holda qoladi. Loyihada
+ * yuzlab maydon `text-[13px]` kabi kichik shriftda — har birini alohida
+ * tuzatish o'rniga sensorli qurilmalarda hammasiga 16px beramiz.
+ *
+ * `maximum-scale=1` bilan zoomni o'chirish NOTO'G'RI yechim: u ko'zi ojiz
+ * odamga sahifani barmoq bilan kattalashtirish imkonini ham yopadi.
+ *
+ * Qoida ataylab `@layer` dan tashqarida: shunda u Tailwind utilitilaridan
+ * (`text-[13px]`, `text-sm`) ustun turadi. `max(...)` ichidagi ikkinchi qiymat —
+ * shrift sozlamasi (KATTA / JUDA KATTA) telefonda ham hurmat qilinsin.
+ * Kompyuterga (sichqoncha) ta'siri yo'q.
+ */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, calc(14px * var(--font-scale, 1)));
+  }
+}
+
 /* ─── Native boshqaruvlar: select ochilmasi, sana tanlagich, scrollbar ──────
  *
  * MUAMMO: qorong'i rejimda filtr ochilmasidagi variantlar deyarli
