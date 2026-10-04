@@ -71,13 +71,14 @@ export function PermanentDiscount({ studentId, studentName, groups = [], onDone 
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState("");
+  const [qollandi, setQollandi] = useState<string | null>(null);
 
   const n = Number(value) || 0;
   const valid = n > 0 && (type !== "FOIZ" || n <= 100);
   const groupNames = new Map(groups.map((g) => [g.groupId, g.name]));
 
   function close() {
-    setOpen(false); setErr(""); setKind("IJTIMOIY"); setType("FOIZ"); setValue("100");
+    setOpen(false); setErr(""); setQollandi(null); setKind("IJTIMOIY"); setType("FOIZ"); setValue("100");
     setGroupId(""); setEndsAt(""); setMaoshgaTasir(true); setNote("");
   }
 
@@ -98,6 +99,9 @@ export function PermanentDiscount({ studentId, studentName, groups = [], onDone 
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error ?? "Saqlab bo'lmadi");
+      setQollandi(j?.applied?.periods
+        ? `Mavjud qarzga ham qo'llandi: ${Number(j.applied.amount).toLocaleString("uz-UZ")} so'm (${j.applied.periods} davr)`
+        : "Yozilgan davr topilmadi — keyingi hisoblardan qo'llanadi");
       await mutate();
       onDone();
       setValue(kind === "IJTIMOIY" ? "100" : ""); setNote(""); setEndsAt(""); setGroupId("");
@@ -178,7 +182,7 @@ export function PermanentDiscount({ studentId, studentName, groups = [], onDone 
                 hisobotda alohida ko&apos;rinadi, sof foydaga ta&apos;sir qilmaydi.
               </p>
             ) : (
-              <p className="text-[11px] text-neutral-400 mt-1">Keyingi hisoblarga har oy o&apos;zi qo&apos;llanadi. Mavjud qarz uchun &quot;Bir martalik chegirma&quot;.</p>
+              <p className="text-[11px] text-neutral-400 mt-1">Joriy davrning yozilgan qarziga ham, keyingi hisoblarga ham o&apos;zi qo&apos;llanadi. O&apos;tgan oylar uchun &quot;Bir martalik chegirma&quot;.</p>
             )}
           </Field>
 
@@ -233,6 +237,7 @@ export function PermanentDiscount({ studentId, studentName, groups = [], onDone 
             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ixtiyoriy" className={inputCls} />
           </Field>
 
+          {qollandi && <p className="text-[12px] text-emerald-700 dark:text-emerald-300" data-qollandi>{qollandi}</p>}
           {err && <p className="text-[12px] text-red-600 dark:text-red-400">{err}</p>}
         </div>
       </Modal>

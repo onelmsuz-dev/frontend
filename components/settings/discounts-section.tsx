@@ -445,7 +445,11 @@ function DiscountModal({ editId, onClose, onDone }: {
       });
       const j = await r.json();
       if (!r.ok) throw new Error(j?.error ?? "Saqlab bo'lmadi");
-      onDone(name); onClose();
+      const q = j?.applied;
+      onDone(q?.periods
+        ? `${name} — mavjud davrlarga ham qo'llandi: ${q.periods} ta, ${Number(q.amount).toLocaleString("uz-UZ")} so'm`
+        : name);
+      onClose();
     } catch (e) { setErr((e as Error).message); }
     finally { setSaving(false); }
   }
@@ -654,7 +658,12 @@ function DiscountModal({ editId, onClose, onDone }: {
             </Field>
           )}
 
-          {/* O'QITUVCHI OYLIGI — chegirma uning foiziga tushsinmi. Ijtimoiyda
+          <p className="text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400 -mt-1">
+          {"Qoida boshlanish sanasidan boshlab (bo'sh bo'lsa bugundan) "}
+          <strong>allaqachon yozilgan joriy davrga ham</strong>
+          {" qo'llanadi: farq chegirma qatori bilan qoplanadi. O'tgan, tugagan davrlarga tegilmaydi."}
+        </p>
+        {/* O'QITUVCHI OYLIGI — chegirma uning foiziga tushsinmi. Ijtimoiyda
               savol yo'q: har doim ayiriladi. */}
           {kind !== "IJTIMOIY" && <Field label="O'qituvchi oyligi">
             <button type="button" onClick={() => setMaoshgaTasir((v) => !v)}

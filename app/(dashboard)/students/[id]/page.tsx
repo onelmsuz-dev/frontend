@@ -390,6 +390,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         : "";
   const payMuz = activeFreeze(
     payableGroups.find((g: Membership) => g.groupId === selectedPayGroupId)?.freezes);
+  /** Muzlatilgan guruhga to'lov — xodim ataylab tasdiqlashi shart. */
+  const [muzTasdiq, setMuzTasdiq] = useState(false);
 
   async function setArchived(archived: boolean) {
     setArchiving(true); setArchiveErr("");
@@ -793,8 +795,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   );
   // QAYTARISH / QARZ OYNALARI UCHUN — har a'zolik va uning savatidagi
   // ortiqcha pul. Chiqib ketgan guruhlar ham: pul odatda ketgandan keyin qaytariladi.
-  const ledgerRows: { groupId: string | null; advance: number }[] =
-    (student as { groupLedger?: { rows?: { groupId: string | null; advance: number }[] } }).groupLedger?.rows ?? [];
+  const ledgerRows: { groupId: string | null; advance: number; debt: number }[] =
+    (student as { groupLedger?: { rows?: { groupId: string | null; advance: number; debt: number }[] } }).groupLedger?.rows ?? [];
   const pulGuruhlari: MoneyGroup[] = (student.groups ?? [])
     .filter((g: KetganAzolik & { groupId: string }) => !!g.groupId)
     .map((g: KetganAzolik & { groupId: string }) => ({
@@ -895,7 +897,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         subtitle={student.name}
         footer={
           <>
-            <Button onClick={submitPayment} disabled={paying}
+            <Button onClick={submitPayment} disabled={paying || (!material && !!payMuz && !muzTasdiq)}
  className="flex-1 h-9 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 text-white text-[13px]">
               {paying ? "Saqlanmoqda..."
                 : material
@@ -912,7 +914,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           <FormField label="Qaysi guruh uchun" required>
             <select
               value={selectedPayGroupId}
-              onChange={e => { setPayForm(p => ({ ...p, groupId: e.target.value })); setPayErr(""); }}
+              onChange={e => { setPayForm(p => ({ ...p, groupId: e.target.value })); setPayErr(""); setMuzTasdiq(false); }}
               className="w-full h-10 px-3 text-[13px] rounded-xl glass-panel border border-white/60 dark:border-white/10 outline-none"
             >
               <option value="">Tanlang…</option>
@@ -924,15 +926,38 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             </select>
           </FormField>
         )}
-        {/* MUZLATILGAN GURUHGA TO'LOV — taqiq emas, ogohlantirish: pul
-            balansga tushadi va o'quvchi qaytganda ishlatiladi. */}
-        {!material && payMuz && (
-          <div className="flex items-start gap-2 rounded-xl bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/40 px-3 py-2.5">
-            <Snowflake className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 mt-0.5 shrink-0" />
-            <p className="text-[12px] text-sky-800 dark:text-sky-200">
-              Bu guruhda a&apos;zolik <strong>muzlatilgan</strong> ({freezeUntilLabel(payMuz)}).
-              To&apos;lov balansga tushadi va o&apos;quvchi qaytganda ishlatiladi — guruh to&apos;g&apos;ri tanlanganini tekshiring.
+        {/* TANLANGAN GURUH QARZI — qaysi guruh tanlansa o'shaning qarzi
+            (Doniyorjon, 2026-10-04). Bitta guruhda ham ko'rinadi. */}
+        {!material && selectedPayGroupId && (() => {
+          const q = ledgerRows.find((r) => r.groupId === selectedPayGroupId);
+          const nom = payableGroups.find((g: Membership) => g.groupId === selectedPayGroupId)?.group?.name ?? "Guruh";
+          return (
+            <p className="text-[12px] -mt-2" data-guruh-qarzi>
+              <span className="text-neutral-500 dark:text-neutral-400">{nom}: </span>
+              {q && q.debt > 0
+                ? <span className="font-semibold text-red-600 dark:text-red-400">{fmt(q.debt)} qarz</span>
+                : q && q.advance > 0
+                  ? <span className="font-semibold text-green-600 dark:text-green-400">{fmt(q.advance)} avans</span>
+                  : <span className="text-neutral-500 dark:text-neutral-400">qarz yo&apos;q</span>}
             </p>
+          );
+        })()}
+        {/* MUZLATILGAN GURUHGA TO'LOV — ogohlantirish + tasdiq (taqiq emas:
+            pul balansga tushadi va o'quvchi qaytganda ishlatiladi). */}
+        {!material && payMuz && (
+          <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 px-3 py-2.5 space-y-2" data-muzlatilgan>
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <p className="text-[12px] text-amber-800 dark:text-amber-200">
+                <strong>Diqqat: bu o&apos;quvchi shu guruhda muzlatilgan</strong> ({freezeUntilLabel(payMuz)}).
+                Siz muzlatilgan guruh uchun to&apos;lov qilyapsiz — pul balansga tushadi va o&apos;quvchi
+                qaytganda ishlatiladi. Guruh to&apos;g&apos;ri tanlanganini tekshiring.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-[12px] font-medium text-amber-900 dark:text-amber-100 cursor-pointer">
+              <input type="checkbox" checked={muzTasdiq} onChange={(e) => setMuzTasdiq(e.target.checked)} className="h-4 w-4 accent-amber-600" />
+              Tushundim, baribir shu guruhga yozilsin
+            </label>
           </div>
         )}
         <FormField label="Summa (UZS)" required>

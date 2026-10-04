@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import useSWR, { mutate } from "swr";
-import { CreditCard, Info, Receipt, X, Snowflake } from "lucide-react";
+import { CreditCard, Info, Receipt, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -118,13 +118,21 @@ export function AcceptPaymentModal({
   }, [open, defaultStudentId]);
 
   const selectedStudent = tanlangan;
+  // TO'LIQ KARTA — qidiruv ro'yxatidagi obyektda muzlatish va guruh qarzlari
+  // yo'q edi, shuning uchun muzlatilgan guruh ogohlantirishi qidiruvdan
+  // tanlangan o'quvchida HECH QACHON chiqmasdi (Doniyorjon, 2026-10-04).
+  const { data: toliqKarta } = useStudent(tanlangan?.id ?? "");
+  const guruhQarzlari: { groupId: string | null; debt: number; advance: number }[] =
+    (toliqKarta as { groupLedger?: { rows?: { groupId: string | null; debt: number; advance: number }[] } } | undefined)
+      ?.groupLedger?.rows ?? [];
+  const [muzTasdiq, setMuzTasdiq] = useState(false);
 
   // To'lov QAYSI guruh uchun ekani — foizli o'qituvchi maoshi va kurs kesimidagi
   // tushum shunga qarab hisoblanadi. Ilgari `groups[0]` olinardi: o'quvchi
   // chiqib ketgan guruhga ham tushib ketishi mumkin edi.
-  const payableGroups: Membership[] = (selectedStudent?.groups ?? []).filter(
-    (sg: Membership) => sg.enrollmentStatus !== "CHIQIB_KETGAN",
-  );
+  const payableGroups: Membership[] = (
+    ((toliqKarta as { groups?: Membership[] } | undefined)?.groups) ?? selectedStudent?.groups ?? []
+  ).filter((sg: Membership) => sg.enrollmentStatus !== "CHIQIB_KETGAN");
 
   // Tanlangan guruh — o'quvchi almashsa eski tanlov o'z-o'zidan bekor bo'ladi,
   // bitta a'zolik bo'lsa avtomatik o'sha tanlanadi (effekt kerak emas).
@@ -143,6 +151,7 @@ export function AcceptPaymentModal({
     payableGroups.find(g => g.groupId === selectedGroupId)?.freezes);
 
   function handleClose() {
+    setMuzTasdiq(false);
     setPayForm(EMPTY_FORM);
     setPayFormErr("");
     setForMaterials(false);
@@ -293,7 +302,7 @@ export function AcceptPaymentModal({
               </Label>
               <select
                 value={selectedGroupId}
-                onChange={e => setPayForm(p => ({ ...p, groupId: e.target.value }))}
+                onChange={e => { setPayForm(p => ({ ...p, groupId: e.target.value })); setMuzTasdiq(false); }}
                 className="w-full h-10 sm:h-9 px-3 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
               >
                 <option value="">Tanlang…</option>
@@ -305,13 +314,39 @@ export function AcceptPaymentModal({
               </select>
             </div>
           )}
-          {!forMaterials && tanlanganMuz && (
-            <div className="flex items-start gap-2 rounded-lg bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-900/40 px-3 py-2">
-              <Snowflake className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 mt-0.5 shrink-0" />
-              <p className="text-[12px] text-sky-800 dark:text-sky-200">
-                Bu guruhda a&apos;zolik <strong>muzlatilgan</strong> ({freezeUntilLabel(tanlanganMuz)}).
-                To&apos;lov balansga tushadi va o&apos;quvchi qaytganda ishlatiladi — guruh to&apos;g&apos;ri tanlanganini tekshiring.
+          {/* TANLANGAN GURUH QARZI — "qaysi guruh uchun" tanlanganda o'sha
+              guruhning qarzi ko'rinsin (Doniyorjon, 2026-10-04). Bitta guruhda
+              ham ko'rinadi: select yashirin, lekin qarz savol tug'diradi. */}
+          {!forMaterials && selectedGroupId && (() => {
+            const q = guruhQarzlari.find(r => r.groupId === selectedGroupId);
+            const nom = payableGroups.find(g => g.groupId === selectedGroupId)?.group?.name ?? "Guruh";
+            return (
+              <p className="text-[12px] -mt-1" data-guruh-qarzi>
+                <span className="text-neutral-500 dark:text-neutral-400">{nom}: </span>
+                {q && q.debt > 0
+                  ? <span className="font-semibold text-red-600 dark:text-red-400">{formatCurrency(q.debt)} qarz</span>
+                  : q && q.advance > 0
+                    ? <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(q.advance)} avans</span>
+                    : <span className="text-neutral-500 dark:text-neutral-400">qarz yo&apos;q</span>}
               </p>
+            );
+          })()}
+          {/* MUZLATILGAN GURUHGA TO'LOV — ogohlantirish + tasdiq (taqiq emas:
+              pul balansga tushadi va o'quvchi qaytganda ishlatiladi). */}
+          {!forMaterials && tanlanganMuz && (
+            <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 px-3 py-2.5 space-y-2" data-muzlatilgan>
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <p className="text-[12px] text-amber-800 dark:text-amber-200">
+                  <strong>Diqqat: bu o&apos;quvchi shu guruhda muzlatilgan</strong> ({freezeUntilLabel(tanlanganMuz)}).
+                  Siz muzlatilgan guruh uchun to&apos;lov qilyapsiz — pul balansga tushadi va o&apos;quvchi
+                  qaytganda ishlatiladi. Guruh to&apos;g&apos;ri tanlanganini tekshiring.
+                </p>
+              </div>
+              <label className="flex items-center gap-2 text-[12px] font-medium text-amber-900 dark:text-amber-100 cursor-pointer">
+                <input type="checkbox" checked={muzTasdiq} onChange={e => setMuzTasdiq(e.target.checked)} className="h-4 w-4 accent-amber-600" />
+                Tushundim, baribir shu guruhga yozilsin
+              </label>
             </div>
           )}
 
@@ -512,7 +547,7 @@ export function AcceptPaymentModal({
         <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-3 border-t border-white/50 dark:border-white/10 shrink-0 flex flex-col-reverse sm:flex-row gap-2">
           <Button
  className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 h-10"
-            disabled={saving}
+            disabled={saving || (!forMaterials && !!tanlanganMuz && !muzTasdiq)}
             onClick={submitPayment}
           >
             {saving
