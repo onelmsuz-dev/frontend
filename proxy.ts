@@ -158,7 +158,15 @@ export const proxy = auth((req) => {
   const isPanel = pathname === "/panel" || pathname.startsWith("/panel/");
 
   if (subdomain) {
-    const origin = `https://${subdomain}.oneroom.uz`;
+    // Jonli domenda — har doim `https://<markaz>.oneroom.uz`. BOSHQA xostda
+    // (lokal ishlab chiqish: `demo.app.localhost:3000`) so'rovning O'Z manzili
+    // ishlatiladi. Ilgari bu yer doim jonli domenni yozardi: lokalda `/` yoki
+    // (kirgan holda) `/login` ochilsa, brauzer `demo.oneroom.uz` ga — haqiqiy
+    // saytga chiqib ketar va lokaldagi o'zgarishni ko'rib bo'lmasdi.
+    const xost = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "";
+    const origin = getHostname(req).endsWith(".oneroom.uz") || !xost
+      ? `https://${subdomain}.oneroom.uz`
+      : `${req.nextUrl.protocol}//${xost}`;
 
     // Login bo'lgan bo'lsa, bu subdomain'ga tegishli ekanini tekshir
     if (isLoggedIn && userSubdomain !== subdomain) {
