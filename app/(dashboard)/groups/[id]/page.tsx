@@ -21,6 +21,7 @@ import { EntityHistorySection } from "@/components/activity/entity-history-secti
 import { GroupNotesSection } from "@/components/groups/group-notes-section";
 import { GroupTabPlaceholder } from "@/components/groups/group-tab-placeholder";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { TabGlide, TabPanel, tabCls } from "@/components/ui/tab-glide";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -187,24 +188,24 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
 
         {/* ── O'NG USTUN ── */}
         <div className="min-w-0 space-y-4">
-          <nav className="flex items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <nav className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabGlide watch={tab} className="flex w-max items-center gap-1">
             {TABS.filter(t => t.id !== "tarix" || canSeeHistory).map(t => {
               const Icon = t.icon;
               const active = tab === t.id;
               return (
                 <button key={t.id} onClick={() => setTab(t.id)}
-                  className={cn(
-                    "flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3.5 h-9 rounded-xl text-[12.5px] font-semibold transition-colors border-b-2",
-                    active
-                      ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
-                      : "border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+                  data-tab-active={active} aria-pressed={active}
+                  className={tabCls(active)}>
                   <Icon className="w-3.5 h-3.5" />
                   {t.label}
                 </button>
               );
             })}
+          </TabGlide>
           </nav>
 
+          <TabPanel k={tab} className="space-y-4">
           {tab === "davomat" && (
             canSeeAttendance ? (
               <GroupAttendanceGrid
@@ -242,6 +243,7 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
               emptyHint="Guruh bilan bog'liq harakatlar shu yerda ko'rinadi." />
           )}
           {tab === "izoh" && <GroupNotesSection groupId={id} canUpdate={canUpdate} />}
+          </TabPanel>
         </div>
       </div>
     </div>

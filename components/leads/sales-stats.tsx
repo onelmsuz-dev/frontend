@@ -5,6 +5,7 @@ import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
 import { useLeadStats, useLeadDaily, useLeadAssignees, type DailyReport } from "@/lib/hooks/useLeads";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { cn } from "@/lib/utils";
+import { TabGlide, tabCls } from "@/components/ui/tab-glide";
 
 /**
  * SOTUVCHILAR HISOBOTI — "kim nechta lid oldi va nechtasi to'ladi".
@@ -86,17 +87,15 @@ export function SalesStats() {
 
       {ochiq && (
         <div className="border-t border-white/50 dark:border-white/10">
-          <div className="flex items-center gap-1 px-4 pt-3">
+          <TabGlide watch={tab} className="mx-4 mt-3 flex w-fit items-center gap-1">
             {([["kunlik", "Kunlik nazorat"], ["davr", "Davr bo'yicha"]] as const).map(([k, l]) => (
               <button key={k} type="button" onClick={() => setTab(k)}
-                className={cn("px-2.5 py-1 rounded-lg text-[12px] font-semibold transition-colors",
-                  tab === k
-                    ? "bg-indigo-600 text-white"
-                    : "text-neutral-500 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10")}>
+                data-tab-active={tab === k} aria-pressed={tab === k}
+                className={tabCls(tab === k, "h-8 px-3 text-[12px]")}>
                 {l}
               </button>
             ))}
-          </div>
+          </TabGlide>
 
           {/* FILTRLAR — Doniyorjon so'rovi: sana oralig'i va operator. */}
           <div className="flex flex-wrap items-center gap-1.5 px-4 pt-2">

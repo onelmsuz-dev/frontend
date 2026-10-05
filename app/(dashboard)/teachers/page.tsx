@@ -25,6 +25,7 @@ import { Segmented, GenderPicker } from "@/components/ui/segmented";
 import { SALARY_TYPES, SALARY_CFG, salaryDisplay, type SalaryType } from "@/lib/salary";
 import { todayStr } from "@/lib/form-constants";
 import { formatCurrency } from "@/lib/money";
+import { TabGlide, segCls } from "@/components/ui/tab-glide";
 
 function fmt(v: number) {
   return formatCurrency(v);
@@ -386,16 +387,15 @@ export default function TeachersPage() {
               </>
             )}
           </p>
-          <div className="flex p-1 gap-0.5 glass-soft rounded-xl ml-auto">
+          <TabGlide variant="segment" watch={viewMode} className="flex p-1 gap-0.5 glass-soft rounded-xl ml-auto">
             {([["grid", LayoutGrid], ["list", List]] as [ViewMode, any][]).map(([id, Icon]) => (
               <button key={id} onClick={() => setViewMode(id)} title={id === "grid" ? "Kartalar" : "Ro\'yxat"} aria-label={id === "grid" ? "Kartalar ko\'rinishi" : "Ro\'yxat ko\'rinishi"} aria-pressed={viewMode === id}
-                className={cn("w-8 h-7 flex items-center justify-center rounded-lg transition-all",
-                  viewMode === id ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
-                    : "text-neutral-400 hover:text-neutral-600")}>
+                data-tab-active={viewMode === id}
+                className={segCls(viewMode === id, "w-8 h-7 flex items-center justify-center")}>
                 <Icon className="w-3.5 h-3.5" />
               </button>
             ))}
-          </div>
+          </TabGlide>
         </div>
 
         {/* Grid */}

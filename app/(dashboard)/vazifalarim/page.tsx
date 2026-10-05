@@ -14,6 +14,7 @@ import {
 } from "@/lib/hooks/useReminders";
 import { useFeature } from "@/lib/hooks/useFeatures";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { TabGlide, tabCls } from "@/components/ui/tab-glide";
 
 const TABS: { v: "barchasi" | ReminderStatus; l: string }[] = [
   { v: "barchasi", l: "Barchasi" },
@@ -122,20 +123,19 @@ export default function MyTasksPage() {
           </div>
         )}
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <TabGlide watch={tab} className="flex w-max items-center gap-1">
           {TABS.map(t => (
             <button key={t.v} onClick={() => setTab(t.v)}
-              className={cn(
-                "shrink-0 whitespace-nowrap px-3.5 h-9 rounded-xl text-[12.5px] font-semibold transition-colors",
-                tab === t.v
-                  ? "bg-indigo-600 text-white dark:bg-indigo-500"
-                  : "glass-soft text-neutral-600 dark:text-neutral-400 hover:bg-white/60 dark:hover:bg-white/10")}>
+              data-tab-active={tab === t.v} aria-pressed={tab === t.v}
+              className={tabCls(tab === t.v)}>
               {t.l}
               {t.v === "MUDDATI_OTGAN" && overdueCount > 0 && (
                 <span className="ml-1.5 text-[10px]">({overdueCount})</span>
               )}
             </button>
           ))}
+        </TabGlide>
         </div>
 
         <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">

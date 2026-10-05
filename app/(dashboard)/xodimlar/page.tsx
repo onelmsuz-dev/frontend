@@ -8,8 +8,8 @@ import { StaffSection } from "@/components/settings/staff-section";
 import { StaffSalaries } from "@/components/staff/staff-salaries";
 import { useBranch } from "@/lib/contexts/branch-context";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
-import { cn } from "@/lib/utils";
 import type { Branch } from "@/types";
+import { TabGlide, TabPanel, segCls } from "@/components/ui/tab-glide";
 
 /**
  * XODIMLAR — o'z bo'limi.
@@ -60,30 +60,28 @@ export default function XodimlarPage() {
         {/* Tab qatori — bitta tab bo'lsa umuman chizilmaydi. */}
         {TABLAR.length > 1 && (
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex p-1 gap-0.5 glass-soft rounded-xl">
+            <TabGlide variant="segment" watch={tab} className="flex p-1 gap-0.5 glass-soft rounded-xl">
               {TABLAR.map((t) => {
                 const Icon = t.icon;
                 return (
                   <button key={t.id} onClick={() => setTab(t.id)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                      tab === t.id
-                        ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
-                        : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200",
-                    )}>
+                    data-tab-active={tab === t.id} aria-pressed={tab === t.id}
+                    className={segCls(tab === t.id, "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold")}>
                     <Icon className="w-3.5 h-3.5" />{t.label}
                   </button>
                 );
               })}
-            </div>
+            </TabGlide>
             <BranchFilter />
           </div>
         )}
         {TABLAR.length === 1 && kopFilial && <BranchFilter />}
 
+        <TabPanel k={tab}>
         {tab === "royxat"
           ? <StaffSection branches={branches as Branch[]} />
           : <StaffSalaries />}
+        </TabPanel>
       </div>
     </div>
   );

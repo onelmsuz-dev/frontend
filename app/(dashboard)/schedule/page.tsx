@@ -25,6 +25,7 @@ import {
   DoorOpen, Minimize2,
 } from "lucide-react";
 import { TimeInput } from "@/components/ui/time-input";
+import { TabGlide, segCls } from "@/components/ui/tab-glide";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -895,7 +896,7 @@ export default function SchedulePage() {
           tashqarida qolib, ularga umuman yetib bo'lmasdi. Telefonda tartib:
           ko'rinish + qo'shish tugmalari → sana → filial. */}
       <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 sm:px-4 py-2.5 border-b border-white/50 dark:border-white/10 glass-panel">
-        <div className="order-1 flex p-1 gap-0.5 glass-soft rounded-xl">
+        <TabGlide variant="segment" watch={view} className="order-1 flex p-1 gap-0.5 glass-soft rounded-xl">
           {([
             ["kun",   "Kun",   List],
             ["hafta", "Hafta", LayoutGrid],
@@ -905,17 +906,13 @@ export default function SchedulePage() {
             ["xona",  "Xonalar", DoorOpen],
           ] as [ViewMode, string, React.ComponentType<{className?:string}>][]).map(([id,label,Icon]) => (
             <button key={id} onClick={() => setView(id)} title={label} aria-label={label} aria-pressed={view===id}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                view===id
-                  ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
-                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-              )}>
+              data-tab-active={view===id}
+              className={segCls(view===id, "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold")}>
               {/* Telefonda faqat tanlangan ko'rinishning nomi yoziladi */}
               <Icon className="w-3.5 h-3.5" /><span className={cn(view !== id && "hidden sm:inline")}>{label}</span>
             </button>
           ))}
-        </div>
+        </TabGlide>
 
         {/* SANA BOSHQARUVI — xona ko'rinishida YO'Q.
             Xonalar jadvali haftalik takrorlanadigan tarh, bitta

@@ -33,6 +33,7 @@ import { useBranch, useBranchQueryString } from "@/lib/contexts/branch-context";
 import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
 import { fmtMonthYear, formatUzDate } from "@/lib/date-uz";
 import { formatCurrency } from "@/lib/money";
+import { TabGlide, TabPanel, segCls } from "@/components/ui/tab-glide";
 
 
 function Skeleton({ className }: { className?: string }) {
@@ -414,20 +415,18 @@ export default function FinancePage() {
         {/* Tabs */}
         {/* Telefonda uchta tab ekrandan keng — sig'masa yon tomonga suriladi
             (ilgari oxirgi tab ekrandan tashqarida qolib, bosib bo'lmasdi). */}
-        <div className="flex gap-0.5 glass-soft p-1 rounded-xl w-fit max-w-full overflow-x-auto no-scrollbar">
+        <TabGlide variant="segment" watch={activeTab} className="flex gap-0.5 glass-soft p-1 rounded-xl w-fit max-w-full overflow-x-auto no-scrollbar">
           {TABS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "shrink-0 whitespace-nowrap px-3 sm:px-4 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                activeTab === tab.id
-                  ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
-                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
-              )}>
+              data-tab-active={activeTab === tab.id} aria-pressed={activeTab === tab.id}
+              className={segCls(activeTab === tab.id, "px-3 sm:px-4 py-1.5 text-sm font-medium")}>
               {tab.label}
             </button>
           ))}
-        </div>
+        </TabGlide>
 
+        {/* Tab kontenti — almashganda yengil ko'tarilib ochiladi. */}
+        <TabPanel k={activeTab} className="space-y-5">
         {/* To'lovlar — filtrlar */}
         {activeTab === "kirim" && (
           <div className="flex flex-wrap items-center gap-2.5 mb-4">
@@ -995,6 +994,7 @@ export default function FinancePage() {
             </div>
           </div>
         )}
+        </TabPanel>
       </div>
 
       <AcceptPaymentModal

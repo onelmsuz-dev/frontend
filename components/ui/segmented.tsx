@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { TabGlide } from "@/components/ui/tab-glide";
 
 interface SegmentedOption<T extends string> {
   value: T;
@@ -21,7 +22,9 @@ export function Segmented<T extends string>({
   options, value, onChange, className, grid,
 }: SegmentedProps<T>) {
   return (
-    <div
+    // Tanlangan variantning foni sirpanadi (`TabGlide`) — boshqa tablar bilan bir xil.
+    <TabGlide
+      variant="segment" watch={value}
       className={cn(
         "p-1 gap-1 glass-soft rounded-xl",
         grid ? "grid" : "flex",
@@ -34,10 +37,11 @@ export function Segmented<T extends string>({
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
+          data-tab-active={value === o.value} aria-pressed={value === o.value}
           className={cn(
-            "px-2.5 py-2 rounded-lg text-[13px] font-semibold transition-all leading-tight text-center",
+            "relative z-[1] px-2.5 py-2 rounded-lg text-[13px] font-semibold transition-colors leading-tight text-center whitespace-normal",
             value === o.value
-              ? "bg-white dark:bg-neutral-700 shadow-sm text-indigo-600 dark:text-indigo-300"
+              ? "text-indigo-600 dark:text-indigo-300"
               : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200",
           )}
         >
@@ -45,7 +49,7 @@ export function Segmented<T extends string>({
           {o.sublabel && <span className="block text-[10px] font-normal opacity-70">{o.sublabel}</span>}
         </button>
       ))}
-    </div>
+    </TabGlide>
   );
 }
 

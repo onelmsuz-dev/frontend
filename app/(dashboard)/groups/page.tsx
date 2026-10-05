@@ -30,6 +30,7 @@ import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { TimeInput } from "@/components/ui/time-input";
 import { formatNumber } from "@/lib/money";
+import { TabGlide, segCls } from "@/components/ui/tab-glide";
 
 const STATUS_CFG: Record<string, { label: string; cls: string }> = {
   ACTIVE:    { label: "Faol",    cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
@@ -568,17 +569,14 @@ function GroupsContent() {
             qolgan ikki son shu qatorning o'ng tomonida, kartochkalarsiz.
             Filial — tepa paneldagi tanlagich shu ro'yxatni ham toraytiradi. */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="flex max-w-full p-1 gap-0.5 glass-soft rounded-xl overflow-x-auto no-scrollbar">
+          <TabGlide variant="segment" watch={statusTab} className="flex max-w-full p-1 gap-0.5 glass-soft rounded-xl overflow-x-auto no-scrollbar">
             {STATUS_TABS.map(t => (
-              <button key={t.v} onClick={() => setStatusTab(t.v)} aria-pressed={statusTab === t.v}
-                className={cn("shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-semibold transition-all",
-                  statusTab === t.v
-                    ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
-                    : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700")}>
+              <button key={t.v} onClick={() => setStatusTab(t.v)} aria-pressed={statusTab === t.v} data-tab-active={statusTab === t.v}
+                className={segCls(statusTab === t.v, "px-3 py-1.5 text-xs font-semibold")}>
                 {t.l} <span className="ml-1 text-neutral-400">{t.v === "barchasi" ? groups.length : groups.filter(g => g.status === t.v).length}</span>
               </button>
             ))}
-          </div>
+          </TabGlide>
           <div className="relative min-w-0 flex-1 sm:flex-none sm:w-60">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <Input placeholder="Guruh, o'qituvchi..." className="pl-9 h-9 text-sm w-full"

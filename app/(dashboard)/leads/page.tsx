@@ -52,6 +52,7 @@ import { useFeature } from "@/lib/hooks/useFeatures";
 import { defaultStage } from "@/lib/lead-stages";
 import { mutate } from "swr";
 import { DeletedColumn } from "@/components/leads/deleted-column";
+import { TAB_IN, TabGlide, TabPanel, tabCls } from "@/components/ui/tab-glide";
 
 interface Course { id: string; name: string; category?: { id: string; name: string; sortOrder?: number } | null }
 
@@ -406,33 +407,29 @@ export default function LeadsPage() {
       {/* TAB QATORI. "Target" bayroqsiz — u Meta'ga umuman bog'liq
           emas va har markazda ishlaydi. Facebook/Instagram tabi esa
           `meta-lead-ads` bayrog'i ortida qoladi. */}
-      <div className="px-5 pt-4 flex gap-1 border-b border-white/60 dark:border-white/10 overflow-x-auto">
+      <div className="px-5 pt-4 pb-2 border-b border-white/60 dark:border-white/10 overflow-x-auto no-scrollbar">
+      <TabGlide watch={tab} className="flex w-max items-center gap-1">
           <button onClick={() => setTab("board")}
-            className={cn("shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
-              tab === "board"
-                ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
-                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+            data-tab-active={tab === "board"} aria-pressed={tab === "board"}
+            className={tabCls(tab === "board", "text-[13px]")}>
             <LayoutGrid className="w-3.5 h-3.5" /> Taxta
           </button>
           {targetKora && (
             <button onClick={() => setTab("target")}
-              className={cn("shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
-                tab === "target"
-                  ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
-                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+            data-tab-active={tab === "target"} aria-pressed={tab === "target"}
+            className={tabCls(tab === "target", "text-[13px]")}>
               <Target className="w-3.5 h-3.5" /> Target
             </button>
           )}
           {META_TABI_KORINSIN && metaEnabled && (
             <button onClick={() => setTab("meta")}
-              className={cn("shrink-0 flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold rounded-t-lg transition-colors",
-                tab === "meta"
-                  ? "text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400"
-                  : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+            data-tab-active={tab === "meta"} aria-pressed={tab === "meta"}
+            className={tabCls(tab === "meta", "text-[13px]")}>
               <Radio className="w-3.5 h-3.5" /> Facebook/Instagram
             </button>
           )}
-        </div>
+      </TabGlide>
+      </div>
 
       <ConvertModal lead={convertTarget}
         onClose={() => setConvertTarget(null)}
@@ -711,7 +708,7 @@ export default function LeadsPage() {
         )}
       </ConfirmDeleteModal>
 
-      {targetKora && tab === "target" && <TargetLeads />}
+      {targetKora && tab === "target" && <TabPanel k="target"><TargetLeads /></TabPanel>}
 
       {META_TABI_KORINSIN && metaEnabled && tab === "meta" && (
         <div className="p-5">
@@ -720,7 +717,7 @@ export default function LeadsPage() {
       )}
 
       {tab === "board" && (
-      <div className="p-5">
+      <div className={cn("p-5", TAB_IN)}>
         {/* BOSQICHLAR XULOSASI bu yerda YO'Q: har bir bosqichning nomi va soni
             pastdagi ustun sarlavhasida turibdi (`20/45` ko'rinishida — yuklangan
             va jami). Tepadagi alohida chiplar qatori aynan shu ma'lumotni

@@ -26,6 +26,7 @@ import { ShopTab } from "@/components/gamification/shop-tab";
 import { RedemptionsTab } from "@/components/gamification/redemptions-tab";
 import { fmtMonthYear } from "@/lib/date-uz";
 import { formatNumber } from "@/lib/money";
+import { TabGlide, TabPanel, tabCls } from "@/components/ui/tab-glide";
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={cn("animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-xl", className)} />;
@@ -136,29 +137,29 @@ export default function GamificationPage() {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1.5 flex-wrap">
+        <TabGlide watch={activeTab} className="flex gap-1 flex-wrap">
           {visibleTabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn("px-3.5 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                activeTab === t.id
-                  ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
-                  : "glass-panel text-neutral-600 dark:text-neutral-400 border-white/60 dark:border-white/10 hover:border-neutral-400")}>
+              data-tab-active={activeTab === t.id} aria-pressed={activeTab === t.id}
+              className={tabCls(activeTab === t.id)}>
               {t.label}
               {t.id === "sorovlar" && pendingCount > 0 && (
                 <span className={cn("ml-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-black",
-                  activeTab === "sorovlar" ? "bg-white/25" : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300")}>
+                  "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300")}>
                   {pendingCount}
                 </span>
               )}
             </button>
           ))}
-        </div>
+        </TabGlide>
 
+        <TabPanel k={activeTab}>
         {activeTab === "reyting" && <LeaderboardTab />}
         {activeTab === "oquvchi" && <StudentsTab settingsActive={!!settings?.active} coinIcon={settings?.coinIcon ?? "🪙"} />}
         {activeTab === "dokon" && <ShopTab canManage={canManage} />}
         {activeTab === "sorovlar" && <RedemptionsTab canManage={canManage} />}
         {activeTab === "sozlama" && <SettingsTab />}
+        </TabPanel>
       </div>
     </div>
   );

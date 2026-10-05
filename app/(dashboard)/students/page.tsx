@@ -32,6 +32,7 @@ import { toCsv, downloadFile, exportPhone } from "@/lib/csv";
 import { mutate } from "swr";
 import { formatUzDate } from "@/lib/date-uz";
 import { formatCurrency, formatNumber } from "@/lib/money";
+import { TabGlide, segCls } from "@/components/ui/tab-glide";
 
 function fmt(v: number) {
   return formatCurrency(v);
@@ -373,7 +374,7 @@ export default function StudentsPage() {
             toraytiradi. */}
         <div className="flex flex-wrap items-center gap-2"
           title={qoshimchaFiltr > 0 || search ? "Sonlar tanlangan filtr bo'yicha hisoblangan" : undefined}>
-          <div className="flex min-w-0 max-w-full gap-0.5 overflow-x-auto no-scrollbar glass-soft p-1 rounded-xl">
+          <TabGlide variant="segment" watch={filterEnroll} className="flex min-w-0 max-w-full gap-0.5 overflow-x-auto no-scrollbar glass-soft p-1 rounded-xl">
             {[
               // "Jami" ro'yxatdagi qatorlardan sanaladi, ro'yxat esa serverda
               // 1000 ta bilan cheklangan — chegaraga yetilsa raqam yolg'on
@@ -387,11 +388,8 @@ export default function StudentsPage() {
             ].map(f => {
               const faol = filterEnroll === f.v;
               return (
-                <button key={f.v} onClick={() => setFilterEnroll(f.v)} aria-pressed={faol}
-                  className={cn("shrink-0 flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12.5px] font-semibold whitespace-nowrap transition-colors",
-                    faol
-                      ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-neutral-100"
-                      : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+                <button key={f.v} onClick={() => setFilterEnroll(f.v)} aria-pressed={faol} data-tab-active={faol}
+                  className={segCls(faol, "flex items-center gap-1.5 h-8 px-3 text-[12.5px] font-semibold")}>
                   {f.l}
                   <span className={cn("tabular-nums text-[11.5px] font-bold",
                     faol ? "text-indigo-600 dark:text-indigo-300" : "text-neutral-400 dark:text-neutral-500")}>
@@ -400,7 +398,7 @@ export default function StudentsPage() {
                 </button>
               );
             })}
-          </div>
+          </TabGlide>
 
           {/* JAMI QARZ — bosilsa faqat qarzdorlar qoladi (yana bosilsa qaytadi). */}
           {canSeeMoney && (stats.qarz > 0 || filterDebt === "qarzdor") && (
