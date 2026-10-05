@@ -17,6 +17,10 @@ import { SELECTABLE_METHODS, methodGridCls } from "@/lib/payment-methods";
 import { formatCurrency } from "@/lib/money";
 import { fetcher } from "@/lib/fetcher";
 import { activeFreeze, isFrozenNow, freezeUntilLabel, type FreezeLike } from "@/lib/freeze";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import {
+  PaymentMonths, EMPTY_MONTHS, oylarPayload, type GroupMonths, type MonthsValue,
+} from "@/components/finance/payment-months";
 
 
 
@@ -126,6 +130,9 @@ export function AcceptPaymentModal({
     (toliqKarta as { groupLedger?: { rows?: { groupId: string | null; debt: number; advance: number }[] } } | undefined)
       ?.groupLedger?.rows ?? [];
   const [muzTasdiq, setMuzTasdiq] = useState(false);
+  /** "Qaysi oy uchun" — oldindan oyi va ro'yxatda yo'q oy (payment-months.tsx). */
+  const [oylar, setOylar] = useState<MonthsValue>(EMPTY_MONTHS);
+  const { me } = useMe();
 
   // To'lov QAYSI guruh uchun ekani — foizli o'qituvchi maoshi va kurs kesimidagi
   // tushum shunga qarab hisoblanadi. Ilgari `groups[0]` olinardi: o'quvchi
@@ -150,8 +157,22 @@ export function AcceptPaymentModal({
   const tanlanganMuz = activeFreeze(
     payableGroups.find(g => g.groupId === selectedGroupId)?.freezes);
 
+  // TANLANGAN GURUHNING OYLARI — serverdagi taqsimotdan (o'quvchi kartasi bilan bir xil).
+  const kartaLedger = (toliqKarta as { groupLedger?: { months?: Record<string, GroupMonths> } } | undefined)?.groupLedger;
+  // `months` faqat yangi backendda bor — bo'lmasa blok umuman chizilmaydi
+  // (aks holda har kartada "yopilmagan oy yo'q" deb yolg'on ko'rinardi).
+  const guruhOylari: GroupMonths | null = selectedGroupId && kartaLedger?.months
+    ? kartaLedger.months[selectedGroupId] ?? { open: [], charged: [] }
+    : null;
+  const tanlanganAzo = ((toliqKarta as { groups?: { groupId: string; priceOverride?: number | null; schedule?: { mode?: string }; group?: { course?: { price?: number } } }[] } | undefined)?.groups ?? [])
+    .find(g => g.groupId === selectedGroupId);
+  const oylikKalendar = (tanlanganAzo?.schedule?.mode ?? "OYLIK_KALENDAR") === "OYLIK_KALENDAR";
+  const oylikNarx = tanlanganAzo?.priceOverride ?? tanlanganAzo?.group?.course?.price ?? 0;
+  const boshqaQarz = guruhQarzlari.filter(r => r.groupId !== selectedGroupId).reduce((s, r) => s + r.debt, 0);
+
   function handleClose() {
     setMuzTasdiq(false);
+    setOylar(EMPTY_MONTHS);
     setPayForm(EMPTY_FORM);
     setPayFormErr("");
     setForMaterials(false);
@@ -237,6 +258,9 @@ export function AcceptPaymentModal({
           note: payForm.note || undefined,
           ...(groupId ? { groupId } : {}),
           ...(payForm.branchId ? { branchId: payForm.branchId } : {}),
+          // QAYSI OY UCHUN — faqat guruh tanlangan va ma'lumot kelgan bo'lsa.
+          ...(groupId && guruhOylari
+            ? oylarPayload(guruhOylari, payForm.amount, oylar, boshqaQarz, oylikKalendar) : {}),
         }),
       });
       const created = await res.json().catch(() => null);
@@ -245,7 +269,9 @@ export function AcceptPaymentModal({
         return;
       }
       void mutate(key => typeof key === "string" && key.startsWith("/api/payments"));
-      void mutate("/api/students");
+      // O'quvchi KARTASI ham — oyna qayta ochilganda oylar ro'yxati eski
+      // bo'lib qolmasin (ikkinchi to'lov yopilgan oyni "ochiq" ko'rardi).
+      void mutate(key => typeof key === "string" && key.startsWith("/api/students"));
       void mutate(key => typeof key === "string" && key.startsWith("/api/dashboard"));
       void mutate(key => typeof key === "string" && key.startsWith("/api/reports"));
       handleClose();
@@ -286,6 +312,7 @@ export function AcceptPaymentModal({
               onChange={(s) => {
                 setTanlov(s);
                 setMuzTasdiq(false);   // yangi o'quvchi — eski tasdiq o'tmasin
+                setOylar(EMPTY_MONTHS);
                 // Guruh tanlovi eski o'quvchiniki bo'lib qolmasin.
                 setPayForm(p => ({ ...p, studentId: s?.id ?? "", groupId: "" }));
                 setPayFormErr("");
@@ -303,7 +330,7 @@ export function AcceptPaymentModal({
               </Label>
               <select
                 value={selectedGroupId}
-                onChange={e => { setPayForm(p => ({ ...p, groupId: e.target.value })); setMuzTasdiq(false); }}
+                onChange={e => { setPayForm(p => ({ ...p, groupId: e.target.value })); setMuzTasdiq(false); setOylar(EMPTY_MONTHS); }}
                 className="w-full h-10 sm:h-9 px-3 text-sm rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900"
               >
                 <option value="">Tanlang…</option>
@@ -352,6 +379,22 @@ export function AcceptPaymentModal({
                 Tushundim, baribir shu guruhga yozilsin
               </label>
             </div>
+          )}
+
+          {/* QAYSI OY UCHUN — pul qaysi oyni yopishi to'lovdan OLDIN ko'rinadi. */}
+          {!forMaterials && selectedGroupId && guruhOylari && (
+            <PaymentMonths
+              key={selectedGroupId}
+              calendar={oylikKalendar}
+              data={guruhOylari}
+              amount={payForm.amount}
+              onAmount={(v) => setPayForm(p => ({ ...p, amount: v }))}
+              value={oylar}
+              onChange={setOylar}
+              monthlyPrice={oylikNarx}
+              canAddMonth={hasPerm(me?.permissions, "payments.update")}
+              otherDebt={boshqaQarz}
+            />
           )}
 
           {/* FILIAL — pul qaysi kassaga tushdi. Bo'sh qoldirilsa
@@ -533,7 +576,7 @@ export function AcceptPaymentModal({
           <div>
             <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">Izoh (ixtiyoriy)</Label>
             <Input
-              placeholder="Masalan: Iyun oyi to'lovi"
+              placeholder="Masalan: otasi to'ladi"
               value={payForm.note}
               onChange={e => setPayForm(p => ({ ...p, note: e.target.value }))}
               className="h-10 sm:h-9 text-sm"

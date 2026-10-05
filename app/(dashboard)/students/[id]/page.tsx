@@ -57,6 +57,9 @@ import { BalanceTrendChart } from "@/components/students/balance-trend-chart";
 import { useFeature } from "@/lib/hooks/useFeatures";
 import { compressImage } from "@/lib/image-compress";
 import { formatCurrency, formatNumber } from "@/lib/money";
+import {
+  PaymentMonths, EMPTY_MONTHS, oylarPayload, type GroupMonths, type MonthsValue,
+} from "@/components/finance/payment-months";
 
 function fmt(v: number) {
   return formatCurrency(v);
@@ -403,8 +406,10 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
     payableGroups.find((g: Membership) => g.groupId === selectedPayGroupId)?.freezes);
   /** Muzlatilgan guruhga to'lov — xodim ataylab tasdiqlashi shart. */
   const [muzTasdiq, setMuzTasdiq] = useState(false);
+  /** "Qaysi oy uchun" — oldindan oyi va ro'yxatda yo'q oy (payment-months.tsx). */
+  const [oylar, setOylar] = useState<MonthsValue>(EMPTY_MONTHS);
   /** Oyna qaysi yo'l bilan yopilmasin (X, Bekor, muvaffaqiyat) — tasdiq o'chadi. */
-  const yopPayModal = () => { setShowPayModal(false); setMuzTasdiq(false); };
+  const yopPayModal = () => { setShowPayModal(false); setMuzTasdiq(false); setOylar(EMPTY_MONTHS); };
 
   async function setArchived(archived: boolean) {
     setArchiving(true); setArchiveErr("");
@@ -561,6 +566,8 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({
           studentId: id, groupId: sg?.groupId ?? undefined,
           amount, method: payForm.method, note: payForm.note || undefined,
+          // QAYSI OY UCHUN — faqat guruh tanlangan va ma'lumot kelgan bo'lsa.
+          ...(sg?.groupId && payOylari ? oylarPayload(payOylari, payForm.amount, oylar, payBoshqaQarz, payKalendar) : {}),
         }),
       });
       const data = await res.json();
@@ -810,6 +817,17 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   // ortiqcha pul. Chiqib ketgan guruhlar ham: pul odatda ketgandan keyin qaytariladi.
   const ledgerRows: { groupId: string | null; advance: number; debt: number }[] =
     (student as { groupLedger?: { rows?: { groupId: string | null; advance: number; debt: number }[] } }).groupLedger?.rows ?? [];
+  // TO'LOV OYNASI — tanlangan guruhning yopilmagan oylari (serverdagi taqsimotdan).
+  const payLedger = (student as { groupLedger?: { months?: Record<string, GroupMonths> } }).groupLedger;
+  // `months` faqat yangi backendda bor — bo'lmasa blok chizilmaydi.
+  const payOylari: GroupMonths | null = selectedPayGroupId && payLedger?.months
+    ? payLedger.months[selectedPayGroupId] ?? { open: [], charged: [] }
+    : null;
+  const payAzo = ((student.groups ?? []) as { groupId: string; priceOverride?: number | null; schedule?: { mode?: string }; group?: { course?: { price?: number } } }[])
+    .find((g) => g.groupId === selectedPayGroupId);
+  const payKalendar = (payAzo?.schedule?.mode ?? "OYLIK_KALENDAR") === "OYLIK_KALENDAR";
+  const payOylikNarx = payAzo?.priceOverride ?? payAzo?.group?.course?.price ?? 0;
+  const payBoshqaQarz = ledgerRows.filter((r) => r.groupId !== selectedPayGroupId).reduce((sum, r) => sum + r.debt, 0);
   const pulGuruhlari: MoneyGroup[] = (student.groups ?? [])
     .filter((g: KetganAzolik & { groupId: string }) => !!g.groupId)
     .map((g: KetganAzolik & { groupId: string }) => ({
@@ -927,7 +945,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           <FormField label="Qaysi guruh uchun" required>
             <select
               value={selectedPayGroupId}
-              onChange={e => { setPayForm(p => ({ ...p, groupId: e.target.value })); setPayErr(""); setMuzTasdiq(false); }}
+              onChange={e => { setPayForm(p => ({ ...p, groupId: e.target.value })); setPayErr(""); setMuzTasdiq(false); setOylar(EMPTY_MONTHS); }}
               className="w-full h-10 px-3 text-[13px] rounded-xl glass-panel border border-white/60 dark:border-white/10 outline-none"
             >
               <option value="">Tanlang…</option>
@@ -975,6 +993,21 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               Tushundim, baribir shu guruhga yozilsin
             </label>
           </div>
+        )}
+        {/* QAYSI OY UCHUN — pul qaysi oyni yopishi to'lovdan OLDIN ko'rinadi. */}
+        {!material && selectedPayGroupId && payOylari && (
+          <PaymentMonths
+            key={selectedPayGroupId}
+            calendar={payKalendar}
+            data={payOylari}
+            amount={payForm.amount}
+            onAmount={(v) => { setPayForm(p => ({ ...p, amount: v })); setPayErr(""); }}
+            value={oylar}
+            onChange={setOylar}
+            monthlyPrice={payOylikNarx}
+            canAddMonth={hasPerm(perms, "payments.update")}
+            otherDebt={payBoshqaQarz}
+          />
         )}
         <FormField label="Summa (UZS)" required>
           <Input placeholder="500 000" value={payForm.amount} type="number" min="0"
@@ -1116,7 +1149,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         </FormField>
         )}
         <FormField label="Izoh" hint="Ixtiyoriy">
-          <Input placeholder="Iyul oyi uchun..." value={payForm.note}
+          <Input placeholder="Masalan: otasi to'ladi" value={payForm.note}
             onChange={e => setPayForm(p => ({...p, note: e.target.value}))} className="h-10" />
         </FormField>
         <div className="flex items-center justify-between glass-soft rounded-xl px-4 py-2.5">
