@@ -19,14 +19,14 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { guruhNarxi, narxMatni } from "@/lib/group-price";
 import {
-  SELECTABLE_METHODS, methodGridCls, methodLabel,
+  SELECTABLE_METHODS, methodGridCls,
 } from "@/lib/payment-methods";
 import { todayStr } from "@/lib/form-constants";
 import { DatePicker } from "@/components/ui/date-picker";
 import { MembershipDateModal } from "@/components/students/membership-date-modal";
 import { FreezeModal } from "@/components/students/freeze-modal";
 import { activeFreeze, freezeUntilLabel, type FreezeLike } from "@/lib/freeze";
-import { Snowflake } from "lucide-react";
+import { Snowflake, LayoutDashboard, UserRound, Wallet, CalendarCheck2, UserRoundX } from "lucide-react";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import {
   useGamificationSettings, useStudentPointHistory,
@@ -38,12 +38,15 @@ import { useOrganization } from "@/lib/hooks/useOrganization";
 import useSWR, { mutate } from "swr";
 import { fetcher as _fetcher } from "@/lib/fetcher";
 import {
-  Phone, Calendar, DollarSign, ArrowLeft, AlertCircle,
+  Phone, Calendar, ArrowLeft, AlertCircle,
   Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays, Printer, Users,
-  Check, Info, Camera, MessageSquare, FileText, UserPlus2, History,
+  Check, Info, Camera, MessageSquare, UserPlus2, History,
 } from "lucide-react";
 import { formatUzDate } from "@/lib/date-uz";
-import { StudentNoteCard } from "@/components/students/student-note-card";
+import { StudentHero, StudentOverview } from "@/components/students/student-overview";
+import { StudentNotes } from "@/components/students/student-notes";
+import { StudentFinance } from "@/components/students/student-finance";
+import { TabGlide, TabPanel, TAB_IN, tabCls } from "@/components/ui/tab-glide";
 import { AttendanceStats } from "@/components/students/attendance-stats";
 import { StudentMaterials } from "@/components/students/student-materials";
 import { StudentReminders } from "@/components/students/student-reminders";
@@ -355,7 +358,15 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   // o'quvchida ekranlab pastga cho'zilardi. Standart tab "Guruhlar" —
   // bu yagona tab HAR DOIM (ruxsatdan qat'i nazar) ko'rinadi, ya'ni
   // sahifa hech qachon bo'sh tab bilan ochilmaydi.
-  const [tab, setTab] = useState("guruhlar");
+  //
+  // 2026-10-05: sahifa endi "Umumiy" bilan ochiladi — hisob holati, davomat,
+  // guruhlar, so'nggi to'lovlar va izohlar bir ekranda. Profil, izohlar,
+  // vazifalar va fayllar "Ma'lumot" tabida. Qolgan tablarning ichi o'zgarmagan.
+  const [tab, setTab] = useState("umumiy");
+  /** "Ma'lumot"dagi uch blokning (izoh, vazifa, fayl) umumiy o'lchami — teng balandlik. */
+  // Faqat uch ustunli holatda (≥1024px): tor ekranda bloklar ustma-ust
+  // turadi va har biri o'z mazmuniga yarasha balandlikda bo'ladi.
+  const BLOK = "lg:h-[30rem]";
   // Gamifikatsiya sozlamasi TEPADA olinadi (ilgari faqat
   // `StudentPointsCard` ichida edi) — tab ro'yxati funksiya yoqiq-yo'qligini
   // bilishi kerak, aks holda o'chiq markazda bo'sh "Gamifikatsiya" tabi
@@ -1633,18 +1644,35 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         )}
       </Modal>
 
-      <div className="p-5 grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-5 items-start">
-        {/* CHAP: shaxsiy va tezkor ma'lumot — doim ko'rinadi, tabdan
-            qat'i nazar. O'NG: tablar (Moliya, Guruhlar, Davomat,
-            Gamifikatsiya) — bir vaqtda faqat bittasi ko'rinadi. Ilgari
-            HAMMASI bitta uzun sahifada ustma-ust terilardi va ko'p
-            guruh/to'lovli o'quvchida sahifa ekranlab pastga cho'zilib,
-            "qayerda nima bor"ni topish qiyinlashardi (egasining talabi,
-            2026-09-28). */}
-        <div className="xl:sticky xl:top-4 space-y-4">
+      {/* Tepada ixcham sarlavha kartasi: kim, holati, telefonlar. */}
+      <div className="px-5 pt-5">
+        <StudentHero
+          name={student.name} avatar={student.avatar}
+          statusLabel={enroll?.label} statusCls={enroll?.cls}
+          phone={student.phone} parentPhone={student.parentPhone} parentName={student.parentName}
+          joined={formatUzDate(student.joinedAt ?? student.createdAt)}
+          // To'lov tugmasi bu yerda YO'Q: tepa panelda ("To'lov qo'shish") va
+          // "Hisob holati" kartasida bor — uchinchisi faqat takror bo'lardi.
+        />
+      </div>
+      <div className="p-5 gap-5 flex flex-col">
+        {/* "MA'LUMOT" TABINING ICHI (egasi, 2026-10-05). DOMda tablardan oldin
+            turadi, ekranda esa keyin (`order-2`); boshqa tabda yashirin.
+              Tepada — o'quvchi ma'lumoti: butun enli, yotiq karta.
+              Ostida — UCHTA BIR XIL blok: izohlar, vazifalar, fayllar. Eni teng
+              (`grid-cols-3`), balandligi ham teng (`BLOK`); ichidagi ro'yxat
+              sig'masa blokning O'ZIDA aylanadi — biri uzayib qatorni buzmaydi.
+              768–1023px: ikki ustun (fayllar ostida to'liq enda), telefonda bitta. */}
+        <div className={tab === "profil"
+          ? cn(TAB_IN, "order-2 grid grid-cols-1 gap-4 items-start [&>*]:min-w-0 md:grid-cols-2 lg:grid-cols-3")
+          : "hidden"}>
           {/* Profile */}
-          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
-            <div className="flex items-center gap-4 mb-4">
+          {/* Yotiq karta: chapda rasm va ism, o'rtada aloqa ma'lumotlari bir
+              qatorda, o'ngda "Ketgan deb belgilash". Telefonda tik (ustma-ust) —
+              yotiq tartib tor ekranda siqilardi. */}
+          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5
+            md:col-span-2 lg:col-span-3 md:flex md:flex-wrap md:items-center md:gap-x-8 md:gap-y-4">
+            <div className="flex items-center gap-4 mb-4 md:mb-0 md:shrink-0">
               {/* PROFIL RASMI — bosilganda o'zgartiriladi. Rasm bo'lmasa
                   ismning bosh harfi bilan rangli doira (avvalgidek). */}
               <div className="relative shrink-0 group">
@@ -1678,9 +1706,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 </span>
               </div>
             </div>
-            {avatarErr && <p className="text-[11.5px] text-red-600 dark:text-red-400 -mt-2 mb-3">{avatarErr}</p>}
+            {avatarErr && <p className="text-[11.5px] text-red-600 dark:text-red-400 -mt-2 mb-3 md:m-0 md:basis-full">{avatarErr}</p>}
 
-            <div className="space-y-2">
+            <div className="space-y-2 md:flex md:min-w-0 md:flex-1 md:flex-wrap md:items-center md:gap-x-7 md:gap-y-2.5 md:space-y-0">
               <a href={`tel:${student.phone}`}
                 className="flex items-center gap-2 text-[13px] text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors">
                 <Phone className="w-3.5 h-3.5 text-neutral-400" />
@@ -1716,23 +1744,22 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               {canManageGroups && (
                 student.archivedAt ? (
                   <button onClick={unarchiveStudent} disabled={archiving}
-                    className="mt-1 flex items-center gap-1.5 w-fit text-[12px] px-3 h-8 rounded-lg font-semibold
-                      bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-60">
+                    className={cn("flex items-center gap-1.5 w-fit text-[12px] px-3 h-8 rounded-lg font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-60",
+                      "mt-1 md:mt-0 lg:ml-auto")}>
                     <UserCheck className="w-3.5 h-3.5" />
                     {archiving ? "..." : "Ketgan belgisini olib tashlash"}
                   </button>
                 ) : (
                   <button onClick={openArchive} disabled={archiving}
-                    className="mt-1 flex items-center gap-1.5 w-fit text-[12px] px-3 h-8 rounded-lg font-semibold
-                      text-neutral-500 dark:text-neutral-400 border border-white/60 dark:border-white/10
-                      hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 transition-colors disabled:opacity-60">
-                    <LogOut className="w-3.5 h-3.5" />
+                    className={cn("flex items-center gap-1.5 w-fit text-[12px] px-3 h-8 rounded-lg font-semibold text-neutral-500 dark:text-neutral-400 border border-white/60 dark:border-white/10 hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 transition-colors disabled:opacity-60",
+                      "mt-1 md:mt-0 lg:ml-auto")}>
+                    <UserRoundX className="w-3.5 h-3.5" />
                     {archiving ? "..." : "Ketgan deb belgilash"}
                   </button>
                 )
               )}
               {archiveErr && (
-                <p className="text-[12px] text-red-600 dark:text-red-400">{archiveErr}</p>
+                <p className="text-[12px] text-red-600 dark:text-red-400 basis-full">{archiveErr}</p>
               )}
             </div>
           </div>
@@ -1741,269 +1768,182 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               Maydon allaqachon bor edi, lekin bu sahifada hech qayerda
               ko'rinmasdi: o'qish ham, yozish ham faqat "Tahrirlash"
               oynasini ochib formani aylanib chiqish orqali mumkin edi. */}
-          <StudentNoteCard
+          {/* Bir nechta izoh, har biri muallifi va vaqti bilan. */}
+          <StudentNotes
+            className={BLOK}
             studentId={student.id}
-            note={student.note}
-            authorName={student.noteByName}
-            noteAt={student.noteAt}
             canEdit={hasPerm(me?.permissions, "students.update")}
-            onSaved={revalidateAll}
+            onChanged={revalidateAll}
           />
 
           {/* VAZIFALAR — follow-up ("3 kundan keyin qo'ng'iroq qilish").
               Izohdan farqi: bu muddatli VAZIFA (nomi ham shu — "Eslatma"
               "Izoh" bilan juda yaqin turardi, egasining talabi, 2026-09-30).
               Bosqichma-bosqich chiqarish — hozircha faqat demo markazda. */}
-          {remindersOn && canReminders && <StudentReminders studentId={student.id} canEdit={canAddReminder} />}
+          {remindersOn && canReminders && (
+            <div className={cn(BLOK, "[&>*]:h-full [&>*]:overflow-y-auto")}>
+              <StudentReminders studentId={student.id} canEdit={canAddReminder} />
+            </div>
+          )}
+
+          {/* FAYLLAR — alohida tab emas, "Ma'lumot" ichidagi uchinchi blok. */}
+          {studentFilesOn && canSeeDocs && (
+            <div className={cn(BLOK, "min-w-0 md:col-span-2 lg:col-span-1 [&>*]:h-full [&>*]:overflow-y-auto")}>
+              <StudentDocumentsSection studentId={student.id} canUpload={canManageDocs} />
+            </div>
+          )}
         </div>
 
-        {/* O'NG: tablar */}
+        {/* TABLAR — bir vaqtda faqat bittasining ichi ko'rinadi. */}
         <div className="min-w-0 space-y-4">
-          <nav className="flex items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* Tanlangan tabning foni bitta element — tabdan tabga sirpanadi
+              (`TabGlide`); kontent esa yengil ko'tarilib ochiladi (`TabPanel`). */}
+          <nav className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <TabGlide watch={tab} className="flex w-max items-center gap-1">
             {[
-              ...(canSeeMoney ? [{ id: "moliya", label: "Moliya", icon: DollarSign }] : []),
+              { id: "umumiy", label: "Umumiy", icon: LayoutDashboard },
+              ...(canSeeMoney ? [{ id: "moliya", label: "Moliya", icon: Wallet }] : []),
               { id: "guruhlar", label: "Guruhlar", icon: Users },
-              ...(canSeeAttendance ? [{ id: "davomat", label: "Davomat", icon: Calendar }] : []),
+              ...(canSeeAttendance ? [{ id: "davomat", label: "Davomat", icon: CalendarCheck2 }] : []),
               ...(studentFilesOn && canSeeSms ? [{ id: "sms", label: "SMS", icon: MessageSquare }] : []),
-              ...(studentFilesOn && canSeeDocs ? [{ id: "fayllar", label: "Fayllar", icon: FileText }] : []),
               ...(canSeeHistory ? [{ id: "tarix", label: "Tarix", icon: History }] : []),
               ...(showGamification ? [{ id: "gamifikatsiya", label: "Gamifikatsiya", icon: Trophy }] : []),
+              { id: "profil", label: "Ma'lumot", icon: UserRound },
             ].map(t => {
               const Icon = t.icon;
               const active = tab === t.id;
               return (
                 <button key={t.id} onClick={() => setTab(t.id)}
-                  className={cn(
-                    "flex items-center gap-1.5 shrink-0 whitespace-nowrap px-3.5 h-9 rounded-xl text-[12.5px] font-semibold transition-colors border-b-2",
-                    active
-                      ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
-                      : "border-transparent text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200")}>
+                  data-tab-active={active} aria-pressed={active}
+                  className={tabCls(active)}>
                   <Icon className="w-3.5 h-3.5" />
                   {t.label}
                 </button>
               );
             })}
+          </TabGlide>
           </nav>
 
+          <TabPanel k={tab} className="space-y-4">
+
+          {tab === "umumiy" && (
+            <StudentOverview
+              balance={student.balance ?? 0}
+              canSeeMoney={canSeeMoney} canSeeAttendance={canSeeAttendance}
+              groups={activeSgs} attendance={student.attendance ?? []}
+              attended={attended} total={total} rate={rate}
+              payments={student.payments ?? []}
+              notes={
+                <StudentNotes
+                  studentId={student.id}
+                  canEdit={hasPerm(me?.permissions, "students.update")}
+                  limit={3} onMore={() => setTab("profil")}
+                  onChanged={revalidateAll}
+                />
+              }
+              paymentGroup={tolovGuruhi}
+              onPay={() => { setPayErr(""); setShowPayModal(true); }}
+              onTab={setTab}
+            />
+          )}
+
+          {/* MOLIYA — joylashuv `StudentFinance` da (uch variant, tanlash uchun).
+              Hisob-kitob bloklari shu yerda yig'ilib, tayyor bo'lak sifatida
+              beriladi: mantiq va oynalar o'zgarmagan, faqat tartib boshqa. */}
           {tab === "moliya" && canSeeMoney && (
-          <div className="space-y-4">
-          {/* Finance */}
-          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                Moliya
-              </h3>
-              {canSeeMoney && (
-                <div className="flex items-center gap-3">
-                  {/* Bir martalik chegirma — MAVJUD qarzni kamaytiradi.
-                      Sozlamalardagi qoida esa faqat kelajakka ta'sir qiladi. */}
-                  {hasPerm(me?.permissions, "discounts.manage") && (<>
-                    <OneTimeDiscount
-                      studentId={student.id}
-                      studentName={student.name}
-                      balance={student.balance ?? 0}
-                      // Faol a'zoliklar + har birining qarzi. Ikkitadan
-                      // ko'p bo'lsa oynada guruh tanlovi chiqadi.
-                      groups={activeSgs.map((sg: any) => ({
-                        groupId: sg.groupId,
-                        name: sg.group?.name ?? "Guruh",
-                        debt: Math.max(0, (student as any)?.groupLedger?.rows
-                          ?.find((r: any) => r.groupId === sg.groupId)?.debt ?? 0),
-                      }))}
-                      onDone={() => mutate(`/api/students/${student.id}`)}
-                    />
-                    {/* Doimiy chegirma — sozlamalardagi qoida, lekin kartochkadan
-                        (ijtimoiy holat uchun; bir martalik har oy qaytarilmasin). */}
-                    <PermanentDiscount
-                      studentId={student.id}
-                      studentName={student.name}
-                      groups={activeSgs.map((sg) => ({ groupId: sg.groupId, name: sg.group?.name ?? "Guruh" }))}
-                      onDone={() => mutate(`/api/students/${student.id}`)}
-                    />
-                  </>)}
-                  {/* TO'LOV + o'q: qaytarish va qarzdorlikka kiritish (2026-09-24). */}
-                  <PayActions
+            <StudentFinance
+              balance={student.balance ?? 0}
+              nextDue={activeSgs.map((sg: any) => sg.schedule?.nextDue).filter(Boolean).sort()[0] ?? null}
+              payments={student.payments ?? []}
+              covered={chegirmaQoplagan}
+              discounts={recentDiscounts}
+              groupName={(id) => (id ? groupNameById.get(id) ?? "O'chirilgan guruh" : "Umumiy")}
+              paymentGroup={tolovGuruhi}
+              onPay={() => { setPayErr(""); setShowPayModal(true); }}
+              // CHEGIRMA TUGMALARI — "Chegirmalar" ichki bo'limida turadi
+              // (ilgari tepada, "To'lov" yonida ham bor edi — bir narsa ikki joyda).
+              // Bir martalik chegirma MAVJUD qarzni kamaytiradi; sozlamalardagi
+              // qoida esa faqat kelajakka ta'sir qiladi.
+              discountActions={hasPerm(me?.permissions, "discounts.manage") ? (<>
+                  <OneTimeDiscount
                     studentId={student.id}
                     studentName={student.name}
                     balance={student.balance ?? 0}
-                    groups={pulGuruhlari}
-                    canAdjust={hasPerm(me?.permissions, "payments.update")}
-                    onPay={() => { setPayErr(""); setShowPayModal(true); }}
+                    // Faol a'zoliklar + har birining qarzi. Ikkitadan
+                    // ko'p bo'lsa oynada guruh tanlovi chiqadi.
+                    groups={activeSgs.map((sg: any) => ({
+                      groupId: sg.groupId,
+                      name: sg.group?.name ?? "Guruh",
+                      debt: Math.max(0, (student as any)?.groupLedger?.rows
+                        ?.find((r: any) => r.groupId === sg.groupId)?.debt ?? 0),
+                    }))}
                     onDone={() => mutate(`/api/students/${student.id}`)}
                   />
-                </div>
-              )}
-            </div>
-            <div className="space-y-3">
-              {canSeeMoney && (
-                <div>
-                  <p className="text-[11px] text-neutral-400 mb-0.5">Balans</p>
-                  <p className={cn("text-[22px] font-black leading-none",
-                    (student.balance ?? 0) >= 0
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400")}>
-                    {fmt(student.balance ?? 0)}
-                  </p>
-
-                  {/* TAFSILOT — bosh raqamdan VIZUAL AJRATILGAN blok.
-                      Ilgari guruh taqsimoti, tarix, chegirmalar hammasi
-                      bosh raqam bilan bir tekis oqib, "qaysi qator nima
-                      uchun" ni ajratish qiyin edi. Yengil fon — bu
-                      "tafsilot", asosiy son emas, degan signal. */}
-                  <div className="mt-3 rounded-xl bg-neutral-50/70 dark:bg-white/[0.03] px-3 py-2.5">
-                  {/* Qaysi guruhga qancha qarz — umumiy raqam o'z-o'zicha
-                      "qayerga?" degan savolni ochiq qoldiradi. */}
-                  <GroupDebtBreakdown
-                    ledger={(student as any).groupLedger}
-                    balance={student.balance ?? 0}
-                    fmt={fmt}
+                  {/* Doimiy chegirma — sozlamalardagi qoida, lekin kartochkadan
+                      (ijtimoiy holat uchun; bir martalik har oy qaytarilmasin). */}
+                  <PermanentDiscount
+                    studentId={student.id}
+                    studentName={student.name}
+                    groups={activeSgs.map((sg) => ({ groupId: sg.groupId, name: sg.group?.name ?? "Guruh" }))}
+                    onDone={() => mutate(`/api/students/${student.id}`)}
                   />
-                  {/* BALANS NIMADAN IBORAT — qator-qator, pastda jami.
-                      Guruh bo'yicha taqsimot bitta guruhli o'quvchida
-                      o'zini umuman ko'rsatmaydi, ya'ni u yerda kartochka
-                      bo'm-bo'sh qolardi va "−300 000 qayerdan?" degan
-                      savol javobsiz edi. */}
-                  <BalanceBreakdown
-                    charges={student.charges ?? []}
-                    payments={student.payments ?? []}
-                    balance={student.balance ?? 0}
-                    fmt={fmt}
-                    groupName={(id) => (id ? groupNameById.get(id) ?? "O'chirilgan guruh" : "Umumiy")}
+                </>) : null}
+              actions={<>
+                {/* TO'LOV + o'q: qaytarish va qarzdorlikka kiritish (2026-09-24). */}
+                <PayActions
+                  studentId={student.id}
+                  studentName={student.name}
+                  balance={student.balance ?? 0}
+                  groups={pulGuruhlari}
+                  canAdjust={hasPerm(me?.permissions, "payments.update")}
+                  onPay={() => { setPayErr(""); setShowPayModal(true); }}
+                  onDone={() => mutate(`/api/students/${student.id}`)}
+                />
+              </>}
+              breakdown={<>
+                {/* Qaysi guruhga qancha qarz — umumiy raqam o'z-o'zicha
+                    "qayerga?" degan savolni ochiq qoldiradi. */}
+                <GroupDebtBreakdown
+                  ledger={(student as any).groupLedger}
+                  balance={student.balance ?? 0}
+                  fmt={fmt}
+                />
+                {/* BALANS NIMADAN IBORAT — qator-qator, pastda jami.
+                    Guruh bo'yicha taqsimot bitta guruhli o'quvchida
+                    o'zini umuman ko'rsatmaydi, ya'ni u yerda kartochka
+                    bo'm-bo'sh qolardi va "−300 000 qayerdan?" degan
+                    savol javobsiz edi. */}
+                <BalanceBreakdown
+                  charges={student.charges ?? []}
+                  payments={student.payments ?? []}
+                  balance={student.balance ?? 0}
+                  fmt={fmt}
+                  groupName={(id) => (id ? groupNameById.get(id) ?? "O'chirilgan guruh" : "Umumiy")}
+                />
+              </>}
+              // BALANS DINAMIKASI — charges+payments'dan hisoblanadi, alohida
+              // so'rov kerak emas. 2 nuqtadan kam bo'lsa o'zi chizilmaydi.
+              chart={<BalanceTrendChart charges={student.charges ?? []} payments={student.payments ?? []} fmt={fmt} />}
+              // QO'SHIMCHA TO'LOVLAR — to'lovlar ro'yxatiga qo'shilmaydi: bu pul
+              // kurs qarziga tegmaydi va aralashtirilsa qarz to'lovi deb o'qilardi.
+              materials={<StudentMaterials studentId={student.id} fmt={fmt} />}
+              paymentActions={(p: any) => (<>
+                {p.amount > 0 && (
+                  <button onClick={() => setReceiptId(p.id)} title="Chek"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg
+                      text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50
+                      dark:hover:bg-indigo-950/30 transition-colors">
+                    <Printer className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {hasPerm(me?.permissions, "payments.update") && (
+                  <PaymentEdit
+                    payment={p}
+                    onDone={() => mutate(`/api/students/${student.id}`)}
                   />
-                  {/* CHEGIRMA QOPLAGAN QARZ. Qarz YOZILGAN, chegirma uni
-                      to'liq yoki qisman yopgan — ikkala raqam ham ko'rinadi,
-                      aks holda balans o'z-o'zicha "hisoblanmagan" ga
-                      o'xshab qolardi. */}
-                  {chegirmaQoplagan.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 space-y-1.5">
-                      <p className="text-[11px] text-neutral-400">Chegirma qoplagan</p>
-                      {chegirmaQoplagan.map((c: any) => (
-                        <div key={c.id} className="flex items-start justify-between gap-2">
-                          <span className="flex items-center gap-1 text-[12px] font-semibold shrink-0">
-                            <span className="text-neutral-400 line-through">
-                              {fmt((c.discountAmount ?? 0) + Math.abs(c.amount ?? 0))}
-                            </span>
-                            <span className="text-green-600 dark:text-green-400">
-                              {fmt(Math.abs(c.amount ?? 0))}
-                            </span>
-                          </span>
-                          <span className="text-[11px] text-neutral-400 text-right truncate">
-                            {c.groupId ? (groupNameById.get(c.groupId) ?? "O'chirilgan guruh") : "Umumiy"}
-                            {c.discountLabel ? ` · ${c.discountLabel}` : ""}
-                            {c.note ? ` · ${c.note}` : ""}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* Balans nega shu raqamgacha kamaygani — to'lovdan
-                      ANIQ ajratib, alohida ko'rsatiladi. */}
-                  {recentDiscounts.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-white/50 dark:border-white/10 space-y-1.5">
-                      <p className="text-[11px] text-neutral-400">So'nggi chegirmalar</p>
-                      {recentDiscounts.map((c: any) => (
-                        <div key={c.id} className="flex items-start justify-between gap-2">
-                          <span className="flex items-center gap-1 text-[12px] font-semibold text-pink-600 dark:text-pink-400 shrink-0">
-                            🎁 −{fmt(Math.abs(c.amount))}
-                          </span>
-                          <span className="text-[11px] text-neutral-400 text-right truncate">
-                            {c.groupId ? (groupNameById.get(c.groupId) ?? "O'chirilgan guruh") : "Umumiy"}
-                            {c.discountLabel || c.note ? ` · ${c.discountLabel || c.note}` : ""}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  </div>
-                </div>
-              )}
-              <div>
-                <p className="text-[11px] text-neutral-400 mb-0.5">Davomiylik</p>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 glass-soft rounded-full overflow-hidden">
-                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${rate}%` }} />
-                  </div>
-                  <span className="text-[12px] font-bold text-neutral-700 dark:text-neutral-300">{rate}%</span>
-                </div>
-                <p className="text-[11px] text-neutral-400 mt-0.5">{attended}/{total} dars</p>
-              </div>
-            </div>
-          </div>
-
-          {/* BALANS DINAMIKASI — charges+payments'dan hisoblanadi,
-              alohida so'rov kerak emas. 2 nuqtadan kam bo'lsa o'zi
-              chizilmaydi. */}
-          <BalanceTrendChart charges={student.charges ?? []} payments={student.payments ?? []} fmt={fmt} />
-
-          {/* QO'SHIMCHA TO'LOVLAR — Moliyadan KEYIN, shu ustunda.
-              To'lovlar ro'yxatiga qo'shilmaydi: bu pul kurs qarziga
-              tegmaydi va aralashtirilsa qarz to'lovi deb o'qilardi. */}
-          {canSeeMoney && <StudentMaterials studentId={student.id} fmt={fmt} />}
-
-          {/* Payments */}
-          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-neutral-400" />
-                <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">So'nggi to'lovlar</h3>
-              </div>
-              <button onClick={() => { setPayErr(""); setShowPayModal(true); }}
-                className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                <Plus className="w-3 h-3" /> Yangi to'lov
-              </button>
-            </div>
-            <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {student.payments?.length === 0 && (
-                <p className="text-[12px] text-neutral-400 p-4 text-center">To'lovlar yo'q</p>
-              )}
-              {student.payments?.map((p: any) => (
-                <div key={p.id} className="flex items-center justify-between gap-2 px-5 py-3">
-                  <div className="min-w-0">
-                    {/* QAYTARISH — manfiy to'lov, qizil va yorliq bilan. */}
-                    {p.amount < 0 ? (
-                      <p className="text-[13px] font-semibold text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                        −{fmt(-p.amount)}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
-                          Qaytarildi
-                        </span>
-                      </p>
-                    ) : (
-                      <p className="text-[13px] font-semibold text-green-600 dark:text-green-400">{fmt(p.amount)}</p>
-                    )}
-                    <p className="text-[11px] text-neutral-400">
-                      {formatUzDate(p.date)} · {methodLabel(p.method)}
-                    </p>
-                    {tolovGuruhi(p) && (
-                      <span className="mt-1 inline-flex items-center gap-1 max-w-full px-1.5 py-0.5 rounded-md
-                        bg-neutral-100 dark:bg-neutral-800 text-[10px] font-medium
-                        text-neutral-600 dark:text-neutral-300">
-                        <Users className="w-2.5 h-2.5 shrink-0" />
-                        <span className="truncate">{tolovGuruhi(p)}</span>
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {p.note && <p className="text-[11px] text-neutral-400 max-w-[120px] text-right truncate">{p.note}</p>}
-                    {p.amount > 0 && (
-                      <button onClick={() => setReceiptId(p.id)} title="Chek"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg
-                          text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50
-                          dark:hover:bg-indigo-950/30 transition-colors">
-                        <Printer className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                    {hasPerm(me?.permissions, "payments.update") && (
-                      <PaymentEdit
-                        payment={p}
-                        onDone={() => mutate(`/api/students/${student.id}`)}
-                      />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          </div>
+                )}
+              </>)}
+            />
           )}
 
           {tab === "guruhlar" && (
@@ -2376,10 +2316,6 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
           {studentFilesOn && canSeeSms && tab === "sms" && <StudentSmsSection studentId={student.id} />}
 
-          {studentFilesOn && canSeeDocs && tab === "fayllar" && (
-            <StudentDocumentsSection studentId={student.id} canUpload={canManageDocs} />
-          )}
-
           {/* `entity` — jurnaldagi NOM ("Student"), URL segmenti emas. Ilgari
               "students" yuborilardi va tab har doim bo'sh chiqardi. */}
           {canSeeHistory && tab === "tarix" && (
@@ -2391,6 +2327,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           {tab === "gamifikatsiya" && showGamification && (
             <StudentPointsCard student={student} cfg={gamifCfg} />
           )}
+          </TabPanel>
         </div>
       </div>
     </div>

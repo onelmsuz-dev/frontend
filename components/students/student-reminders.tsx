@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR, { mutate } from "swr";
-import { Bell, Plus, Check, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { ListTodo, Plus, Check, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
 import { formatUzDate } from "@/lib/date-uz";
@@ -88,7 +88,9 @@ export function StudentReminders({ studentId, canEdit }: { studentId: string; ca
       <div className="flex items-center justify-between mb-3">
         <h3 className="flex items-center gap-1.5 text-[11px] font-bold text-neutral-500
           dark:text-neutral-400 uppercase tracking-wider">
-          <Bell className="w-3.5 h-3.5" />
+          {/* Ro'yxat belgisi — qo'ng'iroqcha (`Bell`) tepa paneldagi
+              bildirishnomalar bilan adashtirardi. */}
+          <ListTodo className="w-3.5 h-3.5" />
           Vazifalar
         </h3>
         {canEdit && (

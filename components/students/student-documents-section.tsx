@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import useSWR, { mutate } from "swr";
-import { FileText, Upload, Download, Trash2, Image as ImageIcon, File as FileIcon } from "lucide-react";
+import { FileText, CloudUpload, FolderOpen, Download, Trash2, Image as ImageIcon, File as FileIcon } from "lucide-react";
 import { fetcher } from "@/lib/fetcher";
 import { formatUzDate } from "@/lib/date-uz";
 import { compressImage, readAsDataUrl, UPLOAD_MAX_BYTES } from "@/lib/image-compress";
@@ -110,16 +110,24 @@ export function StudentDocumentsSection({ studentId, canUpload }: { studentId: s
     <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
       <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-neutral-400" />
+          <FolderOpen className="w-4 h-4 text-neutral-400" />
           <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Fayllar</h3>
+          {items.length > 0 && (
+            <span className="rounded-full bg-neutral-200/70 px-1.5 py-px text-[10.5px] font-bold text-neutral-600 dark:bg-white/10 dark:text-neutral-300">
+              {items.length}
+            </span>
+          )}
         </div>
         {canUpload && (
           <>
             <input ref={inputRef} type="file" className="hidden"
               onChange={e => handleFiles(e.target.files)} />
+            {/* BULUT + tepaga strelka — "kompyuterdan yuklash". Ilgari patnisdan
+                chiqayotgan strelka (`Upload`) edi va "ulashish/yuborish"ga
+                o'xshab ko'rinardi. */}
             <button onClick={() => inputRef.current?.click()} disabled={uploading}
-              className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-50">
-              <Upload className="w-3 h-3" /> {uploading ? "Yuklanmoqda..." : "Fayl yuklash"}
+              className="flex h-8 items-center gap-1.5 rounded-xl bg-indigo-50 px-3 text-[12.5px] font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:opacity-50 dark:bg-indigo-400/15 dark:text-indigo-200 dark:hover:bg-indigo-400/25">
+              <CloudUpload className="w-3.5 h-3.5" />{uploading ? "Yuklanmoqda..." : "Fayl yuklash"}
             </button>
           </>
         )}
@@ -132,7 +140,20 @@ export function StudentDocumentsSection({ studentId, canUpload }: { studentId: s
           {[1, 2].map(i => <div key={i} className="h-12 rounded-xl bg-neutral-100 dark:bg-neutral-800 animate-pulse" />)}
         </div>
       ) : items.length === 0 ? (
-        <p className="text-[12px] text-neutral-400 p-5 text-center">Hali fayl yuklanmagan</p>
+        /* BO'SH HOLAT — bosiladigan maydon (yuklash huquqi bo'lsa): yolg'iz
+           kulrang yozuv kartani "chala" ko'rsatardi. */
+        <div className="p-4">
+          <button type="button" disabled={!canUpload || uploading} onClick={() => inputRef.current?.click()}
+            className="flex w-full flex-col items-center gap-1.5 rounded-2xl border border-dashed border-neutral-300/80 px-4 py-6 text-center transition-colors enabled:hover:border-indigo-300 enabled:hover:bg-indigo-50/50 disabled:cursor-default dark:border-white/15 dark:enabled:hover:border-indigo-400/40 dark:enabled:hover:bg-indigo-400/5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-400 dark:bg-white/5">
+              <FileText className="h-5 w-5" />
+            </span>
+            <span className="text-[13px] font-semibold text-neutral-700 dark:text-neutral-200">Hali fayl yuklanmagan</span>
+            <span className="text-[12px] text-neutral-400">
+              {canUpload ? "Shartnoma, pasport nusxasi, sertifikat — bosib yuklang" : "Fayllar shu yerda ko'rinadi"}
+            </span>
+          </button>
+        </div>
       ) : (
         <ul className="divide-y divide-neutral-100 dark:divide-neutral-800">
           {items.map(d => {
