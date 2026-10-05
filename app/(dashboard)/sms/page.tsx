@@ -115,6 +115,29 @@ export default function SmsPage() {
 
   const hasPending = sms?.requests?.some(r => r.status === "PENDING");
 
+  /**
+   * JOYLASHUV: har bir bo'lim — butun enli bitta qator, yuqoridan pastga:
+   * balans → yangi xabar (asosiy ish, 1-2-3 qadam) → matnlar → avtomatlashtirish → tarix.
+   * Ilgari sahifa `max-w-4xl` bilan cheklangan va chapga taqalib, o'ngda bo'shliq qolardi.
+   */
+  const stepLabel = (n: number, text: string) => (
+    <p className="flex items-center gap-2.5 text-[14px] font-semibold text-neutral-900 dark:text-neutral-100 mb-3">
+      <span className="w-6 h-6 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white text-[12px] flex items-center justify-center shrink-0">{n}</span>
+      {text}
+    </p>
+  );
+  // Tanlov tugmalari. Chegara ataylab kulrang: oq chegara oq fonda yo'qolib,
+  // tanlanmagan tugma oddiy matndek ko'rinardi.
+  const chip = (on: boolean) => cn(
+    "inline-flex items-center gap-2 h-10 px-4 rounded-xl text-[13px] font-semibold border transition-colors",
+    on ? "bg-indigo-600 dark:bg-indigo-500 border-indigo-600 dark:border-indigo-500 text-white"
+       : "bg-white dark:bg-white/5 border-neutral-200 dark:border-white/15 text-neutral-700 dark:text-neutral-200 hover:border-indigo-300",
+  );
+  const chipRow = "flex flex-wrap gap-2.5";
+  // Ichki qatorlar (matn, avtomatlashtirish)
+  const rowBox = "flex items-start justify-between gap-3 rounded-xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-white/5 px-4 py-3.5";
+  const hintCls = "text-[12.5px] leading-relaxed text-neutral-500 dark:text-neutral-400";
+
   const filteredStudents = useMemo(() =>
     students.filter(s => s.name?.toLowerCase().includes(search.toLowerCase()) || s.phone?.includes(search)),
     [students, search]);
@@ -214,367 +237,384 @@ export default function SmsPage() {
     finally { setBuying(false); }
   }
 
-  return (
-    <div>
-      <TopHeader title="SMS xabarlar" subtitle="O'quvchi, ota-ona va o'qituvchilarga xabar yuborish" />
-
-      <div className="p-5 space-y-5 max-w-4xl">
-        {/* Balans + paket */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Card className="border border-white/60 dark:border-white/10 shadow-none sm:col-span-2">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center">
-                  <Wallet className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <div>
-                  <p className="text-[11px] text-neutral-500">SMS balansi</p>
-                  <p className="text-[26px] font-black text-neutral-900 dark:text-neutral-100 leading-none">
-                    {isLoading ? "..." : balance} <span className="text-[13px] font-medium text-neutral-400">ta</span>
-                  </p>
-                </div>
+  // Balans, shlyuz holati va kutilayotgan paket so'rovi
+  const summary = (
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="border border-white/60 dark:border-white/10 shadow-none sm:col-span-2">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               </div>
-              <Button onClick={() => { setShowBuy(true); setBuyErr(""); }} disabled={hasPending}
- className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 h-9 text-[13px]">
-                <Package className="w-4 h-4" /> Paket sotib olish
-              </Button>
-            </CardContent>
-          </Card>
-          <Card className="border border-white/60 dark:border-white/10 shadow-none">
-            <CardContent className="p-4">
-              <p className="text-[11px] text-neutral-500 mb-1">Holat</p>
-              {configured ? (
-                <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-green-600 dark:text-green-400">
-                  <CheckCircle2 className="w-4 h-4" /> Shlyuz ulangan
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-amber-600 dark:text-amber-400">
-                  <AlertTriangle className="w-4 h-4" /> Sozlanmagan
-                </span>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {hasPending && (
-          <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40 rounded-xl px-3 py-2.5">
-            <Clock className="w-4 h-4 text-blue-600 shrink-0" />
-            <p className="text-[12px] font-medium text-blue-700 dark:text-blue-400">Tasdiqlanmagan paket so'rovingiz bor. Admin javobini kuting.</p>
-          </div>
-        )}
-
-        {/* Mening matnlarim (moderatsiya) */}
-        <Card className="border border-white/60 dark:border-white/10 shadow-none">
-          <CardContent className="p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-neutral-400" />
-                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Mening matnlarim</p>
-              </div>
-              <Button size="sm" onClick={() => { setShowAddTpl(true); setTplErr(""); }}
- className="gap-1.5 h-8 text-[12px] bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 ">
-                <Plus className="w-3.5 h-3.5" /> Matn qo'shish
-              </Button>
-            </div>
-            <p className="text-[11px] text-neutral-400">
-              Eskiz.uz talabiga ko'ra, xabar yuborishdan oldin matn moderatsiyadan o'tishi shart.
-              Tasdiqlangan matnlar — o'zingiz qo'shganlar va boshqa markazlar bilan "umumiy" qilinganlar.
-            </p>
-            {tplLoading ? (
-              <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-12 rounded-xl glass-soft animate-pulse" />)}</div>
-            ) : tplError ? (
-              <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5">
-                <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                <p className="text-[12px] font-medium text-red-600 dark:text-red-400">
-                  Matnlar yuklanmadi: {tplError.message}
+              <div>
+                <p className="text-[11px] text-neutral-500">SMS balansi</p>
+                <p className="text-[26px] font-black text-neutral-900 dark:text-neutral-100 leading-none">
+                  {isLoading ? "..." : balance} <span className="text-[13px] font-medium text-neutral-400">ta</span>
                 </p>
               </div>
-            ) : templates.length === 0 ? (
-              <p className="text-[12px] text-neutral-400 py-3 text-center">Hali matn qo'shilmagan</p>
+            </div>
+            <Button onClick={() => { setShowBuy(true); setBuyErr(""); }} disabled={hasPending}
+      className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 h-9 text-[13px]">
+              <Package className="w-4 h-4" /> Paket sotib olish
+            </Button>
+          </CardContent>
+        </Card>
+        <Card className="border border-white/60 dark:border-white/10 shadow-none">
+          <CardContent className="p-4">
+            <p className="text-[11px] text-neutral-500 mb-1">Holat</p>
+            {configured ? (
+              <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-green-600 dark:text-green-400">
+                <CheckCircle2 className="w-4 h-4" /> Shlyuz ulangan
+              </span>
             ) : (
-              <div className="space-y-1.5">
-                {templates.map(t => (
-                  <div key={t.id} className="flex items-start justify-between gap-3 rounded-xl border border-white/50 dark:border-white/10 px-3 py-2.5">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{t.title}</p>
-                        <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0", TPL_STATUS_COLOR[t.status])}>
-                          {TPL_STATUS_LABEL[t.status] ?? t.status}
-                        </span>
-                        {t.isShared && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-                            Umumiy
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[12px] text-neutral-500 dark:text-neutral-400 mt-0.5 line-clamp-2">{t.text}</p>
-                      {t.status === "REJECTED" && t.reviewNote && (
-                        <p className="text-[11px] text-red-500 mt-1">Sabab: {t.reviewNote}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="w-4 h-4" /> Sozlanmagan
+              </span>
             )}
           </CardContent>
         </Card>
+      </div>
 
-        {/* Avtomatlashtirish */}
-        <Card className="border border-white/60 dark:border-white/10 shadow-none">
-          <CardContent className="p-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-500" />
-              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Avtomatlashtirish</p>
-            </div>
+      {hasPending && (
+        <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40 rounded-xl px-3 py-2.5">
+          <Clock className="w-4 h-4 text-blue-600 shrink-0" />
+          <p className="text-[12px] font-medium text-blue-700 dark:text-blue-400">Tasdiqlanmagan paket so'rovingiz bor. Admin javobini kuting.</p>
+        </div>
+      )}
+    </>
+  );
 
-            <div className="flex items-start justify-between gap-3 rounded-xl border border-white/50 dark:border-white/10 px-3.5 py-3">
-              <div className="flex items-start gap-2.5 min-w-0">
-                <UserX className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+  // Mening matnlarim (moderatsiya)
+  const templatesCard = (
+    <Card className="border border-white/60 dark:border-white/10 shadow-none">
+      <CardContent className="p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-neutral-400" />
+            <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Mening matnlarim</p>
+          </div>
+          <Button size="sm" onClick={() => { setShowAddTpl(true); setTplErr(""); }}
+    className="gap-1.5 h-8 text-[12px] bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 ">
+            <Plus className="w-3.5 h-3.5" /> Matn qo'shish
+          </Button>
+        </div>
+        <p className={hintCls}>
+          Eskiz.uz talabiga ko'ra, xabar yuborishdan oldin matn moderatsiyadan o'tishi shart.
+          Tasdiqlangan matnlar — o'zingiz qo'shganlar va boshqa markazlar bilan "umumiy" qilinganlar.
+        </p>
+        {tplLoading ? (
+          <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-12 rounded-xl glass-soft animate-pulse" />)}</div>
+        ) : tplError ? (
+          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5">
+            <ShieldAlert className="w-3.5 h-3.5 text-red-500 shrink-0" />
+            <p className="text-[12px] font-medium text-red-600 dark:text-red-400">
+              Matnlar yuklanmadi: {tplError.message}
+            </p>
+          </div>
+        ) : templates.length === 0 ? (
+          <p className="text-[12px] text-neutral-400 py-3 text-center">Hali matn qo'shilmagan</p>
+        ) : (
+          <div className="space-y-2.5">
+            {templates.map(t => (
+              <div key={t.id} className={rowBox}>
                 <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">
-                    Davomat: "Kelmadi" belgilanganda avtomatik SMS
-                  </p>
-                  <p className="text-[11px] text-neutral-400 mt-0.5">
-                    O'qituvchi davomatda o'quvchini "Kelmadi" deb belgilasa — ota-onasiga (yoki raqami bo'lmasa o'ziga) tanlangan matn avtomatik yuboriladi.
-                  </p>
-                  {automation?.absence.enabled && (
-                    <select
-                      value={automation.absence.templateId ?? ""}
-                      onChange={e => toggleAbsenceAutomation(true, e.target.value)}
-                      className="mt-2 h-8 px-2.5 text-[12px] rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
-                      {(automation.availableTemplates ?? []).length === 0 && <option value="">Tasdiqlangan matn yo'q</option>}
-                      {(automation.availableTemplates ?? []).map(t => (
-                        <option key={t.id} value={t.id}>{t.title}</option>
-                      ))}
-                    </select>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{t.title}</p>
+                    <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0", TPL_STATUS_COLOR[t.status])}>
+                      {TPL_STATUS_LABEL[t.status] ?? t.status}
+                    </span>
+                    {t.isShared && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                        Umumiy
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[13px] leading-relaxed text-neutral-500 dark:text-neutral-400 mt-1.5 line-clamp-2">{t.text}</p>
+                  {t.status === "REJECTED" && t.reviewNote && (
+                    <p className="text-[11px] text-red-500 mt-1">Sabab: {t.reviewNote}</p>
                   )}
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  const next = !automation?.absence.enabled;
-                  if (next && !automation?.availableTemplates?.length) {
-                    setAutomationErr("Avval yuqorida tasdiqlangan matn kerak");
-                    return;
-                  }
-                  toggleAbsenceAutomation(next, automation?.availableTemplates?.[0]?.id);
-                }}
-                disabled={automationSaving}
-                className={cn(
-                  "relative w-10 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60",
-                  automation?.absence.enabled ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-600",
-                )}>
-                <span className={cn(
-                  "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
-                  automation?.absence.enabled && "translate-x-4",
-                )} />
-              </button>
-            </div>
-            {automationErr && <p className="text-[12px] text-red-600 dark:text-red-400">{automationErr}</p>}
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 
-        {/* Xabar yuborish */}
-        <Card className="border border-white/60 dark:border-white/10 shadow-none">
-          <CardContent className="p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-neutral-400" />
-              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Yangi xabar</p>
-            </div>
+  // Avtomatlashtirish
+  const automationCard = (
+    <Card className="border border-white/60 dark:border-white/10 shadow-none">
+      <CardContent className="p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Zap className="w-4 h-4 text-amber-500" />
+          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Avtomatlashtirish</p>
+        </div>
 
-            {/* Rejim: shablondan yoki erkin matn */}
-            <div className="flex gap-2">
+        <div className={rowBox}>
+          <div className="flex items-start gap-2.5 min-w-0">
+            <UserX className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">
+                Davomat: "Kelmadi" belgilanganda avtomatik SMS
+              </p>
+              <p className={cn(hintCls, "mt-1.5")}>
+                O'qituvchi davomatda o'quvchini "Kelmadi" deb belgilasa — ota-onasiga (yoki raqami bo'lmasa o'ziga) tanlangan matn avtomatik yuboriladi.
+              </p>
+              {automation?.absence.enabled && (
+                <select
+                  value={automation.absence.templateId ?? ""}
+                  onChange={e => toggleAbsenceAutomation(true, e.target.value)}
+                  className={cn("mt-3 h-10 px-3 text-[13px] w-full max-w-xs", "rounded-lg border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none")}>
+                  {(automation.availableTemplates ?? []).length === 0 && <option value="">Tasdiqlangan matn yo'q</option>}
+                  {(automation.availableTemplates ?? []).map(t => (
+                    <option key={t.id} value={t.id}>{t.title}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const next = !automation?.absence.enabled;
+              if (next && !automation?.availableTemplates?.length) {
+                setAutomationErr("Avval yuqorida tasdiqlangan matn kerak");
+                return;
+              }
+              toggleAbsenceAutomation(next, automation?.availableTemplates?.[0]?.id);
+            }}
+            disabled={automationSaving}
+            className={cn(
+              "relative w-10 h-6 rounded-full transition-colors shrink-0 disabled:opacity-60",
+              automation?.absence.enabled ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-600",
+            )}>
+            <span className={cn(
+              "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+              automation?.absence.enabled && "translate-x-4",
+            )} />
+          </button>
+        </div>
+        {automationErr && <p className="text-[12px] text-red-600 dark:text-red-400">{automationErr}</p>}
+      </CardContent>
+    </Card>
+  );
+
+  // Xabar yuborish
+  const composeCard = (
+    <Card className="border border-white/60 dark:border-white/10 shadow-none">
+      <CardContent className="p-6 space-y-7">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-neutral-400" />
+          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Yangi xabar</p>
+        </div>
+
+        {/* Rejim: shablondan yoki erkin matn */}
+        <div className="space-y-4">
+          <div>
+            {stepLabel(1, "Xabar matni")}
+            <div className={chipRow}>
               {([["template", "Tasdiqlangan matn"], ["free", "Erkin matn"]] as const).map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setComposeMode(v)}
-                  className={cn("h-9 px-4 rounded-xl text-[12px] font-semibold border transition-all",
-                    composeMode === v ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
-                                      : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400")}>
+                  className={chip(composeMode === v)}>
                   {l}
                 </button>
               ))}
             </div>
+          </div>
 
-            {composeMode === "template" ? (
-              approvedTemplates.length === 0 ? (
-                <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-3.5 py-3">
-                  <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-[12px] text-amber-700 dark:text-amber-400">
-                    Hali tasdiqlangan matningiz yo'q. Yuqorida <strong>"Matn qo'shish"</strong> orqali yuboring —
-                    admin tasdiqlagach shu yerda tanlab yuborasiz.
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-[12px] font-medium text-neutral-500 mb-1.5">Matnni tanlang</p>
-                  <div className="flex flex-wrap gap-2">
-                    {approvedTemplates.map(t => (
-                      <button key={t.id} type="button" onClick={() => setTemplateId(t.id)}
-                        className={cn("h-9 px-3.5 rounded-xl text-[12px] font-semibold border-2 transition-all",
-                          templateId === t.id ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400"
-                                               : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400")}>
-                        {t.title}
-                      </button>
-                    ))}
-                  </div>
-                  {selectedTemplate && (
-                    <div className="mt-2.5 rounded-xl glass-soft px-3.5 py-2.5">
-                      <p className="text-[13px] text-neutral-700 dark:text-neutral-300">{selectedTemplate.text}</p>
-                      {selectedTemplate.text.includes("{ism}") && (
-                        <p className="text-[11px] text-neutral-400 mt-1">{"{ism}"} — har bir oluvchiga o'z ismi bilan yuboriladi</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            ) : (
-              <>
-                <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-3 py-2">
-                  <ShieldAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400">
-                    Moderatsiyadan o'tmagan matn operator tomonidan yetkazilmasligi mumkin.
-                  </p>
-                </div>
-                <FormField label="Xabar matni" hint={`${message.length} belgi${message.length > 160 ? " · 160 dan oshsa 2 SMS hisoblanadi" : ""}`}>
-                  <Textarea rows={3} placeholder="Assalomu alaykum! ..." value={message}
-                    onChange={e => setMessage(e.target.value)} />
-                </FormField>
-              </>
-            )}
-
-            {/* Oluvchi turlari */}
-            <div>
-              <p className="text-[12px] font-medium text-neutral-500 mb-1.5">Kimga</p>
-              <div className="flex flex-wrap gap-2">
-                {AUDIENCE_CFG.map(({ key, label, icon: Icon }) => {
-                  const on = audiences.has(key);
-                  return (
-                    <button key={key} type="button" onClick={() => toggleAudience(key)}
-                      className={cn("inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-[12px] font-semibold border-2 transition-all",
-                        on ? "border-neutral-900 dark:border-neutral-100 bg-indigo-600 text-white dark:bg-indigo-500"
-                           : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400")}>
-                      <Icon className="w-3.5 h-3.5" /> {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Qamrov */}
-            <div>
-              <p className="text-[12px] font-medium text-neutral-500 mb-1.5">Qamrov</p>
-              <div className="flex gap-2">
-                {([["all", "Hammaga"], ["selected", "Tanlab"]] as const).map(([v, l]) => (
-                  <button key={v} type="button" onClick={() => setScope(v)}
-                    className={cn("h-9 px-4 rounded-xl text-[12px] font-semibold border transition-all",
-                      scope === v ? "bg-indigo-600 text-white dark:bg-indigo-500 border-neutral-900"
-                                  : "border-white/60 dark:border-white/10 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400")}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tanlab — ro'yxat */}
-            {scope === "selected" && (
-              <div className="rounded-xl border border-white/60 dark:border-white/10 overflow-hidden">
-                <div className="p-2.5 border-b border-white/50 dark:border-white/10">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
-                    <Input placeholder="Qidirish..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
-                  </div>
-                </div>
-                <div className="max-h-64 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
-                  {(audiences.has("students") || audiences.has("parents")) && filteredStudents.map(s => (
-                    <label key={s.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-white/60 dark:hover:bg-white/10">
-                      <input type="checkbox" checked={selStudents.has(s.id)} onChange={() => toggleSet(setSelStudents, s.id)}
-                        className="w-4 h-4 rounded accent-neutral-900 dark:accent-neutral-100" />
-                      <span className="text-[13px] text-neutral-800 dark:text-neutral-200 flex-1">{s.name}</span>
-                      <span className="text-[11px] text-neutral-400">{s.phone}</span>
-                    </label>
-                  ))}
-                  {audiences.has("teachers") && filteredTeachers.map(t => (
-                    <label key={t.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-white/60 dark:hover:bg-white/10">
-                      <input type="checkbox" checked={selTeachers.has(t.id)} onChange={() => toggleSet(setSelTeachers, t.id)}
-                        className="w-4 h-4 rounded accent-neutral-900 dark:accent-neutral-100" />
-                      <span className="text-[13px] text-neutral-800 dark:text-neutral-200 flex-1">{t.user?.name} <span className="text-[11px] text-purple-500">· ustoz</span></span>
-                      <span className="text-[11px] text-neutral-400">{t.phone}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Xulosa + yuborish */}
-            <div className="flex items-center justify-between pt-1">
-              <p className="text-[12px] text-neutral-500">
-                Taxminan <strong className="text-neutral-800 dark:text-neutral-200">{estimate}</strong> ta SMS
-                {estimate > balance && <span className="text-red-500"> · balans yetarli emas</span>}
-              </p>
-              <Button onClick={sendSms} disabled={sending || !configured || balance === 0}
-                className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white h-9 text-[13px]">
-                <Send className="w-4 h-4" /> {sending ? "Yuborilmoqda..." : "Yuborish"}
-              </Button>
-            </div>
-
-            {err && (
-              <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 rounded-xl px-3 py-2.5">
-                <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{err}</p>
-              </div>
-            )}
-            {result && (
-              <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-100 rounded-xl px-3 py-2.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                <p className="text-[12px] font-medium text-green-700 dark:text-green-400">
-                  {result.sent} ta yuborildi{result.failed > 0 ? `, ${result.failed} ta xato` : ""} (jami {result.total})
+          {composeMode === "template" ? (
+            approvedTemplates.length === 0 ? (
+              <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-3.5 py-3">
+                <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-[12px] text-amber-700 dark:text-amber-400">
+                  Hali tasdiqlangan matningiz yo'q. Pastdagi «Mening matnlarim» bo‘limida <strong>"Matn qo'shish"</strong> orqali yuboring —
+                  admin tasdiqlagach shu yerda tanlab yuborasiz.
                 </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Tarix */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <Card className="border border-white/60 dark:border-white/10 shadow-none">
-            <CardContent className="p-0">
-              <p className="px-4 py-3 text-[13px] font-bold text-neutral-900 dark:text-neutral-100 border-b border-white/50 dark:border-white/10">So'nggi yuborilganlar</p>
-              {(sms?.messages ?? []).length === 0 ? (
-                <p className="text-[12px] text-neutral-400 p-6 text-center">Hali SMS yuborilmagan</p>
-              ) : (sms?.messages ?? []).slice(0, 15).map(m => (
-                <div key={m.id} className="flex items-center justify-between px-4 py-2.5 border-b border-white/50 dark:border-white/10 last:border-0">
-                  <div className="min-w-0">
-                    <p className="text-[12px] font-medium text-neutral-800 dark:text-neutral-200 truncate">{m.recipientName ?? m.phone}</p>
-                    <p className="text-[11px] text-neutral-400 truncate">{m.phone} · {formatUzDate(m.createdAt)}</p>
-                  </div>
-                  <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0",
-                    m.status === "SENT" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
-                    {m.status === "SENT" ? "Yuborildi" : "Xato"}
-                  </span>
+            ) : (
+              <div>
+                <p className="text-[12px] font-medium text-neutral-500 mb-1.5">Matnni tanlang</p>
+                <div className={chipRow}>
+                  {approvedTemplates.map(t => (
+                    <button key={t.id} type="button" onClick={() => setTemplateId(t.id)}
+                      className={chip(templateId === t.id)}>
+                      {t.title}
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card className="border border-white/60 dark:border-white/10 shadow-none">
-            <CardContent className="p-0">
-              <p className="px-4 py-3 text-[13px] font-bold text-neutral-900 dark:text-neutral-100 border-b border-white/50 dark:border-white/10">Paket so'rovlari</p>
-              {(sms?.requests ?? []).length === 0 ? (
-                <p className="text-[12px] text-neutral-400 p-6 text-center">So'rovlar yo'q</p>
-              ) : (sms?.requests ?? []).map(r => (
-                <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
-                  <div>
-                    <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{r.quantity} ta · {fmtMoney(r.amount)}</p>
-                    <p className="text-[11px] text-neutral-400">{formatUzDate(r.createdAt)}</p>
+                {selectedTemplate && (
+                  <div className="mt-2.5 rounded-xl glass-soft px-3.5 py-2.5">
+                    <p className="text-[13px] text-neutral-700 dark:text-neutral-300">{selectedTemplate.text}</p>
+                    {selectedTemplate.text.includes("{ism}") && (
+                      <p className="text-[11px] text-neutral-400 mt-1">{"{ism}"} — har bir oluvchiga o'z ismi bilan yuboriladi</p>
+                    )}
                   </div>
-                  <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-semibold", STATUS_COLOR[r.status])}>
-                    {STATUS_LABEL[r.status] ?? r.status}
-                  </span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                )}
+              </div>
+            )
+          ) : (
+            <>
+              <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 rounded-xl px-3 py-2">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                  Moderatsiyadan o'tmagan matn operator tomonidan yetkazilmasligi mumkin.
+                </p>
+              </div>
+              <FormField label="Xabar matni" hint={`${message.length} belgi${message.length > 160 ? " · 160 dan oshsa 2 SMS hisoblanadi" : ""}`}>
+                <Textarea rows={3} placeholder="Assalomu alaykum! ..." value={message}
+                  onChange={e => setMessage(e.target.value)} />
+              </FormField>
+            </>
+          )}
         </div>
+
+        {/* Oluvchi turlari */}
+        <div>
+          {stepLabel(2, "Kimga yuboriladi")}
+          <div className={chipRow}>
+            {AUDIENCE_CFG.map(({ key, label, icon: Icon }) => {
+              const on = audiences.has(key);
+              return (
+                <button key={key} type="button" onClick={() => toggleAudience(key)}
+                  className={chip(on)}>
+                  <Icon className="w-3.5 h-3.5" /> {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Qamrov */}
+        <div>
+          {stepLabel(3, "Hammagami yoki tanlab")}
+          <div className={chipRow}>
+            {([["all", "Hammaga"], ["selected", "Tanlab"]] as const).map(([v, l]) => (
+              <button key={v} type="button" onClick={() => setScope(v)}
+                className={chip(scope === v)}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tanlab — ro'yxat */}
+        {scope === "selected" && (
+          <div className="rounded-xl border border-white/60 dark:border-white/10 overflow-hidden">
+            <div className="p-2.5 border-b border-white/50 dark:border-white/10">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400" />
+                <Input placeholder="Qidirish..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 text-sm" />
+              </div>
+            </div>
+            <div className="max-h-64 overflow-y-auto divide-y divide-neutral-100 dark:divide-neutral-800">
+              {(audiences.has("students") || audiences.has("parents")) && filteredStudents.map(s => (
+                <label key={s.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-white/60 dark:hover:bg-white/10">
+                  <input type="checkbox" checked={selStudents.has(s.id)} onChange={() => toggleSet(setSelStudents, s.id)}
+                    className="w-4 h-4 rounded accent-neutral-900 dark:accent-neutral-100" />
+                  <span className="text-[13px] text-neutral-800 dark:text-neutral-200 flex-1">{s.name}</span>
+                  <span className="text-[11px] text-neutral-400">{s.phone}</span>
+                </label>
+              ))}
+              {audiences.has("teachers") && filteredTeachers.map(t => (
+                <label key={t.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-white/60 dark:hover:bg-white/10">
+                  <input type="checkbox" checked={selTeachers.has(t.id)} onChange={() => toggleSet(setSelTeachers, t.id)}
+                    className="w-4 h-4 rounded accent-neutral-900 dark:accent-neutral-100" />
+                  <span className="text-[13px] text-neutral-800 dark:text-neutral-200 flex-1">{t.user?.name} <span className="text-[11px] text-purple-500">· ustoz</span></span>
+                  <span className="text-[11px] text-neutral-400">{t.phone}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Xulosa + yuborish */}
+        <div className="flex items-center justify-between border-t border-neutral-200/70 dark:border-white/10 pt-5">
+          <p className="text-[13px] text-neutral-500">
+            Taxminan <strong className="text-neutral-800 dark:text-neutral-200">{estimate}</strong> ta SMS
+            {estimate > balance && <span className="text-red-500"> · balans yetarli emas</span>}
+          </p>
+          <Button onClick={sendSms} disabled={sending || !configured || balance === 0}
+            className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white h-10 px-5 text-[14px]">
+            <Send className="w-4 h-4" /> {sending ? "Yuborilmoqda..." : "Yuborish"}
+          </Button>
+        </div>
+
+        {err && (
+          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 rounded-xl px-3 py-2.5">
+            <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+            <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{err}</p>
+          </div>
+        )}
+        {result && (
+          <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 border border-green-100 rounded-xl px-3 py-2.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+            <p className="text-[12px] font-medium text-green-700 dark:text-green-400">
+              {result.sent} ta yuborildi{result.failed > 0 ? `, ${result.failed} ta xato` : ""} (jami {result.total})
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  // Tarix: so'nggi yuborilganlar
+  const sentCard = (
+    <Card className="border border-white/60 dark:border-white/10 shadow-none">
+      <CardContent className="p-0">
+        <p className="px-4 py-3 text-[13px] font-bold text-neutral-900 dark:text-neutral-100 border-b border-white/50 dark:border-white/10">So'nggi yuborilganlar</p>
+        {(sms?.messages ?? []).length === 0 ? (
+          <p className="text-[12px] text-neutral-400 p-6 text-center">Hali SMS yuborilmagan</p>
+        ) : (sms?.messages ?? []).slice(0, 15).map(m => (
+          <div key={m.id} className="flex items-center justify-between px-4 py-2.5 border-b border-white/50 dark:border-white/10 last:border-0">
+            <div className="min-w-0">
+              <p className="text-[12px] font-medium text-neutral-800 dark:text-neutral-200 truncate">{m.recipientName ?? m.phone}</p>
+              <p className="text-[11px] text-neutral-400 truncate">{m.phone} · {formatUzDate(m.createdAt)}</p>
+            </div>
+            <span className={cn("text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0",
+              m.status === "SENT" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                  : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400")}>
+              {m.status === "SENT" ? "Yuborildi" : "Xato"}
+            </span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+
+  // Tarix: paket so'rovlari
+  const requestsCard = (
+    <Card className="border border-white/60 dark:border-white/10 shadow-none">
+      <CardContent className="p-0">
+        <p className="px-4 py-3 text-[13px] font-bold text-neutral-900 dark:text-neutral-100 border-b border-white/50 dark:border-white/10">Paket so'rovlari</p>
+        {(sms?.requests ?? []).length === 0 ? (
+          <p className="text-[12px] text-neutral-400 p-6 text-center">So'rovlar yo'q</p>
+        ) : (sms?.requests ?? []).map(r => (
+          <div key={r.id} className="flex items-center justify-between px-4 py-3 border-b border-white/50 dark:border-white/10 last:border-0">
+            <div>
+              <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{r.quantity} ta · {fmtMoney(r.amount)}</p>
+              <p className="text-[11px] text-neutral-400">{formatUzDate(r.createdAt)}</p>
+            </div>
+            <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-semibold", STATUS_COLOR[r.status])}>
+              {STATUS_LABEL[r.status] ?? r.status}
+            </span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div>
+      <TopHeader title="SMS xabarlar" subtitle="O'quvchi, ota-ona va o'qituvchilarga xabar yuborish" />
+
+      <div className="p-5 space-y-5">
+        {summary}
+        {composeCard}
+        {templatesCard}
+        {automationCard}
+        {sentCard}
+        {requestsCard}
       </div>
 
       {/* Paket sotib olish modal */}

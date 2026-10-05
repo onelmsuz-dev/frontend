@@ -30,7 +30,7 @@ export default function SalaryPage() {
     <div>
       <TopHeader title="Mening oyligim" subtitle="Oylik hisob-kitob va statistika" />
 
-      <div className="p-6 max-w-4xl space-y-5">
+      <div className="p-5 space-y-5">
         {/* Stat kartalar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {isLoading ? (
