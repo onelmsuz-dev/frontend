@@ -10,6 +10,7 @@ import { useBranch } from "@/lib/contexts/branch-context";
 import { BranchPicker } from "@/components/layout/branch-filter";
 import { parseDelimited, mapRows, toCsv, downloadFile, type MappedRow } from "@/lib/csv";
 import { readTable } from "@/lib/xlsx";
+import { buildXlsx } from "@/lib/xlsx-write";
 import { Upload, FileDown, AlertCircle, CheckCircle2, CircleAlert, Copy } from "lucide-react";
 
 interface Props {
@@ -32,8 +33,8 @@ const selectCls =
 
 const TEMPLATE_HEADERS = ["Ism", "Telefon", "Ota-ona telefoni", "Ota-ona ismi", "Maktab", "Jinsi", "Guruh"];
 const TEMPLATE_SAMPLE = [
-  ["Alisher Soipov", "998951236575", "998182735687", "Sobir aka", "12-maktab", "Erkak", "Rus tili guruhi"],
-  ["Dilnoza Karimova", "998901234567", "", "", "", "Ayol", ""],
+  ["Alisher Soipov", "+998951236575", "+998912735687", "Sobir aka", "12-maktab", "Erkak", "Rus tili guruhi"],
+  ["Dilnoza Karimova", "+998901234567", "", "", "", "Ayol", ""],
 ];
 
 /**
@@ -54,6 +55,7 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
   const [rows,     setRows]     = useState<MappedRow[]>([]);
   const [matched,  setMatched]  = useState<string[]>([]);
   const [headerless, setHeaderless] = useState(false);
+  const [brokenPhones, setBrokenPhones] = useState(0);
   const [groupId,  setGroupId]  = useState("");
   // FILIAL — guruhsiz qatorlar uchun, ko'p filialli markazda (2026-09-24).
   const { kopFilial, activeBranchId } = useBranch();
@@ -65,7 +67,7 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
   const [summary,  setSummary]  = useState<{ created: number; duplicates: number; errors: number } | null>(null);
 
   function reset() {
-    setRaw(""); setRows([]); setMatched([]); setHeaderless(false);
+    setRaw(""); setRows([]); setMatched([]); setHeaderless(false); setBrokenPhones(0);
     setErr(""); setResults(null); setSummary(null);
   }
   function closeAll() { reset(); onClose(); }
@@ -77,6 +79,7 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
     setRows(parsed.rows);
     setMatched(parsed.matched);
     setHeaderless(parsed.headerless);
+    setBrokenPhones(parsed.brokenPhones);
   }
 
   function ingest(text: string) {
@@ -104,12 +107,18 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
     }
   }
 
+  /**
+   * Namuna — `.xlsx`, BARCHA ustunlar matn formatida: Excel yozilgan
+   * telefonni 9,98955E+11 ga, "9/1" ni sanaga aylantirmaydi.
+   */
   function downloadTemplate() {
-    downloadFile("oquvchilar-namuna.csv", toCsv(TEMPLATE_HEADERS, TEMPLATE_SAMPLE));
+    downloadFile("oquvchilar-namuna.xlsx", buildXlsx("O'quvchilar",
+      TEMPLATE_HEADERS.map((header) => ({ header, type: "text" as const })), TEMPLATE_SAMPLE));
   }
 
-  const valid = rows.filter(r => r.name.trim().length >= 2 && r.phone.replace(/\D/g, "").length >= 9);
-  const invalid = rows.length - valid.length;
+  const valid = rows.filter(r => !r.brokenPhone && !r.brokenParentPhone
+    && r.name.trim().length >= 2 && r.phone.replace(/\D/g, "").length >= 9);
+  const invalid = rows.length - valid.length - brokenPhones;
 
   async function submit() {
     if (valid.length === 0) { setErr("Yuborish uchun to'g'ri qator yo'q"); return; }
@@ -217,6 +226,8 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
                 </div>
               )}
 
+              {brokenPhones > 0 && <BrokenPhonesNote rows={rows} count={brokenPhones} kind="students" />}
+
               <PreviewTable rows={rows.slice(0, 6)} total={rows.length} />
             </>
           )}
@@ -275,6 +286,43 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
   );
 }
 
+/**
+ * EXCEL BUZGAN TELEFONLAR. Excel telefonni son deb olib CSV'ga saqlasa,
+ * "9,98955E+11" yozadi — oxirgi raqamlar yo'qoladi va ularni o'sha fayldan
+ * tiklab bo'lmaydi. Bunday qatorlar yuborilmaydi; odamga qaysi ustunda nima
+ * bo'lganini va qanday tuzatishni aytamiz (aks holda u "nega 40 tasi
+ * tushmadi" deb qolardi). Ota-ona telefoni buzilgan qator ham ushlab
+ * qolinadi: o'quvchi telefonsiz ota-ona bilan yozilsa, to'g'ri fayl qayta
+ * yuklanganda "dublikat" deb o'tkazilib, ota-ona raqami hech qachon tushmasdi.
+ */
+export function BrokenPhonesNote({ rows, count, kind }: {
+  rows: { name: string; brokenPhone?: string; brokenParentPhone?: string }[];
+  count: number;
+  /** Lidlar uchun tizimdan qayta eksport yo'q — maslahat boshqacha. */
+  kind: "students" | "leads";
+}) {
+  const misol = rows.filter((r) => r.brokenPhone || r.brokenParentPhone).slice(0, 3).map((r) =>
+    `${r.name || "ismsiz"}: ${r.brokenPhone ?? `ota-ona telefoni ${r.brokenParentPhone}`}`);
+  return (
+    <div className="flex items-start gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 rounded-xl px-3 py-2.5"
+      data-buzilgan-telefon={count}>
+      <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />
+      <div className="text-[12px] text-red-700 dark:text-red-400 space-y-1">
+        <p>
+          <strong>{count}{" "}ta qatorda telefon raqami Excel&apos;da buzilgan</strong>{" "}
+          ({misol.join("; ")}{count > misol.length ? "; …" : ""}) — oxirgi raqamlari yo&apos;qolgan
+          va ularni bu fayldan tiklab bo&apos;lmaydi, shuning uchun bu qatorlar yuborilmaydi.
+        </p>
+        <p className="text-red-600/90 dark:text-red-400/90">
+          {"Tuzatish: "}
+          {kind === "students" && <>{"ro'yxatni tizimdan qaytadan "}<strong>Eksport (Excel)</strong>{" qilib oling yoki "}</>}
+          {"asl jadvalni CSV qilib saqlamasdan, "}<strong>.xlsx</strong>{" ko'rinishida yuklang."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const FIELD_LABELS: Record<string, string> = {
   name: "Ism", phone: "Telefon", parentPhone: "Ota-ona tel", parentName: "Ota-ona ismi",
   school: "Maktab", source: "Manba", gender: "Jinsi", groupName: "Guruh",
@@ -294,12 +342,21 @@ function PreviewTable({ rows, total }: { rows: MappedRow[]; total: number }) {
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {rows.map((r, i) => {
-              const bad = r.name.trim().length < 2 || r.phone.replace(/\D/g, "").length < 9;
+              const bad = !!r.brokenPhone || !!r.brokenParentPhone
+                || r.name.trim().length < 2 || r.phone.replace(/\D/g, "").length < 9;
               return (
                 <tr key={i} className={cn(bad && "bg-amber-50/60 dark:bg-amber-900/10")}>
                   <td className="px-3 py-1.5 text-neutral-800 dark:text-neutral-200">{r.name || "—"}</td>
-                  <td className="px-3 py-1.5 text-neutral-600 dark:text-neutral-400">{r.phone || "—"}</td>
-                  <td className="px-3 py-1.5 text-neutral-500">{r.parentPhone || "—"}</td>
+                  <td className="px-3 py-1.5 text-neutral-600 dark:text-neutral-400">
+                    {r.brokenPhone
+                      ? <span className="text-red-600 dark:text-red-400" title="Excel raqamni buzgan">{r.brokenPhone}</span>
+                      : r.phone || "—"}
+                  </td>
+                  <td className="px-3 py-1.5 text-neutral-500">
+                    {r.brokenParentPhone
+                      ? <span className="text-red-600 dark:text-red-400" title="Excel raqamni buzgan">{r.brokenParentPhone}</span>
+                      : r.parentPhone || "—"}
+                  </td>
                   <td className="px-3 py-1.5 text-neutral-500">{r.groupName || "—"}</td>
                 </tr>
               );

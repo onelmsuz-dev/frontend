@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { parseDelimited, mapLeadRows, toCsv, downloadFile, type MappedLead } from "@/lib/csv";
 import { readTable } from "@/lib/xlsx";
+import { buildXlsx } from "@/lib/xlsx-write";
+import { BrokenPhonesNote } from "@/components/students/student-import-modal";
 import { SourcePicker } from "./source-picker";
 import { Upload, FileDown, AlertCircle, CheckCircle2, CircleAlert, GraduationCap } from "lucide-react";
 
@@ -32,7 +34,7 @@ import { Upload, FileDown, AlertCircle, CheckCircle2, CircleAlert, GraduationCap
 
 const TEMPLATE_HEADERS = ["Ism", "Telefon", "Maktab", "Sinf", "Izoh"];
 const TEMPLATE_SAMPLE = [
-  ["Alisher Soipov", "998951236575", "12-maktab", "9-A", "Matematikaga qiziqadi"],
+  ["Alisher Soipov", "+998951236575", "12-maktab", "9-A", "Matematikaga qiziqadi"],
   ["Dilnoza Karimova", "", "12-maktab", "9-A", ""],
 ];
 
@@ -56,6 +58,7 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
   const [matched, setMatched] = useState<string[]>([]);
   const [scoreCols, setScoreCols] = useState<string[]>([]);
   const [headerless, setHeaderless] = useState(false);
+  const [brokenPhones, setBrokenPhones] = useState(0);
   const [source,  setSource]  = useState("Maktab tashrifi");
   const [busy,    setBusy]    = useState(false);
   const [err,     setErr]     = useState("");
@@ -63,7 +66,7 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
 
   function reset() {
     setRaw(""); setRows([]); setMatched([]); setScoreCols([]);
-    setHeaderless(false); setErr(""); setSummary(null);
+    setHeaderless(false); setBrokenPhones(0); setErr(""); setSummary(null);
   }
   function closeAll() { reset(); onClose(); }
 
@@ -72,6 +75,7 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
     const p = mapLeadRows(table);
     setRows(p.rows); setMatched(p.matched);
     setScoreCols(p.scoreColumns); setHeaderless(p.headerless);
+    setBrokenPhones(p.brokenPhones);
   }
 
   function ingest(text: string) {
@@ -107,8 +111,13 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
    */
   const BOLAK = 1000;
 
+  // Telefoni Excel'da buzilgan qatorlar YUBORILMAYDI: telefonsiz yozilsa,
+  // to'g'ri fayl bilan qayta yuklanganda dublikat tekshiruvi ularni
+  // tanimay, ikkinchi nusxa ochilardi.
+  const sendable = rows.filter((r) => !r.brokenPhone);
+
   async function submit() {
-    if (rows.length === 0) { setErr("Yuborish uchun qator yo'q"); return; }
+    if (sendable.length === 0) { setErr("Yuborish uchun qator yo'q"); return; }
     if (!source.trim())    { setErr("Manba tanlang"); return; }
     setBusy(true); setErr("");
     try {
@@ -117,9 +126,9 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
       // shu nomuvofiqlik tufayli "N ta o'tkazib yuborildi" qatori ekranda
       // HECH QACHON chiqmagan.
       const jami = { created: 0, duplicates: 0, skipped: 0 };
-      for (let i = 0; i < rows.length; i += BOLAK) {
-        const bolak = rows.slice(i, i + BOLAK);
-        setProgress({ done: i, total: rows.length });
+      for (let i = 0; i < sendable.length; i += BOLAK) {
+        const bolak = sendable.slice(i, i + BOLAK);
+        setProgress({ done: i, total: sendable.length });
         const res = await fetch("/api/leads/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -146,8 +155,8 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
     finally { setBusy(false); setProgress(null); }
   }
 
-  const withPhone = rows.filter((r) => (r.phone ?? "").replace(/\D/g, "").length >= 9).length;
-  const bolaklar = Math.ceil(rows.length / 1000);
+  const withPhone = sendable.filter((r) => (r.phone ?? "").replace(/\D/g, "").length >= 9).length;
+  const bolaklar = Math.ceil(sendable.length / 1000);
 
   return (
     <Modal open={open} onClose={closeAll} size="lg"
@@ -166,11 +175,11 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
           </>
         ) : (
           <>
-            <Button onClick={submit} disabled={busy || rows.length === 0}
+            <Button onClick={submit} disabled={busy || sendable.length === 0}
               className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-semibold">
               {busy ? "Yuborilmoqda…"
-                    : rows.length > 0 ? `${rows.length} ta lidni qo'shish`
-                                      : "Qo'shish"}
+                    : sendable.length > 0 ? `${sendable.length} ta lidni qo'shish`
+                                          : "Qo'shish"}
             </Button>
             <Button variant="outline" className="h-10 px-4 text-[13px]" onClick={closeAll}>
               Bekor
@@ -209,7 +218,9 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
             <input ref={fileRef} type="file" onChange={onFile} className="hidden"
               accept=".xlsx,.csv,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
             <button type="button"
-              onClick={() => downloadFile("lidlar-namuna.csv", toCsv(TEMPLATE_HEADERS, TEMPLATE_SAMPLE))}
+              onClick={() => downloadFile("lidlar-namuna.xlsx", buildXlsx("Lidlar",
+                // Hammasi MATN: telefon 9,98955E+11 ga, "9/1" sinf sanaga aylanmasin.
+                TEMPLATE_HEADERS.map((header) => ({ header, type: "text" as const })), TEMPLATE_SAMPLE))}
               className="flex items-center gap-1.5 h-9 px-3 rounded-xl text-[12px] font-semibold
                          glass-soft text-neutral-600 dark:text-neutral-300
                          hover:bg-white/70 dark:hover:bg-white/10 transition-colors">
@@ -233,13 +244,15 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
             <div className="space-y-2.5">
               <div className="flex flex-wrap items-center gap-2 text-[12px]">
                 <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                  {rows.length}{" "}ta qator o&apos;qildi
+                  {sendable.length}{" "}ta qator o&apos;qildi
                 </span>
                 <span className="text-neutral-400">·</span>
                 <span className="text-neutral-600 dark:text-neutral-400">
                   {withPhone} tasida telefon bor
                 </span>
               </div>
+
+              {brokenPhones > 0 && <BrokenPhonesNote rows={rows} count={brokenPhones} kind="leads" />}
 
               {headerless && (
                 <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20">
@@ -266,7 +279,7 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
                 <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20">
                   <CircleAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-px" />
                   <p className="text-[11px] leading-relaxed text-neutral-700 dark:text-neutral-300">
-                    {rows.length}{" "}ta qator {bolaklar}{" "}bo&apos;lakda ketma-ket
+                    {sendable.length}{" "}ta qator {bolaklar}{" "}bo&apos;lakda ketma-ket
                     yuboriladi. Oyna yopilmasin — hammasi o&apos;tguncha kuting.
                   </p>
                 </div>
@@ -297,9 +310,11 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
                         <tr key={i} className="border-t border-neutral-100 dark:border-neutral-800">
                           <td className="px-2.5 py-1.5 text-neutral-900 dark:text-neutral-100">{r.name}</td>
                           <td className={cn("px-2.5 py-1.5 tabular-nums",
-                            r.phone ? "text-neutral-600 dark:text-neutral-300"
-                                    : "text-neutral-300 dark:text-neutral-600")}>
-                            {r.phone || "—"}
+                            r.brokenPhone ? "text-red-600 dark:text-red-400"
+                            : r.phone ? "text-neutral-600 dark:text-neutral-300"
+                                      : "text-neutral-300 dark:text-neutral-600")}
+                            title={r.brokenPhone ? "Excel raqamni buzgan — qator yuborilmaydi" : undefined}>
+                            {r.brokenPhone || r.phone || "—"}
                           </td>
                           {matched.includes("school") && (
                             <td className="px-2.5 py-1.5 text-neutral-600 dark:text-neutral-300">{r.school || "—"}</td>

@@ -28,7 +28,9 @@ import { useGroups } from "@/lib/hooks/useGroups";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { payStatusFromBalance, PAY_STATUS_CFG } from "@/lib/payment-status";
-import { toCsv, downloadFile, exportPhone } from "@/lib/csv";
+import { downloadFile } from "@/lib/csv";
+import { buildXlsx, type XlsxColumn } from "@/lib/xlsx-write";
+import { businessTodayStr } from "@/lib/time";
 import { mutate } from "swr";
 import { formatUzDate } from "@/lib/date-uz";
 import { formatCurrency, formatNumber } from "@/lib/money";
@@ -260,14 +262,26 @@ export default function StudentsPage() {
     } finally { setActivating(null); }
   }
 
-  /** Ekrandagi (filtrlangan) ro'yxatni CSV qilib beradi. */
-  function exportCsv() {
+  /**
+   * Ekrandagi (filtrlangan) ro'yxatni Excel fayli (.xlsx) qilib beradi.
+   *
+   * CSV EMAS (2026-10-05, Mudarris): Excel CSV'dagi kirill ismlarni
+   * "РђР‘Р”..." qilib, telefonlarni 9,98955E+11 qilib ko'rsatardi —
+   * sababi `lib/xlsx-write.ts` da. Telefon MATN katak (raqami to'liq,
+   * "+" bilan), balans SON, qo'shilgan sana haqiqiy Excel SANASI —
+   * saralash va filtr ishlaydi.
+   */
+  function exportExcel() {
+    const sana = (v?: string | null) => {
+      const d = v ? new Date(v) : null;
+      return d && !Number.isNaN(d.getTime()) ? businessTodayStr(d) : "";
+    };
     const rows = students.map(s => {
       const gs = activeGroupsOf(s);
       return [
         s.name,
-        exportPhone(s.phone),
-        exportPhone(s.parentPhone),
+        s.phone ?? "",
+        s.parentPhone ?? "",
         s.parentName ?? "",
         s.school ?? "",
         s.gender === "MALE" ? "Erkak" : s.gender === "FEMALE" ? "Ayol" : "",
@@ -277,18 +291,25 @@ export default function StudentsPage() {
         // Qarz ustuni faqat moliya huquqi bo'lganda — aks holda javobda
         // balans yo'q va eksportda chalg'ituvchi "0" chiqardi.
         ...(canSeeMoney ? [Math.round(s.balance ?? 0)] : []),
-        formatUzDate(s.joinedAt ?? s.createdAt),
+        sana(s.joinedAt ?? s.createdAt),
       ];
     });
-    downloadFile(
-      `oquvchilar-${new Date().toISOString().slice(0, 10)}.csv`,
-      toCsv(
-        ["Ism", "Telefon", "Ota-ona telefoni", "Ota-ona ismi", "Maktab", "Jinsi",
-         "Guruh", "O'qituvchi", "Holat",
-         ...(canSeeMoney ? ["Balans"] : []), "Qo'shilgan"],
-        rows,
-      ),
-    );
+    const columns: XlsxColumn[] = [
+      { header: "Ism" },
+      { header: "Telefon", type: "text" },
+      { header: "Ota-ona telefoni", type: "text" },
+      { header: "Ota-ona ismi" },
+      { header: "Maktab" },
+      { header: "Jinsi" },
+      { header: "Guruh" },
+      { header: "O'qituvchi" },
+      { header: "Holat" },
+      ...(canSeeMoney ? [{ header: "Balans", type: "money" } as XlsxColumn] : []),
+      { header: "Qo'shilgan", type: "date" },
+    ];
+    // Fayl nomidagi sana — Toshkent kuni (UTC bo'yicha yarim tundan keyin
+    // 05:00 gacha kechagi sana chiqardi).
+    downloadFile(`oquvchilar-${businessTodayStr()}.xlsx`, buildXlsx("O'quvchilar", columns, rows));
   }
 
   /**
@@ -457,8 +478,8 @@ export default function StudentsPage() {
               <MoreHorizontal className="w-4 h-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[210px]">
-              <DropdownMenuItem onClick={exportCsv} disabled={students.length === 0}>
-                <Download className="w-3.5 h-3.5" /> Eksport (CSV) — {students.length} ta
+              <DropdownMenuItem onClick={exportExcel} disabled={students.length === 0}>
+                <Download className="w-3.5 h-3.5" /> Eksport (Excel) — {students.length} ta
               </DropdownMenuItem>
               {canCreate && (
                 <DropdownMenuItem onClick={() => setShowImport(true)}>

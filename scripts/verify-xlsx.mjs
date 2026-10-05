@@ -126,8 +126,10 @@ const dir = mkdtempSync(join(tmpdir(), "xlsx-"));
 try {
   // `lib/xlsx.ts` ni ishga tushirish uchun JS ga aylantiramiz.
   const js = join(dir, "xlsx.mjs");
-  execFileSync("npx", ["esbuild", "lib/xlsx.ts", "--format=esm",
-    "--target=node20", "--outfile=" + js], { stdio: "pipe" });
+  // `--bundle`: `lib/xlsx.ts` endi `./csv` ni import qiladi (kodlash va
+  // kirill tiklash) — usiz vaqtinchalik papkada `csv` topilmay yiqilardi.
+  execFileSync("npx", ["esbuild", "lib/xlsx.ts", "--bundle", "--format=esm",
+    "--platform=node", "--target=node20", "--outfile=" + js], { stdio: "pipe" });
   const { parseXlsx, readTable } = await import(js);
 
   const base = [["[Content_Types].xml", CT], ["xl/workbook.xml", WB],

@@ -9,6 +9,8 @@ import {
 import { cn } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
 import { formatUzDate } from "@/lib/date-uz";
+import { buildXlsx, type XlsxColumn } from "@/lib/xlsx-write";
+import { businessTodayStr } from "@/lib/time";
 import { TargetGuide } from "@/components/leads/target-guide";
 import { useLeadStages } from "@/lib/hooks/useLeads";
 
@@ -155,25 +157,29 @@ export function TargetLeads() {
   }
 
   /**
-   * EXCEL — CSV, `﻿` (BOM) bilan.
+   * EXCEL — haqiqiy `.xlsx` (`lib/xlsx-write.ts`, kutubxonasiz).
    *
-   * BOM SHART: usiz Excel faylni UTF-8 deb tanimaydi va o'zbekcha
-   * harflar («o'», «g'») krakozyabraga aylanadi. Haqiqiy `.xlsx`
-   * yozish uchun kutubxona kerak bo'lardi — loyihada faqat O'QIGICH
-   * bor, va bitta eksport uchun 300 KB qo'shish arzimaydi.
+   * Ilgari BOM'li CSV edi: telefon Excel'da 9,98955E+11 bo'lib ko'rinardi,
+   * ingliz lokalidagi Excel esa `;` ni ajratgich deb tanimay, hammasini
+   * bitta ustunga tiqardi. Telefon — MATN katak, sana — Excel SANASI.
    */
   function excel() {
-    const qator = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const csv = [
-      ["Ism", "Telefon", "Kurs", "Maktab", "Sinf", "Qo'shimcha",
-       "Izoh", "Bosqich", "Mas'ul", "Sana"].map(qator).join(";"),
-      ...amalUchun.map(l => [
-        l.name, l.phone, l.course ?? "", l.school ?? "", l.grade ?? "",
-        qoshimcha(l), l.note ?? "", bosqichNomi.get(l.stageId ?? "") ?? "",
-        l.assignedTo?.name ?? "", formatUzDate(l.createdAt),
-      ].map(qator).join(";")),
-    ].join("\r\n");
-    yuklab(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }), "csv");
+    const sana = (v?: string | null) => {
+      const d = v ? new Date(v) : null;
+      return d && !Number.isNaN(d.getTime()) ? businessTodayStr(d) : "";
+    };
+    const columns: XlsxColumn[] = [
+      { header: "Ism" }, { header: "Telefon", type: "text" }, { header: "Kurs" },
+      { header: "Maktab" }, { header: "Sinf", type: "text" }, { header: "Qo'shimcha" },
+      { header: "Izoh" }, { header: "Bosqich" }, { header: "Mas'ul" },
+      { header: "Sana", type: "date" },
+    ];
+    const rows = amalUchun.map(l => [
+      l.name, l.phone, l.course ?? "", l.school ?? "", l.grade ?? "",
+      qoshimcha(l), l.note ?? "", bosqichNomi.get(l.stageId ?? "") ?? "",
+      l.assignedTo?.name ?? "", sana(l.createdAt),
+    ]);
+    yuklab(buildXlsx("Target lidlari", columns, rows), "xlsx");
   }
 
   async function pdf() {
@@ -213,7 +219,7 @@ export function TargetLeads() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `target-lidlar-${new Date().toISOString().slice(0, 10)}.${ken}`;
+    a.download = `target-lidlar-${businessTodayStr()}.${ken}`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
