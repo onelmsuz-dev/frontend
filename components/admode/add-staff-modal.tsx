@@ -72,15 +72,38 @@ export function AddStaffModal({ orgs, initialOrgId = "", onClose, onDone }: Prop
   const [err, setErr]           = useState("");
   const [tayyor, setTayyor]     = useState<{ name: string; phone: string; parol: string; org: AdmodeOrg; rol: string } | null>(null);
   const [nusxa, setNusxa]       = useState(false);
+  const [orinOchilmoqda, setOrinOchilmoqda] = useState(false);
 
-  const { data: opts, isLoading } = useSWR<StaffOptions>(
+  const { data: opts, isLoading, mutate: optsYangila } = useSWR<StaffOptions>(
     orgId ? `/api/admode/organizations/${orgId}/staff-options` : null, fetcher);
 
   // Rol tanlanmagan bo'lsa — markazning birinchi maxsus roli, bo'lmasa qabulxona.
   const tanlanganRol = rol || (opts?.staffRoles?.[0] ? `STAFF:${opts.staffRoles[0].id}` : "RECEPTIONIST");
   const egami = tanlanganRol === "SUPER_ADMIN";
-  const limitToldi = !!opts && !opts.limit.isDemo && opts.limit.used >= opts.limit.max;
+  // Demo markaz ham: xodim limiti hamma markazga bir xil (tarif + qo'shimcha o'rin).
+  const limitToldi = !!opts && opts.limit.used >= opts.limit.max;
   const raqamlar = phone.replace(/\D/g, "");
+
+  /** Limit to'lgan markazga shu oynaning o'zidan 1 ta qo'shimcha o'rin. */
+  async function orinOch() {
+    if (!opts || !orgId) return;
+    setOrinOchilmoqda(true); setErr("");
+    try {
+      const res = await fetch(`/api/admode/organizations/${orgId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        // MUTLAQ son: tugma javobgacha o'chiq, qayta yuborilsa ham bittadan ortmaydi.
+        body: JSON.stringify({ extraStaffSlots: opts.limit.extra + 1 }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        setErr(d?.error ?? "O'rin ochib bo'lmadi");
+        return;
+      }
+      await optsYangila();
+    } catch { setErr("Serverga ulanib bo'lmadi"); }
+    finally { setOrinOchilmoqda(false); }
+  }
 
   function markazAlmash(id: string) {
     setOrgId(id); setRol(""); setFiliallar([]); setErr("");
@@ -180,13 +203,21 @@ export function AddStaffModal({ orgs, initialOrgId = "", onClose, onDone }: Prop
                 {orgs.map((o) => <option key={o.id} value={o.id}>{o.name} · {o.subdomain}</option>)}
               </select>
               {opts?.limit && (
-                <p className={cn("text-[11px] mt-1.5", limitToldi ? "text-red-600 dark:text-red-400" : "text-neutral-500")} data-limit>
-                  {opts.limit.isDemo
-                    ? "Demo markaz — xodim limiti yo'q"
-                    : `Xodimlar: ${opts.limit.used} / ${opts.limit.max} · ${opts.limit.plan} tarifi` +
+                <div className="flex items-center justify-between gap-2 mt-1.5">
+                  <p className={cn("text-[11px]", limitToldi ? "text-red-600 dark:text-red-400" : "text-neutral-500")} data-limit>
+                    {`Xodimlar: ${opts.limit.used} / ${opts.limit.max} · ${opts.limit.plan} tarifi` +
                       (opts.limit.extra > 0 ? ` + ${opts.limit.extra} qo'shimcha` : "")}
-                  {limitToldi && " — limit to'lgan: Tashkilotlar bo'limida qo'shimcha o'rin oching yoki tarifni oshiring"}
-                </p>
+                    {limitToldi && " — limit to'lgan"}
+                  </p>
+                  {/* Limit to'lsa — shu yerning o'zida o'rin ochiladi (Tashkilotlar
+                      jadvalidagi "+" bilan bir xil: mutlaq son, markaz tarixiga yoziladi). */}
+                  {limitToldi && (
+                    <button type="button" onClick={orinOch} disabled={orinOchilmoqda} data-orin-och
+                      className="shrink-0 h-7 px-2.5 rounded-lg text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 disabled:opacity-50 transition-colors">
+                      {orinOchilmoqda ? "Ochilmoqda…" : "Yana 1 ta o'rin ochish"}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 

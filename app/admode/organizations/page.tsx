@@ -671,11 +671,11 @@ export default function OrganizationsPage() {
                           <div className="flex flex-col gap-1">
                             <span
                               className={cn("text-[13px] font-bold whitespace-nowrap",
-                                !org.isDemo && org.staff && org.staff.used >= org.staff.max
+                                org.staff && org.staff.used >= org.staff.max
                                   ? "text-amber-600 dark:text-amber-400"
                                   : "text-neutral-700 dark:text-neutral-300")}
-                              title={org.isDemo ? "Demo markaz — xodim limiti yo'q" : "Band / limit (egasi hisobga kirmaydi)"}>
-                              {org.staff?.used ?? 0} / {org.isDemo ? "∞" : (org.staff?.max ?? "—")}
+                              title="Band / limit (egasi hisobga kirmaydi). Demo markazga ham amal qiladi.">
+                              {org.staff?.used ?? 0} / {org.staff?.max ?? "—"}
                             </span>
                             <div className="flex items-center gap-1">
                               <button disabled={staffId === org.id || !org.extraStaffSlots}

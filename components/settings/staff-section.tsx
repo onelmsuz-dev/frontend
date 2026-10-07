@@ -334,8 +334,8 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
               style={{ width: `${Math.min(100, (used / Math.max(limit, 1)) * 100)}%` }} />
           </div>
           {atLimit && (
-            <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-1.5">
-              Limit to&apos;ldi — yangi xodim uchun tarifni yangilang
+            <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-1.5" data-limit-toldi>
+              {"Limit to'ldi. Yana xodim kerak bo'lsa, platformadan qo'shimcha o'rin so'rang yoki tarifni yangilang."}
             </p>
           )}
         </div>
