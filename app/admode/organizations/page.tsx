@@ -67,6 +67,7 @@ export default function OrganizationsPage() {
   const [deleteErr,  setDeleteErr]  = useState("");
   const [gamiId,     setGamiId]     = useState<string | null>(null);
   const [demoId,     setDemoId]     = useState<string | null>(null);
+  const [staffId,    setStaffId]    = useState<string | null>(null);
   const [resetId,    setResetId]    = useState<string | null>(null);
 
   // Password reset state
@@ -277,6 +278,32 @@ export default function OrganizationsPage() {
       mutate();
     } catch { setDeleteErr("Serverga ulanib bo'lmadi"); }
     finally { setGamiId(null); }
+  }
+
+  /**
+   * QO'SHIMCHA XODIM O'RNI — tarifni almashtirmasdan markazga yana xodim
+   * qo'shishga ruxsat (2026-10-07). Markaz ochilgan o'ringa xodimni O'ZI
+   * qo'shadi. MUTLAQ son yuboriladi va ro'yxat qayta yuklanmaguncha tugmalar
+   * o'chiq turadi — aks holda tez ikki bosishda ikkinchisi eski qiymatdan
+   * hisoblanib, bitta o'rin yo'qolardi.
+   */
+  async function setExtraStaff(id: string, extraStaffSlots: number) {
+    if (extraStaffSlots < 0) return;
+    setStaffId(id);
+    try {
+      const res = await fetch(`/api/admode/organizations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ extraStaffSlots }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setDeleteErr(d.error ?? "Xodim o'rnini o'zgartirib bo'lmadi");
+        return;
+      }
+      await mutate();
+    } catch { setDeleteErr("Serverga ulanib bo'lmadi"); }
+    finally { setStaffId(null); }
   }
 
   async function changePlan(id: string, plan: string) {
@@ -529,7 +556,7 @@ export default function OrganizationsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80">
-                {["Tashkilot", "Tarif", "O'quvchi", "O'qituvchi", "Guruh", "Xona", "Kurs", "Daromad", "Holat", "Demo", "Dvigatel", "Gamifikatsiya", "Qo'shilgan", "Amallar"].map(h => (
+                {["Tashkilot", "Tarif", "O'quvchi", "O'qituvchi", "Xodim", "Guruh", "Xona", "Kurs", "Daromad", "Holat", "Demo", "Dvigatel", "Gamifikatsiya", "Qo'shilgan", "Amallar"].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-[10px] font-bold text-neutral-500 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -540,7 +567,7 @@ export default function OrganizationsPage() {
               {isLoading
                 ? Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i} className="border-b border-neutral-200 dark:border-neutral-800/50">
-                      {Array.from({ length: 13 }).map((_, j) => (
+                      {Array.from({ length: 15 }).map((_, j) => (
                         <td key={j} className="px-4 py-3.5"><Skeleton className="h-3.5 w-full" /></td>
                       ))}
                     </tr>
@@ -635,6 +662,41 @@ export default function OrganizationsPage() {
                           <div className="flex items-center gap-1">
                             <Users className="w-3 h-3 text-purple-500" />
                             <span className="text-[13px] font-bold text-purple-600 dark:text-purple-400">{org._count.teachers}</span>
+                          </div>
+                        </td>
+                        {/* XODIM — "band / limit" va tarifdan tashqari o'rinlar.
+                            −/+ tarifni almashtirmasdan o'rin ochadi yoki yopadi;
+                            ochilgan o'ringa markaz xodimni o'zi qo'shadi. */}
+                        <td className="px-4 py-3.5">
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className={cn("text-[13px] font-bold whitespace-nowrap",
+                                !org.isDemo && org.staff && org.staff.used >= org.staff.max
+                                  ? "text-amber-600 dark:text-amber-400"
+                                  : "text-neutral-700 dark:text-neutral-300")}
+                              title={org.isDemo ? "Demo markaz — xodim limiti yo'q" : "Band / limit (egasi hisobga kirmaydi)"}>
+                              {org.staff?.used ?? 0} / {org.isDemo ? "∞" : (org.staff?.max ?? "—")}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button disabled={staffId === org.id || !org.extraStaffSlots}
+                                onClick={() => setExtraStaff(org.id, (org.extraStaffSlots ?? 0) - 1)}
+                                title="Qo'shimcha o'rinni bittaga kamaytirish"
+                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 transition-colors">
+                                −
+                              </button>
+                              <span
+                                className={cn("text-[10px] font-semibold min-w-6 text-center",
+                                  org.extraStaffSlots ? "text-emerald-600 dark:text-emerald-400" : "text-neutral-400")}
+                                title="Tarifdan tashqari berilgan qo'shimcha o'rinlar">
+                                +{org.extraStaffSlots ?? 0}
+                              </span>
+                              <button disabled={staffId === org.id}
+                                onClick={() => setExtraStaff(org.id, (org.extraStaffSlots ?? 0) + 1)}
+                                title="Markazga yana 1 ta xodim o'rni ochish"
+                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-500 hover:border-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-40 transition-colors">
+                                +
+                              </button>
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3.5">

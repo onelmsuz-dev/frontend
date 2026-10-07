@@ -26,7 +26,8 @@ interface StaffOptions {
   org: AdmodeOrg;
   staffRoles: { id: string; name: string }[];
   branches: { id: string; name: string }[];
-  limit: { used: number; max: number; plan: string; isDemo: boolean };
+  /** `max` — tarif + qo'shimcha o'rinlar (`extra`), server hisoblaydi. */
+  limit: { used: number; max: number; extra: number; plan: string; isDemo: boolean };
 }
 
 /** Standart (eski) rollar — markazda maxsus rol bo'lmasa ham tanlash mumkin. */
@@ -182,8 +183,9 @@ export function AddStaffModal({ orgs, initialOrgId = "", onClose, onDone }: Prop
                 <p className={cn("text-[11px] mt-1.5", limitToldi ? "text-red-600 dark:text-red-400" : "text-neutral-500")} data-limit>
                   {opts.limit.isDemo
                     ? "Demo markaz — xodim limiti yo'q"
-                    : `Xodimlar: ${opts.limit.used} / ${opts.limit.max} · ${opts.limit.plan} tarifi`}
-                  {limitToldi && " — limit to'lgan, avval Markazlar bo'limida tarifni oshiring"}
+                    : `Xodimlar: ${opts.limit.used} / ${opts.limit.max} · ${opts.limit.plan} tarifi` +
+                      (opts.limit.extra > 0 ? ` + ${opts.limit.extra} qo'shimcha` : "")}
+                  {limitToldi && " — limit to'lgan: Tashkilotlar bo'limida qo'shimcha o'rin oching yoki tarifni oshiring"}
                 </p>
               )}
             </div>

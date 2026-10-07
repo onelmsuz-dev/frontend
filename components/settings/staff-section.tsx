@@ -97,7 +97,9 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
   const [resetErr, setResetErr] = useState("");
   const [resetSaving, setResetSaving] = useState(false);
 
-  const limit = org?.limits?.maxStaff;
+  // Haqiqiy limit = tarif + platforma bergan qo'shimcha o'rinlar (server hisoblaydi).
+  const limit = org?.staffMax ?? org?.limits?.maxStaff;
+  const extra: number = org?.extraStaffSlots ?? 0;
   const used  = org?.usage?.staff ?? Math.max(users.length - 1, 0);
   const atLimit = typeof limit === "number" && used >= limit;
 
@@ -316,6 +318,9 @@ export function StaffSection({ branches }: { branches: Branch[] }) {
           <div className="flex items-baseline justify-between gap-2 mb-1.5">
             <span className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-300">
               Tarif limiti{org?.limits?.label ? ` · ${org.limits.label}` : ""}
+              {extra > 0 && (
+                <span className="font-normal text-emerald-600 dark:text-emerald-400"> + {extra} qo&apos;shimcha</span>
+              )}
             </span>
             <span className={cn(
               "text-[12px] font-bold tabular-nums",

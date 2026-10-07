@@ -154,7 +154,9 @@ export function TarifSection() {
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <UsageBar icon={Users}    label="O'quvchilar" used={sub.usage.students.used} max={sub.usage.students.max} />
               <UsageBar icon={Building} label="Filiallar"   used={sub.usage.branches.used} max={sub.usage.branches.max} />
-              <UsageBar icon={UserCog}  label="Xodimlar"    used={sub.usage.staff.used}    max={sub.usage.staff.max} />
+              <UsageBar icon={UserCog}
+                label={sub.usage.staff.extra ? `Xodimlar (+${sub.usage.staff.extra} qo'shimcha)` : "Xodimlar"}
+                used={sub.usage.staff.used} max={sub.usage.staff.max} />
             </div>
           )}
         </CardContent>

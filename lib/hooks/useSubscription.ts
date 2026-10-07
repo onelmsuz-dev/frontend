@@ -28,7 +28,8 @@ export interface SubscriptionData {
   usage: {
     students: { used: number; max: number };
     branches: { used: number; max: number };
-    staff: { used: number; max: number };
+    /** `max` — tarif + qo'shimcha o'rinlar (`extra`, platforma beradi). */
+    staff: { used: number; max: number; extra?: number };
   };
   subscription: { active: boolean; daysLeft: number; expiresAt: string | null; warning: boolean; blocked: boolean };
   requests: Array<{
