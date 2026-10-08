@@ -213,6 +213,9 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
                 scheduleDays={group.scheduleDays ?? []}
                 students={students}
                 canMark={canMarkAttendance}
+                startTime={group.startTime}
+                startDate={group.startDate}
+                endDate={group.endDate}
               />
             ) : (
               <p className="text-[12px] text-neutral-400 px-5 py-8 text-center glass-panel border border-white/60 dark:border-white/10 rounded-2xl">

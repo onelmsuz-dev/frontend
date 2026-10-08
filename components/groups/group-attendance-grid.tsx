@@ -6,8 +6,9 @@ import useSWR, { mutate } from "swr";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
-import { attendanceFrom } from "@/lib/attendance-from";
-import { businessToday, toDateStr } from "@/lib/time";
+import { attendanceFrom, kunUz } from "@/lib/attendance-from";
+import { businessMinutesOfDay, businessToday, toDateStr } from "@/lib/time";
+import { ATTENDANCE_GRACE_MINUTES } from "@/lib/form-constants";
 import { UZ_MONTHS_SHORT, UZ_WEEKDAYS } from "@/lib/date-uz";
 
 type Status = "KELDI" | "KELMADI" | "KECH_KELDI" | "SABABLI" | "SINOV_DARSI";
@@ -51,9 +52,15 @@ function useMounted() {
  * DAVOMAT — OY JADVALI (sana × o'quvchi).
  *
  * Kun-kun varaqlash o'rniga BUTUN OY bir ko'rinishda: xodim "kim necha kun
- * qatnashgan" ni pastga tushmasdan ko'radi. Faqat BUGUNGI ustun bosiladi —
- * o'tgan kunlar jurnal, o'zgartirib bo'lmaydi (xatoni tuzatish alohida
- * davomat sahifasida, ruxsat bilan).
+ * qatnashgan" ni pastga tushmasdan ko'radi.
+ *
+ * O'TGAN DARS KUNLARI HAM BELGILANADI (2026-10-08). Ilgari faqat bugungi
+ * ustun bosilardi: Parvinaxon xodimi 6-oktabrni 7-oktabr kechqurun shu
+ * jadvaldan belgilamoqchi bo'ldi — katakchalar jim turdi, "Saqlash" ham
+ * yo'q edi, belgi hech qachon saqlanmadi. Endi "Davomat" sahifasi bilan
+ * BIR XIL qoida (`sababi()`): o'quvchi qo'shilgan kundan, guruh muddati
+ * ichida, bugun esa dars boshlangach. Bosilmaydigan katak SABABINI aytadi
+ * (ustiga olib borilsa yoki bosilsa) — jim turmaydi.
  *
  * BELGILASH — POPUP orqali, sikllab EMAS: bir bosishda 4 ta variant chiqadi.
  *
@@ -65,12 +72,16 @@ function useMounted() {
  * uni kesa olmaydi. `DatePicker` bilan bir xil naqsh.
  */
 export function GroupAttendanceGrid({
-  groupId, scheduleDays, students, canMark,
+  groupId, scheduleDays, students, canMark, startTime, startDate, endDate,
 }: {
   groupId: string;
   scheduleDays: string[];
   students: any[];
   canMark: boolean;
+  /** Dars boshlanishi ("10:00") — bugungi ustun shundan ochiladi. */
+  startTime?: string;
+  startDate?: string | Date | null;
+  endDate?: string | Date | null;
 }) {
   const mounted = useMounted();
 
@@ -82,6 +93,37 @@ export function GroupAttendanceGrid({
   // Server rad etsa (dars hali boshlanmagan, dars kuni emas...) — sabab
   // ekranda. Ilgari javob tekshirilmasdi va belgi jimgina saqlanmasdi.
   const [saveErr, setSaveErr] = useState("");
+  // Bosilmaydigan katak bosilganda — NEGA (xato emas, tushuntirish).
+  const [info, setInfo] = useState("");
+
+  const groupStartStr = startDate ? String(startDate).slice(0, 10) : null;
+  const groupEndStr   = endDate ? String(endDate).slice(0, 10) : null;
+  const [boshSoat, boshDaqiqa] = (startTime ?? "00:00").split(":").map(Number);
+  // Server bilan bir xil: dars boshlanishidan `ATTENDANCE_GRACE_MINUTES` oldin ochiladi.
+  const darsBoshlandi = businessMinutesOfDay() >= boshSoat * 60 + boshDaqiqa - ATTENDANCE_GRACE_MINUTES;
+
+  /**
+   * KATAK NEGA BOSILMAYDI — `null` bo'lsa bosiladi.
+   *
+   * Qoidalar `attendance.service` `upsert()` dagi bilan AYNAN bir xil
+   * tartibda: ekran "bosiladi" desa server rad etmasin, rad etadigan
+   * bo'lsa — katak oldindan sababini aytsin. Bayram kunini bu yer bilmaydi:
+   * u holda server xabari (`saveErr`) chiqadi.
+   */
+  function sababi(
+    sg: { enrollmentStatus?: string; joinedAt?: string | null; student?: { joinedAt?: string | null } | null },
+    ds: string,
+  ): string | null {
+    if (!canMark) return "Davomat belgilashga ruxsatingiz yo'q";
+    if (ds > todayStr) return "Bu kun hali kelmagan";
+    if (groupStartStr && ds < groupStartStr) return `Guruh ${kunUz(groupStartStr)} dan boshlangan`;
+    if (groupEndStr && ds > groupEndStr) return `Guruh ${kunUz(groupEndStr)} da tugagan`;
+    if (sg.enrollmentStatus === "CHIQIB_KETGAN") return "O'quvchi guruhdan chiqib ketgan — davomatini o'zgartirib bo'lmaydi";
+    const from = attendanceFrom(sg.joinedAt, sg.student?.joinedAt);
+    if (from && ds < from) return `O'quvchi bu kunda guruhda emas edi — ${kunUz(from)} dan qo'shilgan`;
+    if (ds === todayStr && !darsBoshlandi) return `Dars hali boshlanmagan — soat ${startTime} dan belgilanadi`;
+    return null;
+  }
 
   // ── Belgilash popup (bosish bilan) ──
   const [openCell, setOpenCell] = useState<{ key: string; sg: any; ds: string } | null>(null);
@@ -174,7 +216,7 @@ export function GroupAttendanceGrid({
     let marked = 0;
     let applicable = 0;
     for (const sg of roster) {
-      const from = attendanceFrom(sg.joinedAt);
+      const from = attendanceFrom(sg.joinedAt, sg.student?.joinedAt);
       if (from && ds < from) continue;
       applicable++;
       const rec = recordMap.get(`${sg.studentId}|${ds}`);
@@ -190,6 +232,7 @@ export function GroupAttendanceGrid({
     setPendingStatus(null);
     setSavingCell(key);
     setSaveErr("");
+    setInfo("");
     try {
       const res = await fetch("/api/attendance", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -308,9 +351,16 @@ export function GroupAttendanceGrid({
   return (
     <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
       <div className="px-5 py-3 border-b border-white/50 dark:border-white/10 flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <CalendarDays className="w-4 h-4 text-neutral-400" />
           <h3 className="text-[13px] font-bold text-neutral-900 dark:text-neutral-100">Davomat</h3>
+          {/* "Saqlash" tugmasi YO'Q — belgi bosilganda saqlanadi. Xodimlar
+              boshqa sahifadagi "Saqlash"ni qidirib qolmasin. */}
+          {canMark && (
+            <span className="text-[11px] text-neutral-400" data-davomat-izoh>
+              Katakni bosing, belgi darhol saqlanadi
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           {!isCurrentMonth && (
@@ -338,6 +388,12 @@ export function GroupAttendanceGrid({
           </button>
         </div>
       </div>
+
+      {info && !saveErr && (
+        <p className="text-[12px] text-neutral-600 dark:text-neutral-300 bg-neutral-50 dark:bg-white/5 px-5 py-2 border-b border-white/50 dark:border-white/10" data-davomat-sabab>
+          {info}
+        </p>
+      )}
 
       {saveErr && (
         <p className="text-[12px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-5 py-2 border-b border-white/50 dark:border-white/10">
@@ -379,7 +435,7 @@ export function GroupAttendanceGrid({
             <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
               {roster.map((sg: any) => {
                 const s = sg.student;
-                const from = attendanceFrom(sg.joinedAt);
+                const from = attendanceFrom(sg.joinedAt, sg.student?.joinedAt);
                 return (
                   <tr key={sg.id} className="hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
                     <td className="sticky left-0 z-10 glass-strong px-4 py-1.5 whitespace-nowrap">
@@ -401,21 +457,28 @@ export function GroupAttendanceGrid({
                       const applicable = !from || ds >= from;
                       const rec = recordMap.get(`${sg.studentId}|${ds}`);
                       const status = rec?.status;
-                      const isToday = ds === todayStr;
-                      const clickable = isToday && canMark && applicable;
+                      const sabab = sababi(sg, ds);
+                      const clickable = sabab === null;
                       const key = `${sg.studentId}|${ds}`;
+                      const sababAyt = () => setInfo(`${kunUz(ds)}, ${s?.name}: ${sabab}`);
                       return (
                         <td key={ds} className="px-2 py-1.5 text-center">
                           {!applicable ? (
                             // `align-middle` — bo'sh inline-blok asos chiziqqa o'tirib,
                             // qatorni belgilangan qatorlardan ~5px baland qilardi.
-                            <span className="inline-block align-middle w-14 h-5" />
+                            <span title={sabab ?? undefined} onClick={sababAyt}
+                              className="inline-block align-middle w-14 h-5 cursor-help" />
                           ) : (
                             <button
                               data-cell-trigger={key}
-                              disabled={!clickable || savingCell === key}
+                              // `disabled` EMAS: o'chiq tugma bosilishni ham, ustiga olib
+                              // borishni ham yutadi — sabab ko'rinmay, katak jim turardi.
+                              aria-disabled={!clickable}
+                              title={sabab ?? undefined}
+                              disabled={savingCell === key}
                               onClick={(e) => {
-                                if (!clickable) return;
+                                if (!clickable) { sababAyt(); return; }
+                                setInfo("");
                                 if (openCell?.key === key) { setOpenCell(null); setPendingStatus(null); return; }
                                 setOpenRect(e.currentTarget.getBoundingClientRect());
                                 setOpenCell({ key, sg, ds });
@@ -433,7 +496,7 @@ export function GroupAttendanceGrid({
                                 status
                                   ? STATUS_CFG[status].cls
                                   : "border border-dashed border-neutral-300 dark:border-neutral-700",
-                                clickable ? "cursor-pointer hover:opacity-80" : "cursor-default",
+                                clickable ? "cursor-pointer hover:opacity-80" : "cursor-help",
                                 savingCell === key && "opacity-50")}>
                               {status ? STATUS_CFG[status].short : (clickable &&
                                 <span className="text-neutral-300 dark:text-neutral-600">+</span>)}

@@ -44,6 +44,11 @@ type Membership = {
   joinedAt?: string | null;
 };
 
+/** Guruh nomini solishtirish kaliti: ortiqcha bo'sh joy va harf kattaligi farq qilmaydi. */
+function nomKaliti(nom: unknown): string {
+  return String(nom ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 function addDays(date: Date, n: number) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
 function toDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -67,6 +72,18 @@ export default function AttendancePage() {
 
   const { data: groupsRaw, isLoading: groupsLoading } = useGroups({ status: "ACTIVE" });
   const hammaGuruh: any[] = Array.isArray(groupsRaw) ? groupsRaw : BOSH;
+
+  /**
+   * BIR XIL NOMLI GURUHLAR — tugmada o'qituvchi ismi ham chiqadi.
+   * Parvinaxon'da uchta "Turk tili Cefr guruhi" bor edi; vaqt bir xil
+   * bo'lsa ular umuman ajralmasdi va davomat boshqa guruhga ketishi mumkin.
+   * Nom bo'sh joy va harf katta-kichikligidan qat'i nazar solishtiriladi.
+   */
+  const takrorNom = useMemo(() => {
+    const sanoq = new Map<string, number>();
+    for (const g of hammaGuruh) sanoq.set(nomKaliti(g.name), (sanoq.get(nomKaliti(g.name)) ?? 0) + 1);
+    return new Set([...sanoq].filter(([, c]) => c > 1).map(([k]) => k));
+  }, [hammaGuruh]);
 
   /**
    * GURUH RO'YXATI FILTRI — jadval bo'limidagi bilan AYNAN BIR XIL
@@ -331,7 +348,9 @@ export default function AttendancePage() {
                         : "glass-panel text-neutral-600 dark:text-neutral-400 border-white/60 dark:border-white/10 hover:border-neutral-400")}>
                     <span className="block">{g.name}</span>
                     <span className={cn("block text-[10px] font-normal", selectedGroup === g.id ? "text-white/70" : "text-neutral-400")}>
-                      {g.startTime}-{g.endTime}
+                      {`${g.startTime}-${g.endTime}`}
+                      {takrorNom.has(nomKaliti(g.name)) && g.teacher?.user?.name
+                        && ` · ${String(g.teacher.user.name).replace(/\s+/g, " ").trim()}`}
                     </span>
                   </button>
                 ))
