@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useRef, useEffect, useMemo } from "react";
 import {
-  Bell, Search, Plus, DollarSign, UserPlus, Users, UserCog,
+  Bell, Search, Plus, DollarSign, UserPlus, Users, UserCog, HandCoins,
   Check, BookOpen, X,
 } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +36,8 @@ const TYPE_ICON: Record<string, { icon: typeof DollarSign; cls: string }> = {
   student: { icon: Users,      cls: "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400" },
   // Platforma qo'shimcha xodim o'rni ochganda (admode, faqat egaga).
   staff:   { icon: UserCog,    cls: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400" },
+  // Oylik avansi kuni (9:00 dan keyin, oylik huquqi borlarga).
+  "salary-advance": { icon: HandCoins, cls: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400" },
 };
 
 function NotifIcon({ type }: { type: string }) {

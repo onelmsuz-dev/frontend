@@ -1,6 +1,6 @@
 import {
   Building, MapPin, DoorOpen, Users, CalendarOff, Link2, Wallet, Percent,
-  CreditCard, Type, Bell, Rocket, History, Trash2, SlidersHorizontal,
+  CreditCard, Type, Bell, Rocket, History, Trash2, SlidersHorizontal, HandCoins,
   type LucideIcon,
 } from "lucide-react";
 import { hasPerm } from "@/lib/hooks/useMe";
@@ -32,7 +32,7 @@ import { hasPerm } from "@/lib/hooks/useMe";
  */
 export const SETTINGS_GROUPS = [
   { id: "markaz", label: "Markaz",          hint: "Ma'lumot, filiallar, xonalar, xodimlar", icon: Building },
-  { id: "pul",    label: "Pul va hisob",    hint: "To'lov rejimi, chegirmalar",              icon: Wallet },
+  { id: "pul",    label: "Pul va hisob",    hint: "To'lov rejimi, chegirmalar, oylik avansi", icon: Wallet },
   { id: "obuna",  label: "OneRoom obunasi", hint: "Tarif va muddat",                         icon: CreditCard },
   { id: "tizim",  label: "Tizim",           hint: "Ko'rinish, bildirishnoma, tarix",         icon: SlidersHorizontal },
 ] as const;
@@ -85,6 +85,11 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   { id: "chegirma",      label: "Chegirmalar", icon: Percent, group: "pul",
     feature: "discounts", perm: "discounts.view",
     keywords: ["chegirma", "skidka", "aksiya", "imtiyoz", "foiz"] },
+  // Xodim va o'qituvchiga oy o'rtasida beriladigan pul — "pul" guruhida,
+  // lekin O'QUVCHI to'lovi emas: nomi ataylab "Oylik avansi".
+  { id: "avans",         label: "Oylik avansi", icon: HandCoins, group: "pul",
+    feature: "salary-advance", perm: "salaries.view",
+    keywords: ["avans", "oylik avansi", "maosh", "zarplata", "oy o'rtasi", "15-sana", "oylik"] },
 
   // ─ Obuna: MARKAZ BIZGA qancha to'laydi ─
   { id: "tarif",         label: "Tarif va muddat", icon: CreditCard, group: "obuna",

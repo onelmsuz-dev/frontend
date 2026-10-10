@@ -13,6 +13,8 @@ import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { fetcher } from "@/lib/fetcher";
 import { formatCurrency } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { TolandiOyna } from "@/components/salary-advance/tolandi-oyna";
+import { sanaQisqa, type AvansBandi } from "@/lib/salary-advance";
 
 /**
  * XODIM OYLIGI.
@@ -48,11 +50,19 @@ type Qator = {
   branches: string[];
   sozlama: { base: number; percent: number | null; perStudent: number | null; profitPercent: number | null };
   sozlanmagan: boolean;
+  /** Shu oy berilgan oylik avansi (oylik hali hisoblanmagan bo'lsa ham). */
+  advanceTotal?: number;
   salary: {
     id: string; total: number; status: "PENDING" | "PAID"; paidAt: string | null;
     base: number; percentAmount: number; perStudentAmount: number; profitAmount: number;
     bonus: number; deduction: number; note: string | null;
     breakdown: Kesim[];
+    // Oylik avansi (to'langan qatorda — to'lash paytidagi nusxa).
+    settledTotal?: number | null;
+    advanceTotal?: number;
+    salaryRemainder?: number;
+    overAdvance?: number;
+    advanceItems?: AvansBandi[];
   } | null;
 };
 
@@ -115,12 +125,24 @@ export function StaffSalaries() {
     finally { setIshlamoqda(false); }
   }
 
-  async function tolandi(id: string) {
-    setIshlamoqda(true); setXato("");
+  // Avansli oylik "To'landi" oynasi orqali — qo'lga beriladigan summa tasdiqlanadi.
+  const [tolashId, setTolashId] = useState<string | null>(null);
+  const [xabar, setXabar] = useState("");
+  const tolashQator = tolashId ? qatorlar.find((q) => q.salary?.id === tolashId) ?? null : null;
+
+  async function tolandi(q: Qator) {
+    const s = q.salary!;
+    if ((s.advanceTotal ?? 0) > 0) { setTolashId(s.id); return; }
+    setIshlamoqda(true); setXato(""); setXabar("");
     try {
-      const res = await fetch(`/api/staff-salaries/${id}/paid`, { method: "PATCH" });
+      // Ekrandagi summa baribir yuboriladi: shu orada avans yozilgan
+      // bo'lsa server 409 qaytaradi va kassir yangi qoldiqni ko'radi.
+      const res = await fetch(`/api/staff-salaries/${s.id}/paid`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedRemainder: s.salaryRemainder ?? Math.round(s.total) }),
+      });
       const d = await res.json();
-      if (!res.ok) { setXato(d.error ?? "Xatolik"); return; }
+      if (!res.ok) { setXato(d.error ?? "Xatolik"); yangila(); return; }
       yangila();
     } catch { setXato("Serverga ulanib bo'lmadi"); }
     finally { setIshlamoqda(false); }
@@ -253,6 +275,11 @@ export function StaffSalaries() {
           <p className="text-[12px] font-medium text-red-600 dark:text-red-400">{xato}</p>
         </div>
       )}
+      {xabar && (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30 px-3 py-2.5 text-[12px] font-medium text-emerald-700 dark:text-emerald-300" data-xodim-xabar>
+          {xabar}
+        </p>
+      )}
 
       {/* ── YIG'MA — bitta kartochka, bitta chiziq ────────────────────────
           "Oyning qanchasi to'landi" degan savolga to'rtta alohida raqam
@@ -350,11 +377,23 @@ export function StaffSalaries() {
                         ) : (
                           <>
                             <p className="text-[15px] font-black text-neutral-900 dark:text-neutral-100 tabular-nums leading-none">
-                              {s ? formatCurrency(s.total) : "—"}
+                              {s ? formatCurrency(s.status === "PAID" && s.settledTotal ? s.settledTotal : s.total) : "—"}
                             </p>
                             <p className="text-[10.5px] text-neutral-400 dark:text-neutral-500 mt-1">
                               {s ? "hisoblangan" : "hali hisoblanmagan"}
                             </p>
+                            {s && (s.advanceTotal ?? 0) > 0 && (
+                              <p className="text-[11px] mt-1 tabular-nums" data-xodim-avans>
+                                <span className="text-indigo-600 dark:text-indigo-400 font-semibold">{`Avans -${formatCurrency(s.advanceTotal ?? 0)}`}</span>
+                                <span className="text-neutral-500">{" · Qo'lga "}</span>
+                                <b className="text-neutral-900 dark:text-neutral-100">{formatCurrency(s.salaryRemainder ?? s.total)}</b>
+                              </p>
+                            )}
+                            {!s && (q.advanceTotal ?? 0) > 0 && (
+                              <p className="text-[11px] mt-1 text-indigo-600 dark:text-indigo-400 font-semibold">
+                                {`avans berildi: ${formatCurrency(q.advanceTotal ?? 0)}`}
+                              </p>
+                            )}
                           </>
                         )}
                       </div>
@@ -383,7 +422,7 @@ export function StaffSalaries() {
                                 text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 transition-colors">
                               <Coins className="w-3.5 h-3.5" />Bonus / ushlab qolish
                             </button>
-                            <button onClick={() => tolandi(s.id)} disabled={ishlamoqda}
+                            <button onClick={() => tolandi(q)} disabled={ishlamoqda} data-xodim-tolandi
                               className="ml-auto inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[11.5px] font-bold
                                 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors">
                               <Check className="w-3.5 h-3.5" />To&apos;landi
@@ -411,8 +450,18 @@ export function StaffSalaries() {
                         {s.bonus > 0 && <Satr nom="Bonus" qiymat={s.bonus} />}
                         {s.deduction > 0 && <Satr nom="Ushlab qolish" qiymat={-s.deduction} />}
                         <div className="border-t border-neutral-200 dark:border-white/10 pt-1.5">
-                          <Satr nom="Jami" qiymat={s.total} kuchli />
+                          <Satr nom="Jami" qiymat={s.status === "PAID" && s.settledTotal ? s.settledTotal : s.total} kuchli />
                         </div>
+                        {(s.advanceItems ?? []).map((a) => (
+                          <Satr key={a.id}
+                            nom={a.carriedFromMonth ? "O'tgan oydan ortiqcha avans" : `Avans (${sanaQisqa(a.givenOn).slice(0, 5)})`}
+                            qiymat={-a.advanceSum} />
+                        ))}
+                        {(s.advanceTotal ?? 0) > 0 && (
+                          <div className="border-t border-neutral-200 dark:border-white/10 pt-1.5">
+                            <Satr nom={s.status === "PAID" ? "Qo'lga berildi" : "Qo'lga beriladi"} qiymat={s.salaryRemainder ?? s.total} kuchli />
+                          </div>
+                        )}
 
                         {s.breakdown.length > 1 && (
                           <div className="pt-2 mt-1 border-t border-neutral-200 dark:border-white/10 space-y-1.5">
@@ -450,6 +499,15 @@ export function StaffSalaries() {
           </ul>
         )}
       </div>
+
+      {/* ── TO'LANDI (avansli oylik) ─────────────────────────────────────── */}
+      {tolashQator?.salary && (
+        <TolandiOyna open={!!tolashQator} onClose={() => setTolashId(null)} kind="STAFF"
+          rowId={tolashQator.salary.id} name={tolashQator.name} month={oy}
+          hisoblangan={tolashQator.salary.total} advanceTotal={tolashQator.salary.advanceTotal ?? 0}
+          advanceItems={tolashQator.salary.advanceItems ?? []} faol
+          onDone={(m) => { setTolashId(null); setXabar(m); yangila(); }} />
+      )}
 
       {/* ── STAVKA ─────────────────────────────────────────────────────────── */}
       <Modal

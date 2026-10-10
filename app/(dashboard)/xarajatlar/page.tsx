@@ -14,6 +14,7 @@ import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { fetcher } from "@/lib/fetcher";
 import { formatCurrency } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { MaoshEslatma } from "@/components/salary-advance/maosh-eslatma";
 import { OyHisobi } from "@/components/xarajat/xarajat-hisob";
 import {
   GorizontalUstunlar, TarixGrafigi, type TarixOy,
@@ -454,6 +455,7 @@ export default function XarajatlarPage() {
             {(kategoriyalar ?? []).map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </FormField>
+        <MaoshEslatma category={forma.category} />
 
         <FormField label="Tavsif" required>
           <Input placeholder="Masalan: Sentabr oyi ijara to'lovi" value={forma.description}

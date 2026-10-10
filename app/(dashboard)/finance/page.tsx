@@ -34,6 +34,15 @@ import { BranchFilter, BranchPicker } from "@/components/layout/branch-filter";
 import { fmtMonthYear, formatUzDate } from "@/lib/date-uz";
 import { formatCurrency } from "@/lib/money";
 import { TabGlide, TabPanel, segCls } from "@/components/ui/tab-glide";
+import { useFeature } from "@/lib/hooks/useFeatures";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { useSalaryAdvances, useSalaryAdvanceSummary } from "@/lib/hooks/useSalaryAdvances";
+import { AvansTab } from "@/components/salary-advance/avans-tab";
+import { TolandiOyna } from "@/components/salary-advance/tolandi-oyna";
+import { StaffSalaries } from "@/components/staff/staff-salaries";
+import { OyNomi, sanaQisqa, type AvansBandi, type OylikQatori } from "@/lib/salary-advance";
+import { YopilmaganYuklab } from "@/components/salary-advance/yopilmagan";
+import { MaoshEslatma } from "@/components/salary-advance/maosh-eslatma";
 
 
 function Skeleton({ className }: { className?: string }) {
@@ -41,7 +50,7 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 
-type Tab = "kirim" | "chiqim" | "materiallar" | "oylik" | "qarzdorlar";
+type Tab = "kirim" | "chiqim" | "materiallar" | "avans" | "oylik" | "qarzdorlar";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -97,6 +106,18 @@ export default function FinancePage() {
   const [generating,    setGenerating]    = useState(false);
   const [payingId,      setPayingId]      = useState<string | null>(null);
   const [salaryErr,     setSalaryErr]     = useState("");
+  const [salaryMsg,     setSalaryMsg]     = useState("");
+  /** Avansli qator "To'landi" oynasi orqali yopiladi. */
+  const [tolash,        setTolash]        = useState<OylikQatori | null>(null);
+  /** "Oylik hisoblash": o'qituvchilar yoki xodimlar (buxgalter /xodimlar ga kira olmaydi). */
+  const [oylikTur,      setOylikTur]      = useState<"oqituvchi" | "xodim">("oqituvchi");
+
+  // Oylik avansi — bayroq va oylik huquqi bilan.
+  const { me } = useMe();
+  const oylikKoradi = hasPerm(me?.permissions, "salaries.view");
+  const avansYoqiq = useFeature("salary-advance") === true && oylikKoradi;
+  const { data: avansRoyxat } = useSalaryAdvances(undefined, avansYoqiq);
+  const { data: avansXulosa } = useSalaryAdvanceSummary(salaryMonth, oylikKoradi);
 
   // Qarzdorlar
   const [payForStudent, setPayForStudent] = useState<any>(null);
@@ -157,6 +178,16 @@ export default function FinancePage() {
   const expCats: any[] = Array.isArray(expCatsRaw) ? expCatsRaw : [];
   const expFiltered = !!(expCat || expFrom || expTo);
   const salaries: any[] = Array.isArray(salariesRaw) ? salariesRaw : [];
+  /** Oyda avans bo'lsa jadvalga "Avans" va "Qo'lga" ustunlari qo'shiladi. */
+  const avansBor = salaries.some((r) => (r.advanceTotal ?? 0) > 0);
+  /** To'langan qatorda — to'lash paytidagi nusxa (keyin qayta hisoblanmaydi). */
+  const hisoblanganOf = (r: OylikQatori): number =>
+    r.status === "PAID" && r.settledSalary > 0 ? r.settledSalary : r.calculatedSalary;
+  // "To'landi" oynasi ro'yxatning JONLI qatoridan oziqlanadi: 409 dan keyin
+  // ro'yxat yangilanganda oyna yangi qoldiqni ko'rsatadi.
+  const tolashQator = tolash ? (salaries.find((r) => r.id === tolash.id) ?? tolash) : null;
+  const joriyOyStr = defaultMonth;
+  const [yopilmaganKorin, setYopilmaganKorin] = useState(false);
   const allStudents: any[] = Array.isArray(studentsRaw) ? studentsRaw : [];
 
   // Qarzdor = balans manfiy va guruhdan chiqib ketmagan (sinovdagilar 0 balans bilan qarzdor emas)
@@ -187,11 +218,21 @@ export default function FinancePage() {
   const refreshCats = () =>
     mutate((k: string) => typeof k === "string" && k.startsWith("/api/expenses"));
 
+  // Avans kuni kelgan va hali berilmaganlar soni — tab nomida.
+  const avansKutmoqda = (() => {
+    const d = avansRoyxat;
+    if (!d || !d.sozlama.enabled || d.month !== d.joriyOy || d.bugun < d.avansKuni) return 0;
+    return d.rows.filter((r) => r.advanceRemaining > 0 && r.salaryStatus !== "PAID" && r.faol).length;
+  })();
+
   const TABS: { id: Tab; label: string }[] = [
     { id: "kirim",      label: "To'lovlar (kirim)" },
     { id: "chiqim",     label: "Xarajatlar (chiqim)" },
     { id: "materiallar", label: "Qo'shimcha to'lovlar" },
-    { id: "oylik",      label: "Oylik hisoblash" },
+    ...(avansYoqiq
+      ? [{ id: "avans" as Tab, label: `Oylik avansi${avansKutmoqda ? ` (${avansKutmoqda})` : ""}` }] : []),
+    // Oylik ro'yxati `salaries.view` so'raydi — ruxsatsiz rolga bo'sh tab ko'rsatilmasin.
+    ...(oylikKoradi ? [{ id: "oylik" as Tab, label: "Oylik hisoblash" }] : []),
     { id: "qarzdorlar", label: `Qarzdorlar${debtors.length ? ` (${debtors.length})` : ""}` },
   ];
 
@@ -248,12 +289,22 @@ export default function FinancePage() {
     finally { setGenerating(false); }
   }
 
-  async function markAsPaid(id: string) {
-    setPayingId(id); setSalaryErr("");
+  /**
+   * TO'LANDI. Avansli qator — tasdiq oynasi (qo'lga beriladigan summa).
+   * Avanssizida bugungidek bir bosish, lekin ekrandagi summa baribir
+   * yuboriladi: shu orada avans yozilgan bo'lsa server 409 qaytaradi.
+   */
+  async function markAsPaid(s: OylikQatori) {
+    if ((s.advanceTotal ?? 0) > 0) { setTolash(s); return; }
+    setPayingId(s.id); setSalaryErr(""); setSalaryMsg("");
     try {
-      const res  = await fetch(`/api/teacher-salaries/${id}`, { method: "PATCH" });
+      const res  = await fetch(`/api/teacher-salaries/${s.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expectedRemainder: s.salaryRemainder ?? Math.round(s.calculatedSalary) }),
+      });
       const data = await res.json();
-      if (!res.ok) { setSalaryErr(data.error ?? "Xatolik"); return; }
+      if (!res.ok) { setSalaryErr(data.error ?? "Xatolik"); mutateSalaries(); return; }
       mutateSalaries();
     } catch { setSalaryErr("Serverga ulanib bo'lmadi"); }
     finally { setPayingId(null); }
@@ -326,6 +377,7 @@ export default function FinancePage() {
                   ))}
                 </select>
               </div>
+              <MaoshEslatma category={expForm.category} />
               {kopFilial && (
                 <div>
                   <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">Filial</Label>
@@ -724,8 +776,70 @@ export default function FinancePage() {
           <MaterialsReport month={payMonth} onMonth={setPayMonth} />
         )}
 
+        {activeTab === "avans" && avansYoqiq && (
+          <AvansTab onOylikgaOt={(m) => { setSalaryMonth(m); setOylikTur("oqituvchi"); setActiveTab("oylik"); }} />
+        )}
+
         {activeTab === "oylik" && (
           <div className="space-y-4">
+            {/* O'qituvchilar / Xodimlar — buxgalter /xodimlar sahifasiga kira olmaydi
+                (u `staff.view` so'raydi), xodim oyligi esa uning ishi. */}
+            <TabGlide variant="segment" watch={oylikTur} className="flex gap-0.5 glass-soft p-1 rounded-xl w-fit max-w-full">
+              {([["oqituvchi", "O'qituvchilar"], ["xodim", "Xodimlar"]] as const).map(([k, nom]) => (
+                <button key={k} onClick={() => setOylikTur(k)} data-oylik-tur={k}
+                  data-tab-active={oylikTur === k} aria-pressed={oylikTur === k}
+                  className={segCls(oylikTur === k, "px-3 sm:px-4 py-1.5 text-sm font-medium")}>
+                  {nom}
+                </button>
+              ))}
+            </TabGlide>
+
+            {/* Avans bannerlari — o'qituvchi ham, xodim ham */}
+            {avansXulosa && (avansXulosa.hisoblanmagan > 0 || avansXulosa.tolanmagan.length > 0 || avansXulosa.yopilmagan > 0) && (
+              <div className="space-y-2" data-oylik-avans-banner>
+                {avansXulosa.hisoblanmagan > 0 && avansXulosa.month === salaryMonth && (
+                  <p className="rounded-xl border border-blue-200 bg-blue-50/80 dark:border-blue-900/40 dark:bg-blue-950/30 px-3.5 py-2.5 text-[12.5px] text-blue-800 dark:text-blue-300">
+                    {`Avansi bor, lekin oyligi hisoblanmagan: ${avansXulosa.hisoblanmagan} kishi. «Oylikni hisoblash»ni bosing.`}
+                  </p>
+                )}
+                {avansXulosa.tolanmagan.filter((t) => t.month !== salaryMonth).map((t) => (
+                  <div key={t.month} className="rounded-xl border border-amber-200 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/30 px-3.5 py-2.5 flex items-center gap-3 flex-wrap">
+                    <p className="text-[12.5px] text-amber-800 dark:text-amber-300 flex-1 min-w-0">
+                      {`${OyNomi(t.month)}: ${t.count} ta oylikda avans bor, «To'landi» bosilmagan: avans hali ushlanmagan.`}
+                    </p>
+                    <button type="button" onClick={() => setSalaryMonth(t.month)}
+                      className="h-8 px-3 rounded-lg text-[12px] font-semibold border border-amber-300 text-amber-800 dark:text-amber-300">
+                      {`${OyNomi(t.month)}ni ochish`}
+                    </button>
+                  </div>
+                ))}
+                {avansXulosa.yopilmagan > 0 && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/30 px-3.5 py-2.5 flex items-center gap-3 flex-wrap">
+                    <p className="text-[12.5px] text-amber-800 dark:text-amber-300 flex-1">
+                      {`Yopilmagan avanslar: ${avansXulosa.yopilmagan}`}
+                    </p>
+                    <button type="button" data-yopilmagan-kor
+                      onClick={() => (avansYoqiq ? setActiveTab("avans") : setYopilmaganKorin((v) => !v))}
+                      className="h-8 px-3 rounded-lg text-[12px] font-semibold border border-amber-300 text-amber-800 dark:text-amber-300">
+                      Ko&apos;rish
+                    </button>
+                  </div>
+                )}
+                {yopilmaganKorin && !avansYoqiq && (
+                  <YopilmaganYuklab onMsg={setSalaryMsg}
+                    onOylikgaOt={(m) => { setSalaryMonth(m); setOylikTur("oqituvchi"); }} />
+                )}
+              </div>
+            )}
+
+            {salaryMsg && (
+              <p className="rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/30 px-3.5 py-2.5 text-[12.5px] font-medium text-emerald-800 dark:text-emerald-300" data-oylik-xabar>
+                {salaryMsg}
+              </p>
+            )}
+
+            {oylikTur === "xodim" ? <StaffSalaries /> : (
+            <>
             {/* Month picker + generate */}
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
@@ -747,25 +861,44 @@ export default function FinancePage() {
                 {generating ? "Hisoblanmoqda..." : "Oylikni hisoblash"}
               </button>
               {salaryErr && (
-                <span className="text-[12px] text-red-500 font-medium">{salaryErr}</span>
+                <span className="text-[12px] text-red-500 font-medium" data-oylik-xato>{salaryErr}</span>
               )}
             </div>
 
             {/* Summary cards */}
             {salaries.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className={cn("grid grid-cols-2 gap-3", avansBor ? "md:grid-cols-4" : "md:grid-cols-3")}>
                 <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
-                  <p className="text-[11px] text-neutral-400 mb-1">Jami o'qituvchilar</p>
-                  <p className="text-[20px] font-black text-neutral-900 dark:text-neutral-100">{salaries.length}</p>
-                </div>
-                <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
-                  <p className="text-[11px] text-neutral-400 mb-1">Jami oylik</p>
-                  <p className="text-[20px] font-black text-violet-600 dark:text-violet-400">
-                    {formatCurrency(salaries.reduce((s: number, r: any) => s + r.calculatedSalary, 0))}
+                  <p className="text-[11px] text-neutral-400 mb-1">{avansBor ? "Jami oylik" : "Jami o'qituvchilar"}</p>
+                  <p className="text-[20px] font-black text-neutral-900 dark:text-neutral-100">
+                    {avansBor ? formatCurrency(salaries.reduce((s: number, r: OylikQatori) => s + hisoblanganOf(r), 0)) : salaries.length}
                   </p>
                 </div>
+                {avansBor ? (
+                  <>
+                    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
+                      <p className="text-[11px] text-neutral-400 mb-1">Berilgan avans</p>
+                      <p className="text-[20px] font-black text-indigo-600 dark:text-indigo-400">
+                        {formatCurrency(salaries.reduce((s: number, r: OylikQatori) => s + (r.advanceTotal ?? 0), 0))}
+                      </p>
+                    </div>
+                    <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
+                      <p className="text-[11px] text-neutral-400 mb-1">Qo&apos;lga to&apos;lanadi</p>
+                      <p className="text-[20px] font-black text-violet-600 dark:text-violet-400">
+                        {formatCurrency(salaries.filter((r: OylikQatori) => r.status !== "PAID").reduce((s: number, r: OylikQatori) => s + (r.salaryRemainder ?? r.calculatedSalary), 0))}
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
+                    <p className="text-[11px] text-neutral-400 mb-1">Jami oylik</p>
+                    <p className="text-[20px] font-black text-violet-600 dark:text-violet-400">
+                      {formatCurrency(salaries.reduce((s: number, r: any) => s + r.calculatedSalary, 0))}
+                    </p>
+                  </div>
+                )}
                 <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
-                  <p className="text-[11px] text-neutral-400 mb-1">To'langan</p>
+                  <p className="text-[11px] text-neutral-400 mb-1">To&apos;langan</p>
                   <p className="text-[20px] font-black text-emerald-600 dark:text-emerald-400">
                     {salaries.filter((r: any) => r.status === "PAID").length} / {salaries.length}
                   </p>
@@ -777,18 +910,24 @@ export default function FinancePage() {
             <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/50 dark:border-white/10">
                 <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">
-                  O'qituvchilar oylik hisobi — {salaryMonth}
+                  O&apos;qituvchilar oylik hisobi — {salaryMonth}
                 </p>
-                <span className="text-[11px] text-neutral-400">{salaries.length} ta o'qituvchi</span>
+                <span className="text-[11px] text-neutral-400">{salaries.length} ta o&apos;qituvchi</span>
               </div>
               <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
-                    <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O'qituvchi</TableHead>
+                    <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O&apos;qituvchi</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Turi</TableHead>
-                    <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right" title="Faqat shu oyga tegishli tushum — oldindan to'langan ortiqcha summa keyingi oyga o'tadi">Yig'ilgan (shu oy)</TableHead>
+                    <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right" title="Faqat shu oyga tegishli tushum — oldindan to'langan ortiqcha summa keyingi oyga o'tadi">Yig&apos;ilgan (shu oy)</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Hisoblangan</TableHead>
+                    {avansBor && (
+                      <>
+                        <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Avans</TableHead>
+                        <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Qo&apos;lga</TableHead>
+                      </>
+                    )}
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-center">Holat</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Amal</TableHead>
                   </TableRow>
@@ -805,8 +944,11 @@ export default function FinancePage() {
                           <TableCell className="text-right"><Skeleton className="h-7 w-20 ml-auto rounded-lg" /></TableCell>
                         </TableRow>
                       ))
-                    : salaries.map((s: any) => (
-                        <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
+                    : salaries.map((s: any) => {
+                        const avans = s.advanceTotal ?? 0;
+                        const oyTugagan = s.month < joriyOyStr;
+                        return (
+                        <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors" data-oylik-qator={s.teacher?.user?.name}>
                           <TableCell>
                             <div className="flex items-center gap-2.5">
                               <div className="w-9 h-9 bg-gradient-to-br from-violet-400 to-blue-500 rounded-xl flex items-center justify-center text-white text-[13px] font-bold shrink-0">
@@ -814,7 +956,9 @@ export default function FinancePage() {
                               </div>
                               <div>
                                 <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100">{s.teacher?.user?.name}</p>
-                                <p className="text-[11px] text-neutral-400">{s.teacher?.user?.email}</p>
+                                <p className="text-[11px] text-neutral-400">
+                                  {s.teacher?.status === "INACTIVE" ? "Ishdan ketgan" : s.teacher?.user?.email}
+                                </p>
                               </div>
                             </div>
                           </TableCell>
@@ -829,26 +973,55 @@ export default function FinancePage() {
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
-                            <span className="text-[14px] font-black text-neutral-900 dark:text-neutral-100">
-                              {formatCurrency(s.calculatedSalary)}
+                            <span className={cn("font-black text-neutral-900 dark:text-neutral-100", avansBor ? "text-[13px]" : "text-[14px]")}>
+                              {formatCurrency(hisoblanganOf(s))}
                             </span>
                           </TableCell>
+                          {avansBor && (
+                            <>
+                              <TableCell className="text-right">
+                                {avans > 0 ? (
+                                  <span className="text-[13px] font-semibold text-indigo-600 dark:text-indigo-400 tabular-nums"
+                                    title={(s.advanceItems ?? []).map((a: AvansBandi) => `${sanaQisqa(a.givenOn).slice(0, 5)} · ${formatCurrency(a.advanceSum)}`).join("\n")}>
+                                    -{formatCurrency(avans)}
+                                  </span>
+                                ) : <span className="text-neutral-300">—</span>}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <span className="text-[14px] font-black text-neutral-900 dark:text-neutral-100 tabular-nums">
+                                  {formatCurrency(s.salaryRemainder ?? s.calculatedSalary)}
+                                </span>
+                                {(s.overAdvance ?? 0) > 0 && (
+                                  <span className={cn("block text-[10.5px] font-semibold mt-0.5",
+                                    s.status === "PAID" || oyTugagan ? "text-red-600 dark:text-red-400" : "text-neutral-400")}>
+                                    {`Ortiqcha avans ${formatCurrency(s.overAdvance)}${s.status !== "PAID" && !oyTugagan ? " (hozircha)" : ""}`}
+                                  </span>
+                                )}
+                              </TableCell>
+                            </>
+                          )}
                           <TableCell className="text-center">
                             {s.status === "PAID" ? (
                               <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-lg font-medium">
-                                <CheckCircle className="w-3 h-3" /> To'landi
+                                <CheckCircle className="w-3 h-3" />{" "}To&apos;landi
                               </span>
                             ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-lg font-medium">
-                                <Clock className="w-3 h-3" /> Kutilmoqda
+                              <span className="inline-flex flex-col items-center gap-1">
+                                <span className="inline-flex items-center gap-1 text-[11px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-lg font-medium">
+                                  <Clock className="w-3 h-3" /> Kutilmoqda
+                                </span>
+                                {avans > 0 && (
+                                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">Avans berildi</span>
+                                )}
                               </span>
                             )}
                           </TableCell>
                           <TableCell className="text-right">
                             {s.status !== "PAID" && (
                               <button
-                                onClick={() => markAsPaid(s.id)}
+                                onClick={() => markAsPaid(s)}
                                 disabled={payingId === s.id}
+                                data-tolandi
                                 className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-lg
                                   bg-emerald-600 hover:bg-emerald-500 text-white transition-colors disabled:opacity-50">
                                 <BadgeCheck className="w-3 h-3" />
@@ -857,7 +1030,8 @@ export default function FinancePage() {
                             )}
                           </TableCell>
                         </TableRow>
-                      ))
+                        );
+                      })
                   }
                 </TableBody>
               </Table>
@@ -876,6 +1050,21 @@ export default function FinancePage() {
                 </div>
               )}
             </div>
+            {avansBor && (
+              <p className="text-[11.5px] text-neutral-500 dark:text-neutral-400">
+                {"O'qituvchi oyligi Xarajatlarga avtomatik yozilmaydi. Qo'lda yozsangiz, TO'LIQ hisoblangan summani yozing (avans ham shu summa ichida)."}
+              </p>
+            )}
+            </>
+            )}
+
+            {tolashQator && (
+              <TolandiOyna open={!!tolashQator} onClose={() => setTolash(null)} kind="TEACHER"
+                rowId={tolashQator.id} name={tolashQator.teacher?.user?.name ?? ""} month={tolashQator.month}
+                hisoblangan={tolashQator.calculatedSalary} advanceTotal={tolashQator.advanceTotal ?? 0}
+                advanceItems={tolashQator.advanceItems ?? []} faol={tolashQator.teacher?.status !== "INACTIVE"}
+                onDone={(m) => { setTolash(null); setSalaryMsg(m); mutateSalaries(); }} />
+            )}
           </div>
         )}
 

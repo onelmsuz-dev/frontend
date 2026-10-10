@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
 import { formatCurrency } from "@/lib/money";
+import { useFeature } from "@/lib/hooks/useFeatures";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { useSalaryAdvanceSettings } from "@/lib/hooks/useSalaryAdvances";
 
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
@@ -33,6 +36,10 @@ const STATUS_CFG: Record<string, { label: string; cls: string }> = {
 export default function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: teacher, isLoading } = useSWR(`/api/teachers/${id}`, fetcher);
+  // Oylik avansi — bayroq va oylik huquqi bor bo'lsa, markaz yoqqan bo'lsa.
+  const { me } = useMe();
+  const avansKorinadi = useFeature("salary-advance") === true && hasPerm(me?.permissions, "salaries.view");
+  const { data: avansSozlama } = useSalaryAdvanceSettings(avansKorinadi);
 
   if (isLoading) {
     return (
@@ -121,6 +128,17 @@ export default function TeacherDetailPage({ params }: { params: Promise<{ id: st
                   {salaryTypeLabel(teacher.salaryType)}
                 </p>
               </div>
+              {avansSozlama?.enabled && (
+                <div className="pt-2 border-t border-white/50 dark:border-white/10" data-oqituvchi-avans>
+                  <p className="text-[11px] text-neutral-400 mb-0.5">Oylik avansi</p>
+                  <p className="text-[12.5px] font-semibold text-neutral-700 dark:text-neutral-300">
+                    {teacher.advancePlan == null
+                      ? (teacher.user?.role === "SUPER_ADMIN" ? "Avans yo'q (egasi)" : `Standart · ${fmt(avansSozlama.standart)}`)
+                      : teacher.advancePlan === 0 ? "Avans yo'q" : `${fmt(teacher.advancePlan)} · alohida`}
+                    {` · har oy ${avansSozlama.day}-sana`}
+                  </p>
+                </div>
+              )}
               <div className="pt-2 border-t border-white/50 dark:border-white/10">
                 <p className="text-[11px] text-neutral-400 mb-1">Oxirgi maosh</p>
                 {teacher.salaries?.[0] ? (

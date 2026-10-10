@@ -15,6 +15,7 @@ import { BillingSettings } from "@/components/settings/billing-settings";
 import { HolidaysSettings } from "@/components/settings/holidays-settings";
 import { BillingModes } from "@/components/settings/billing-modes";
 import { DiscountsSection } from "@/components/settings/discounts-section";
+import { AvansSozlama } from "@/components/salary-advance/avans-sozlama";
 import { ActivitySection } from "@/components/settings/activity-section";
 import { TrashSection } from "@/components/settings/trash-section";
 import { AppearanceSection } from "@/components/settings/appearance-section";
@@ -579,6 +580,8 @@ function SettingsContent() {
           {activeSection === "organish" && <OnboardingSettingsPanel />}
 
           {activeSection === "chegirma" && <DiscountsSection />}
+
+          {activeSection === "avans" && <AvansSozlama />}
 
           {activeSection === "harakatlar" && <ActivitySection />}
 
