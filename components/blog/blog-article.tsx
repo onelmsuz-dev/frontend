@@ -59,7 +59,7 @@ export function BlogArticle({ slug, locale }: { slug: string; locale: Locale }) 
         })}</ol></nav>
       </details>
       <article className="blog-prose" aria-label={post.title}><ArticleBody markdown={post.markdown} tableLabel={ui.tableLabel} />
-        <div className="blog-article-cta"><span className="blog-eyebrow">{ui.ctaEyebrow}</span><h2>{ui.ctaTitle}</h2><p>{ui.ctaText}</p><ApplyButton where={`Blog › ${post.slug}`} className="blog-blue-button">{ui.ctaButton} <ArrowUpRight size={18} aria-hidden /></ApplyButton></div>
+        <div className="blog-article-cta"><span className="blog-eyebrow">{ui.ctaEyebrow}</span><h2>{post.cta?.title ?? ui.ctaTitle}</h2><p>{post.cta?.text ?? ui.ctaText}</p><ApplyButton where={`Blog › ${post.slug}`} className="blog-blue-button">{post.cta?.button ?? ui.ctaButton} <ArrowUpRight size={18} aria-hidden /></ApplyButton></div>
         <Link href={blogHref} className="blog-back"><ArrowLeft size={17} aria-hidden /> {ui.backBottom}</Link>
       </article>
     </div>

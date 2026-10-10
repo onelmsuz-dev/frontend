@@ -1,3 +1,6 @@
+import best from "@/content/blog/eng-yaxshi-crm.json";
+import bestRu from "@/content/blog/eng-yaxshi-crm.ru.json";
+import bestEn from "@/content/blog/eng-yaxshi-crm.en.json";
 import excel from "@/content/blog/excel-yoki-crm.json";
 import excelRu from "@/content/blog/excel-yoki-crm.ru.json";
 import excelEn from "@/content/blog/excel-yoki-crm.en.json";
@@ -14,6 +17,8 @@ interface PostText {
   dateLabel: string;
   imageAlt: string;
   markdown: string;
+  /** Maqola oxiridagi chaqiriq bloki uchun alohida matn; berilmasa blogning umumiy matni (`blog-ui.ts`) chiqadi. */
+  cta?: { title: string; text: string; button: string };
 }
 
 interface RawPost {
@@ -37,6 +42,55 @@ export interface Post extends PostText {
 }
 
 const RAW: RawPost[] = [
+  {
+    slug: "oquv-markazlari-uchun-eng-yaxshi-crm",
+    date: "2026-10-10",
+    author: "OneRoom",
+    image: "/blog/eng-yaxshi-crm.jpg",
+    imageWidth: 1536,
+    imageHeight: 864,
+    text: {
+      uz: {
+        title: "O‘quv markazi uchun eng yaxshi CRM: O‘zbekistonda 6 tizim",
+        description: "O‘zbekistondagi 6 ta o‘quv markaz CRM tizimi: narx, bepul sinov, imkoniyatlar va kimga qaysi biri mos. 2026-yil oktabr holatiga ochiq manbalardan taqqoslash.",
+        category: "CRM va boshqaruv",
+        dateLabel: "10-oktabr, 2026",
+        imageAlt: "Sinfxonadagi noutbukda OneRoom boshqaruv paneli, yonida OneRoom va boshqa CRM tizimlarining taqqoslash kartochkalari",
+        markdown: best.markdown,
+        cta: {
+          title: "OneRoom’ni 7 kun bepul sinab ko‘ring.",
+          text: "Ariza qoldiring: mutaxassis siz bilan bog‘lanadi va tizimni markazingizga moslab sozlaydi. Karta ma’lumoti so‘ralmaydi.",
+          button: "Ariza qoldirish",
+        },
+      },
+      ru: {
+        title: "Лучшая CRM для учебного центра: 6 систем в Узбекистане",
+        description: "6 CRM для учебных центров Узбекистана: цены, бесплатный период, возможности и кому какая подходит. Сравнение по открытым данным на октябрь 2026 года.",
+        category: "CRM и управление",
+        dateLabel: "10 октября 2026",
+        imageAlt: "Ноутбук с панелью управления OneRoom в учебном классе, рядом карточки сравнения OneRoom и других CRM-систем",
+        markdown: bestRu.markdown,
+        cta: {
+          title: "Попробуйте OneRoom 7 дней бесплатно.",
+          text: "Оставьте заявку: специалист свяжется с вами и настроит систему под ваш центр. Данные карты не запрашиваются.",
+          button: "Оставить заявку",
+        },
+      },
+      en: {
+        title: "Best CRM for Learning Centers: 6 Systems in Uzbekistan",
+        description: "Six CRM systems for learning centers in Uzbekistan compared: pricing, free trials, features and who each one suits. Based on public data as of October 2026.",
+        category: "CRM & management",
+        dateLabel: "October 10, 2026",
+        imageAlt: "A laptop showing the OneRoom dashboard in a classroom, next to comparison cards for OneRoom and other CRM systems",
+        markdown: bestEn.markdown,
+        cta: {
+          title: "Try OneRoom free for 7 days.",
+          text: "Submit a request: a specialist will contact you and set the system up for your center. No card details are asked for.",
+          button: "Submit a request",
+        },
+      },
+    },
+  },
   {
     slug: "excel-yoki-crm",
     date: "2026-09-30",
