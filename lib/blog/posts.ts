@@ -52,7 +52,7 @@ const RAW: RawPost[] = [
     text: {
       uz: {
         title: "O‘quv markazi uchun eng yaxshi CRM: O‘zbekistonda 6 tizim",
-        description: "O‘zbekistondagi 6 ta o‘quv markaz CRM tizimi: narx, bepul sinov, imkoniyatlar va kimga qaysi biri mos. 2026-yil oktabr holatiga ochiq manbalardan taqqoslash.",
+        description: "OneRoom, Modme, Soff CRM, EduTizim, amoCRM va Bitrix24: narx, bepul sinov va imkoniyatlar taqqoslashi. 2026-yil oktabr holatiga ochiq manbalardan.",
         category: "CRM va boshqaruv",
         dateLabel: "10-oktabr, 2026",
         imageAlt: "Sinfxonadagi noutbukda OneRoom boshqaruv paneli, yonida OneRoom va boshqa CRM tizimlarining taqqoslash kartochkalari",
@@ -65,7 +65,7 @@ const RAW: RawPost[] = [
       },
       ru: {
         title: "Лучшая CRM для учебного центра: 6 систем в Узбекистане",
-        description: "6 CRM для учебных центров Узбекистана: цены, бесплатный период, возможности и кому какая подходит. Сравнение по открытым данным на октябрь 2026 года.",
+        description: "OneRoom, Modme, Soff CRM, EduTizim, amoCRM и Bitrix24: сравнение цен, бесплатного периода и возможностей. По открытым данным на октябрь 2026 года.",
         category: "CRM и управление",
         dateLabel: "10 октября 2026",
         imageAlt: "Ноутбук с панелью управления OneRoom в учебном классе, рядом карточки сравнения OneRoom и других CRM-систем",
@@ -78,7 +78,7 @@ const RAW: RawPost[] = [
       },
       en: {
         title: "Best CRM for Learning Centers: 6 Systems in Uzbekistan",
-        description: "Six CRM systems for learning centers in Uzbekistan compared: pricing, free trials, features and who each one suits. Based on public data as of October 2026.",
+        description: "OneRoom, Modme, Soff CRM, EduTizim, amoCRM and Bitrix24 compared on pricing, free trials and features. Based on public data as of October 2026.",
         category: "CRM & management",
         dateLabel: "October 10, 2026",
         imageAlt: "A laptop showing the OneRoom dashboard in a classroom, next to comparison cards for OneRoom and other CRM systems",
