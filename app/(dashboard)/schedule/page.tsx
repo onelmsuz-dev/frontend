@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TopHeader } from "@/components/layout/top-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -181,6 +181,14 @@ function getUzIdx(date: Date): number|null {
 function dayKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
+/** "YYYY-MM-DD" → mahalliy sana; noto'g'ri qiymatda `null`. */
+function parseDayKey(v: string | null): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v ?? "");
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return d.getMonth() === Number(m[2]) - 1 ? d : null;
+}
+const VIEWS: readonly ViewMode[] = ["kun", "hafta", "oy", "xona"];
 
 // ─── Mini calendar popover ───────────────────────────────────────────────────
 
@@ -261,7 +269,19 @@ function MiniCal({ pickerMonth, onChangeMonth, today, selDay, weekStart, view, o
 
 // ─── Main page ───────────────────────────────────────────────────────────────
 
+/**
+ * `useSearchParams` Suspense chegarasini talab qiladi (aks holda sahifa
+ * oldindan chizilmaydi) — sozlamalar sahifasidagi kabi.
+ */
 export default function SchedulePage() {
+  return (
+    <Suspense fallback={null}>
+      <ScheduleContent />
+    </Suspense>
+  );
+}
+
+function ScheduleContent() {
   // "Bugun" — Toshkent bo'yicha (qurilma soati boshqa mintaqada bo'lsa ham).
   const router = useRouter();
   const { data: org } = useOrganization();
@@ -272,13 +292,45 @@ export default function SchedulePage() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "SUPER_ADMIN";
 
-  const [view,        setView]        = useState<ViewMode>("hafta");
+  /**
+   * KO'RINISH VA SANA MANZILDA — `?view=oy&sana=2026-11-01` (2026-10-14).
+   * Sahifa yangilanganda odam turgan joyida qoladi: qaysi ko'rinish
+   * (kun/hafta/oy/xona) va qaysi kun/hafta/oy. Boshlang'ich qiymat
+   * manzildan olinadi (effekt emas — sahifa "hafta"da miltillab, keyin
+   * sakramasin). Standart holat (joriy hafta) manzilga yozilmaydi.
+   */
+  const searchParams = useSearchParams();
+  const urlView = searchParams.get("view") as ViewMode | null;
+  const urlSana = parseDayKey(searchParams.get("sana")) ?? today;
+  const [view,        setView]        = useState<ViewMode>(urlView && VIEWS.includes(urlView) ? urlView : "hafta");
   const [fit, setFit] = useFit();
-  const [selDay,      setSelDay]      = useState(new Date(today));
-  const [weekStart,   setWeekStart]   = useState(getMondayOf(today));
-  const [monthDate,   setMonthDate]   = useState(new Date(today));
+  const [selDay,      setSelDay]      = useState(new Date(urlSana));
+  const [weekStart,   setWeekStart]   = useState(getMondayOf(urlSana));
+  const [monthDate,   setMonthDate]   = useState(new Date(urlSana.getFullYear(), urlSana.getMonth(), 1));
   const [pickerOpen,  setPickerOpen]  = useState(false);
-  const [pickerMonth, setPickerMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [pickerMonth, setPickerMonth] = useState(new Date(urlSana.getFullYear(), urlSana.getMonth(), 1));
+
+  // Holat o'zgarsa — manzil yangilanadi. `replaceState`: serverga so'rov yo'q,
+  // tarixga qadam qo'shilmaydi ("Orqaga" kun-kun yurmaydi).
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const p = url.searchParams;
+    if (view === "hafta") p.delete("view"); else p.set("view", view);
+    const joriy =
+      view === "kun"   ? sameDay(selDay, today) :
+      view === "hafta" ? sameDay(weekStart, getMondayOf(today)) :
+      view === "oy"    ? monthDate.getFullYear() === today.getFullYear() && monthDate.getMonth() === today.getMonth() :
+      true;                                     // xona — sanaga bog'liq emas
+    if (joriy) p.delete("sana");
+    else p.set("sana", dayKey(view === "kun" ? selDay : view === "hafta" ? weekStart
+      : new Date(monthDate.getFullYear(), monthDate.getMonth(), 1)));
+    // Xonalar ichki tanlovi (`RoomGrid`) — boshqa ko'rinishda kerak emas.
+    if (view !== "xona") { p.delete("xt"); p.delete("xk"); }
+    const yangi = url.pathname + (p.toString() ? `?${p}` : "") + url.hash;
+    if (yangi !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.replaceState(null, "", yangi);
+    }
+  }, [view, selDay, weekStart, monthDate, today]);
 
   // Group modal
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -1097,7 +1149,7 @@ export default function SchedulePage() {
                       onClick={() => router.push(`/groups/${entry.groupId}`)}
                       onKeyDown={(e) => { if (e.key === "Enter") router.push(`/groups/${entry.groupId}`); }}
                       className={cn("absolute rounded-xl overflow-hidden cursor-pointer border border-l-[4px] shadow-sm transition-all hover:brightness-95 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500",
-                        entry.color, entry.upcoming && "border-dashed opacity-80")}
+                        entry.color, entry.upcoming && "border-dashed [&>*]:opacity-70")}
                       style={{
                         top: top+2, height: Math.max(height-4,24),
                         left: `calc(${col * w}% + 12px)`,
@@ -1197,7 +1249,7 @@ export default function SchedulePage() {
                         onClick={() => router.push(`/groups/${entry.groupId}`)}
                         onKeyDown={(e) => { if (e.key === "Enter") router.push(`/groups/${entry.groupId}`); }}
                         className={cn("absolute rounded-lg overflow-hidden cursor-pointer border border-l-[3px] shadow-sm transition-all hover:brightness-95 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500",
-                          entry.color, entry.upcoming && "border-dashed opacity-80")}
+                          entry.color, entry.upcoming && "border-dashed [&>*]:opacity-70")}
                         style={{
                           top: top+2, height: Math.max(height-4,20),
                           left: `calc(${col * w}% + 4px)`,
@@ -1229,52 +1281,97 @@ export default function SchedulePage() {
         </div>
       )}
 
-      {/* ══ OY VIEW ═══════════════════════════════════════════════════════════ */}
-      {view === "oy" && (
-        <div className="flex-1 overflow-auto p-4">
-          <div className="flex items-baseline gap-2 mb-3 px-1">
-            <h2 className="text-[20px] font-black text-neutral-900 dark:text-neutral-100">{UZ_MONTHS[monthDate.getMonth()]}</h2>
-            <span className="text-[14px] font-semibold text-neutral-400 dark:text-neutral-500">{monthDate.getFullYear()}</span>
+      {/* ══ OY VIEW ═══════════════════════════════════════════════════════════
+           Qayta chizildi (2026-10-14): ilgari 9px yozuv, qirrali bloklar va
+           oy 5 haftada tugasa ham pastda bo'm-bo'sh 6-qator turardi.
+           Endi: faqat kerakli haftalar (balandlik ekranga teng bo'linadi),
+           har kunda darslar soni, kurs rangidagi nuqtali yozuvlar, bugun
+           ajralib turadi, o'tgan kunlar xiraroq, yakshanba alohida fon. */}
+      {view === "oy" && (() => {
+        const oy = monthDate.getMonth();
+        const boshi = calCells.findIndex(d => d.getMonth() === oy);
+        const kunlar = new Date(monthDate.getFullYear(), oy + 1, 0).getDate();
+        const haftalar = Math.ceil((boshi + kunlar) / 7);
+        const katak = calCells.slice(0, haftalar * 7);
+        const oyDarslari = katak.reduce((n, d) => n + (d.getMonth() === oy ? entriesOn(d).length : 0), 0);
+        return (
+        // Sig'masa — butun oy ko'rinishi aylanadi (oxirgi hafta kesilmasin).
+        <div className="flex-1 min-h-0 overflow-auto flex flex-col p-4 gap-3">
+          <div className="flex items-end justify-between gap-3 px-1">
+            <div className="flex items-baseline gap-2">
+              <h2 className="text-[22px] font-black tracking-tight text-neutral-900 dark:text-neutral-100">{UZ_MONTHS[oy]}</h2>
+              <span className="text-[15px] font-semibold text-neutral-400 dark:text-neutral-500">{monthDate.getFullYear()}</span>
+            </div>
+            <span className="rounded-full bg-indigo-50 px-3 py-1 text-[12px] font-semibold text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200">
+              Bu oy: {oyDarslari} ta dars
+            </span>
           </div>
-          <div className="grid grid-cols-7 mb-1">
-            {["Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba","Yakshanba"].map(d => (
-              <div key={d} className="text-center py-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">{d.slice(0,3)}</span>
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-px rounded-2xl overflow-hidden bg-white/45 dark:bg-white/10 border border-white/60 dark:border-white/10">
-            {calCells.slice(0,42).map((d, i) => {
-              const inMonth = d.getMonth()===monthDate.getMonth();
-              if (i>=35 && !inMonth) return <div key={i} className="glass-soft h-24" />;
-              const isToday = sameDay(d, today);
-              const isSel   = sameDay(d, selDay);
-              const entries = inMonth ? entriesOn(d) : [];
-              return (
-                <button key={i} onClick={() => { setSelDay(new Date(d)); setView("kun"); }}
-                  className={cn("glass-soft h-24 p-1.5 text-left flex flex-col gap-1",
-                    "hover:bg-white/60 dark:hover:bg-white/10 transition-colors",
-                    !inMonth && "opacity-25")}>
-                  <span className={cn("w-6 h-6 flex items-center justify-center rounded-full text-[12px] font-bold shrink-0",
-                    isToday ? "bg-indigo-600 text-white dark:bg-indigo-500"
-                    : isSel  ? "bg-neutral-200 dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 ring-2 ring-neutral-400"
-                             : "text-neutral-700 dark:text-neutral-300")}>
-                    {d.getDate()}
-                  </span>
-                  <div className="flex flex-col gap-px flex-1 overflow-hidden">
-                    {entries.slice(0,3).map(e => (
-                      <div key={e.id} className={cn("text-[9px] font-semibold px-1.5 py-px rounded-sm truncate", e.color)}>
-                        {e.time} {e.groupName}
-                      </div>
-                    ))}
-                    {entries.length>3 && <span className="text-[9px] text-neutral-400 dark:text-neutral-500 px-1">+{entries.length-3} ta boshqa</span>}
-                  </div>
-                </button>
-              );
-            })}
+
+          <div className="grow shrink-0 flex flex-col overflow-hidden rounded-2xl border border-neutral-200/80 bg-white/70 shadow-sm dark:border-white/10 dark:bg-neutral-900/60">
+            <div className="grid grid-cols-7 border-b border-neutral-200/80 dark:border-white/10">
+              {["Dushanba","Seshanba","Chorshanba","Payshanba","Juma","Shanba","Yakshanba"].map((d, i) => (
+                <div key={d} className={cn("px-3 py-2.5 text-[11.5px] font-bold text-neutral-500 dark:text-neutral-400",
+                  i === 6 && "bg-neutral-50/80 text-neutral-400 dark:bg-white/[0.03] dark:text-neutral-500")}>
+                  <span className="hidden lg:inline">{d}</span>
+                  <span className="lg:hidden">{d.slice(0, 2)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid flex-1 grid-cols-7" style={{ gridTemplateRows: `repeat(${haftalar}, minmax(112px, 1fr))` }}>
+              {katak.map((d, i) => {
+                const inMonth = d.getMonth() === oy;
+                const isToday = sameDay(d, today);
+                const otgan   = inMonth && !isToday && d < today;
+                const entries = inMonth ? entriesOn(d) : [];
+                const yakshanba = i % 7 === 6;
+                return (
+                  <button key={i} onClick={() => { setSelDay(new Date(d)); setView("kun"); }}
+                    disabled={!inMonth}
+                    title={inMonth ? `${d.getDate()} ${UZ_MONTHS[oy]} — kunlik jadvalni ochish` : undefined}
+                    className={cn("group/kun relative flex min-w-0 flex-col gap-1.5 p-2 text-left transition-colors",
+                      "border-neutral-200/80 dark:border-white/10",
+                      i % 7 !== 6 && "border-r", i < (haftalar - 1) * 7 && "border-b",
+                      yakshanba && "bg-neutral-50/80 dark:bg-white/[0.03]",
+                      inMonth ? "hover:bg-indigo-50/60 dark:hover:bg-indigo-400/[0.06]" : "cursor-default",
+                      isToday && "bg-indigo-50/70 ring-2 ring-inset ring-indigo-500/70 dark:bg-indigo-400/10")}>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={cn("flex h-7 min-w-7 items-center justify-center rounded-full px-1 text-[13px] font-bold tabular-nums",
+                        isToday ? "bg-indigo-600 text-white shadow-sm dark:bg-indigo-500"
+                          : !inMonth ? "text-neutral-300 dark:text-neutral-700"
+                          : otgan ? "text-neutral-400 dark:text-neutral-500"
+                          : "text-neutral-800 dark:text-neutral-100")}>
+                        {d.getDate()}
+                      </span>
+                      {entries.length > 0 && (
+                        <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-semibold tabular-nums",
+                          "bg-neutral-100 text-neutral-500 dark:bg-white/10 dark:text-neutral-400")}>
+                          {entries.length} dars
+                        </span>
+                      )}
+                    </div>
+                    <div className={cn("flex min-h-0 flex-1 flex-col gap-1 overflow-hidden", otgan && "opacity-60")}>
+                      {entries.slice(0, 3).map(e => (
+                        <div key={e.id}
+                          className={cn("flex min-w-0 items-center gap-1.5 rounded-md border-l-[3px] px-1.5 py-[3px] text-[11px] leading-tight", e.color)}>
+                          <span className="shrink-0 font-bold tabular-nums">{e.time}</span>
+                          <span className="truncate font-medium opacity-90">{e.groupName}</span>
+                        </div>
+                      ))}
+                      {entries.length > 3 && (
+                        <span className="w-fit rounded-md px-1.5 text-[11px] font-semibold text-indigo-600 group-hover/kun:underline dark:text-indigo-400">
+                          +{entries.length - 3} ta boshqa
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       </div>
     </div>

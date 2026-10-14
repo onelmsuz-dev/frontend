@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Clock, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { blockColorFor } from "@/lib/course-colors";
 import { businessMinutesOfDay } from "@/lib/time";
@@ -149,16 +151,22 @@ export function RoomTimeGrid({
   }, [showNow]);
 
   /**
-   * USTUNLAR — faqat BAND xonalar, oxirida "Xonasiz".
-   * Bo'sh xonani ustun qilib chizish panjarani kengaytirar, lekin hech
-   * narsa aytmasdi.
+   * USTUNLAR — oxirida "Xonasiz".
+   *
+   * Asosiy jadvalda HAMMA xona (2026-10-14): "qaysi xona bo'sh" degan
+   * savolning javobi aynan bo'sh ustun — ilgari bo'sh xona umuman
+   * chizilmas va xonalar "to'liq ko'rinmayapti" deb qabul qilinardi.
+   * Tartib: avval BAND xonalar, keyin bo'shlari (torroq ustunda) —
+   * xona ko'p bo'lsa darsli xonalar ekrandan o'ngga surilib ketmasin.
+   * Yon panelda (`compact`) — faqat band xonalar: u tor.
    */
   const ustunlar = useMemo(() => {
     const band = new Set(groups.map((g) => g.room?.id).filter(Boolean) as string[]);
-    const list = rooms.filter((r) => band.has(r.id));
+    const bandlar = rooms.filter((r) => band.has(r.id));
+    const list = compact ? bandlar : [...bandlar, ...rooms.filter((r) => !band.has(r.id))];
     const xonasizBor = groups.some((g) => !g.room?.id);
     return xonasizBor ? [...list, { id: "__yoq__", name: "Xonasiz" }] : list;
-  }, [groups, rooms]);
+  }, [groups, rooms, compact]);
 
   /**
    * VAQT OYNASI — YARIM SOATLIK, UZLUKSIZ.
@@ -204,9 +212,15 @@ export function RoomTimeGrid({
     return m;
   }, [groups, ustunlar]);
 
-  const eniPx  = compact ? 150 : 190;
-  const qatorH = compact ? 34 : 44;          // BAND yarim soatning balandligi
-  const boshH  = compact ? 16 : 20;          // bo'sh yarim soat — torroq
+  /** Ustunning ENG KAM eni — keng ekranda ustunlar shundan ham kengayadi. */
+  const eniPx  = compact ? 150 : 200;
+  /** Bo'sh xona ustuni — ichida kartochka yo'q, kengligi kerak emas. */
+  const boshEniPx = 110;
+  const ustunUslub = (id: string) => (xonaBoyicha.has(id) || compact
+    ? { minWidth: eniPx, flexGrow: 2 }
+    : { minWidth: boshEniPx, flexGrow: 1 });
+  const qatorH = compact ? 34 : 48;          // BAND yarim soatning balandligi
+  const boshH  = compact ? 16 : 22;          // bo'sh yarim soat — torroq
   const gutter = compact ? 48 : 56;
 
   /**
@@ -285,19 +299,33 @@ export function RoomTimeGrid({
        sarlavha yopishib turolmasdi. `overflow-hidden` ham aylanish
        konteksti yaratadi, shuning uchun bu yerda YO'Q. */
     <div className={cn("h-full overflow-auto border rounded-lg", PANJARA)}>
-      <div className="min-w-max">
+      {/* `min-w-full` + ustunlarda `flex-1`: keng ekranda panjara butun
+          enni egallaydi (ilgari ustunlar qotib 190px edi va o'ng tomoni
+          bo'm-bo'sh, chiziqlar o'rtada uzilib qolardi). Tor ekranda
+          `minWidth` bo'yicha yonga aylanadi. */}
+      <div className="min-w-full w-max">
         {/* ─── SARLAVHA: xonalar, tepada qotadi ─────────────────────── */}
         <div className={cn("flex border-b sticky top-0 z-20", PANJARA, HOSHIYA)}>
           <div className={cn("shrink-0 sticky left-0 z-30 border-r", PANJARA, HOSHIYA)}
             style={{ width: gutter }} />
-          {ustunlar.map((r) => (
-            <div key={r.id}
-              className={cn("shrink-0 px-2 py-2 text-[11.5px] font-bold truncate",
-                "text-neutral-600 dark:text-neutral-300", "border-l", PANJARA)}
-              style={{ width: eniPx }}>
-              {r.name}
-            </div>
-          ))}
+          {ustunlar.map((r) => {
+            const soni = xonaBoyicha.get(r.id)?.length ?? 0;
+            return (
+              <div key={r.id}
+                className={cn("basis-0 min-w-0 border-l", compact ? "px-2 py-2" : "px-3 py-2.5", PANJARA)}
+                style={ustunUslub(r.id)}>
+                <p className={cn("truncate font-bold text-neutral-700 dark:text-neutral-200", compact ? "text-[11.5px]" : "text-[13px]")}>
+                  {r.name}
+                </p>
+                {!compact && (
+                  <p className={cn("text-[11px] font-medium",
+                    soni ? "text-neutral-400 dark:text-neutral-500" : "text-emerald-600 dark:text-emerald-400")}>
+                    {soni ? `${soni} ta dars` : "Bo'sh"}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* ─── TANA: chapda vaqt ustuni, o'ngda xonalar ─────────────── */}
@@ -326,8 +354,9 @@ export function RoomTimeGrid({
 
           {ustunlar.map((r) => (
             <div key={r.id}
-              className={cn("shrink-0 relative border-l", PANJARA)}
-              style={{ width: eniPx, height: jadvalH }}>
+              className={cn("basis-0 min-w-0 relative border-l", PANJARA,
+                !xonaBoyicha.has(r.id) && "bg-neutral-50/40 dark:bg-white/[0.02]")}
+              style={{ ...ustunUslub(r.id), height: jadvalH }}>
               {/* Yarim soatlik chiziqlar — daftar katagi */}
               {Array.from({ length: oyna.qator }, (_, i) => (
                 <div key={i}
@@ -342,34 +371,57 @@ export function RoomTimeGrid({
                 const o = Math.max(daqiqa(g.endTime) ?? b + QADAM, b + QADAM);
                 const h = Math.max(yPx(o) - yPx(b), 18);
                 const w = 100 / jami;
+                const soni = g._count?.students ?? 0;
+                const sigim = g.maxStudents ?? 15;
+                const toliq = soni >= sigim;
                 return (
                   <Link key={g.id} href={`/groups/${g.id}`}
-                    className={cn("absolute rounded-md border-l-4 px-1.5 py-1",
-                      "overflow-hidden transition-opacity hover:opacity-80",
+                    title={`${g.name} · ${g.startTime}–${g.endTime}`}
+                    className={cn("group/blok absolute flex flex-col overflow-hidden border-l-4",
+                      "shadow-sm ring-1 ring-black/[0.04] transition-all hover:z-[5] hover:shadow-md hover:-translate-y-px dark:ring-white/5",
+                      compact ? "rounded-md px-1.5 py-1" : "rounded-lg px-2.5 py-2",
                       blockColorFor(g, i))}
                     style={{
-                      top: yPx(b) + 1, height: h - 2,
-                      left: `calc(${yolak * w}% + 2px)`,
-                      width: `calc(${w}% - 4px)`,
+                      top: yPx(b) + 2, height: h - 4,
+                      left: `calc(${yolak * w}% + 3px)`,
+                      width: `calc(${w}% - 6px)`,
                     }}>
-                    <p className="text-[11px] font-bold leading-tight truncate">{g.name}</p>
+                    <p className={cn("font-bold leading-tight truncate", compact ? "text-[11px]" : "text-[13px]")}>{g.name}</p>
                     {/* Matn BLOK BALANDLIGIGA qarab qo'shiladi: qisqa
                         darsda hammasi sig'maydi va qirqilgan yozuv
                         bo'lmagandan yomonroq. */}
                     {h >= 44 && (
-                      <p className="text-[9.5px] opacity-80 leading-tight truncate">
-                        {g.teacher?.user?.name ?? "—"}
+                      <p className={cn("mt-1 flex min-w-0 items-center gap-1 opacity-80 leading-tight", compact ? "text-[9.5px]" : "text-[11.5px]")}>
+                        {!compact && <UserRound className="h-3 w-3 shrink-0" />}
+                        <span className="truncate">{g.teacher?.user?.name ?? "—"}</span>
                       </p>
                     )}
                     {h >= 62 && (
-                      <p className="text-[9px] opacity-70 leading-tight">
+                      <p className={cn("mt-0.5 flex items-center gap-1 opacity-75 leading-tight tabular-nums", compact ? "text-[9px]" : "text-[11.5px]")}>
+                        {!compact && <Clock className="h-3 w-3 shrink-0" />}
                         {g.startTime}&ndash;{g.endTime}
                       </p>
                     )}
-                    {h >= 78 && (
-                      <p className="text-[9px] font-bold opacity-90 leading-tight">
-                        {g._count?.students ?? 0}{" / "}{g.maxStudents ?? 15}
-                      </p>
+                    {/* O'QUVCHILAR SONI — pastda; to'lgan guruh qizil belgi
+                        bilan (yangi o'quvchini boshqa guruhga yo'naltirish uchun). */}
+                    {h >= 84 && (
+                      <div className="mt-auto pt-1.5">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold tabular-nums",
+                            compact ? "text-[9px]" : "text-[11px]",
+                            toliq ? "bg-red-500 text-white" : "bg-white/70 dark:bg-white/10")}>
+                            {!compact && <Users className="h-3 w-3" />}
+                            {soni}{" / "}{sigim}
+                          </span>
+                          {toliq && !compact && <span className="text-[10.5px] font-semibold text-red-600 dark:text-red-400">To&apos;lgan</span>}
+                        </div>
+                        {!compact && (
+                          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/10">
+                            <div className={cn("h-full rounded-full", toliq ? "bg-red-500" : "bg-current opacity-60")}
+                              style={{ width: `${Math.min(100, Math.round((soni / Math.max(1, sigim)) * 100))}%` }} />
+                          </div>
+                        )}
+                      </div>
                     )}
                   </Link>
                 );
@@ -403,8 +455,31 @@ export function RoomGrid({
   ishBoshi?: string | null;
   ishOxiri?: string | null;
 }) {
-  const [tab, setTab] = useState<JadvalTab>("toq");
-  const [kunIdx, setKunIdx] = useState(() => bugungiIndeks());
+  /**
+   * TOQ/JUFT/BOSHQA VA KUN MANZILDA — `?view=xona&xt=boshqa&xk=2`: sahifa
+   * yangilanganda tanlangan bo'lim saqlanadi (jadval sahifasidagi
+   * `view`/`sana` bilan bir xil yondashuv).
+   */
+  const searchParams = useSearchParams();
+  const urlTab = searchParams.get("xt");
+  const urlKun = Number(searchParams.get("xk"));
+  const [tab, setTab] = useState<JadvalTab>(
+    urlTab === "toq" || urlTab === "juft" || urlTab === "boshqa" || urlTab === "hamma" ? urlTab : "toq");
+  const [kunIdx, setKunIdx] = useState(() =>
+    Number.isInteger(urlKun) && urlKun >= 0 && urlKun < KUNLAR.length && searchParams.has("xk")
+      ? urlKun : bugungiIndeks());
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (tab === "toq") url.searchParams.delete("xt"); else url.searchParams.set("xt", tab);
+    // Kun faqat "Boshqa"da tanlanadi va u bugundan farq qilsagina yoziladi.
+    if (tab === "boshqa" && kunIdx !== bugungiIndeks()) url.searchParams.set("xk", String(kunIdx));
+    else url.searchParams.delete("xk");
+    const yangi = url.pathname + url.search + url.hash;
+    if (yangi !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.replaceState(null, "", yangi);
+    }
+  }, [tab, kunIdx]);
 
   const korinadi = useMemo(
     () => filtrla(groups, tab, kunIdx), [groups, tab, kunIdx]);
