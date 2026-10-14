@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useState, useRef } from "react";
+import { use, useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useStudent } from "@/lib/hooks/useStudents";
 import { useGroups } from "@/lib/hooks/useGroups";
@@ -38,7 +39,7 @@ import { useOrganization } from "@/lib/hooks/useOrganization";
 import useSWR, { mutate } from "swr";
 import { fetcher as _fetcher } from "@/lib/fetcher";
 import {
-  Phone, Calendar, ArrowLeft, AlertCircle,
+  Calendar, ArrowLeft, AlertCircle,
   Plus, LogOut, Shuffle, UserCheck, Trophy, CalendarDays, Printer, Users,
   Check, Info, Camera, MessageSquare, UserPlus2, History,
 } from "lucide-react";
@@ -391,6 +392,56 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const canManageDocs = hasPerm(perms, "documents.manage") || canManageGroups;
   const canSeeSms = hasPerm(perms, "sms.view");
   const canSeeHistory = hasPerm(perms, "activity.view");
+
+  /** Ko'rinadigan tablar — ruxsat va bayroqlarga qarab. */
+  const tablar = [
+    { id: "umumiy", label: "Umumiy", icon: LayoutDashboard },
+    ...(canSeeMoney ? [{ id: "moliya", label: "Moliya", icon: Wallet }] : []),
+    { id: "guruhlar", label: "Guruhlar", icon: Users },
+    ...(canSeeAttendance ? [{ id: "davomat", label: "Davomat", icon: CalendarCheck2 }] : []),
+    ...(studentFilesOn && canSeeSms ? [{ id: "sms", label: "SMS", icon: MessageSquare }] : []),
+    ...(canSeeHistory ? [{ id: "tarix", label: "Tarix", icon: History }] : []),
+    ...(showGamification ? [{ id: "gamifikatsiya", label: "Gamifikatsiya", icon: Trophy }] : []),
+    { id: "profil", label: "Ma'lumot", icon: UserRound },
+  ];
+
+  /**
+   * OCHIQ TAB MANZILDA — `?tab=moliya` (2026-10-14, sozlamalar sahifasidagi
+   * kabi). Sahifa yangilanganda (masalan to'lovdan keyin F5) odam turgan
+   * tabida qoladi, havolani boshqaga yuborsa ham aynan shu tab ochiladi.
+   *
+   * Faqat KO'RINADIGAN tab qabul qilinadi: ruxsati yo'q xodim
+   * `?tab=moliya` havolasi bilan yashirin tabni ocholmaydi. Ruxsatlar
+   * (`me`) kechroq kelgani uchun effekt ro'yxat to'lgach yana tekshiradi;
+   * `tabQollandi` — bir marta: keyin odam tanlagan tabni qaytarib qo'ymaydi.
+   */
+  const searchParams = useSearchParams();
+  const tabQollandi = useRef("");
+  const tabIds = tablar.map(t => t.id).join(",");
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (!t || tabQollandi.current === t) return;
+    if (tabIds.split(",").includes(t)) {
+      tabQollandi.current = t;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTab(t);
+    }
+  }, [searchParams, tabIds]);
+
+  /**
+   * Tab tanlash — manzil ham yangilanadi. `history.replaceState`: serverga
+   * so'rov yo'q va tarixga qadam qo'shilmaydi ("Orqaga" tablar bo'ylab
+   * yurmaydi, o'quvchilar ro'yxatiga qaytaradi). Standart tab ("Umumiy")
+   * manzilda yozilmaydi — havola toza qoladi.
+   */
+  const tabniOch = (id: string) => {
+    setTab(id);
+    tabQollandi.current = id;
+    const url = new URL(window.location.href);
+    if (id === "umumiy") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", id);
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  };
 
   // To'lov uchun mos a'zoliklar (guruhni tashlab ketganlar chiqarib tashlanadi)
   const payableGroups: Membership[] = (student?.groups ?? []).filter(
@@ -1686,117 +1737,61 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           joined={formatUzDate(student.joinedAt ?? student.createdAt)}
           // To'lov tugmasi bu yerda YO'Q: tepa panelda ("To'lov qo'shish") va
           // "Hisob holati" kartasida bor — uchinchisi faqat takror bo'lardi.
+          // PROFIL RASMI — bosilganda o'zgartiriladi. Bosqichma-bosqich
+          // chiqarish: rasm yuklash hozircha faqat demo markazda.
+          avatarEdit={canManageGroups && studentFilesOn ? (
+            <>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
+                onChange={e => uploadAvatar(e.target.files?.[0])} />
+              <button onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading}
+                title="Rasmni o'zgartirish"
+                className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100
+                  flex items-center justify-center transition-opacity disabled:opacity-100">
+                <Camera className="w-4 h-4 text-white" />
+              </button>
+            </>
+          ) : undefined}
+          // TAVSIYA QILGAN — kim orqali kelgani. `referralCode`
+          // (gamifikatsiya kartasida) bu o'quvchining O'ZINI tavsiya qilish
+          // kodi — bu esa TESKARI: uni kim taklif qilgani.
+          meta={student.referredBy && (
+            <Link href={`/students/${student.referredBy.id}`}
+              className="flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              <UserPlus2 className="w-3 h-3" />
+              {student.referredBy.name} orqali keldi
+            </Link>
+          )}
+          // "Ketgan" holati ATAYLAB belgilanadi — avval u guruhi yo'qligidan
+          // chiqarilar va yangi o'quvchi ham ketgan bo'lib ko'rinardi.
+          actions={canManageGroups && (
+            student.archivedAt ? (
+              <button onClick={unarchiveStudent} disabled={archiving}
+                className="flex h-9 items-center gap-1.5 rounded-xl bg-green-600 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-60">
+                <UserCheck className="w-3.5 h-3.5" />
+                {archiving ? "..." : "Ketgan belgisini olib tashlash"}
+              </button>
+            ) : (
+              <button onClick={openArchive} disabled={archiving}
+                className="flex h-9 items-center gap-1.5 rounded-xl glass-soft px-3 text-[13px] font-medium text-neutral-500 transition-colors hover:text-red-600 dark:text-neutral-400 dark:hover:text-red-400 disabled:opacity-60">
+                <UserRoundX className="w-3.5 h-3.5" />
+                {archiving ? "..." : "Ketgan deb belgilash"}
+              </button>
+            )
+          )}
         />
+        {avatarErr && <p className="mt-2 text-[11.5px] text-red-600 dark:text-red-400">{avatarErr}</p>}
+        {archiveErr && !confirmArchive && <p className="mt-2 text-[12px] text-red-600 dark:text-red-400">{archiveErr}</p>}
       </div>
       <div className="p-5 gap-5 flex flex-col">
         {/* "MA'LUMOT" TABINING ICHI (egasi, 2026-10-05). DOMda tablardan oldin
             turadi, ekranda esa keyin (`order-2`); boshqa tabda yashirin.
-              Tepada — o'quvchi ma'lumoti: butun enli, yotiq karta.
-              Ostida — UCHTA BIR XIL blok: izohlar, vazifalar, fayllar. Eni teng
+              UCHTA BIR XIL blok: izohlar, vazifalar, fayllar. Eni teng
               (`grid-cols-3`), balandligi ham teng (`BLOK`); ichidagi ro'yxat
               sig'masa blokning O'ZIDA aylanadi — biri uzayib qatorni buzmaydi.
               768–1023px: ikki ustun (fayllar ostida to'liq enda), telefonda bitta. */}
         <div className={tab === "profil"
           ? cn(TAB_IN, "order-2 grid grid-cols-1 gap-4 items-start [&>*]:min-w-0 md:grid-cols-2 lg:grid-cols-3")
           : "hidden"}>
-          {/* Profile */}
-          {/* Yotiq karta: chapda rasm va ism, o'rtada aloqa ma'lumotlari bir
-              qatorda, o'ngda "Ketgan deb belgilash". Telefonda tik (ustma-ust) —
-              yotiq tartib tor ekranda siqilardi. */}
-          <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5
-            md:col-span-2 lg:col-span-3 md:flex md:flex-wrap md:items-center md:gap-x-8 md:gap-y-4">
-            <div className="flex items-center gap-4 mb-4 md:mb-0 md:shrink-0">
-              {/* PROFIL RASMI — bosilganda o'zgartiriladi. Rasm bo'lmasa
-                  ismning bosh harfi bilan rangli doira (avvalgidek). */}
-              <div className="relative shrink-0 group">
-                <div className={cn("w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-white text-xl font-black",
-                  !student.avatar && (student.isActive
-                    ? "bg-gradient-to-br from-blue-400 to-indigo-500"
-                    : "bg-gradient-to-br from-amber-400 to-orange-400"))}>
-                  {student.avatar
-                    ? <img src={student.avatar} alt={student.name} className="w-full h-full object-cover" />
-                    : student.name[0]}
-                </div>
-                {/* Bosqichma-bosqich chiqarish — rasm yuklash hozircha
-                    faqat demo markazda. */}
-                {canManageGroups && studentFilesOn && (
-                  <>
-                    <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
-                      onChange={e => uploadAvatar(e.target.files?.[0])} />
-                    <button onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading}
-                      title="Rasmni o'zgartirish"
-                      className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100
-                        flex items-center justify-center transition-opacity disabled:opacity-100">
-                      <Camera className="w-4 h-4 text-white" />
-                    </button>
-                  </>
-                )}
-              </div>
-              <div>
-                <h2 className="font-bold text-neutral-900 dark:text-neutral-100">{student.name}</h2>
-                <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-semibold", enroll?.cls)}>
-                  {enroll?.label}
-                </span>
-              </div>
-            </div>
-            {avatarErr && <p className="text-[11.5px] text-red-600 dark:text-red-400 -mt-2 mb-3 md:m-0 md:basis-full">{avatarErr}</p>}
-
-            <div className="space-y-2 md:flex md:min-w-0 md:flex-1 md:flex-wrap md:items-center md:gap-x-7 md:gap-y-2.5 md:space-y-0">
-              <a href={`tel:${student.phone}`}
-                className="flex items-center gap-2 text-[13px] text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors">
-                <Phone className="w-3.5 h-3.5 text-neutral-400" />
-                {student.phone}
-              </a>
-              {student.parentPhone && (
-                <a href={`tel:${student.parentPhone}`}
-                  className="flex items-center gap-2 text-[13px] text-neutral-500 dark:text-neutral-400">
-                  <Phone className="w-3.5 h-3.5 text-neutral-400" />
-                  Ota-ona: {student.parentPhone}
-                </a>
-              )}
-              <div className="flex items-center gap-2 text-[13px] text-neutral-500 dark:text-neutral-400">
-                <Calendar className="w-3.5 h-3.5 text-neutral-400" />
-                {formatUzDate(student.joinedAt ?? student.createdAt)} dan beri
-              </div>
-
-              {/* TAVSIYA QILGAN — kim orqali kelgani. `referralCode`
-                  (gamifikatsiya kartasida) bu o'quvchining O'ZINI
-                  tavsiya qilish kodi — bu esa TESKARI: uni kim
-                  taklif qilgani. */}
-              {student.referredBy && (
-                <Link href={`/students/${student.referredBy.id}`}
-                  className="flex items-center gap-2 text-[13px] text-neutral-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors w-fit">
-                  <UserPlus2 className="w-3.5 h-3.5 text-neutral-400" />
-                  {student.referredBy.name} orqali keldi
-                </Link>
-              )}
-
-              {/* "Ketgan" holati ATAYLAB belgilanadi — avval u guruhi
-                  yo'qligidan chiqarilar va yangi o'quvchi ham ketgan
-                  bo'lib ko'rinardi. */}
-              {canManageGroups && (
-                student.archivedAt ? (
-                  <button onClick={unarchiveStudent} disabled={archiving}
-                    className={cn("flex items-center gap-1.5 w-fit text-[12px] px-3 h-8 rounded-lg font-semibold bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-60",
-                      "mt-1 md:mt-0 lg:ml-auto")}>
-                    <UserCheck className="w-3.5 h-3.5" />
-                    {archiving ? "..." : "Ketgan belgisini olib tashlash"}
-                  </button>
-                ) : (
-                  <button onClick={openArchive} disabled={archiving}
-                    className={cn("flex items-center gap-1.5 w-fit text-[12px] px-3 h-8 rounded-lg font-semibold text-neutral-500 dark:text-neutral-400 border border-white/60 dark:border-white/10 hover:text-red-600 hover:border-red-300 dark:hover:text-red-400 transition-colors disabled:opacity-60",
-                      "mt-1 md:mt-0 lg:ml-auto")}>
-                    <UserRoundX className="w-3.5 h-3.5" />
-                    {archiving ? "..." : "Ketgan deb belgilash"}
-                  </button>
-                )
-              )}
-              {archiveErr && (
-                <p className="text-[12px] text-red-600 dark:text-red-400 basis-full">{archiveErr}</p>
-              )}
-            </div>
-          </div>
-
           {/* IZOH — profil bilan Moliya orasida.
               Maydon allaqachon bor edi, lekin bu sahifada hech qayerda
               ko'rinmasdi: o'qish ham, yozish ham faqat "Tahrirlash"
@@ -1814,9 +1809,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               "Izoh" bilan juda yaqin turardi, egasining talabi, 2026-09-30).
               Bosqichma-bosqich chiqarish — hozircha faqat demo markazda. */}
           {remindersOn && canReminders && (
-            <div className={cn(BLOK, "[&>*]:h-full [&>*]:overflow-y-auto")}>
-              <StudentReminders studentId={student.id} canEdit={canAddReminder} />
-            </div>
+            <StudentReminders className={BLOK} studentId={student.id} canEdit={canAddReminder} />
           )}
 
           {/* FAYLLAR — alohida tab emas, "Ma'lumot" ichidagi uchinchi blok. */}
@@ -1833,20 +1826,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
               (`TabGlide`); kontent esa yengil ko'tarilib ochiladi (`TabPanel`). */}
           <nav className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <TabGlide watch={tab} className="flex w-max items-center gap-1">
-            {[
-              { id: "umumiy", label: "Umumiy", icon: LayoutDashboard },
-              ...(canSeeMoney ? [{ id: "moliya", label: "Moliya", icon: Wallet }] : []),
-              { id: "guruhlar", label: "Guruhlar", icon: Users },
-              ...(canSeeAttendance ? [{ id: "davomat", label: "Davomat", icon: CalendarCheck2 }] : []),
-              ...(studentFilesOn && canSeeSms ? [{ id: "sms", label: "SMS", icon: MessageSquare }] : []),
-              ...(canSeeHistory ? [{ id: "tarix", label: "Tarix", icon: History }] : []),
-              ...(showGamification ? [{ id: "gamifikatsiya", label: "Gamifikatsiya", icon: Trophy }] : []),
-              { id: "profil", label: "Ma'lumot", icon: UserRound },
-            ].map(t => {
+            {tablar.map(t => {
               const Icon = t.icon;
               const active = tab === t.id;
               return (
-                <button key={t.id} onClick={() => setTab(t.id)}
+                <button key={t.id} onClick={() => tabniOch(t.id)}
                   data-tab-active={active} aria-pressed={active}
                   className={tabCls(active)}>
                   <Icon className="w-3.5 h-3.5" />
@@ -1870,13 +1854,13 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                 <StudentNotes
                   studentId={student.id}
                   canEdit={hasPerm(me?.permissions, "students.update")}
-                  limit={3} onMore={() => setTab("profil")}
+                  limit={3} onMore={() => tabniOch("profil")}
                   onChanged={revalidateAll}
                 />
               }
               paymentGroup={tolovGuruhi}
               onPay={() => { setPayErr(""); setShowPayModal(true); }}
-              onTab={setTab}
+              onTab={tabniOch}
             />
           )}
 

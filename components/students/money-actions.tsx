@@ -62,17 +62,20 @@ export function PayActions({
 
   return (
     <>
-      <div className="inline-flex items-stretch rounded-lg border border-emerald-500/70 dark:border-emerald-500/50 overflow-hidden">
+      {/* Moliya bo'limining ASOSIY amali — ko'rsatkichlar yonida ko'zga
+          tashlanadigan to'liq yashil tugma (ilgari 28px, 11px yozuv bilan
+          qiyin topilardi, egasi 2026-10-14). O'q — qaytarish/qarzdorlik. */}
+      <div className="inline-flex items-stretch overflow-hidden rounded-xl bg-emerald-600 text-white shadow-[0_8px_20px_-10px_rgba(5,150,105,0.7)]">
         <button onClick={onPay}
-          className="flex items-center gap-1 px-2.5 h-7 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
-          <Plus className="w-3 h-3" />{" "}To&apos;lov
+          className="flex h-11 items-center gap-2 px-4 text-[14px] font-semibold transition-colors hover:bg-emerald-700">
+          <Plus className="h-4 w-4" />To&apos;lov qo&apos;shish
         </button>
         {canAdjust && (
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label="Boshqa amallar"
-              className="flex items-center justify-center w-7 h-7 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors outline-none">
-              <ChevronDown className="w-3.5 h-3.5" />
+              className="flex w-10 items-center justify-center border-l border-white/25 outline-none transition-colors hover:bg-emerald-700 data-[popup-open]:bg-emerald-700">
+              <ChevronDown className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[210px]">
               <DropdownMenuItem onClick={() => setModal("refund")} className="text-red-600 dark:text-red-400">

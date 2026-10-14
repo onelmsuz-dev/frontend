@@ -45,25 +45,39 @@ const CARD = "glass-panel border border-white/60 dark:border-white/10 rounded-2x
 
 /* ── HERO ───────────────────────────────────────────────────────────────── */
 export function StudentHero({
-  name, avatar, statusLabel, statusCls, phone, parentPhone, parentName, joined, onPay,
+  name, avatar, statusLabel, statusCls, phone, parentPhone, parentName, joined, onPay, avatarEdit, meta, actions,
 }: {
   name: string; avatar?: string | null; statusLabel?: string; statusCls?: string;
   phone?: string | null; parentPhone?: string | null; parentName?: string | null;
   joined?: string | null; onPay?: () => void;
+  /** Rasm ustidagi o'zgartirish tugmasi (hover'da chiqadi) — huquq bo'lsa. */
+  avatarEdit?: React.ReactNode;
+  /** Ism ostidagi qatorga, "... dan beri" yoniga (masalan "... orqali keldi"). */
+  meta?: React.ReactNode;
+  /** O'ng tomondagi tugmalar qatori oxiriga (masalan "Ketgan deb belgilash"). */
+  actions?: React.ReactNode;
 }) {
   return (
     <div className={cn(CARD, "flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-4")}>
       <div className="flex min-w-0 items-center gap-3.5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-500 text-[18px] font-black text-white">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" /> : name[0]}
+        <div className="group relative shrink-0">
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-500 text-[18px] font-black text-white">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" /> : name[0]}
+          </div>
+          {avatarEdit}
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-[17px] font-bold tracking-tight text-neutral-900 dark:text-neutral-100">{name}</h2>
             {statusLabel && <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", statusCls)}>{statusLabel}</span>}
           </div>
-          {joined && <p className="mt-0.5 text-[12px] text-neutral-500 dark:text-neutral-400">{joined} dan beri o&apos;qiydi</p>}
+          {(joined || meta) && (
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-neutral-500 dark:text-neutral-400">
+              {joined && <span>{joined} dan beri o&apos;qiydi</span>}
+              {meta}
+            </div>
+          )}
         </div>
       </div>
 
@@ -87,6 +101,7 @@ export function StudentHero({
             <Plus className="h-3.5 w-3.5" />To&apos;lov
           </button>
         )}
+        {actions}
       </div>
     </div>
   );
