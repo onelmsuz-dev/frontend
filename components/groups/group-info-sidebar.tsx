@@ -5,14 +5,13 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Pencil, Trash2, UserPlus, Clock, MapPin, Wallet, GraduationCap,
   MoreVertical, UserX, UserCheck, Snowflake, UserRound, ArrowRight,
+  Flag, CalendarClock, RotateCcw, Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mutate } from "swr";
 import { formatUzDate } from "@/lib/date-uz";
 import { formatCurrency } from "@/lib/money";
-import { WEEKDAY_SHORT } from "@/lib/form-constants";
+import { WEEKDAYS, todayStr } from "@/lib/form-constants";
 import { useRooms } from "@/lib/hooks/useRooms";
 import { activeFreeze, type FreezeLike } from "@/lib/freeze";
 import { payStatusFromBalance, PAY_STATUS_CFG } from "@/lib/payment-status";
@@ -20,6 +19,7 @@ import { Modal, ConfirmDeleteModal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -66,19 +66,20 @@ const SORTS = [
 ];
 
 interface Props {
-  group: any;
   students: any[];
-  groupId: string;
   canUpdate: boolean;
-  canDelete: boolean;
-  status: { label: string; cls: string };
-  onAddStudent: () => void;
   onChanged: () => void;
 }
 
-export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelete, status, onAddStudent, onChanged }: Props) {
+/**
+ * GURUH SAHIFASI — O'NG USTUNDAGI O'QUVCHILAR RO'YXATI.
+ *
+ * Guruh ma'lumoti, tahrirlash, yakunlash va o'chirish tepadagi
+ * `GroupHero` da (2026-10-14). Bu yerda faqat ro'yxat: saralash,
+ * holat belgilari, tezkor kartochka va "guruhdan chiqarish".
+ */
+export function GroupInfoSidebar({ students, canUpdate, onChanged }: Props) {
   const router = useRouter();
-  const teacher = group.teacher?.user;
   const mounted = useMounted();
 
   // O'QUVCHI USTIGA BORGANDA — tezkor ma'lumot kartochkasi (telefon,
@@ -89,12 +90,9 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
   const [hover, setHover] = useState<{ sg: any; rect: DOMRect } | null>(null);
 
   const [sort, setSort] = useState("az");
-  const [showEdit, setShowEdit] = useState(false);
-  const [showDelete, setShowDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<any>(null);
   const [removing, setRemoving] = useState(false);
-  // Server rad etgan amal sababi (masalan pul tarixi bor guruh o'chmaydi).
+  // Server rad etgan amal sababi.
   // Ilgari javob tekshirilmasdi — bosilgan tugma hech narsa qilmagandek edi.
   const [amalXato, setAmalXato] = useState("");
 
@@ -131,80 +129,24 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
     }
   }
 
-  async function deleteGroup() {
-    setDeleting(true); setAmalXato("");
-    try {
-      const res = await fetch(`/api/groups/${groupId}`, { method: "DELETE" });
-      if (!res.ok) {
-        setAmalXato(await xatoMatni(res, "Guruhni o'chirib bo'lmadi"));
-        setShowDelete(false);
-        return;
-      }
-      mutate((k: string) => typeof k === "string" && k.startsWith("/api/groups"), undefined, { revalidate: true });
-      router.push("/groups");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
   return (
     <div className="space-y-4">
-      {/* Info card */}
-      <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-5 flex items-start justify-between gap-3">
-        <dl className="space-y-2.5 min-w-0 flex-1">
-          <span className={cn("inline-block text-[11px] px-2 py-0.5 rounded-full font-semibold mb-1", status.cls)}>{status.label}</span>
-          <Row icon={GraduationCap} label="Kurs" value={group.course?.name ?? "—"} />
-          <Row icon={GraduationCap} label="O'qituvchi" value={teacher?.name ?? "Biriktirilmagan"} />
-          {group.course?.price != null && (
-            <Row icon={Wallet} label="Narx" value={formatCurrency(group.course.price)} />
-          )}
-          <Row icon={Clock} label="Vaqt"
-            value={`${(group.scheduleDays ?? []).map((d: string) => WEEKDAY_SHORT[d] ?? d).join(", ")} · ${group.startTime}`} />
-          {group.room?.name && <Row icon={MapPin} label="Xona" value={group.room.name} />}
-          {group.room?.capacity != null && <Row icon={MapPin} label="Xona sig'imi" value={String(group.room.capacity)} />}
-          <Row label="Mashg'ulotlar sanalari" wrap
-            value={`${formatUzDate(group.startDate)} — ${group.endDate ? formatUzDate(group.endDate) : "hozircha cheksiz"}`} />
-          <p className="text-[10.5px] text-neutral-400 pt-1">(id: {group.groupNumber ?? group.id})</p>
-        </dl>
-
-        {(canUpdate || canDelete) && (
-          <div className="flex flex-col gap-1.5 shrink-0">
-            {canUpdate && (
-              <button onClick={() => setShowEdit(true)} title="Tahrirlash"
-                className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                <Pencil className="w-4 h-4" />
-              </button>
-            )}
-            {canUpdate && (
-              <button onClick={onAddStudent} title="O'quvchi qo'shish"
-                className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors">
-                <UserPlus className="w-4 h-4" />
-              </button>
-            )}
-            {canDelete && (
-              <button onClick={() => setShowDelete(true)} title="O'chirish"
-                className="w-8 h-8 flex items-center justify-center rounded-xl text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Sort */}
+      {/* Sarlavha + son chapda, saralash o'ngda. Guruh javobi chiqib
+          ketganlarni ham qaytaradi (eski davomat tarixi uchun) — son faqat
+          HOZIRGI a'zolarni sanaydi, ketganlar alohida. */}
       <div className="flex items-center justify-between gap-2">
-        <select value={sort} onChange={e => setSort(e.target.value)}
+        <div className="min-w-0">
+          <p className="text-[14px] font-bold text-neutral-800 dark:text-neutral-100">O&apos;quvchilar</p>
+          <p className="text-[11.5px] text-neutral-400">
+            {`${students.filter(x => x.enrollmentStatus !== "CHIQIB_KETGAN").length} ta`}
+            {ketganSoni > 0 && ` · ${ketganSoni} ketgan`}
+          </p>
+        </div>
+        <select value={sort} onChange={e => setSort(e.target.value)} aria-label="Saralash"
           className="h-9 px-3 text-[12.5px] rounded-xl border border-white/60 dark:border-white/10
             bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 outline-none">
           {SORTS.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
         </select>
-        {/* Guruh javobi endi chiqib ketganlarni ham qaytaradi (eski davomat
-            tarixi uchun) — son faqat HOZIRGI a'zolarni sanasin, ketganlar
-            alohida. Aks holda "15 ta" deb turib, 3 tasi allaqachon ketgan bo'lardi. */}
-        <span className="text-[11px] text-neutral-400">
-          {`${students.filter(x => x.enrollmentStatus !== "CHIQIB_KETGAN").length} ta`}
-          {ketganSoni > 0 && ` · ${ketganSoni} ketgan`}
-        </span>
       </div>
 
       {amalXato && (
@@ -291,22 +233,6 @@ export function GroupInfoSidebar({ group, students, groupId, canUpdate, canDelet
       </div>
 
       {hover && mounted && createPortal(<StudentHoverCard sg={hover.sg} rect={hover.rect} />, document.body)}
-
-      {showEdit && (
-        <EditGroupModal group={group} groupId={groupId} onClose={() => setShowEdit(false)} onSaved={() => { setShowEdit(false); onChanged(); }} />
-      )}
-
-      <ConfirmDeleteModal
-        open={showDelete}
-        onClose={() => setShowDelete(false)}
-        onConfirm={deleteGroup}
-        loading={deleting}
-        title="Guruhni o'chirish"
-        description={<>
-          <span className="font-semibold text-neutral-700 dark:text-neutral-300">{group.name}</span>
-          {" guruhi butunlay o'chiriladi. Bu amalni ortga qaytarib bo'lmaydi."}
-        </>}
-      />
 
       <ConfirmDeleteModal
         open={!!removeTarget}
@@ -409,25 +335,7 @@ function StudentHoverCard({ sg, rect }: { sg: any; rect: DOMRect }) {
   );
 }
 
-/**
- * `wrap` — sana oralig'i kabi uzunroq qiymatlar uchun: `truncate`
- * (bir qatorda "...") o'rniga ikkinchi qatorga tushadi. Standart
- * (`truncate`) qisqa qiymatlar (kurs nomi, narx) uchun to'g'ri ishlaydi,
- * lekin "Mashg'ulotlar sanalari" tor yon panelda "30.07.2026 ..." bo'lib
- * kesilib qolardi — tugash sanasi umuman ko'rinmasdi (egasining talabi,
- * 2026-09-30).
- */
-function Row({ icon: Icon, label, value, wrap }: { icon?: any; label: string; value: string; wrap?: boolean }) {
-  return (
-    <div className="flex items-start gap-2 text-[12.5px]">
-      {Icon && <Icon className="w-3.5 h-3.5 text-neutral-400 mt-0.5 shrink-0" />}
-      <dt className="font-semibold text-neutral-700 dark:text-neutral-300 shrink-0">{label}:</dt>
-      <dd className={cn("text-neutral-500 dark:text-neutral-400 min-w-0", wrap ? "break-words" : "truncate")}>{value}</dd>
-    </div>
-  );
-}
-
-function EditGroupModal({ group, groupId, onClose, onSaved }: { group: any; groupId: string; onClose: () => void; onSaved: () => void }) {
+export function EditGroupModal({ group, groupId, onClose, onSaved }: { group: any; groupId: string; onClose: () => void; onSaved: () => void }) {
   const { data: roomsRaw } = useRooms();
   const rooms = Array.isArray(roomsRaw) ? roomsRaw : [];
   const [form, setForm] = useState({
@@ -445,9 +353,18 @@ function EditGroupModal({ group, groupId, onClose, onSaved }: { group: any; grou
     try {
       const res = await fetch(`/api/groups/${groupId}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: form.name, maxStudents: Number(form.maxStudents) || 15, roomId: form.roomId || null, status: form.status }),
+        body: JSON.stringify({
+          name: form.name, maxStudents: Number(form.maxStudents) || 15, roomId: form.roomId || null,
+          // Holat faqat O'ZGARTIRILGANDA yuboriladi — aks holda backend
+          // sanalardan o'zi hal qilgan holat ustiga eskisi yozilib qolardi.
+          ...(form.status !== group.status ? { status: form.status } : {}),
+        }),
       });
-      if (!res.ok) { setErr("Saqlab bo'lmadi"); return; }
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setErr((d as { error?: string })?.error ?? "Saqlab bo'lmadi");
+        return;
+      }
       onSaved();
     } catch { setErr("Serverga ulanib bo'lmadi"); }
     finally { setSaving(false); }
@@ -477,14 +394,256 @@ function EditGroupModal({ group, groupId, onClose, onSaved }: { group: any; grou
           {rooms.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
       </FormField>
-      <FormField label="Holat">
-        <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
-          className="w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
-          <option value="ACTIVE">Faol</option>
-          <option value="UPCOMING">Keladigan</option>
-          <option value="COMPLETED">Yakunlangan</option>
-        </select>
+      {/* "Yakunlangan" bu yerda yo'q — guruh kartasidagi "Guruhni yakunlash"
+          orqali, aniq sana bilan qilinadi (yakunlangan guruhda maydon ham yo'q:
+          "Qayta ochish" o'sha kartada). */}
+      {group.status !== "COMPLETED" && (
+        <FormField label="Holat">
+          <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
+            className="w-full h-10 px-3 text-[13px] rounded-xl border border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 outline-none">
+            <option value="ACTIVE">Faol</option>
+            <option value="UPCOMING">Keladigan</option>
+          </select>
+        </FormField>
+      )}
+      {err && <p className="text-[12px] text-red-600 dark:text-red-400">{err}</p>}
+    </Modal>
+  );
+}
+
+/* ── GURUH MUDDATI ─────────────────────────────────────────────────────── */
+
+/** Yakunlash bloki uchun kerakli guruh maydonlari. */
+type GuruhMuddat = { name?: string; status?: string; startDate?: string; endDate?: string | null; scheduleDays?: string[] };
+
+/** `Group.startDate/endDate` → "YYYY-MM-DD" (bazada kun boshi, UTC). */
+const isoKun = (v: string | null | undefined) => (v ? String(v).slice(0, 10) : null);
+
+/** Ikki "YYYY-MM-DD" orasidagi kunlar (b − a). */
+function kunFarqi(a: string, b: string) {
+  return Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);
+}
+
+/** Bugundan (o'zi ham) orqaga — guruhning eng so'nggi dars kuni (7 kun ichida). */
+function oxirgiDarsKuni(scheduleDays: string[] | undefined, minIso: string | null): string | null {
+  if (!scheduleDays?.length) return null;
+  const d = new Date();
+  for (let i = 0; i < 7; i++) {
+    // JS: 0 = yakshanba; WEEKDAYS: 0 = dushanba.
+    const kalit = WEEKDAYS[(d.getDay() + 6) % 7].value;
+    const iso = todayStr(d);
+    if (minIso && iso < minIso) return null;
+    if (scheduleDays.includes(kalit)) return iso;
+    d.setDate(d.getDate() - 1);
+  }
+  return null;
+}
+
+async function patchGroup(groupId: string, body: Record<string, unknown>): Promise<string | null> {
+  try {
+    const res = await fetch(`/api/groups/${groupId}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) return null;
+    const d = await res.json().catch(() => ({}));
+    return (d as { error?: string })?.error ?? "Saqlab bo'lmadi";
+  } catch { return "Serverga ulanib bo'lmadi"; }
+}
+
+/**
+ * Kartaning pastki qismi — guruh qachon tugashi. Uch holat:
+ *   · yakunlangan  → kulrang belgi, oxirgi dars sanasi va "Qayta ochish";
+ *   · tugash sanasi oldinda → sariq belgi, "N kun qoldi" va "O'zgartirish";
+ *   · muddatsiz    → "Guruhni yakunlash" tugmasi.
+ *
+ * Sana — OXIRGI DARS KUNI (`Group.endDate`). Backend qoidasi: sana o'tgach
+ * guruh o'zi "Yakunlangan" bo'ladi, undan keyingi davr uchun oylik hisob
+ * yozilmaydi (`billing-periods`, `group-lifecycle`).
+ */
+export function GroupEndSection({ group, groupId, canUpdate, onFinish, onChanged }: {
+  group: GuruhMuddat; groupId: string; canUpdate: boolean; onFinish: () => void; onChanged: () => void;
+}) {
+  const [qaytaOchish, setQaytaOchish] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const bugun = todayStr();
+  const end = isoKun(group.endDate);
+  const yakunlangan = group.status === "COMPLETED";
+
+  async function reopen() {
+    setSaving(true); setErr("");
+    // `endDate: ""` — backendda tugash sanasini olib tashlaydi (null).
+    const e = await patchGroup(groupId, { status: "ACTIVE", endDate: "" });
+    setSaving(false);
+    if (e) { setErr(e); return; }
+    setQaytaOchish(false);
+    onChanged();
+  }
+
+  if (yakunlangan) {
+    return (
+      <div className="mt-4 border-t border-white/50 pt-4 dark:border-white/10">
+        <div className="flex items-center gap-3 rounded-xl bg-neutral-100/80 px-3.5 py-3 dark:bg-white/5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-neutral-200/80 text-neutral-600 dark:bg-white/10 dark:text-neutral-300">
+            <Flag className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-100">Guruh yakunlangan</p>
+            <p className="text-[12px] text-neutral-500 dark:text-neutral-400">
+              {end ? <>Oxirgi dars: <span className="font-medium tabular-nums">{formatUzDate(end)}</span></> : "Sana belgilanmagan"}
+            </p>
+          </div>
+          {canUpdate && !qaytaOchish && (
+            <button type="button" onClick={() => { setErr(""); setQaytaOchish(true); }}
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[12px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/30">
+              <RotateCcw className="h-3.5 w-3.5" />Qayta ochish
+            </button>
+          )}
+        </div>
+        {qaytaOchish && (
+          <div className="mt-2.5 rounded-xl border border-indigo-200 bg-indigo-50/60 px-3.5 py-3 dark:border-indigo-400/20 dark:bg-indigo-400/[0.06]">
+            <p className="text-[12.5px] text-neutral-700 dark:text-neutral-200">
+              Guruh yana faol bo&apos;ladi va o&apos;quvchilarga oylik hisob qayta yoziladi.
+            </p>
+            <div className="mt-2.5 flex items-center gap-2">
+              <button type="button" onClick={reopen} disabled={saving}
+                className="flex h-8 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 text-[12px] font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60">
+                {saving ? "Ochilmoqda…" : "Ha, qayta ochish"}
+              </button>
+              <button type="button" onClick={() => setQaytaOchish(false)} disabled={saving}
+                className="h-8 rounded-lg px-3 text-[12px] font-semibold text-neutral-500 transition-colors hover:bg-black/5 dark:text-neutral-400 dark:hover:bg-white/10">
+                Bekor
+              </button>
+            </div>
+          </div>
+        )}
+        {err && <p className="mt-2 text-[12px] text-red-600 dark:text-red-400">{err}</p>}
+      </div>
+    );
+  }
+
+  if (end) {
+    const qoldi = kunFarqi(bugun, end);
+    return (
+      <div className="mt-4 border-t border-white/50 pt-4 dark:border-white/10">
+        <div className="flex items-center gap-3 rounded-xl bg-amber-50 px-3.5 py-3 dark:bg-amber-400/[0.08]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300">
+            <CalendarClock className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-100">
+              Yakunlanadi: <span className="tabular-nums">{formatUzDate(end)}</span>
+            </p>
+            <p className="text-[12px] text-amber-700 dark:text-amber-300">
+              {qoldi <= 0 ? "Bugun oxirgi dars kuni" : `${qoldi} kun qoldi`}
+            </p>
+          </div>
+          {canUpdate && (
+            <button type="button" onClick={onFinish}
+              className="flex h-8 shrink-0 items-center rounded-lg px-2.5 text-[12px] font-semibold text-amber-800 transition-colors hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-400/15">
+              O&apos;zgartirish
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!canUpdate) return null;
+  return (
+    <div className="mt-4 border-t border-white/50 pt-4 dark:border-white/10">
+      <button type="button" onClick={onFinish}
+        className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white/60 text-[13px] font-semibold text-neutral-700
+          transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600
+          dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:border-red-400/30 dark:hover:bg-red-400/10 dark:hover:text-red-300">
+        <Flag className="h-4 w-4" />Guruhni yakunlash
+      </button>
+    </div>
+  );
+}
+
+/**
+ * GURUHNI YAKUNLASH — oxirgi dars kunini tanlash.
+ *   · o'tgan sana → guruh darhol "Yakunlangan" (backend o'zi qo'yadi);
+ *   · bugun       → bugungi dars oxirgisi, ertaga o'zi yopiladi
+ *                   (bugun davomat belgilash ochiq qoladi);
+ *   · kelajak     → shu sanagacha davom etadi, keyin o'zi yopiladi.
+ * Shuning uchun faqat `endDate` yuboriladi — holatni backend sanadan hal qiladi.
+ */
+export function FinishGroupModal({ group, groupId, activeCount, onClose, onSaved }: {
+  group: GuruhMuddat; groupId: string; activeCount: number; onClose: () => void; onSaved: () => void;
+}) {
+  const bugun = todayStr();
+  const boshi = isoKun(group.startDate);
+  const avvalgi = isoKun(group.endDate);
+  const oxirgiDars = oxirgiDarsKuni(group.scheduleDays, boshi);
+  const [sana, setSana] = useState(avvalgi ?? oxirgiDars ?? bugun);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+
+  const otgan = sana < bugun;
+  const bugunmi = sana === bugun;
+
+  async function save(endDate: string) {
+    setSaving(true); setErr("");
+    const e = await patchGroup(groupId, { endDate });
+    setSaving(false);
+    if (e) { setErr(e); return; }
+    onSaved();
+  }
+
+  const chip = (label: string, v: string) => (
+    <button key={label} type="button" onClick={() => setSana(v)}
+      className={cn("h-8 rounded-lg px-3 text-[12px] font-semibold transition-colors",
+        sana === v
+          ? "bg-indigo-600 text-white"
+          : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-white/5 dark:text-neutral-300 dark:hover:bg-white/10")}>
+      {label}
+    </button>
+  );
+
+  return (
+    <Modal open onClose={onClose} title={avvalgi ? "Tugash sanasini o'zgartirish" : "Guruhni yakunlash"} subtitle={group.name}
+      footer={
+        <>
+          <Button onClick={() => save(sana)} disabled={saving || !sana}
+            className="flex-1 h-9 bg-red-600 hover:bg-red-700 text-white text-[13px]">
+            {saving ? "Saqlanmoqda..." : otgan ? "Hozir yakunlash" : "Sanani belgilash"}
+          </Button>
+          <Button variant="outline" className="h-9 px-4 text-[13px]" onClick={onClose} disabled={saving}>Bekor</Button>
+        </>
+      }>
+      <FormField label="Oxirgi dars kuni" required>
+        <DatePicker value={sana} onChange={setSana} min={boshi ?? undefined} />
       </FormField>
+      <div className="-mt-1 flex flex-wrap gap-1.5">
+        {oxirgiDars && oxirgiDars !== bugun && chip(`Oxirgi dars · ${formatUzDate(oxirgiDars).slice(0, 5)}`, oxirgiDars)}
+        {chip("Bugun", bugun)}
+      </div>
+
+      <div className={cn("flex gap-2.5 rounded-xl px-3.5 py-3 text-[12.5px] leading-relaxed",
+        otgan ? "bg-red-50 text-red-800 dark:bg-red-400/10 dark:text-red-200" : "bg-amber-50 text-amber-900 dark:bg-amber-400/10 dark:text-amber-100")}>
+        <Info className="mt-0.5 h-4 w-4 shrink-0" />
+        <div>
+          <p className="font-semibold">
+            {otgan ? "Guruh darhol yakunlanadi."
+              : bugunmi ? "Bugungi dars oxirgisi — guruh ertaga o'zi yakunlanadi."
+              : `Guruh ${formatUzDate(sana)} gacha davom etadi, keyin o'zi yakunlanadi.`}
+          </p>
+          <p className="mt-0.5 opacity-90">
+            Shu sanadan keyin oylik hisob yozilmaydi va davomat ochilmaydi.
+            {activeCount > 0 && ` ${activeCount} ta o'quvchining to'lov va davomat tarixi saqlanadi.`}
+          </p>
+        </div>
+      </div>
+
+      {avvalgi && (
+        <button type="button" onClick={() => save("")} disabled={saving}
+          className="text-[12px] font-semibold text-indigo-600 hover:underline disabled:opacity-60 dark:text-indigo-400">
+          Tugash sanasini olib tashlash (muddatsiz davom etsin)
+        </button>
+      )}
       {err && <p className="text-[12px] text-red-600 dark:text-red-400">{err}</p>}
     </Modal>
   );

@@ -16,6 +16,7 @@ import { Modal } from "@/components/ui/modal";
 import { FormField } from "@/components/ui/form-field";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { GroupInfoSidebar } from "@/components/groups/group-info-sidebar";
+import { GroupHero } from "@/components/groups/group-hero";
 import { GroupAttendanceGrid } from "@/components/groups/group-attendance-grid";
 import { EntityHistorySection } from "@/components/activity/entity-history-section";
 import { GroupNotesSection } from "@/components/groups/group-notes-section";
@@ -115,10 +116,76 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
   const status = STATUS_CFG[group.status] ?? STATUS_CFG.ACTIVE;
   const students = group.students ?? [];
 
+  /** Tablar va ularning ichi — ikkala ko'rinishda bir xil. */
+  const tabBolim = (
+    <>
+    <nav className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <TabGlide watch={tab} className="flex w-max items-center gap-1">
+      {TABS.filter(t => t.id !== "tarix" || canSeeHistory).map(t => {
+        const Icon = t.icon;
+        const active = tab === t.id;
+        return (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            data-tab-active={active} aria-pressed={active}
+            className={tabCls(active)}>
+            <Icon className="w-3.5 h-3.5" />
+            {t.label}
+          </button>
+        );
+      })}
+    </TabGlide>
+    </nav>
+
+    <TabPanel k={tab} className="space-y-4">
+    {tab === "davomat" && (
+      canSeeAttendance ? (
+        <GroupAttendanceGrid
+          groupId={id}
+          scheduleDays={group.scheduleDays ?? []}
+          students={students}
+          canMark={canMarkAttendance}
+          startTime={group.startTime}
+          startDate={group.startDate}
+          endDate={group.endDate}
+        />
+      ) : (
+        <p className="text-[12px] text-neutral-400 px-5 py-8 text-center glass-panel border border-white/60 dark:border-white/10 rounded-2xl">
+          Davomatni ko&apos;rish uchun ruxsatingiz yo&apos;q
+        </p>
+      )
+    )}
+    {tab === "baho" && (
+      <GroupTabPlaceholder icon={Star} title="Baholash"
+        note="O'quvchilarga dars/topshiriq bo'yicha baho qo'yish bu yerda bo'ladi." />
+    )}
+    {tab === "onlayn" && (
+      <GroupTabPlaceholder icon={PlayCircle} title="Onlayn darslar va materiallar"
+        note="Video darslar, fayllar va uy vazifalari shu yerga joylanadi." />
+    )}
+    {tab === "chegirma" && (
+      <GroupTabPlaceholder icon={Percent} title="Chegirmali narx"
+        note="Guruh darajasidagi maxsus narx/chegirma sozlamalari shu yerda bo'ladi." />
+    )}
+    {tab === "imtihon" && (
+      <GroupTabPlaceholder icon={FileCheck2} title="Imtihonlar"
+        note="Guruh imtihonlari va natijalari shu yerda ko'rinadi." />
+    )}
+    {/* `entity` — jurnaldagi NOM ("Group"). Ilgari "groups" yuborilardi
+        va tab har doim bo'sh chiqardi. */}
+    {tab === "tarix" && canSeeHistory && (
+      <EntityHistorySection entity="Group" entityId={id}
+        emptyHint="Guruh bilan bog'liq harakatlar shu yerda ko'rinadi." />
+    )}
+    {tab === "izoh" && <GroupNotesSection groupId={id} canUpdate={canUpdate} />}
+    </TabPanel>
+    </>
+  );
+
   return (
     <div>
       <TopHeader
-        title={`${group.name} · ${group.course?.name ?? "—"}${group.teacher?.user?.name ? ` · ${group.teacher.user.name}` : ""}`}
+        // Kurs va o'qituvchi tepadagi kartada (`GroupHero`) — sarlavhada faqat nom.
+        title={group.name}
         subtitle={
           <Link href="/groups" className="flex items-center gap-1 text-neutral-400 hover:text-neutral-600 text-sm transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -167,86 +234,30 @@ export default function GroupDetailPage({ params }: { params: Promise<{ id: stri
         )}
       </Modal>
 
-      {/* CHAP: ixcham guruh ma'lumoti + raqamlangan o'quvchilar ro'yxati.
-          O'NG: tab qatori (Davomat, Baholash, ... Tarix, Izohlar) — har
-          safar faqat bitta bo'lim ko'rinadi, ekran uzun ro'yxatlar bilan
-          to'lib ketmaydi (egasining ko'rsatgan namunasi, 2026-09-28). */}
-      <div className="p-5 grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-5 items-start">
-        {/* ── CHAP USTUN ── */}
-        <div className="xl:sticky xl:top-4">
-          <GroupInfoSidebar
-            group={group}
-            students={students}
-            groupId={id}
-            canUpdate={canUpdate}
-            canDelete={canDelete}
-            status={status}
-            onAddStudent={() => { setAddErr(""); setShowAdd(true); }}
-            onChanged={() => mutate(`/api/groups/${id}`)}
-          />
-        </div>
-
-        {/* ── O'NG USTUN ── */}
-        <div className="min-w-0 space-y-4">
-          <nav className="overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <TabGlide watch={tab} className="flex w-max items-center gap-1">
-            {TABS.filter(t => t.id !== "tarix" || canSeeHistory).map(t => {
-              const Icon = t.icon;
-              const active = tab === t.id;
-              return (
-                <button key={t.id} onClick={() => setTab(t.id)}
-                  data-tab-active={active} aria-pressed={active}
-                  className={tabCls(active)}>
-                  <Icon className="w-3.5 h-3.5" />
-                  {t.label}
-                </button>
-              );
-            })}
-          </TabGlide>
-          </nav>
-
-          <TabPanel k={tab} className="space-y-4">
-          {tab === "davomat" && (
-            canSeeAttendance ? (
-              <GroupAttendanceGrid
-                groupId={id}
-                scheduleDays={group.scheduleDays ?? []}
-                students={students}
-                canMark={canMarkAttendance}
-                startTime={group.startTime}
-                startDate={group.startDate}
-                endDate={group.endDate}
-              />
-            ) : (
-              <p className="text-[12px] text-neutral-400 px-5 py-8 text-center glass-panel border border-white/60 dark:border-white/10 rounded-2xl">
-                Davomatni ko&apos;rish uchun ruxsatingiz yo&apos;q
-              </p>
-            )
-          )}
-          {tab === "baho" && (
-            <GroupTabPlaceholder icon={Star} title="Baholash"
-              note="O'quvchilarga dars/topshiriq bo'yicha baho qo'yish bu yerda bo'ladi." />
-          )}
-          {tab === "onlayn" && (
-            <GroupTabPlaceholder icon={PlayCircle} title="Onlayn darslar va materiallar"
-              note="Video darslar, fayllar va uy vazifalari shu yerga joylanadi." />
-          )}
-          {tab === "chegirma" && (
-            <GroupTabPlaceholder icon={Percent} title="Chegirmali narx"
-              note="Guruh darajasidagi maxsus narx/chegirma sozlamalari shu yerda bo'ladi." />
-          )}
-          {tab === "imtihon" && (
-            <GroupTabPlaceholder icon={FileCheck2} title="Imtihonlar"
-              note="Guruh imtihonlari va natijalari shu yerda ko'rinadi." />
-          )}
-          {/* `entity` — jurnaldagi NOM ("Group"). Ilgari "groups" yuborilardi
-              va tab har doim bo'sh chiqardi. */}
-          {tab === "tarix" && canSeeHistory && (
-            <EntityHistorySection entity="Group" entityId={id}
-              emptyHint="Guruh bilan bog'liq harakatlar shu yerda ko'rinadi." />
-          )}
-          {tab === "izoh" && <GroupNotesSection groupId={id} canUpdate={canUpdate} />}
-          </TabPanel>
+      {/* TARTIB (2026-10-14): tepada keng karta (nom, holat, amallar,
+          ko'rsatkichlar), ostida chapda tablar — davomat birinchi ko'rinadi —
+          o'ngda ixcham o'quvchilar ro'yxati. Ilgari ma'lumot va ro'yxat chap
+          ustunda edi: o'quvchilar davomatda ham takrorlanar va tor ekranda
+          14 kishilik ro'yxat davomatni ekran ostiga surib yuborardi. */}
+      <div className="p-5 space-y-5">
+        <GroupHero
+          group={group}
+          students={students}
+          groupId={id}
+          canUpdate={canUpdate}
+          canDelete={canDelete}
+          status={status}
+          onChanged={() => mutate(`/api/groups/${id}`)}
+        />
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] gap-5 items-start">
+          <div className="min-w-0 space-y-4">{tabBolim}</div>
+          <div className="xl:sticky xl:top-4">
+            <GroupInfoSidebar
+              students={students}
+              canUpdate={canUpdate}
+              onChanged={() => mutate(`/api/groups/${id}`)}
+            />
+          </div>
         </div>
       </div>
     </div>
