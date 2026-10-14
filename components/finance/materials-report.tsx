@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/money";
 import { formatUzDate } from "@/lib/date-uz";
 import { methodShort, methodCls } from "@/lib/payment-methods";
 import { useBranchQueryString } from "@/lib/contexts/branch-context";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 
 /**
  * QO'SHIMCHA TO'LOVLAR HISOBOTI — kitob, forma, sertifikat.
@@ -101,6 +102,8 @@ export function MaterialsReport({
       .map(x => ({ yozuv: x, juft: tolangan.get(x.id) ?? null }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rawList]);
+  // Jadval 10 tadan; oy/filial o'zgarsa birinchi sahifaga.
+  const pg = usePagination(items, qs);
 
   return (
     <div className="space-y-4">
@@ -170,7 +173,7 @@ export function MaterialsReport({
                   Bu oyda qo&apos;shimcha to&apos;lov yo&apos;q
                 </td></tr>
               )}
-              {items.map(({ yozuv: it, juft }) => (
+              {pg.items.map(({ yozuv: it, juft }) => (
                 <tr key={it.id}
                   className="border-t border-white/50 dark:border-white/10
                     hover:bg-white/50 dark:hover:bg-white/5 transition-colors">
@@ -237,6 +240,7 @@ export function MaterialsReport({
             </tbody>
           </table>
         </div>
+        <Pagination p={pg} />
       </div>
     </div>
   );

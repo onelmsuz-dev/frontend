@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { TopHeader } from "@/components/layout/top-header";
 import { AcceptPaymentModal } from "@/components/finance/accept-payment-modal";
 import { MaterialsReport } from "@/components/finance/materials-report";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import { ReceiptModal } from "@/components/payments/receipt-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -195,6 +196,13 @@ export default function FinancePage() {
     .filter(s => s.balance < 0 && s.groups?.[0]?.enrollmentStatus !== "CHIQIB_KETGAN")
     .sort((a, b) => a.balance - b.balance);
   const totalDebt = debtors.reduce((sum, s) => sum + Math.abs(s.balance), 0);
+
+  // SAHIFALASH — jadvallarda 10 tadan (`Pagination`). Jami summalar to'liq
+  // ro'yxatdan hisoblanadi; filtr o'zgarsa birinchi sahifaga qaytiladi.
+  const payPg  = usePagination(payments, `${payMonth}|${payDate}|${payGroupId}|${payMethod}`);
+  const expPg  = usePagination(expList, expListQs);
+  const salPg  = usePagination(salaries, salaryQs);
+  const debtPg = usePagination(debtors);
 
   const totalPayments = payments.reduce((s, p) => s + p.amount, 0);
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
@@ -588,7 +596,7 @@ export default function FinancePage() {
                         <TableCell className="text-right"><Skeleton className="h-6 w-6 rounded-lg ml-auto" /></TableCell>
                       </TableRow>
                     ))
-                  : payments.map((p: any) => (
+                  : payPg.items.map((p: any) => (
                       <TableRow key={p.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                         <TableCell>
                           <div className="flex items-center gap-2.5">
@@ -631,6 +639,7 @@ export default function FinancePage() {
               </TableBody>
             </Table>
             </div>
+            <Pagination p={payPg} />
             {!paymentsLoading && payments.length === 0 && (
               <div className="py-12 text-center text-sm text-neutral-400">Hali to'lov yo'q</div>
             )}
@@ -736,7 +745,7 @@ export default function FinancePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expList.map((e: any) => (
+                {expPg.items.map((e: any) => (
                   <TableRow key={e.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
                     <TableCell>
                       <span className="text-[11px] bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-2.5 py-1 rounded-lg font-medium">
@@ -755,6 +764,7 @@ export default function FinancePage() {
               </TableBody>
             </Table>
             </div>
+            <Pagination p={expPg} />
             {!expListLoading && expList.length === 0 && (
               <div className="py-12 flex flex-col items-center gap-3">
                 <p className="text-sm text-neutral-400">
@@ -944,7 +954,7 @@ export default function FinancePage() {
                           <TableCell className="text-right"><Skeleton className="h-7 w-20 ml-auto rounded-lg" /></TableCell>
                         </TableRow>
                       ))
-                    : salaries.map((s: any) => {
+                    : salPg.items.map((s: any) => {
                         const avans = s.advanceTotal ?? 0;
                         const oyTugagan = s.month < joriyOyStr;
                         return (
@@ -1036,6 +1046,7 @@ export default function FinancePage() {
                 </TableBody>
               </Table>
               </div>
+              <Pagination p={salPg} />
               {!salariesLoading && salaries.length === 0 && (
                 <div className="py-14 text-center">
                   <p className="text-sm text-neutral-400 mb-3">Bu oy uchun oylik hisoblanmagan</p>
@@ -1131,7 +1142,7 @@ export default function FinancePage() {
                             ))}
                           </TableRow>
                         ))
-                      : debtors.map(s => {
+                      : debtPg.items.map(s => {
                           const sg = s.groups?.[0];
                           return (
                             <TableRow key={s.id} className="hover:bg-white/60 dark:hover:bg-white/10 transition-colors">
@@ -1174,6 +1185,7 @@ export default function FinancePage() {
                   </TableBody>
                 </Table>
               </div>
+              <Pagination p={debtPg} />
               {!studentsLoading && debtors.length === 0 && (
                 <div className="py-14 text-center">
                   <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-400 opacity-60" />
