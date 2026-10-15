@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, History, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatUzDate, UZ_MONTHS } from "@/lib/date-uz";
+import { formatUzDate, UZ_MONTHS, davrYorligi } from "@/lib/date-uz";
 
 /**
  * BALANS TARIXI — standart holatda YOPIQ.
@@ -45,7 +45,14 @@ export interface LedgerItem {
   voidedAt?: string | null;
   discountAmount?: number | null;
   discountLabel?: string | null;
+  /** Qarz yozilgan paytdagi rejim — sikl rejimida oy o'rniga davr ko'rsatiladi. */
+  mode?: string | null;
+  periodStart?: string | null;
+  periodEnd?: string | null;
 }
+
+/** Davr oyning istalgan kunidan boshlanadigan rejimlar (backend `CYCLE_MODES`). */
+const SIKL = new Set(["INDIVIDUAL", "GURUH_SANASI"]);
 
 /** "2026-09" → "Sentabr". Yil yozilmaydi — yonida sana turadi. */
 function oyNomi(m?: string | null): string {
@@ -66,7 +73,10 @@ function yorliq(it: LedgerItem, kind: "charge" | "payment",
   if (kind === "payment") return it.amount < 0 ? "To'lov qaytarildi" : "To'lov";
 
   const g = it.groupId ? guruhNomi(it.groupId) : "";
-  const oy = oyNomi(it.month);
+  // Sikl qarzi: "Sentabr" emas, "12.09 – 12.10" — o'quvchi aynan shu davr uchun to'laydi.
+  const oy = it.mode && SIKL.has(it.mode) && it.periodStart && it.periodEnd
+    ? davrYorligi(it.periodStart, it.periodEnd)
+    : oyNomi(it.month);
 
   switch (it.reason) {
     case "DISCOUNT":

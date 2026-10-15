@@ -188,3 +188,35 @@ function calendarDaysBetween(from: string, to: string): number {
   const [ty, tm, td] = to.split("-").map(Number);
   return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86_400_000);
 }
+
+// ─── SIKL DAVRI (2026-10-15) ────────────────────────────────────────────────
+//
+// INDIVIDUAL va GURUH_SANASI rejimida to'lov davri oyning istalgan kunidan
+// boshlanadi (12.09 – 12.10). Ichkarida kalit hamon oy ("2026-09") — o'qituvchi
+// oyligi shundan hisoblanadi. Bu ikki funksiya faqat EKRANDAGI yorliq uchun;
+// qoidasi backend `common/billing-schedule.ts` dagi bilan bir xil.
+
+/** `month` da boshlanadigan sikl — [start, end), "YYYY-MM-DD". 31 qisqa oyga sig'diriladi. */
+export function siklDavri(month: string, anchorDay: number): { start: string; end: string } {
+  const [y, m] = month.split("-").map(Number);
+  const kun = (yy: number, mm: number) => {
+    const d = new Date(Date.UTC(yy, mm - 1, 1));
+    const oxiri = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+    d.setUTCDate(Math.min(anchorDay, oxiri));
+    return d.toISOString().slice(0, 10);
+  };
+  return { start: kun(y, m), end: kun(y, m + 1) };
+}
+
+/**
+ * "2026-09-12", "2026-10-12" → "12.09 – 12.10". Oxiri — keyingi to'lov kuni.
+ * Yil faqat davr yil chegarasidan o'tsa yoziladi: "20.12.2026 – 20.01.2027".
+ */
+export function davrYorligi(start: string, end: string): string {
+  const yil = start.slice(0, 4) !== end.slice(0, 4);
+  const f = (d: string) => {
+    const [yy, mm, dd] = d.slice(0, 10).split("-");
+    return yil ? `${dd}.${mm}.${yy}` : `${dd}.${mm}`;
+  };
+  return `${f(start)} – ${f(end)}`;
+}

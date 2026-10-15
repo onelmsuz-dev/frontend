@@ -27,7 +27,7 @@ import { useState } from "react";
 import { Plus, X, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/money";
-import { UZ_MONTHS } from "@/lib/date-uz";
+import { UZ_MONTHS, siklDavri, davrYorligi } from "@/lib/date-uz";
 import { businessTodayStr } from "@/lib/time";
 
 export interface OpenMonth {
@@ -36,6 +36,8 @@ export interface OpenMonth {
   left: number;
   periodStart: string | null;
   periodEnd: string | null;
+  /** Sikl qarzi (INDIVIDUAL / GURUH_SANASI) — oy nomi o'rniga davr ko'rsatiladi. */
+  cycle?: boolean;
 }
 export interface GroupMonths {
   open: OpenMonth[];
@@ -45,6 +47,12 @@ export interface GroupMonths {
    * o'zi yozadi (qo'lda qo'shilsa ikki marta qarz bo'lardi). Server beradi.
    */
   addBefore?: string;
+  /**
+   * A'zolik sikl rejimida bo'lsa — to'lov kuni. Bor bo'lsa blok "davr" tilida
+   * gapiradi: oldindan va qo'shiladigan oylar ham "12.11 – 12.12" bo'lib
+   * ko'rinadi. Kalit baribir oy — o'qituvchi oyligi undan hisoblanadi.
+   */
+  cycleDay?: number | null;
 }
 
 export interface MonthsValue {
@@ -73,8 +81,26 @@ const oldingiOy = (m: string) => {
   return mm === 1 ? `${y - 1}-12` : `${y}-${String(mm - 1).padStart(2, "0")}`;
 };
 
-/** Davr sanalari faqat sikl rejimida ko'rsatiladi (oy 1-sanasidan boshlanmasa). */
+/**
+ * Oy kalitining ekrandagi nomi: sikl rejimida davr ("12.09 – 12.10"),
+ * aks holda oy ("Sentabr 2026").
+ */
+export function davrNomi(m: string, cycleDay?: number | null): string {
+  if (!cycleDay) return oyLabel(m);
+  const d = siklDavri(m, cycleDay);
+  return davrYorligi(d.start, d.end);
+}
+
+/** Ochiq qatorning asosiy yorlig'i — sikl qarzida o'z davri. */
+function qatorNomi(q: Qator, cycleDay?: number | null): string {
+  if (q.cycle && q.periodStart && q.periodEnd) return davrYorligi(q.periodStart, q.periodEnd);
+  if (q.yangi) return davrNomi(q.month, cycleDay);
+  return oyLabel(q.month);
+}
+
+/** Kichik kulrang sana — oylik nomli, lekin oy o'rtasidan boshlangan qatorda. */
 function davrSanasi(o: OpenMonth): string | null {
+  if (o.cycle) return null;                   // davr allaqachon asosiy yorliqda
   if (!o.periodStart || !o.periodEnd || o.periodStart.endsWith("-01")) return null;
   const s = o.periodStart.split("-");
   const e = new Date(`${o.periodEnd}T00:00:00Z`);
@@ -126,10 +152,11 @@ export function oylarTaqsimoti(data: GroupMonths | null, amountRaw: string, valu
   qoldi = Math.max(0, qoldi - davrsiz);
   const boshqaga = Math.min(qoldi, Math.max(0, otherDebt));
   const oldindan = qoldi - boshqaga;
-  // Standart oy faqat OYLIK KALENDAR rejimida: sikl markazida keyingi davr
-  // boshqa oyda boshlanishi mumkin — yorliq noto'g'ri bo'lmasin.
+  // Standart: oylik kalendarda keyingi oy, sikl rejimida keyingi davr (yorliq
+  // to'lov kunidan hisoblanadi — `cycleDay`). Boshqa rejimlarda (kunlik,
+  // modul) "oy" tushunchasi yo'q — standart qo'yilmaydi.
   const oldindanOy = value.advanceMonth === undefined
-    ? (calendar ? oldindanOylar(data)[0] ?? null : null)
+    ? (calendar || data?.cycleDay ? oldindanOylar(data)[0] ?? null : null)
     : value.advanceMonth;
   return { qamrov, davrsiz, boshqaga, oldindan, oldindanOy };
 }
@@ -175,6 +202,9 @@ export function PaymentMonths({ data, amount, onAmount, value, onChange, monthly
   const { qamrov, davrsiz, boshqaga, oldindan: ortiqcha, oldindanOy: tanlanganOldindan } =
     oylarTaqsimoti(data, amount, value, otherDebt, calendar);
   const oldindan = oldindanOylar(data);
+  // Sikl rejimida blok "davr" tilida gapiradi (INDIVIDUAL, GURUH_SANASI).
+  const sikl = data?.cycleDay ?? null;
+  const birlik = sikl ? "davr" : "oy";
 
   // Qo'shsa bo'ladigan oylar: tizim hisoblashni boshlagan oydan OLDINGI va
   // qarzi yozilmagan oxirgi 12 oy. Joriy oy hech qachon (uni tizim yozadi).
@@ -213,13 +243,13 @@ export function PaymentMonths({ data, amount, onAmount, value, onChange, monthly
     <div className="rounded-xl border border-white/60 dark:border-white/10 px-3 py-2.5 space-y-2" data-oylar>
       <div className="flex items-center gap-1.5">
         <CalendarDays className="w-3.5 h-3.5 text-neutral-400" />
-        <p className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-200">Qaysi oy uchun</p>
-        <p className="text-[11px] text-neutral-400 ml-auto">eng eski oydan yopiladi</p>
+        <p className="text-[12px] font-semibold text-neutral-700 dark:text-neutral-200">Qaysi {birlik} uchun</p>
+        <p className="text-[11px] text-neutral-400 ml-auto">eng eski {birlik}dan yopiladi</p>
       </div>
 
       {qamrov.length === 0 && (
         <p className="text-[12px] text-neutral-500 dark:text-neutral-400">
-          Bu guruhda yopilmagan oy yo&apos;q — to&apos;lov oldindan bo&apos;ladi.
+          Bu guruhda yopilmagan {birlik} yo&apos;q — to&apos;lov oldindan bo&apos;ladi.
         </p>
       )}
 
@@ -239,7 +269,7 @@ export function PaymentMonths({ data, amount, onAmount, value, onChange, monthly
                 {q.tushadi > 0 ? "✓" : ""}
               </span>
               <span className="text-[13px] font-medium text-neutral-800 dark:text-neutral-100 shrink-0">
-                {oyLabel(q.month)}
+                {qatorNomi(q, sikl)}
               </span>
               {sana && <span className="text-[11px] text-neutral-400 truncate">{sana}</span>}
               {q.yangi && (
@@ -257,7 +287,7 @@ export function PaymentMonths({ data, amount, onAmount, value, onChange, monthly
               {toliq ? "yopiladi" : qisman ? `qisman ${formatCurrency(q.tushadi)}` : "—"}
             </span>
             {q.yangi && (
-              <button type="button" aria-label="Qo'shilgan oyni olib tashlash"
+              <button type="button" aria-label={`Qo'shilgan ${birlik}ni olib tashlash`}
                 onClick={() => onChange({ ...value, addMonth: null })}
                 className="p-0.5 text-neutral-400 hover:text-red-500">
                 <X className="w-3.5 h-3.5" />
@@ -291,7 +321,7 @@ export function PaymentMonths({ data, amount, onAmount, value, onChange, monthly
                 tanlanganOldindan === m
                   ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-500"
                   : "border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:border-indigo-400")}>
-              {m ? oyLabel(m) : "oy belgilanmasin"}
+              {m ? davrNomi(m, sikl) : `${birlik} belgilanmasin`}
             </button>
           ))}
         </div>
@@ -305,8 +335,8 @@ export function PaymentMonths({ data, amount, onAmount, value, onChange, monthly
                 if (!yangiSumma && monthlyPrice > 0) setYangiSumma(String(Math.round(monthlyPrice)));
               }}
               className="h-8 px-2 text-[12px] rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900">
-              <option value="">Oy…</option>
-              {qoshsaBoladi.map((m) => <option key={m} value={m}>{oyLabel(m)}</option>)}
+              <option value="">{sikl ? "Davr…" : "Oy…"}</option>
+              {qoshsaBoladi.map((m) => <option key={m} value={m}>{davrNomi(m, sikl)}</option>)}
             </select>
             <input type="number" inputMode="numeric" min="0" placeholder="Summa"
               value={yangiSumma} onChange={(e) => setYangiSumma(e.target.value)}
@@ -321,13 +351,13 @@ export function PaymentMonths({ data, amount, onAmount, value, onChange, monthly
               Bekor
             </button>
             <p className="w-full text-[11px] text-neutral-400">
-              Masalan o&apos;quvchi tizimga keyin kiritilgan va oldingi oy qarzi yo&apos;q. Qarz va to&apos;lov birga yoziladi.
+              Masalan o&apos;quvchi tizimga keyin kiritilgan va oldingi {birlik} qarzi yo&apos;q. Qarz va to&apos;lov birga yoziladi.
             </p>
           </div>
         ) : (
           <button type="button" onClick={() => setQoshish(true)}
             className="flex items-center gap-1 text-[12px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
-            <Plus className="w-3.5 h-3.5" />{" "}{"Ro'yxatda yo'q oyni qo'shish"}
+            <Plus className="w-3.5 h-3.5" />{" "}{`Ro'yxatda yo'q ${birlik}ni qo'shish`}
           </button>
         )
       )}

@@ -13,7 +13,7 @@
  * yo'qoladi: unga tayyor RASM beriladi.
  */
 
-import { formatUzDate } from "./date-uz";
+import { formatUzDate, davrYorligi } from "./date-uz";
 
 const OYLAR = ["yanvar", "fevral", "mart", "aprel", "may", "iyun",
                "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
@@ -31,10 +31,13 @@ export interface ReceiptData {
   coursePrice?: number | null;
   receivedBy?: string | null;
   organization?: { name?: string | null } | null;
-  periods?: { month: string | null; amount: number }[];
+  /** `start`/`end` — sikl davri (INDIVIDUAL / GURUH_SANASI): oy o'rniga "12.09 – 12.10". */
+  periods?: { month: string | null; amount: number; start?: string; end?: string }[];
   advance?: number;
   /** Oldindan to'langan qism qaysi oy(lar) uchun — kassir belgilagan. */
   advanceMonths?: string[];
+  /** `advanceMonths` ning sikl davrlari (xuddi shu tartibda) — bo'lsa davr yoziladi. */
+  advancePeriods?: { start: string; end: string }[];
   /** Shu to'lovdan keyin o'quvchiga qaytarilgan qism. */
   refunded?: number;
 }
@@ -268,9 +271,11 @@ export function maydonlar(d: ReceiptData): [string, string][] {
 
 export function davrRoyxati(d: ReceiptData): [string, string][] {
   const r: [string, string][] = (d.periods ?? []).map(
-    (p) => [oyNomi(p.month), pul(p.amount)] as [string, string]);
+    (p) => [p.start && p.end ? davrYorligi(p.start, p.end) : oyNomi(p.month), pul(p.amount)] as [string, string]);
   if ((d.advance ?? 0) > 0) {
-    const oylar = (d.advanceMonths ?? []).map((m) => oyNomi(m)).join(", ");
+    const davrlar = d.advancePeriods ?? [];
+    const oylar = (d.advanceMonths ?? []).map((m, i) =>
+      davrlar[i] ? davrYorligi(davrlar[i].start, davrlar[i].end) : oyNomi(m)).join(", ");
     r.push([oylar ? `Oldindan: ${oylar}` : "Oldindan to'lov", pul(d.advance!)]);
   }
   if ((d.refunded ?? 0) > 0) r.push(["Keyin qaytarilgan", pul(d.refunded!)]);
