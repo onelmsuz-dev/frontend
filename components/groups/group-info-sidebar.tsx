@@ -9,7 +9,10 @@ import {
   Flag, CalendarClock, RotateCcw, Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatUzDate } from "@/lib/date-uz";
+import useSWR from "swr";
+import { formatUzDate, davrYorligi } from "@/lib/date-uz";
+import { fetcher } from "@/lib/fetcher";
+import { useFeature } from "@/lib/hooks/useFeatures";
 import { formatCurrency } from "@/lib/money";
 import { WEEKDAYS, todayStr } from "@/lib/form-constants";
 import { useRooms } from "@/lib/hooks/useRooms";
@@ -470,6 +473,7 @@ export function GroupEndSection({ group, groupId, canUpdate, onFinish, onChanged
   const bugun = todayStr();
   const end = isoKun(group.endDate);
   const yakunlangan = group.status === "COMPLETED";
+  const yakunHisobi = useFeature("group-end-settlement") === true;
 
   async function reopen() {
     setSaving(true); setErr("");
@@ -505,6 +509,7 @@ export function GroupEndSection({ group, groupId, canUpdate, onFinish, onChanged
           <div className="mt-2.5 rounded-xl border border-indigo-200 bg-indigo-50/60 px-3.5 py-3 dark:border-indigo-400/20 dark:bg-indigo-400/[0.06]">
             <p className="text-[12.5px] text-neutral-700 dark:text-neutral-200">
               Guruh yana faol bo&apos;ladi va o&apos;quvchilarga oylik hisob qayta yoziladi.
+              {yakunHisobi && " Yakunlashda o'quvchilarga qaytarilgan pul bekor qilinadi."}
             </p>
             <div className="mt-2.5 flex items-center gap-2">
               <button type="button" onClick={reopen} disabled={saving}
@@ -559,6 +564,102 @@ export function GroupEndSection({ group, groupId, canUpdate, onFinish, onChanged
           dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:border-red-400/30 dark:hover:bg-red-400/10 dark:hover:text-red-300">
         <Flag className="h-4 w-4" />Guruhni yakunlash
       </button>
+    </div>
+  );
+}
+
+/** `GET /api/groups/:id/end-preview` javobi. */
+type YakunHisobi = {
+  enabled: boolean;
+  money?: boolean;
+  items?: { studentName: string; periodStart: string; periodEnd: string; totalLessons: number;
+            usedLessons: number; refundLessons: number; charged?: number; keep?: number; refund?: number }[];
+  skipped?: { studentName: string; reason: string }[];
+  totalRefund?: number;
+  teacherCut?: number | null;
+  paidSalaryMonths?: string[];
+};
+
+/**
+ * YAKUN HISOB-KITOBI — tanlangan kun oxirgi dars bo'lsa kimga qancha qaytadi.
+ *
+ * Server hisoblaydi (`common/group-end-settlement.ts`), oyna faqat ko'rsatadi:
+ * o'tilmagan darslar puli o'quvchi balansiga qaytadi, o'qituvchi faqat
+ * o'tilgan darslardan ulush oladi. Bayroq o'chiq markazda blok chiqmaydi.
+ */
+function GroupEndPreview({ groupId, sana, otgan }: { groupId: string; sana: string; otgan: boolean }) {
+  const { data, isLoading } = useSWR<YakunHisobi>(
+    `/api/groups/${groupId}/end-preview?date=${sana}`, fetcher);
+  if (isLoading) return <p className="text-[12px] text-neutral-400">Hisob-kitob tayyorlanmoqda…</p>;
+  if (!data?.enabled) return null;
+  const items = data.items ?? [];
+  const skipped = data.skipped ?? [];
+  const pul = data.money === true;
+
+  return (
+    <div className="rounded-xl border border-neutral-200 px-3.5 py-3 text-[12.5px] dark:border-white/10" data-yakun-hisobi>
+      <p className="font-semibold text-neutral-800 dark:text-neutral-100">O&apos;tilmagan darslar hisob-kitobi</p>
+      {items.length === 0 ? (
+        <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+          Qaytariladigan pul yo&apos;q — yozilgan davrlar shu kungacha tugaydi.
+        </p>
+      ) : (
+        <>
+          <p className="mt-1 text-neutral-500 dark:text-neutral-400">
+            {formatUzDate(sana)} dan keyingi darslar puli o&apos;quvchi balansiga qaytadi.
+            O&apos;qituvchi faqat o&apos;tilgan darslardan ulush oladi.
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {items.map((i, k) => (
+              <li key={k} className="flex items-baseline gap-2">
+                <span className="min-w-0 flex-1 truncate text-neutral-800 dark:text-neutral-100">
+                  {i.studentName}
+                  <span className="ml-1.5 text-[11px] text-neutral-400">
+                    {davrYorligi(i.periodStart, i.periodEnd)} · {i.usedLessons}/{i.totalLessons} dars o&apos;tdi
+                  </span>
+                </span>
+                {pul && i.refund != null && (
+                  <span className="shrink-0 tabular-nums font-semibold text-green-600 dark:text-green-400">
+                    +{formatCurrency(i.refund)}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+          {pul && (
+            <div className="mt-2 border-t border-neutral-200 pt-2 dark:border-white/10">
+              <p className="flex justify-between font-semibold text-neutral-800 dark:text-neutral-100">
+                <span>Jami qaytadi</span>
+                <span className="tabular-nums">{formatCurrency(data.totalRefund ?? 0)}</span>
+              </p>
+              {data.teacherCut != null && data.teacherCut > 0 && (
+                <p className="mt-0.5 flex justify-between text-neutral-500 dark:text-neutral-400">
+                  <span title="O'quvchilar to'liq to'laganda. To'lanmagan qarzdan o'qituvchi baribir ulush olmaydi.">
+                    O&apos;qituvchi ulushi kamayadi
+                  </span>
+                  <span className="tabular-nums">−{formatCurrency(data.teacherCut)} gacha</span>
+                </p>
+              )}
+            </div>
+          )}
+          {(data.paidSalaryMonths?.length ?? 0) > 0 && (
+            <p className="mt-2 text-amber-700 dark:text-amber-300">
+              O&apos;qituvchi oyligi {data.paidSalaryMonths!.join(", ")} uchun allaqachon to&apos;langan —
+              u qayta hisoblanmaydi, farqni qo&apos;lda hal qiling.
+            </p>
+          )}
+        </>
+      )}
+      {skipped.length > 0 && (
+        <p className="mt-2 text-amber-700 dark:text-amber-300">
+          Hisoblanmadi: {skipped.map((x) => `${x.studentName} (${x.reason})`).join("; ")}
+        </p>
+      )}
+      <p className="mt-2 text-[11px] text-neutral-400">
+        {otgan
+          ? "Hisob-kitob yakunlash bilan birga yoziladi."
+          : "Hisob-kitob guruh yakunlanganda yoziladi — shu orada yoziladigan davrlar ham hisobga olinadi."}
+      </p>
     </div>
   );
 }
@@ -637,6 +738,8 @@ export function FinishGroupModal({ group, groupId, activeCount, onClose, onSaved
           </p>
         </div>
       </div>
+
+      {sana && <GroupEndPreview groupId={groupId} sana={sana} otgan={otgan} />}
 
       {avvalgi && (
         <button type="button" onClick={() => save("")} disabled={saving}
