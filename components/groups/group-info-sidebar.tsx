@@ -606,8 +606,7 @@ function GroupEndPreview({ groupId, sana, otgan }: { groupId: string; sana: stri
       ) : (
         <>
           <p className="mt-1 text-neutral-500 dark:text-neutral-400">
-            {formatUzDate(sana)} dan keyingi darslar puli o&apos;quvchi balansiga qaytadi.
-            O&apos;qituvchi faqat o&apos;tilgan darslardan ulush oladi.
+            {`${formatUzDate(sana)} dan keyingi darslar puli o'quvchi balansiga qaytadi. O'qituvchi faqat o'tilgan darslardan ulush oladi.`}
           </p>
           <ul className="mt-2 space-y-1.5">
             {items.map((i, k) => (
@@ -615,7 +614,7 @@ function GroupEndPreview({ groupId, sana, otgan }: { groupId: string; sana: stri
                 <span className="min-w-0 flex-1 truncate text-neutral-800 dark:text-neutral-100">
                   {i.studentName}
                   <span className="ml-1.5 text-[11px] text-neutral-400">
-                    {davrYorligi(i.periodStart, i.periodEnd)} · {i.usedLessons}/{i.totalLessons} dars o&apos;tdi
+                    {`${davrYorligi(i.periodStart, i.periodEnd)} · ${i.usedLessons}/${i.totalLessons} dars o'tdi`}
                   </span>
                 </span>
                 {pul && i.refund != null && (
@@ -644,8 +643,7 @@ function GroupEndPreview({ groupId, sana, otgan }: { groupId: string; sana: stri
           )}
           {(data.paidSalaryMonths?.length ?? 0) > 0 && (
             <p className="mt-2 text-amber-700 dark:text-amber-300">
-              O&apos;qituvchi oyligi {data.paidSalaryMonths!.join(", ")} uchun allaqachon to&apos;langan —
-              u qayta hisoblanmaydi, farqni qo&apos;lda hal qiling.
+              {`O'qituvchi oyligi ${data.paidSalaryMonths!.join(", ")} uchun allaqachon to'langan — u qayta hisoblanmaydi, farqni qo'lda hal qiling.`}
             </p>
           )}
         </>

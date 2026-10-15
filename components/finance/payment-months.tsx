@@ -249,7 +249,7 @@ export function PaymentMonths({ data, amount, onAmount, value, onChange, monthly
 
       {qamrov.length === 0 && (
         <p className="text-[12px] text-neutral-500 dark:text-neutral-400">
-          Bu guruhda yopilmagan {birlik} yo&apos;q — to&apos;lov oldindan bo&apos;ladi.
+          {`Bu guruhda yopilmagan ${birlik} yo'q — to'lov oldindan bo'ladi.`}
         </p>
       )}
 
@@ -351,7 +351,7 @@ export function PaymentMonths({ data, amount, onAmount, value, onChange, monthly
               Bekor
             </button>
             <p className="w-full text-[11px] text-neutral-400">
-              Masalan o&apos;quvchi tizimga keyin kiritilgan va oldingi {birlik} qarzi yo&apos;q. Qarz va to&apos;lov birga yoziladi.
+              {`Masalan o'quvchi tizimga keyin kiritilgan va oldingi ${birlik} qarzi yo'q. Qarz va to'lov birga yoziladi.`}
             </p>
           </div>
         ) : (
