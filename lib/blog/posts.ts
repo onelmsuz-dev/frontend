@@ -1,3 +1,6 @@
+import bitrixAmo from "@/content/blog/bitrix24-yoki-amocrm.json";
+import bitrixAmoRu from "@/content/blog/bitrix24-yoki-amocrm.ru.json";
+import bitrixAmoEn from "@/content/blog/bitrix24-yoki-amocrm.en.json";
 import best from "@/content/blog/eng-yaxshi-crm.json";
 import bestRu from "@/content/blog/eng-yaxshi-crm.ru.json";
 import bestEn from "@/content/blog/eng-yaxshi-crm.en.json";
@@ -42,6 +45,55 @@ export interface Post extends PostText {
 }
 
 const RAW: RawPost[] = [
+  {
+    slug: "bitrix24-yoki-amocrm",
+    date: "2026-10-19",
+    author: "OneRoom",
+    image: "/blog/bitrix24-yoki-amocrm-muqova.jpg",
+    imageWidth: 1536,
+    imageHeight: 864,
+    text: {
+      uz: {
+        title: "Bitrix24 yoki amoCRM o‘quv markazga to‘g‘ri keladimi?",
+        description: "amoCRM va Bitrix24 lid va sotuvda kuchli, lekin guruh, davomat, oylik to‘lov va o‘qituvchi oyligi tayyor emas. Narxlar, cheklovlar va kimga mosligi.",
+        category: "CRM va boshqaruv",
+        dateLabel: "19-oktabr, 2026",
+        imageAlt: "Bitrix24, amoCRM va OneRoom yozuvli bloklardan yig‘ilgan kub, yonida ‘Bitrix24 yoki amoCRM? O‘quv markazga to‘g‘ri keladimi?’ sarlavhasi",
+        markdown: bitrixAmo.markdown,
+        cta: {
+          title: "Lid ham, guruh ham bitta tizimda.",
+          text: "Ariza qoldiring: mutaxassis OneRoom’ni markazingizga moslab sozlaydi, 7 kun bepul sinab ko‘rasiz. Karta ma’lumoti so‘ralmaydi.",
+          button: "Ariza qoldirish",
+        },
+      },
+      ru: {
+        title: "Подходит ли Bitrix24 или amoCRM учебному центру?",
+        description: "amoCRM и Bitrix24 сильны в заявках и продажах, но группы, посещаемость, оплаты и зарплата преподавателей в них не готовы. Цены, лимиты и кому что подходит.",
+        category: "CRM и управление",
+        dateLabel: "19 октября 2026",
+        imageAlt: "Куб из блоков с надписями Bitrix24, amoCRM и OneRoom, рядом заголовок на узбекском ‘Bitrix24 yoki amoCRM? O‘quv markazga to‘g‘ri keladimi?’",
+        markdown: bitrixAmoRu.markdown,
+        cta: {
+          title: "И заявка, и группа — в одной системе.",
+          text: "Оставьте заявку: специалист настроит OneRoom под ваш центр, и вы попробуете его 7 дней бесплатно. Данные карты не запрашиваются.",
+          button: "Оставить заявку",
+        },
+      },
+      en: {
+        title: "Is Bitrix24 or amoCRM Right for a Learning Center?",
+        description: "amoCRM and Bitrix24 are strong at leads and sales, but groups, attendance, monthly payments and teacher pay aren't built in. Pricing, limits and who they suit.",
+        category: "CRM & management",
+        dateLabel: "October 19, 2026",
+        imageAlt: "A cube of blocks labeled Bitrix24, amoCRM and OneRoom, next to the Uzbek heading ‘Bitrix24 yoki amoCRM? O‘quv markazga to‘g‘ri keladimi?’",
+        markdown: bitrixAmoEn.markdown,
+        cta: {
+          title: "Leads and groups in one system.",
+          text: "Submit a request: a specialist will set OneRoom up for your center and you'll try it free for 7 days. No card details are asked for.",
+          button: "Submit a request",
+        },
+      },
+    },
+  },
   {
     slug: "oquv-markazlari-uchun-eng-yaxshi-crm",
     date: "2026-10-10",
