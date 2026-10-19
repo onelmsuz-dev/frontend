@@ -25,7 +25,7 @@ export function blogIndexMetadata(locale: Locale): Metadata {
       url: absoluteUrl("/blog", locale),
       type: "website",
       ...(locale === "uz" ? {} : openGraphLocale(locale)),
-      images: [{ url: posts[0].image, width: 1600, height: 900 }],
+      images: [{ url: posts[0].image, width: posts[0].imageWidth ?? 1600, height: posts[0].imageHeight ?? 900 }],
     },
     robots: { index: true, follow: true, googleBot: { "max-image-preview": "large" } },
   };
@@ -43,26 +43,33 @@ export function BlogIndex({ locale }: { locale: Locale }) {
 
     <section className="blog-section" aria-labelledby="articles-title">
       <div className="blog-section-heading"><h2 id="articles-title">{ui.latest}</h2><span>{ui.articlesCount(posts.length)}</span></div>
-      <div className="blog-articles-grid">
+      {/* Eng yangi maqola — to'liq kenglikda (rasm chapda), qolganlari ixcham gridda. */}
+      <div className="blog-articles">
         {posts.map((post, index) => <article key={post.slug} className={`blog-post-card ${index === 0 ? "blog-post-featured" : ""}`}>
           <Link href={localizePath(`/blog/${post.slug}`, locale)} className="blog-post-link">
-            <div className="blog-cover"><Image src={post.image} alt={post.imageAlt} width={1600} height={900} priority={index === 0} sizes="(max-width: 760px) 100vw, 70vw" /><span className="blog-cover-label">{ui.coverLabel}</span></div>
+            <div className="blog-cover"><Image src={post.image} alt={post.imageAlt} width={post.imageWidth ?? 1600} height={post.imageHeight ?? 900} priority={index === 0} sizes={index === 0 ? "(max-width: 900px) 100vw, 680px" : "(max-width: 640px) 100vw, (max-width: 1000px) 50vw, 380px"} /></div>
             <div className="blog-card-copy">
               <div className="blog-meta"><span className="blog-category">{post.category}</span><span><Clock3 size={14} aria-hidden /> {post.readingMinutes} {ui.minutes}</span></div>
               <h3>{post.title}</h3><p>{post.description}</p>
-              <div className="blog-card-bottom"><time dateTime={post.date}>{post.dateLabel}</time><span>{ui.readArticle} <ArrowUpRight size={19} aria-hidden /></span></div>
+              <div className="blog-card-bottom"><time dateTime={post.date}>{post.dateLabel}</time><span>{ui.readArticle} <ArrowUpRight size={18} aria-hidden /></span></div>
             </div>
           </Link>
         </article>)}
-        <aside className="blog-help-card">
-          <span className="blog-help-icon"><BookOpen size={26} aria-hidden /></span>
-          <span className="blog-eyebrow">{ui.helpEyebrow}</span>
-          <h2>{ui.helpTitle1}{" "}<br />{ui.helpTitle2}</h2>
-          <p>{ui.helpText}</p>
+      </div>
+      <aside className="blog-help-card">
+        <div className="blog-help-copy">
+          <span className="blog-help-icon"><BookOpen size={24} aria-hidden /></span>
+          <div>
+            <span className="blog-eyebrow">{ui.helpEyebrow}</span>
+            <h2>{ui.helpTitle1} {ui.helpTitle2}</h2>
+            <p>{ui.helpText}</p>
+          </div>
+        </div>
+        <div className="blog-help-actions">
           <ApplyButton where="Blog › Demo kartochkasi" className="blog-white-button">{ui.helpButton} <ArrowUpRight size={18} aria-hidden /></ApplyButton>
           <Link href={localizePath("/", locale)} className="blog-help-link">{ui.helpLink} <ArrowRight size={16} aria-hidden /></Link>
-        </aside>
-      </div>
+        </div>
+      </aside>
     </section>
 
     <section className="blog-section blog-topics" aria-labelledby="topics-title">
