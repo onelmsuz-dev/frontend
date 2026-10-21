@@ -116,9 +116,14 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
       TEMPLATE_HEADERS.map((header) => ({ header, type: "text" as const })), TEMPLATE_SAMPLE));
   }
 
-  const valid = rows.filter(r => !r.brokenPhone && !r.brokenParentPhone
-    && r.name.trim().length >= 2 && r.phone.replace(/\D/g, "").length >= 9);
+  // Telefon MAJBURIY EMAS (2026-10-20): faqat ota-ona raqami bilan, hatto
+  // raqamsiz qator ham kiradi — ism bo'lsa bas. Raqam formati serverda
+  // tekshiriladi, noto'g'risi izohga tushadi, qator yo'qolmaydi.
+  const valid = rows.filter(r => !r.brokenPhone && !r.brokenParentPhone && r.name.trim().length >= 2);
   const invalid = rows.length - valid.length - brokenPhones;
+  const raqamli = (v?: string) => (v ?? "").replace(/\D/g, "").length >= 9;
+  const faqatOtaOna = valid.filter(r => !raqamli(r.phone) && raqamli(r.parentPhone)).length;
+  const telefonsiz  = valid.filter(r => !raqamli(r.phone) && !raqamli(r.parentPhone)).length;
 
   async function submit() {
     if (valid.length === 0) { setErr("Yuborish uchun to'g'ri qator yo'q"); return; }
@@ -206,7 +211,17 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
                 </span>
                 {invalid > 0 && (
                   <span className="px-2 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-semibold">
-                    {invalid}{" "}ta qator to&apos;liq emas — o&apos;tkazib yuboriladi
+                    {invalid}{" "}ta qatorda ism yo&apos;q — o&apos;tkazib yuboriladi
+                  </span>
+                )}
+                {faqatOtaOna > 0 && (
+                  <span className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-semibold" data-faqat-otaona={faqatOtaOna}>
+                    {faqatOtaOna}{" "}ta qator faqat ota-ona raqami bilan
+                  </span>
+                )}
+                {telefonsiz > 0 && (
+                  <span className="px-2 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 font-semibold" data-telefonsiz={telefonsiz}>
+                    {telefonsiz}{" "}ta qator telefonsiz
                   </span>
                 )}
                 {matched.length > 0 && (
@@ -269,8 +284,9 @@ export function StudentImportModal({ open, onClose, onDone, groups }: Props) {
           <div className="flex items-start gap-2 glass-soft rounded-xl px-3 py-2.5">
             <Copy className="w-3.5 h-3.5 text-neutral-400 shrink-0 mt-0.5" />
             <p className="text-[12px] text-neutral-500 dark:text-neutral-400">
-              Ro&apos;yxatda allaqachon bor telefon raqamlar <strong>o&apos;tkazib yuboriladi</strong> —
-              bir xil faylni ikki marta yuklash xavfsiz.
+              {"Ro'yxatda allaqachon bor o'quvchi (bir xil raqam va ism) "}<strong>o&apos;tkazib yuboriladi</strong>{" — "}
+              {"bir xil faylni ikki marta yuklash xavfsiz. Aka-uka bitta raqam bilan ikkalasi ham kiradi. "}
+              {"Bitta katakda ikkita raqam bo'lsa, ikkinchisi qo'shimcha telefon bo'ladi."}
             </p>
           </div>
 
@@ -342,8 +358,7 @@ function PreviewTable({ rows, total }: { rows: MappedRow[]; total: number }) {
           </thead>
           <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
             {rows.map((r, i) => {
-              const bad = !!r.brokenPhone || !!r.brokenParentPhone
-                || r.name.trim().length < 2 || r.phone.replace(/\D/g, "").length < 9;
+              const bad = !!r.brokenPhone || !!r.brokenParentPhone || r.name.trim().length < 2;
               return (
                 <tr key={i} className={cn(bad && "bg-amber-50/60 dark:bg-amber-900/10")}>
                   <td className="px-3 py-1.5 text-neutral-800 dark:text-neutral-200">{r.name || "—"}</td>
@@ -378,6 +393,18 @@ function ImportResult({ summary, results }: {
   results: RowResult[];
 }) {
   const problems = results.filter(r => r.outcome !== "created");
+  // Kirgan, lekin eslatmasi bor qatorlar: faqat ota-ona raqami, aka-uka
+  // bilan bir xil raqam, noto'g'ri raqam izohga tushgani.
+  //
+  // "Guruh topilmadi" ALOHIDA sanaladi: Excel'da «Guruh» ustuni ko'pincha
+  // yo'nalish nomi bo'ladi va 300 qatorning hammasida shu eslatma chiqib,
+  // muhimlarini (noto'g'ri raqam) ko'mib yuborardi.
+  const GURUH = /guruhi topilmadi — guruhsiz kiritildi/;
+  const guruhYoq = results.filter(r => r.outcome === "created" && GURUH.test(r.message ?? "")).length;
+  const eslatmalar = results
+    .filter(r => r.outcome === "created" && r.message)
+    .map(r => ({ ...r, message: (r.message ?? "").split("; ").filter(m => !GURUH.test(m)).join("; ") }))
+    .filter(r => r.message);
   return (
     <>
       <div className="grid grid-cols-3 gap-2">
@@ -399,6 +426,33 @@ function ImportResult({ summary, results }: {
           <p className="text-[12px] font-medium text-green-700 dark:text-green-400">
             {summary.created}{" "}ta o&apos;quvchi ro&apos;yxatga qo&apos;shildi
           </p>
+        </div>
+      )}
+
+      {guruhYoq > 0 && (
+        <p className="text-[12px] text-neutral-500 dark:text-neutral-400" data-guruh-topilmadi={guruhYoq}>
+          {`${guruhYoq} ta qatorda «Guruh» ustunidagi nom markazda topilmadi — o'quvchi guruhsiz kiritildi, nom izohda saqlandi.`}
+        </p>
+      )}
+
+      {eslatmalar.length > 0 && (
+        <div data-import-eslatma={eslatmalar.length}>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5">
+            {`Qo'shildi, lekin tekshirib chiqing (${eslatmalar.length})`}
+          </p>
+          <div className="rounded-xl border border-white/60 dark:border-white/10 divide-y divide-neutral-100 dark:divide-neutral-800 max-h-40 overflow-y-auto">
+            {eslatmalar.map(r => (
+              <div key={r.row} className="flex items-start justify-between gap-3 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-[12px] font-medium text-neutral-700 dark:text-neutral-200 truncate">
+                    {r.row}. {r.name}
+                  </p>
+                  <p className="text-[11px] text-neutral-400">{r.phone || "—"}</p>
+                </div>
+                <span className="text-[11px] shrink-0 text-right max-w-[55%] text-blue-700 dark:text-blue-400">{r.message}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

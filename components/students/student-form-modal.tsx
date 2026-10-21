@@ -39,7 +39,7 @@ interface Props {
 
 function emptyForm() {
   return {
-    name: "", phone: "", birthDate: "", joinedAt: todayStr(), password: "",
+    name: "", phone: "", extraPhone: "", birthDate: "", joinedAt: todayStr(), password: "",
     source: "", gender: "MALE" as Gender,
     parentPhone: "", parentName: "",
     groupId: "", joinDate: todayStr(),
@@ -101,7 +101,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
     if (!open) return;
     if (isEdit && initial) {
       setForm({
-        name: initial.name ?? "", phone: initial.phone ?? "",
+        name: initial.name ?? "", phone: initial.phone ?? "", extraPhone: initial.extraPhone ?? "",
         birthDate: initial.birthDate ? String(initial.birthDate).slice(0, 10) : "",
         // Eski yozuvlarda `joinedAt` bo'lmasligi mumkin — `createdAt` ga tushamiz.
         joinedAt: String(initial.joinedAt ?? initial.createdAt ?? "").slice(0, 10),
@@ -112,7 +112,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
         referralCode: initial.referredBy?.referralCode ?? "",
         note: initial.note ?? "",
       });
-      setOpenParent(!!(initial.parentPhone || initial.parentName));
+      setOpenParent(!!(initial.parentPhone || initial.parentName || initial.extraPhone));
       setOpenGroup(false);
     } else {
       setForm(emptyForm());
@@ -224,8 +224,16 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
   async function submit() {
     const e: typeof fErr = {};
     if (!form.name.trim()) e.name = "Ism majburiy";
-    if (form.phone.replace(/\D/g, "").length !== 12) e.phone = "To'liq 9 ta raqam kiriting";
-    if (e.name || e.phone) { setFErr(e); return; }
+    // Telefon IXTIYORIY: faqat ota-ona raqami bilan ham bo'ladi, lekin
+    // kamida bittasi kerak. Yozilgan bo'lsa — to'liq.
+    const telBor = form.phone.replace(/\D/g, "").length > 0;
+    const otaBor = form.parentPhone.replace(/\D/g, "").length === 12;
+    if (telBor && form.phone.replace(/\D/g, "").length !== 12) e.phone = "To'liq 9 ta raqam kiriting";
+    else if (!telBor && !otaBor) e.phone = "Telefon yoki ota-ona telefonini kiriting";
+    if (form.extraPhone.replace(/\D/g, "").length > 0 && form.extraPhone.replace(/\D/g, "").length !== 12) {
+      e.phone = "Qo'shimcha telefon to'liq emas";
+    }
+    if (e.name || e.phone) { setFErr(e); setOpenParent(true); return; }
     // Ko'p filialli markazda guruhsiz qo'shilayotgan o'quvchi filialsiz qolmasin.
     if (kopFilial && !oqBranch && (isEdit || !form.groupId)) {
       setErr("Filialni tanlang — aks holda o'quvchi filial bo'yicha ro'yxatlarda ko'rinmaydi");
@@ -235,7 +243,11 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
     setSaving(true); setErr("");
     try {
       const body: Record<string, unknown> = {
-        name: form.name.trim(), phone: form.phone, gender: form.gender,
+        name: form.name.trim(), gender: form.gender,
+        // Bo'sh telefon: yaratishda yuborilmaydi, tahrirda `null` (olib tashlandi).
+        ...(telBor ? { phone: form.phone } : isEdit ? { phone: null } : {}),
+        ...(form.extraPhone.replace(/\D/g, "").length === 12 ? { extraPhone: form.extraPhone }
+          : isEdit ? { extraPhone: null } : {}),
       };
       if (form.birthDate) body.birthDate = form.birthDate;
       if (form.joinedAt) body.joinedAt = form.joinedAt;
@@ -295,7 +307,8 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
           className="h-10" />
       </FormField>
 
-      <FormField label="Telefon raqam" required error={fErr.phone}>
+      <FormField label="Telefon raqam" error={fErr.phone}
+        hint={form.phone.replace(/\D/g, "").length === 0 ? "Bo'sh qoldirsangiz, ota-ona telefoni kiritilishi shart" : undefined}>
         <PhoneInput value={form.phone}
           onChange={v => { setForm(p => ({ ...p, phone: v })); setFErr(p => ({ ...p, phone: undefined })); }}
           error={!!fErr.phone} />
@@ -499,6 +512,10 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
           <FormField label="Ota-ona ismi">
             <Input placeholder="Ismi" value={form.parentName}
               onChange={e => setForm(p => ({ ...p, parentName: e.target.value }))} className="h-10" />
+          </FormField>
+          <FormField label="Qo'shimcha telefon" hint="O'quvchining ikkinchi raqami bo'lsa">
+            <PhoneInput value={form.extraPhone}
+              onChange={v => { setForm(p => ({ ...p, extraPhone: v })); setFErr(p => ({ ...p, phone: undefined })); }} />
           </FormField>
         </div>
       </Section>

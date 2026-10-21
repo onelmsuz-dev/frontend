@@ -45,10 +45,10 @@ const CARD = "glass-panel border border-white/60 dark:border-white/10 rounded-2x
 
 /* ── HERO ───────────────────────────────────────────────────────────────── */
 export function StudentHero({
-  name, avatar, statusLabel, statusCls, phone, parentPhone, parentName, joined, onPay, avatarEdit, meta, actions,
+  name, avatar, statusLabel, statusCls, phone, extraPhone, parentPhone, parentName, joined, onPay, avatarEdit, meta, actions,
 }: {
   name: string; avatar?: string | null; statusLabel?: string; statusCls?: string;
-  phone?: string | null; parentPhone?: string | null; parentName?: string | null;
+  phone?: string | null; extraPhone?: string | null; parentPhone?: string | null; parentName?: string | null;
   joined?: string | null; onPay?: () => void;
   /** Rasm ustidagi o'zgartirish tugmasi (hover'da chiqadi) — huquq bo'lsa. */
   avatarEdit?: React.ReactNode;
@@ -86,6 +86,13 @@ export function StudentHero({
           <a href={`tel:${phone}`} title="O'quvchiga qo'ng'iroq"
             className="flex h-9 items-center gap-2 rounded-xl glass-soft px-3 text-[13px] font-medium tabular-nums text-neutral-700 transition-colors hover:text-indigo-600 dark:text-neutral-200 dark:hover:text-indigo-300">
             <Phone className="h-3.5 w-3.5 text-neutral-400" />{phone}
+          </a>
+        )}
+        {extraPhone && (
+          <a href={`tel:${extraPhone}`} title="Qo'shimcha telefon" data-qoshimcha-telefon
+            className="flex h-9 items-center gap-2 rounded-xl glass-soft px-3 text-[13px] font-medium tabular-nums text-neutral-700 transition-colors hover:text-indigo-600 dark:text-neutral-200 dark:hover:text-indigo-300">
+            <Phone className="h-3.5 w-3.5 text-neutral-400" />
+            <span className="text-[11px] font-semibold text-neutral-400">Qo&apos;shimcha</span>{extraPhone}
           </a>
         )}
         {parentPhone && (

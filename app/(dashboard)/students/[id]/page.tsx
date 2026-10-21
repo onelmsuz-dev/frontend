@@ -1733,7 +1733,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         <StudentHero
           name={student.name} avatar={student.avatar}
           statusLabel={enroll?.label} statusCls={enroll?.cls}
-          phone={student.phone} parentPhone={student.parentPhone} parentName={student.parentName}
+          phone={student.phone} extraPhone={student.extraPhone} parentPhone={student.parentPhone} parentName={student.parentName}
           joined={formatUzDate(student.joinedAt ?? student.createdAt)}
           // To'lov tugmasi bu yerda YO'Q: tepa panelda ("To'lov qo'shish") va
           // "Hisob holati" kartasida bor — uchinchisi faqat takror bo'lardi.

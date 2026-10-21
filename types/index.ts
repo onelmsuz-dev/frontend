@@ -31,7 +31,9 @@ export interface Lead {
 export interface Student {
   id: string;
   name: string;
-  phone: string;
+  /** Ixtiyoriy — faqat ota-ona raqami bilan yozilgan o'quvchida `null`. */
+  phone: string | null;
+  extraPhone?: string | null;
   parentPhone?: string;
   groupId: string;
   groupName: string;

@@ -608,8 +608,13 @@ export default function StudentsPage() {
                         </TableCell>
                         <TableCell>
                           {/* Ota-ona raqami — raqam ustiga borilganda va profilda. */}
+                          {/* O'z raqami bo'lmasa — ota-onaniki (belgisi bilan). */}
                           <p title={s.parentPhone ? `Ota-ona: ${s.parentPhone}` : undefined}
-                            className="text-[13px] text-neutral-700 dark:text-neutral-300 whitespace-nowrap tabular-nums">{s.phone}</p>
+                            className="text-[13px] text-neutral-700 dark:text-neutral-300 whitespace-nowrap tabular-nums">
+                            {s.phone ?? (s.parentPhone
+                              ? <><span className="text-[10px] font-semibold text-neutral-400 mr-1">ota-ona</span>{s.parentPhone}</>
+                              : <span className="text-neutral-400">—</span>)}
+                          </p>
                         </TableCell>
                         <TableCell>
                           {/* BARCHA guruhlar. Bitta o'quvchi bir nechta fanga
@@ -685,9 +690,11 @@ export default function StudentsPage() {
                                     <Edit className="w-3.5 h-3.5" /> Tahrirlash
                                   </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem onClick={() => { window.location.href = `tel:${s.phone}`; }}>
-                                  <Phone className="w-3.5 h-3.5" />{" "}Qo&apos;ng&apos;iroq qilish
-                                </DropdownMenuItem>
+                                {(s.phone || s.parentPhone) && (
+                                  <DropdownMenuItem onClick={() => { window.location.href = `tel:${s.phone ?? s.parentPhone}`; }}>
+                                    <Phone className="w-3.5 h-3.5" />{" "}Qo&apos;ng&apos;iroq qilish
+                                  </DropdownMenuItem>
+                                )}
                                 {canSendSms && (
                                   <DropdownMenuItem onClick={() => smsToOne(s.id)}>
                                     <MessageSquare className="w-3.5 h-3.5" /> SMS yuborish
