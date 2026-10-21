@@ -213,8 +213,12 @@ async function parseXlsxBytes(buf: Uint8Array): Promise<string[][]> {
   const sanaXf = styXml ? sanaUslublari(styXml) : [];
   const y1904 = /<workbookPr\b[^>]*\bdate1904="(1|true)"/.test(wbXml);
 
-  const rows: string[][] = [];
+  // Qatorlar RAQAMI bilan — birlashtirilgan kataklarni to'ldirish uchun
+  // (pastda). Ilgari faqat tartib saqlanardi.
+  const byRow = new Map<number, string[]>();
+  let rowNo = 0;
   for (const rowXml of sheetXml.match(/<row[^>]*>[\s\S]*?<\/row>/g) ?? []) {
+    rowNo = Number(rowXml.match(/^<row[^>]*\br="(\d+)"/)?.[1] ?? rowNo + 1);
     const cells: string[] = [];
     // O'ZI YOPILADIGAN KATAK. Haqiqiy Excel bo'sh, lekin uslubi bor
     // katakni `<c r="D3" s="2"/>` deb yozadi. Oddiy `<c ...>...</c>`
@@ -258,9 +262,28 @@ async function parseXlsxBytes(buf: Uint8Array): Promise<string[][]> {
       cells[idx] = value.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
     }
     // Butunlay bo'sh qator o'tkazib yuboriladi.
-    if (cells.some((c) => c !== "")) rows.push(cells);
+    if (cells.some((c) => c !== "")) byRow.set(rowNo, cells);
   }
-  return rows;
+
+  // BIRLASHTIRILGAN KATAKLAR. Excel qiymatni faqat yuqori-chap katakda
+  // saqlaydi, qolganlari faylda BO'SH. Aka-uka uchun bitta telefon katagi
+  // ikki qatorga birlashtirilgan jadvalda ikkinchi bola telefonsiz
+  // o'qilardi (2026-10-20). Qiymat diapazonning hamma katagiga
+  // ko'chiriladi — faqat mavjud qatorlarga va faqat bo'sh kataklarga.
+  for (const m of sheetXml.matchAll(/<mergeCell\b[^>]*\bref="([A-Z]+)(\d+):([A-Z]+)(\d+)"/g)) {
+    const c1 = colIndex(m[1]), r1 = Number(m[2]), c2 = colIndex(m[3]), r2 = Number(m[4]);
+    const value = byRow.get(r1)?.[c1] ?? "";
+    if (value === "") continue;
+    for (let r = r1; r <= r2; r++) {
+      const row = byRow.get(r);
+      if (!row) continue;
+      for (let c = c1; c <= c2; c++) {
+        while (row.length <= c) row.push("");
+        if (row[c] === "") row[c] = value;
+      }
+    }
+  }
+  return [...byRow.entries()].sort((a, b) => a[0] - b[0]).map(([, cells]) => cells);
 }
 
 /**

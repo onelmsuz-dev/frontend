@@ -229,6 +229,20 @@ try {
   eq("boy matn birlashtirildi", ex[1][0], "Ali Valiyev");
   eq("formula natijasi", ex[2][0], "Zebo Q.");
   eq("son katak", ex[2][1], "998901234567");
+
+  console.log("\n10) BIRLASHTIRILGAN KATAKLAR — aka-uka uchun bitta telefon");
+  // Excel qiymatni faqat yuqori-chap katakda saqlaydi; B7:B8 birlashgan.
+  const MG_SH = `<?xml version="1.0"?><worksheet><sheetData>
+<row r="1">${s("A",1,0)}${s("B",1,1)}</row>
+<row r="7">${inl("A",7,"Bozorov Bahodir")}${inl("B",7,"91 949 12 45")}</row>
+<row r="8">${inl("A",8,"Bozorova Iroda")}</row>
+<row r="9">${inl("A",9,"Yolg'iz Bola")}${inl("B",9,"90 111 22 33")}</row>
+</sheetData><mergeCells count="2"><mergeCell ref="B7:B8"/><mergeCell ref="B9:B10"/></mergeCells></worksheet>`;
+  const mg = await parseXlsx(await blob([["[Content_Types].xml", CT],
+    ["xl/sharedStrings.xml", sst(STRINGS)], ["xl/worksheets/sheet1.xml", MG_SH]]));
+  eq("ikkinchi qator birlashgan raqamni oldi", mg[2], ["Bozorova Iroda", "91 949 12 45"]);
+  eq("birinchi qator o'zgarmadi", mg[1], ["Bozorov Bahodir", "91 949 12 45"]);
+  eq("bo'sh qatorga yoyilmaydi (10-qator yo'q)", mg.length, 4);
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }
