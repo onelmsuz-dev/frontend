@@ -122,7 +122,8 @@ export function FinanceInsights() {
           </p>
           <div className="space-y-2.5">
             <CompareRow label="Tushum"  cur={month.collected} prev={prev.collected} change={change.collected} good="up" />
-            <CompareRow label="Xarajat" cur={month.expenses}  prev={prev.expenses}  change={change.expenses}  good="down" />
+            {/* Rang ishora bo'yicha: "+" yashil, "−" qizil — egasining talabi (2026-10-22). */}
+            <CompareRow label="Xarajat" cur={month.expenses}  prev={prev.expenses}  change={change.expenses}  good="up" />
             <CompareRow label="Foyda"   cur={month.profit}    prev={prev.profit}    change={change.profit}    good="up" />
           </div>
         </div>

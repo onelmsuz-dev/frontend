@@ -57,8 +57,9 @@ export function OyHisobi({
             ozgarish != null ? (
               <span className={cn(
                 "text-[11px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap",
-                // Xarajatning O'SISHI yomon xabar — ishora teskari.
-                ozgarish <= 0
+                // Rang ishora bo'yicha: "+" yashil, "−" qizil — Moliya sahifasidagi
+                // taqqoslash bilan bir xil (egasining talabi, 2026-10-22).
+                ozgarish >= 0
                   ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40"
                   : "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40",
               )}>
