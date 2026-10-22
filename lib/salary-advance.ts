@@ -56,6 +56,9 @@ export interface OylikQatori {
   calculatedSalary: number;
   settledSalary: number;
   totalCollected: number;
+  /** Shu oy uchun yozilgan qarz (maosh asosi) va shundan kutilayotgan oylik. */
+  chargedTotal?: number;
+  expectedSalary?: number;
   advanceTotal?: number;
   salaryRemainder?: number;
   overAdvance?: number;

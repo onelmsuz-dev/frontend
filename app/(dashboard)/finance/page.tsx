@@ -901,9 +901,12 @@ export default function FinancePage() {
                   </>
                 ) : (
                   <div className="glass-panel border border-white/60 dark:border-white/10 rounded-2xl p-4">
-                    <p className="text-[11px] text-neutral-400 mb-1">Jami oylik</p>
+                    <p className="text-[11px] text-neutral-400 mb-1">Jami oylik (tushumdan)</p>
                     <p className="text-[20px] font-black text-violet-600 dark:text-violet-400">
                       {formatCurrency(salaries.reduce((s: number, r: any) => s + r.calculatedSalary, 0))}
+                    </p>
+                    <p className="text-[11px] text-neutral-400 mt-1" data-kutilayotgan-jami>
+                      {`Kutilayotgan: ${formatCurrency(salaries.reduce((s: number, r: OylikQatori) => s + (r.status === "PAID" ? hisoblanganOf(r) : (r.expectedSalary ?? 0)), 0))}`}
                     </p>
                   </div>
                 )}
@@ -931,7 +934,8 @@ export default function FinancePage() {
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">O&apos;qituvchi</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Turi</TableHead>
                     <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right" title="Faqat shu oyga tegishli tushum — oldindan to'langan ortiqcha summa keyingi oyga o'tadi">Yig&apos;ilgan (shu oy)</TableHead>
-                    <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Hisoblangan</TableHead>
+                    <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right" title="O'quvchi soni va kurs narxiga qarab: shu oy uchun yozilgan qarzning hammasi to'lansa chiqadigan oylik">Kutilayotgan</TableHead>
+                    <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right" title="Haqiqatan tushgan puldan hisoblangan — to'lanadigan summa shu">Hisoblangan</TableHead>
                     {avansBor && (
                       <>
                         <TableHead className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-right">Avans</TableHead>
@@ -983,9 +987,23 @@ export default function FinancePage() {
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
+                            {/* Kutilayotgan — yozilgan qarz asosida. To'lov to'liq
+                                tushsa hisoblangan shunga yetadi; tushmasa farq ko'rinadi. */}
+                            <span className="text-[13px] font-semibold text-neutral-500 dark:text-neutral-400 tabular-nums"
+                              title={s.chargedTotal != null ? `Shu oy uchun yozilgan qarz: ${formatCurrency(s.chargedTotal)}` : undefined}
+                              data-kutilayotgan={s.expectedSalary ?? 0}>
+                              {s.status === "PAID" ? "—" : formatCurrency(s.expectedSalary ?? 0)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
                             <span className={cn("font-black text-neutral-900 dark:text-neutral-100", avansBor ? "text-[13px]" : "text-[14px]")}>
                               {formatCurrency(hisoblanganOf(s))}
                             </span>
+                            {s.status !== "PAID" && s.teacher?.salaryType === "PERCENT" && (s.expectedSalary ?? 0) > hisoblanganOf(s) && (
+                              <span className="block text-[10.5px] text-neutral-400 mt-0.5">
+                                {`to'lov tushgach ${formatCurrency(s.expectedSalary)} gacha`}
+                              </span>
+                            )}
                           </TableCell>
                           {avansBor && (
                             <>

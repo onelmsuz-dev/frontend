@@ -122,7 +122,7 @@ export default function SalaryPage() {
                     <div>
                       <p className="text-[14px] font-semibold text-neutral-900 dark:text-neutral-100">{monthLabel(s.month)}</p>
                       <p className="text-[11px] text-neutral-400">
-                        Yig'ilgan: {fmtMoney(s.totalCollected)}
+                        {s.chargedTotal > 0 ? `Yig'ilgan: ${fmtMoney(s.totalCollected)} / ${fmtMoney(s.chargedTotal)}` : `Yig'ilgan: ${fmtMoney(s.totalCollected)}`}
                         {/* `baseSalary` — usuliga qarab yoki so'm, yoki foiz (masalan 50% ish haqi
                             uchun 50). Har doim `fmtMoney` bilan ko'rsatilsa, "Baza: 50 so'm" deb
                             chiqib, birinchi ko'rgan odam buni haqiqiy pul deb o'ylab qolardi. */}
@@ -133,6 +133,11 @@ export default function SalaryPage() {
                       <p className="text-[15px] font-black text-neutral-900 dark:text-neutral-100">
                         {fmtMoney(s.status === "PAID" && s.settledSalary > 0 ? s.settledSalary : s.calculatedSalary)}
                       </p>
+                      {s.status !== "PAID" && (s.expectedSalary ?? 0) > s.calculatedSalary && (
+                        <p className="text-[11px] text-neutral-400 tabular-nums" data-kutilayotgan>
+                          {`Kutilayotgan: ${fmtMoney(s.expectedSalary)} (to'lovlar to'liq tushsa)`}
+                        </p>
+                      )}
                       {(s.advanceTotal ?? 0) > 0 && (
                         <p className="text-[11px] text-neutral-500 tabular-nums" data-oylik-avans>
                           {`Avans: -${fmtMoney(s.advanceTotal)} · Qo'lga: ${fmtMoney(s.salaryRemainder ?? s.calculatedSalary)}`}
