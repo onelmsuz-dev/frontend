@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { formatUzDate } from "@/lib/date-uz";
 import { StudentHero, StudentOverview } from "@/components/students/student-overview";
+import { StudentFormModal } from "@/components/students/student-form-modal";
 import { StudentNotes } from "@/components/students/student-notes";
 import { StudentFinance } from "@/components/students/student-finance";
 import { TabGlide, TabPanel, TAB_IN, tabCls } from "@/components/ui/tab-glide";
@@ -141,6 +142,9 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   const { data: student, isLoading, error, mutate: revalidate } = useStudent(id);
   const { data: groupsRaw } = useGroups({ status: "ACTIVE,UPCOMING" });
   const allGroups: any[] = Array.isArray(groupsRaw) ? groupsRaw : [];
+
+  // O'quvchi ma'lumotlarini tahrirlash — ro'yxatdagi o'sha oyna (`StudentFormModal`).
+  const [showEdit, setShowEdit] = useState(false);
 
   // Payment modal
   const [showPayModal, setShowPayModal] = useState(false);
@@ -1442,6 +1446,15 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         )}
       </Modal>
 
+      {/* O'quvchi ma'lumotlarini tahrirlash — ism yonidagi "Tahrirlash" tugmasi */}
+      <StudentFormModal
+        open={showEdit}
+        mode="edit"
+        initial={student}
+        onClose={() => setShowEdit(false)}
+        onSaved={revalidateAll}
+      />
+
       {/* Guruhga qo'shilgan sanani tuzatish */}
       <MembershipDateModal
         membershipId={dateModalId}
@@ -1735,6 +1748,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           statusLabel={enroll?.label} statusCls={enroll?.cls}
           phone={student.phone} extraPhone={student.extraPhone} parentPhone={student.parentPhone} parentName={student.parentName}
           joined={formatUzDate(student.joinedAt ?? student.createdAt)}
+          onEdit={canManageGroups ? () => setShowEdit(true) : undefined}
           // To'lov tugmasi bu yerda YO'Q: tepa panelda ("To'lov qo'shish") va
           // "Hisob holati" kartasida bor — uchinchisi faqat takror bo'lardi.
           // PROFIL RASMI — bosilganda o'zgartiriladi. Bosqichma-bosqich

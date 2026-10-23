@@ -18,7 +18,7 @@
 
 import Link from "next/link";
 import {
-  ArrowRight, CalendarCheck2, Clock, Phone, Plus, Receipt, Snowflake, Users, Wallet,
+  ArrowRight, CalendarCheck2, Clock, Pencil, Phone, Plus, Receipt, Snowflake, Users, Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/money";
@@ -45,11 +45,18 @@ const CARD = "glass-panel border border-white/60 dark:border-white/10 rounded-2x
 
 /* ── HERO ───────────────────────────────────────────────────────────────── */
 export function StudentHero({
-  name, avatar, statusLabel, statusCls, phone, extraPhone, parentPhone, parentName, joined, onPay, avatarEdit, meta, actions,
+  name, avatar, statusLabel, statusCls, phone, extraPhone, parentPhone, parentName, joined, onPay, onEdit, avatarEdit, meta, actions,
 }: {
   name: string; avatar?: string | null; statusLabel?: string; statusCls?: string;
   phone?: string | null; extraPhone?: string | null; parentPhone?: string | null; parentName?: string | null;
   joined?: string | null; onPay?: () => void;
+  /**
+   * Ism yonidagi "Tahrirlash" — o'quvchi ma'lumotlari oynasini ochadi. Ilgari
+   * tahrirlash faqat O'quvchilar RO'YXATIDAN edi: profilda turgan xodim
+   * ro'yxatga qaytib, o'quvchini qayta topishi kerak edi (egasi, 2026-10-23).
+   * Huquq bo'lmasa berilmaydi va tugma chiqmaydi.
+   */
+  onEdit?: () => void;
   /** Rasm ustidagi o'zgartirish tugmasi (hover'da chiqadi) — huquq bo'lsa. */
   avatarEdit?: React.ReactNode;
   /** Ism ostidagi qatorga, "... dan beri" yoniga (masalan "... orqali keldi"). */
@@ -71,6 +78,14 @@ export function StudentHero({
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-[17px] font-bold tracking-tight text-neutral-900 dark:text-neutral-100">{name}</h2>
             {statusLabel && <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", statusCls)}>{statusLabel}</span>}
+            {onEdit && (
+              <button type="button" onClick={onEdit} title="O'quvchini tahrirlash" aria-label="O'quvchini tahrirlash"
+                data-oquvchi-tahrirlash
+                className="flex h-7 items-center gap-1 rounded-lg px-2 text-[12px] font-semibold text-neutral-500 transition-colors
+                  hover:bg-indigo-50 hover:text-indigo-600 dark:text-neutral-400 dark:hover:bg-indigo-400/10 dark:hover:text-indigo-300">
+                <Pencil className="h-3.5 w-3.5" />Tahrirlash
+              </button>
+            )}
           </div>
           {(joined || meta) && (
             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-neutral-500 dark:text-neutral-400">
