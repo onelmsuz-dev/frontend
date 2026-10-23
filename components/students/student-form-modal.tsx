@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { mutate } from "swr";
-import { Plus, AlertCircle, Users, UserPlus, ChevronDown } from "lucide-react";
+import {
+  Plus, AlertCircle, Users, UserPlus, ChevronDown, Phone, UsersRound, CalendarDays, Megaphone, KeyRound, Check,
+} from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +50,17 @@ function emptyForm() {
   };
 }
 
+/** Tugma bilan ochiladigan qo'shimcha maydonlar — tartibi ekrandagidek. */
+type Qoshimcha = "extraPhone" | "parent" | "joinedAt" | "source" | "referral" | "password";
+const QOSHIMCHA: { key: Qoshimcha; label: string; icon: typeof Phone }[] = [
+  { key: "extraPhone", label: "Qo'shimcha telefon", icon: Phone },
+  { key: "parent",     label: "Ota-ona",            icon: UsersRound },
+  { key: "joinedAt",   label: "Qabul sanasi",       icon: CalendarDays },
+  { key: "source",     label: "Manba",              icon: Megaphone },
+  { key: "referral",   label: "Tavsiya qilgan",     icon: UserPlus },
+  { key: "password",   label: "Parol",              icon: KeyRound },
+];
+
 function revalidateGroups() {
   mutate((k: string) => typeof k === "string" && k.startsWith("/api/groups"), undefined, { revalidate: true });
 }
@@ -68,9 +82,24 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
   const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Collapsible sections
-  const [openGroup, setOpenGroup] = useState(true);
-  const [openParent, setOpenParent] = useState(false);
+  /**
+   * QO'SHIMCHA MAYDONLAR — tugma bosilganda ochiladi (egasi, 2026-10-23).
+   *
+   * Ilgari oynada 12 ta maydon birdaniga turardi va "Guruhga qo'shish"
+   * bo'limi ochiq kelardi — qabulxona bitta o'quvchini qo'shish uchun
+   * uzun formani aylantirardi. Endi asosiylari (telefon, ism, tug'ilgan
+   * sana, jins, izoh) doim ko'rinadi, qolgani kerak bo'lsa ochiladi.
+   * Yopilgan maydondagi qiymat O'CHMAYDI va saqlanadi — tugma yashiradi, xolos.
+   */
+  const [ochiq, setOchiq] = useState<Set<Qoshimcha>>(new Set());
+  const ochiqmi = (k: Qoshimcha) => ochiq.has(k);
+  const almashtir = (k: Qoshimcha) => setOchiq(prev => {
+    const n = new Set(prev);
+    if (n.has(k)) n.delete(k); else n.add(k);
+    return n;
+  });
+  const och = (k: Qoshimcha) => setOchiq(prev => new Set(prev).add(k));
+  const [openGroup, setOpenGroup] = useState(false);
 
   // ── Referal: kod bo'yicha taklif qiluvchini topish ────────────────────────
   const [referrer, setReferrer] = useState<{ id: string; name: string; phone: string } | null>(null);
@@ -112,11 +141,18 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
         referralCode: initial.referredBy?.referralCode ?? "",
         note: initial.note ?? "",
       });
-      setOpenParent(!!(initial.parentPhone || initial.parentName || initial.extraPhone));
+      // Tahrirda qiymati bor qo'shimcha maydonlar ochiq keladi — hech narsa yashirinmasin.
+      const bor = new Set<Qoshimcha>(["joinedAt"]);
+      if (initial.extraPhone) bor.add("extraPhone");
+      if (initial.parentPhone || initial.parentName) bor.add("parent");
+      if (initial.source) bor.add("source");
+      if (initial.referredBy) bor.add("referral");
+      setOchiq(bor);
       setOpenGroup(false);
     } else {
       setForm(emptyForm());
-      setOpenGroup(true); setOpenParent(false);
+      setOchiq(new Set());
+      setOpenGroup(false);
     }
     setFErr({}); setErr(""); setReferrer(null); setRefErr("");
     setFBranch(""); setFTeacher(""); setFCourse(""); setShowNewGroup(false);
@@ -230,10 +266,16 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
     const otaBor = form.parentPhone.replace(/\D/g, "").length === 12;
     if (telBor && form.phone.replace(/\D/g, "").length !== 12) e.phone = "To'liq 9 ta raqam kiriting";
     else if (!telBor && !otaBor) e.phone = "Telefon yoki ota-ona telefonini kiriting";
-    if (form.extraPhone.replace(/\D/g, "").length > 0 && form.extraPhone.replace(/\D/g, "").length !== 12) {
-      e.phone = "Qo'shimcha telefon to'liq emas";
+    const qoshimchaChala = form.extraPhone.replace(/\D/g, "").length > 0 && form.extraPhone.replace(/\D/g, "").length !== 12;
+    if (qoshimchaChala) e.phone = "Qo'shimcha telefon to'liq emas";
+    if (e.name || e.phone) {
+      setFErr(e);
+      // Xato yashirin maydonda bo'lsa — o'sha bo'lim ochilsin, aks holda
+      // xodim nimani to'ldirishni ko'rmaydi.
+      if (!telBor && !otaBor) och("parent");
+      if (qoshimchaChala) och("extraPhone");
+      return;
     }
-    if (e.name || e.phone) { setFErr(e); setOpenParent(true); return; }
     // Ko'p filialli markazda guruhsiz qo'shilayotgan o'quvchi filialsiz qolmasin.
     if (kopFilial && !oqBranch && (isEdit || !form.groupId)) {
       setErr("Filialni tanlang — aks holda o'quvchi filial bo'yicha ro'yxatlarda ko'rinmaydi");
@@ -301,12 +343,7 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
         </>
       }
     >
-      <FormField label="Ism familiya" required error={fErr.name} dataTour={TOUR_TARGETS.studentNameInput}>
-        <Input placeholder="Alisher Navoiy" value={form.name}
-          onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setFErr(p => ({ ...p, name: undefined })); }}
-          className="h-10" />
-      </FormField>
-
+      {/* ── ASOSIY — doim ko'rinadi ── */}
       <FormField label="Telefon raqam" error={fErr.phone}
         hint={form.phone.replace(/\D/g, "").length === 0 ? "Bo'sh qoldirsangiz, ota-ona telefoni kiritilishi shart" : undefined}>
         <PhoneInput value={form.phone}
@@ -314,7 +351,13 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
           error={!!fErr.phone} />
       </FormField>
 
-      <div className="grid grid-cols-2 gap-3">
+      <FormField label="Ism familiya" required error={fErr.name} dataTour={TOUR_TARGETS.studentNameInput}>
+        <Input placeholder="Alisher Navoiy" value={form.name}
+          onChange={e => { setForm(p => ({ ...p, name: e.target.value })); setFErr(p => ({ ...p, name: undefined })); }}
+          className="h-10" />
+      </FormField>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FormField label="Tug'ilgan sana">
           {/* Native `type="date"` emas: kalendar brauzer tilida ochilardi
               va tug'ilgan yilga yetish uchun strelkani o'nlab marta bosish
@@ -322,76 +365,10 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
           <DatePicker value={form.birthDate} max={todayStr()} clearable
             onChange={v => setForm(p => ({ ...p, birthDate: v }))} />
         </FormField>
-        <FormField label="Markazga qabul sanasi"
-          hint="Ro'yxatda shu sana ko'rinadi">
-          <DatePicker value={form.joinedAt} max={todayStr()}
-            onChange={v => setForm(p => ({ ...p, joinedAt: v }))} />
-        </FormField>
-        <FormField label="Manba" hint="Qayerdan bildi">
-          <select value={form.source} onChange={e => setForm(p => ({ ...p, source: e.target.value }))} className={selectCls}>
-            <option value="">Tanlang...</option>
-            {SOURCE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+        <FormField label="Jinsi">
+          <GenderPicker value={form.gender} onChange={v => setForm(p => ({ ...p, gender: v }))} />
         </FormField>
       </div>
-
-      <FormField
-        label="Kim tavsiya qildi?"
-        error={refErr || undefined}
-        hint={referrer ? undefined : "O'quvchi ismini yozing yoki do'sti bergan kodni kiriting — ixtiyoriy"}
-      >
-        <Input
-          placeholder="Ism yozing yoki kod: S7K4M2"
-          value={form.referralCode}
-          onChange={e => {
-            setForm(p => ({ ...p, referralCode: e.target.value }));
-            setReferrer(null); setRefErr("");
-          }}
-          className="h-10"
-        />
-        {refLoading && <p className="text-[11px] text-neutral-400 mt-1.5">Tekshirilmoqda...</p>}
-
-        {/* Ism bo'yicha topilganlar — tanlansa referredById to'g'ridan-to'g'ri qo'yiladi */}
-        {refCandidates.length > 0 && (
-          <div className="mt-1.5 rounded-xl border border-white/60 dark:border-white/10 glass-soft overflow-hidden">
-            {refCandidates.map((c: any) => (
-              <button key={c.id} type="button"
-                onClick={() => { setReferrer({ id: c.id, name: c.name, phone: c.phone }); setRefErr(""); }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-white/60 dark:hover:bg-white/10 transition-colors border-b border-white/50 dark:border-white/10 last:border-0">
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
-                  {c.name[0]}
-                </div>
-                <span className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">{c.name}</span>
-                <span className="text-[11px] text-neutral-400 ml-auto shrink-0">{c.phone}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {referrer && (
-          <div className="flex items-center gap-2 mt-1.5 px-2.5 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-            <UserPlus className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />
-            <p className="text-[12px] text-green-700 dark:text-green-300 flex-1">
-              <span className="font-semibold">{referrer.name}</span> tavsiya qilgan —
-              birinchi to&apos;lovdan keyin unga ball beriladi
-            </p>
-            <button type="button"
-              onClick={() => { setReferrer(null); setForm(p => ({ ...p, referralCode: "" })); }}
-              className="text-[11px] font-semibold text-green-700 dark:text-green-300 hover:underline shrink-0">
-              Bekor
-            </button>
-          </div>
-        )}
-      </FormField>
-
-      <FormField label={isEdit ? "Yangi parol" : "Parol"} hint={isEdit ? "Bo'sh qoldirsangiz o'zgarmaydi" : "Ixtiyoriy — o'quvchi paneli uchun"}>
-        <Input noAutofill name="student-new-password" type="password" placeholder="Kamida 6 belgi" value={form.password}
-          onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="h-10" />
-      </FormField>
-
-      <FormField label="Jinsini tanlang">
-        <GenderPicker value={form.gender} onChange={v => setForm(p => ({ ...p, gender: v }))} />
-      </FormField>
 
       {kopFilial && (
         <FormField label="Filial" required hint={!isEdit ? "Guruh tanlansa — guruh filiali olinadi" : undefined}>
@@ -400,13 +377,136 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
       )}
 
       <FormField label="Izoh" hint="Ixtiyoriy">
-        <Input placeholder="Qo'shimcha ma'lumot..." value={form.note}
-          onChange={e => setForm(p => ({ ...p, note: e.target.value }))} className="h-10" />
+        <Textarea placeholder="Qo'shimcha ma'lumot..." value={form.note} rows={2}
+          onChange={e => setForm(p => ({ ...p, note: e.target.value }))} />
       </FormField>
 
+      {/* ── QO'SHIMCHA — tugma bilan ochiladi ── */}
+      <div>
+        <p className="mb-2 text-[12px] font-semibold text-neutral-600 dark:text-neutral-300">Qo&apos;shimcha ma&apos;lumot</p>
+        <div className="flex flex-wrap gap-1.5" data-qoshimcha-tugmalar>
+          {QOSHIMCHA.map(q => {
+            const faol = ochiqmi(q.key);
+            return (
+              <button key={q.key} type="button" onClick={() => almashtir(q.key)} aria-pressed={faol}
+                className={cn("flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors",
+                  faol
+                    ? "border-indigo-600 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500"
+                    : "border-neutral-300 text-neutral-600 hover:border-indigo-400 hover:text-indigo-600 dark:border-neutral-700 dark:text-neutral-300 dark:hover:text-indigo-300")}>
+                {faol ? <Check className="h-3.5 w-3.5" /> : <q.icon className="h-3.5 w-3.5" />}
+                {q.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {ochiqmi("extraPhone") && (
+        <FormField label="Qo'shimcha telefon" hint="O'quvchining ikkinchi raqami">
+          <PhoneInput value={form.extraPhone}
+            onChange={v => { setForm(p => ({ ...p, extraPhone: v })); setFErr(p => ({ ...p, phone: undefined })); }} />
+        </FormField>
+      )}
+
+      {ochiqmi("parent") && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField label="Ota-ona telefoni">
+            <PhoneInput value={form.parentPhone}
+              onChange={v => { setForm(p => ({ ...p, parentPhone: v })); setFErr(p => ({ ...p, phone: undefined })); }} />
+          </FormField>
+          <FormField label="Ota-ona ismi">
+            <Input placeholder="Ismi" value={form.parentName}
+              onChange={e => setForm(p => ({ ...p, parentName: e.target.value }))} className="h-10" />
+          </FormField>
+        </div>
+      )}
+
+      {(ochiqmi("joinedAt") || ochiqmi("source")) && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {ochiqmi("joinedAt") && (
+            <FormField label="Markazga qabul sanasi" hint="Ro'yxatda shu sana ko'rinadi">
+              <DatePicker value={form.joinedAt} max={todayStr()}
+                onChange={v => setForm(p => ({ ...p, joinedAt: v }))} />
+            </FormField>
+          )}
+          {ochiqmi("source") && (
+            <FormField label="Manba" hint="Qayerdan bildi">
+              <select value={form.source} onChange={e => setForm(p => ({ ...p, source: e.target.value }))} className={selectCls}>
+                <option value="">Tanlang...</option>
+                {SOURCE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </FormField>
+          )}
+        </div>
+      )}
+
+      {ochiqmi("referral") && (
+        <FormField
+          label="Kim tavsiya qildi?"
+          error={refErr || undefined}
+          hint={referrer ? undefined : "O'quvchi ismini yozing yoki do'sti bergan kodni kiriting — ixtiyoriy"}
+        >
+          <Input
+            placeholder="Ism yozing yoki kod: S7K4M2"
+            value={form.referralCode}
+            onChange={e => {
+              setForm(p => ({ ...p, referralCode: e.target.value }));
+              setReferrer(null); setRefErr("");
+            }}
+            className="h-10"
+          />
+          {refLoading && <p className="text-[11px] text-neutral-400 mt-1.5">Tekshirilmoqda...</p>}
+
+          {/* Ism bo'yicha topilganlar — tanlansa referredById to'g'ridan-to'g'ri qo'yiladi */}
+          {refCandidates.length > 0 && (
+            <div className="mt-1.5 rounded-xl border border-white/60 dark:border-white/10 glass-soft overflow-hidden">
+              {refCandidates.map((c: any) => (
+                <button key={c.id} type="button"
+                  onClick={() => { setReferrer({ id: c.id, name: c.name, phone: c.phone }); setRefErr(""); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-white/60 dark:hover:bg-white/10 transition-colors border-b border-white/50 dark:border-white/10 last:border-0">
+                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                    {c.name[0]}
+                  </div>
+                  <span className="text-[12px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">{c.name}</span>
+                  <span className="text-[11px] text-neutral-400 ml-auto shrink-0">{c.phone}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {referrer && (
+            <div className="flex items-center gap-2 mt-1.5 px-2.5 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+              <UserPlus className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />
+              <p className="text-[12px] text-green-700 dark:text-green-300 flex-1">
+                <span className="font-semibold">{referrer.name}</span> tavsiya qilgan —
+                birinchi to&apos;lovdan keyin unga ball beriladi
+              </p>
+              <button type="button"
+                onClick={() => { setReferrer(null); setForm(p => ({ ...p, referralCode: "" })); }}
+                className="text-[11px] font-semibold text-green-700 dark:text-green-300 hover:underline shrink-0">
+                Bekor
+              </button>
+            </div>
+          )}
+        </FormField>
+      )}
+
+      {ochiqmi("password") && (
+        <FormField label={isEdit ? "Yangi parol" : "Parol"} hint={isEdit ? "Bo'sh qoldirsangiz o'zgarmaydi" : "O'quvchi paneli uchun"}>
+          <Input noAutofill name="student-new-password" type="password" placeholder="Kamida 6 belgi" value={form.password}
+            onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className="h-10" />
+        </FormField>
+      )}
+
       {/* ── Guruhga qo'shish (faqat yaratishda) ── */}
-      {!isEdit && (
-        <Section icon={Users} title="Guruhga qo'shish" open={openGroup} onToggle={() => setOpenGroup(o => !o)}>
+      {!isEdit && !openGroup && (
+        <button type="button" onClick={() => setOpenGroup(true)}
+          className="flex items-center gap-1.5 self-start text-[13px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+          <Plus className="w-3.5 h-3.5" />Guruhga qo&apos;shish
+        </button>
+      )}
+      {!isEdit && openGroup && (
+        <Section icon={Users} title="Guruhga qo'shish" open onToggle={() => { setOpenGroup(false); setForm(p => ({ ...p, groupId: "" })); }}>
           <p className="text-[11px] text-neutral-400 mb-2">
             * Guruhni tezroq topish uchun quyidagi filtrlardan foydalaning
           </p>
@@ -502,23 +602,6 @@ export function StudentFormModal({ open, mode, initial, onClose, onSaved }: Prop
           )}
         </Section>
       )}
-
-      {/* ── Ota-ona ── */}
-      <Section icon={UserPlus} title="Ota-ona ma'lumoti" open={openParent} onToggle={() => setOpenParent(o => !o)}>
-        <div className="space-y-3">
-          <FormField label="Ota-ona telefon raqami">
-            <PhoneInput value={form.parentPhone} onChange={v => setForm(p => ({ ...p, parentPhone: v }))} />
-          </FormField>
-          <FormField label="Ota-ona ismi">
-            <Input placeholder="Ismi" value={form.parentName}
-              onChange={e => setForm(p => ({ ...p, parentName: e.target.value }))} className="h-10" />
-          </FormField>
-          <FormField label="Qo'shimcha telefon" hint="O'quvchining ikkinchi raqami bo'lsa">
-            <PhoneInput value={form.extraPhone}
-              onChange={v => { setForm(p => ({ ...p, extraPhone: v })); setFErr(p => ({ ...p, phone: undefined })); }} />
-          </FormField>
-        </div>
-      </Section>
 
       {err && (
         <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/40 rounded-xl px-3 py-2.5">
