@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useStudents } from "@/lib/hooks/useStudents";
+import { useStudentFilters } from "@/lib/hooks/useStudentFilters";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
@@ -120,14 +121,17 @@ export default function StudentsPage() {
   // (server ham javobda balansni bermaydi).
   const canSeeMoney = hasPerm(me?.permissions, "payments.view");
 
-  const [search,       setSearch]       = useState("");
-  const [filterEnroll, setFilterEnroll] = useState("barchasi");
-  const [filterGroup,  setFilterGroup]  = useState("barchasi");
-  const [filterTeacher,setFilterTeacher]= useState("barchasi");
-  const [filterDebt,   setFilterDebt]   = useState("barchasi");
-  /** Qabul sanasi oralig'i — "shu davrda qo'shilganlar". */
-  const [joinedFrom,   setJoinedFrom]   = useState("");
-  const [joinedTo,     setJoinedTo]     = useState("");
+  // Filtrlar profilga kirib qaytganda ham saqlanadi (`useStudentFilters`).
+  const [filters, setFilters] = useStudentFilters();
+  /** `joinedFrom`/`joinedTo` — qabul sanasi oralig'i, "shu davrda qo'shilganlar". */
+  const { search, filterEnroll, filterGroup, filterTeacher, filterDebt, joinedFrom, joinedTo, showFilters } = filters;
+  const setSearch       = (v: string) => setFilters({ search: v });
+  const setFilterEnroll = (v: string) => setFilters({ filterEnroll: v });
+  const setFilterGroup  = (v: string) => setFilters({ filterGroup: v });
+  const setFilterTeacher= (v: string) => setFilters({ filterTeacher: v });
+  const setFilterDebt   = (v: string) => setFilters({ filterDebt: v });
+  const setJoinedFrom   = (v: string) => setFilters({ joinedFrom: v });
+  const setJoinedTo     = (v: string) => setFilters({ joinedTo: v });
 
   const [modalMode,    setModalMode]    = useState<"create" | "edit" | null>(null);
   const [modalInitial, setModalInitial] = useState<any>(null);
@@ -138,13 +142,16 @@ export default function StudentsPage() {
   // Qatordagi SMS tugmasi: shu o'quvchini tanlab, ommaviy paneldagi SMS
   // oynasini ochadi — yuborish mantiqi bitta joyda qoladi.
   const [smsOpen,      setSmsOpen]      = useState(false);
-  /** Qo'shimcha filtrlar paneli (guruh, o'qituvchi, to'lov, sana) ochiqmi. */
-  const [showFilters,  setShowFilters]  = useState(false);
   /** Tashqaridan ochiladigan ommaviy amal (jadvaldagi "+ Guruh" tugmasi). */
   const [bulkAction,   setBulkAction]   = useState<string | null>(null);
   /** "+ Guruh" orqali ochilganini eslab qolamiz (tanlovni tozalash uchun). */
   const singleAssign = useRef(false);
   const smsToOne = (id: string) => { setSelectedIds(new Set([id])); setSmsOpen(true); };
+
+  // Saqlangan qarz filtri shu vkladkada keyin kirgan, moliya huquqi yo'q
+  // xodimga o'tib ketmasin (`me` yuklanguncha filtr saqlanib turadi —
+  // aks holda qaytganda bir lahza to'liq ro'yxat ko'rinardi).
+  const debt = filterDebt !== "barchasi" && (!me || canSeeMoney) ? filterDebt : undefined;
 
   // Filtrlar SERVERGA yuboriladi — javob 1000 ta bilan cheklangani uchun
   // brauzerda filtrlash katta markazda to'liq natija bermasdi.
@@ -152,7 +159,7 @@ export default function StudentsPage() {
     search,
     groupId:   filterGroup   !== "barchasi" ? filterGroup   : undefined,
     teacherId: filterTeacher !== "barchasi" ? filterTeacher : undefined,
-    debt:      filterDebt    !== "barchasi" ? filterDebt    : undefined,
+    debt,
     enrollmentStatus: filterEnroll !== "barchasi" ? filterEnroll : undefined,
     joinedFrom: joinedFrom || undefined,
     joinedTo:   joinedTo   || undefined,
@@ -165,7 +172,7 @@ export default function StudentsPage() {
     search,
     groupId:   filterGroup   !== "barchasi" ? filterGroup   : undefined,
     teacherId: filterTeacher !== "barchasi" ? filterTeacher : undefined,
-    debt:      filterDebt    !== "barchasi" ? filterDebt    : undefined,
+    debt,
     joinedFrom: joinedFrom || undefined,
     joinedTo:   joinedTo   || undefined,
   });
@@ -348,9 +355,11 @@ export default function StudentsPage() {
     (filterDebt !== "barchasi" ? 1 : 0) + (joinedFrom || joinedTo ? 1 : 0);
 
   function clearFilters() {
-    setSearch(""); setFilterEnroll("barchasi"); setFilterGroup("barchasi");
-    setFilterTeacher("barchasi"); setFilterDebt("barchasi");
-    setJoinedFrom(""); setJoinedTo("");
+    setFilters({
+      search: "", filterEnroll: "barchasi", filterGroup: "barchasi",
+      filterTeacher: "barchasi", filterDebt: "barchasi",
+      joinedFrom: "", joinedTo: "",
+    });
   }
 
   return (
@@ -450,7 +459,7 @@ export default function StudentsPage() {
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
 
-          <button onClick={() => setShowFilters(v => !v)} aria-expanded={showFilters}
+          <button onClick={() => setFilters({ showFilters: !showFilters })} aria-expanded={showFilters}
             className={cn("shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold border transition-colors",
               showFilters || qoshimchaFiltr > 0
                 ? "border-indigo-300 dark:border-indigo-400/40 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
