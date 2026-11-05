@@ -10,24 +10,31 @@ import { useGroups } from "@/lib/hooks/useGroups";
 import { PAYMENT_METHODS, methodShort, methodCls } from "@/lib/payment-methods";
 import { formatUzDate } from "@/lib/date-uz";
 import { formatCurrency } from "@/lib/money";
+import { businessTodayStr } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import {
   Empty, FIELD_CLS, Field, FilterBar, GhostBtn, MiniStat, Panel, PanelHead, Skeleton, Th, royxat, type Tolov,
 } from "./ui";
 
+/** Backend bir so'rovda shuncha to'lov qaytaradi (`payments.service.ts`: `take`). */
+const TOLOV_LIMIT = 500;
+
 /**
  * KIRIM → TO'LOVLAR. Oy — sahifaning umumiy tanlovidan; bu yerda faqat
- * ro'yxatni toraytiruvchi filtrlar (sana, guruh, usul).
+ * ro'yxatni toraytiruvchi filtrlar (sana oralig'i, guruh, usul).
  */
 export function PaymentsSection({ month }: { month: string }) {
-  const [date,    setDate]    = useState("");
+  const [from,    setFrom]    = useState("");
+  const [to,      setTo]      = useState("");
   const [groupId, setGroupId] = useState("");
   const [method,  setMethod]  = useState("");
   const [chekId,  setChekId]  = useState<string | null>(null);
 
+  const sanaBor = !!(from || to);
   const { data: raw, isLoading } = usePayments({
-    month:   date ? undefined : month,   // aniq sana tanlansa oy shart emas
-    date:    date || undefined,
+    month:   sanaBor ? undefined : month,   // sana tanlansa oy shart emas
+    from:    from || undefined,
+    to:      to || undefined,
     groupId: groupId || undefined,
     method:  method || undefined,
   });
@@ -49,8 +56,8 @@ export function PaymentsSection({ month }: { month: string }) {
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [payments]);
 
-  const filtered = !!(date || groupId || method);
-  const pg = usePagination(payments, `${month}|${date}|${groupId}|${method}`);
+  const filtered = !!(sanaBor || groupId || method);
+  const pg = usePagination(payments, `${month}|${from}|${to}|${groupId}|${method}`);
 
   return (
     <div className="space-y-4">
@@ -75,8 +82,13 @@ export function PaymentsSection({ month }: { month: string }) {
       <Panel>
         <PanelHead title="To'lovlar tarixi" sub={`${payments.length} ta to'lov`} />
         <FilterBar>
-          <Field label="Aniq sana">
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={FIELD_CLS} />
+          <Field label="Sanadan">
+            <input type="date" value={from} max={to || businessTodayStr()}
+              onChange={(e) => setFrom(e.target.value)} className={FIELD_CLS} />
+          </Field>
+          <Field label="Sanagacha">
+            <input type="date" value={to} min={from || undefined} max={businessTodayStr()}
+              onChange={(e) => setTo(e.target.value)} className={FIELD_CLS} />
           </Field>
           <Field label="Guruh">
             <select value={groupId} onChange={(e) => setGroupId(e.target.value)} className={FIELD_CLS}>
@@ -91,12 +103,17 @@ export function PaymentsSection({ month }: { month: string }) {
             </select>
           </Field>
           {filtered && (
-            <GhostBtn onClick={() => { setDate(""); setGroupId(""); setMethod(""); }}>
+            <GhostBtn onClick={() => { setFrom(""); setTo(""); setGroupId(""); setMethod(""); }}>
               <X className="w-3.5 h-3.5" /> Tozalash
             </GhostBtn>
           )}
-          {date && (
-            <p className="text-[11px] text-neutral-400 w-full">Aniq sana tanlangan — yuqoridagi oy e&apos;tiborga olinmaydi.</p>
+          {sanaBor && (
+            <p className="text-[11px] text-neutral-400 w-full">Sana tanlangan — yuqoridagi oy e&apos;tiborga olinmaydi.</p>
+          )}
+          {payments.length >= TOLOV_LIMIT && (
+            <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 w-full" data-tolov-limit>
+              Faqat oxirgi {TOLOV_LIMIT} ta to&apos;lov ko&apos;rsatildi, jami summa to&apos;liq emas. Oraliqni qisqartiring.
+            </p>
           )}
         </FilterBar>
 

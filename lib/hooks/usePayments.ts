@@ -19,6 +19,9 @@ export function usePayments(params?: {
   month?: string;
   method?: string;
   date?: string;
+  /** Sana oralig'i ("YYYY-MM-DD"), ikkala chekka ham kiradi; oydan ustun. */
+  from?: string;
+  to?: string;
 }) {
   const qs = useBranchQueryString({
     studentId: params?.studentId,
@@ -26,6 +29,8 @@ export function usePayments(params?: {
     month:     params?.month,
     method:    params?.method,
     date:      params?.date,
+    from:      params?.from,
+    to:        params?.to,
   });
   return useSWR(`/api/payments${qs}`, fetcher);
 }
