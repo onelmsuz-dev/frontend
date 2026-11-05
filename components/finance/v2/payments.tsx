@@ -8,9 +8,9 @@ import { ReceiptModal } from "@/components/payments/receipt-modal";
 import { usePayments } from "@/lib/hooks/usePayments";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { PAYMENT_METHODS, methodShort, methodCls } from "@/lib/payment-methods";
-import { formatUzDate } from "@/lib/date-uz";
+import { fmtDateTime, formatUzDate } from "@/lib/date-uz";
 import { formatCurrency } from "@/lib/money";
-import { businessTodayStr } from "@/lib/time";
+import { businessTodayStr, kechKiritilgan } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import {
   Empty, FIELD_CLS, Field, FilterBar, GhostBtn, MiniStat, Panel, PanelHead, Skeleton, Th, royxat, type Tolov,
@@ -26,6 +26,7 @@ const TOLOV_LIMIT = 500;
 export function PaymentsSection({ month }: { month: string }) {
   const [from,    setFrom]    = useState("");
   const [to,      setTo]      = useState("");
+  const [late,    setLate]    = useState(false);
   const [groupId, setGroupId] = useState("");
   const [method,  setMethod]  = useState("");
   const [chekId,  setChekId]  = useState<string | null>(null);
@@ -35,6 +36,7 @@ export function PaymentsSection({ month }: { month: string }) {
     month:   sanaBor ? undefined : month,   // sana tanlansa oy shart emas
     from:    from || undefined,
     to:      to || undefined,
+    late:    late || undefined,
     groupId: groupId || undefined,
     method:  method || undefined,
   });
@@ -56,8 +58,8 @@ export function PaymentsSection({ month }: { month: string }) {
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [payments]);
 
-  const filtered = !!(sanaBor || groupId || method);
-  const pg = usePagination(payments, `${month}|${from}|${to}|${groupId}|${method}`);
+  const filtered = !!(sanaBor || late || groupId || method);
+  const pg = usePagination(payments, `${month}|${from}|${to}|${late}|${groupId}|${method}`);
 
   return (
     <div className="space-y-4">
@@ -102,8 +104,12 @@ export function PaymentsSection({ month }: { month: string }) {
               {methods.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </Field>
+          <GhostBtn onClick={() => setLate((v) => !v)} aria-pressed={late} data-kech-filtr
+            className={cn(late && "border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-400/40 dark:bg-amber-400/10 dark:text-amber-300 dark:hover:bg-amber-400/15")}>
+            Kechikib kiritilgan
+          </GhostBtn>
           {filtered && (
-            <GhostBtn onClick={() => { setFrom(""); setTo(""); setGroupId(""); setMethod(""); }}>
+            <GhostBtn onClick={() => { setFrom(""); setTo(""); setLate(false); setGroupId(""); setMethod(""); }}>
               <X className="w-3.5 h-3.5" /> Tozalash
             </GhostBtn>
           )}
@@ -123,7 +129,8 @@ export function PaymentsSection({ month }: { month: string }) {
               <TableRow className="glass-soft hover:bg-white/60 dark:hover:bg-white/10">
                 <Th>O&apos;quvchi</Th>
                 <Th>Guruh</Th>
-                <Th>Sana</Th>
+                <Th>To&apos;lov qilingan</Th>
+                <Th>Kiritilgan</Th>
                 <Th>Usul</Th>
                 <Th className="text-right">Summa</Th>
                 <Th className="text-right">Chek</Th>
@@ -133,7 +140,7 @@ export function PaymentsSection({ month }: { month: string }) {
               {isLoading
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 7 }).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-3 w-full" /></TableCell>
                       ))}
                     </TableRow>
@@ -150,6 +157,18 @@ export function PaymentsSection({ month }: { month: string }) {
                       </TableCell>
                       <TableCell className="text-[13px] text-neutral-500 dark:text-neutral-400">{p.group?.name ?? "—"}</TableCell>
                       <TableCell className="text-[13px] text-neutral-500 dark:text-neutral-400">{formatUzDate(p.date)}</TableCell>
+                      <TableCell data-kiritilgan>
+                        <p className={cn("text-[13px] tabular-nums whitespace-nowrap",
+                          kechKiritilgan(p.date, p.enteredAt)
+                            ? "font-semibold text-amber-600 dark:text-amber-400"
+                            : "text-neutral-500 dark:text-neutral-400")}
+                          title={kechKiritilgan(p.date, p.enteredAt) ? "To'lov qilingan kundan keyin kiritilgan" : undefined}>
+                          {fmtDateTime(p.enteredAt)}
+                        </p>
+                        {p.receivedBy?.name && (
+                          <p className="text-[11px] text-neutral-400">{p.receivedBy.name}</p>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium", methodCls(p.method))}>
                           {methodShort(p.method)}

@@ -27,11 +27,12 @@ import { useState } from "react";
 import { Receipt, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/money";
-import { formatUzDate } from "@/lib/date-uz";
+import { fmtDateTime, formatUzDate } from "@/lib/date-uz";
+import { kechKiritilgan } from "@/lib/time";
 import { methodLabel } from "@/lib/payment-methods";
 import { TabGlide, TabPanel, tabCls } from "@/components/ui/tab-glide";
 
-type Pay = { id: string; amount: number; date: string; method?: string | null; note?: string | null; groupId?: string | null; ledgerGroupName?: string | null };
+type Pay = { id: string; amount: number; date: string; enteredAt?: string | null; method?: string | null; note?: string | null; groupId?: string | null; ledgerGroupName?: string | null };
 type Charge = { id: string; amount?: number | null; discountAmount?: number | null; discountLabel?: string | null; note?: string | null; groupId?: string | null };
 
 const CARD = "glass-panel border border-white/60 dark:border-white/10 rounded-2xl";
@@ -91,6 +92,11 @@ export function StudentFinance({
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-x-2 text-[13.5px] font-semibold tabular-nums text-neutral-900 dark:text-neutral-100">
                   {formatUzDate(p.date)}
+                  {kechKiritilgan(p.date, p.enteredAt) && (
+                    <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400" data-kiritilgan>
+                      Kiritilgan: {fmtDateTime(p.enteredAt)}
+                    </span>
+                  )}
                   {qaytarildi && <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[10.5px] font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-300">Qaytarildi</span>}
                 </p>
                 <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] text-neutral-500 dark:text-neutral-400">

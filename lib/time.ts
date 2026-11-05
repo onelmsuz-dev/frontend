@@ -63,3 +63,9 @@ export function tolovSanaMin(at: Date = new Date()): string {
   const [y, m] = businessTodayStr(at).split("-");
   return `${Number(y) - 1}-${m}-01`;
 }
+
+/** To'lov keyinroq kiritilganmi — kunlar markaz vaqti bo'yicha solishtiriladi. */
+export function kechKiritilgan(date: string | Date, enteredAt?: string | Date | null): boolean {
+  if (!enteredAt) return false;
+  return businessTodayStr(new Date(enteredAt)) > businessTodayStr(new Date(date));
+}

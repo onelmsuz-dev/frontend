@@ -16,6 +16,9 @@ export const fetcher = (url: string) => fetch(url).then((r) => r.json());
 /** API javoblari — faqat shu sahifa o'qiydigan maydonlar. */
 export interface Tolov {
   id: string; amount: number; method: string; date: string;
+  /** Tizimga kiritilgan payt; eski to'lovda `null`. */
+  enteredAt?: string | null;
+  receivedBy?: { name?: string } | null;
   student?: { name?: string }; group?: { name?: string } | null;
 }
 export interface Xarajat { id: string; category: string; description: string; amount: number; date: string }
