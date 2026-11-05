@@ -5,6 +5,8 @@ import useSWR, { mutate } from "swr";
 import { CreditCard, Info, Receipt, X, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
+import { businessTodayStr, tolovSanaMin } from "@/lib/time";
 import { Label } from "@/components/ui/label";
 import { ModalOverlay } from "@/components/ui/modal-overlay";
 import { ReceiptModal } from "@/components/payments/receipt-modal";
@@ -58,6 +60,11 @@ export function AcceptPaymentModal({
   const { kopFilial } = useBranch();
   const [payForm, setPayForm] = useState<PayForm>(EMPTY_FORM);
   const [payFormErr, setPayFormErr] = useState("");
+  // TO'LOV SANASI. Bo'sh = bugun: oyna kechadan ochiq qolsa ham kechagi kun
+  // jimgina yuborilmaydi. Faqat o'tgan kun tanlansa serverga ketadi.
+  const [tolovSana, setTolovSana] = useState("");
+  const tanlanganSana = tolovSana || businessTodayStr();
+  const sanaYuborish = tanlanganSana !== businessTodayStr() ? { date: tanlanganSana } : {};
   const [saving, setSaving] = useState(false);
   // To'lov qabul qilinishi bilan chek OCHILADI — kassada qog'oz shu zahoti
   // kerak bo'ladi. Yopish bir bosishda, ya'ni chek kerak bo'lmasa xalaqit
@@ -118,6 +125,7 @@ export function AcceptPaymentModal({
     if (!open) return;
     setPayForm({ ...EMPTY_FORM, studentId: defaultStudentId ?? "" });
     setPayFormErr("");
+    setTolovSana("");
     setTanlov(undefined);
   }, [open, defaultStudentId]);
 
@@ -175,6 +183,7 @@ export function AcceptPaymentModal({
     setOylar(EMPTY_MONTHS);
     setPayForm(EMPTY_FORM);
     setPayFormErr("");
+    setTolovSana("");
     setForMaterials(false);
     setQarzYopish(false);
     setCategory("");
@@ -200,6 +209,7 @@ export function AcceptPaymentModal({
             amount: Number(payForm.amount),
             method: payForm.method,
             note: payForm.note || undefined,
+            ...sanaYuborish,
           }
         : {
             studentId: payForm.studentId,
@@ -208,6 +218,7 @@ export function AcceptPaymentModal({
             method: payForm.method,
             note: payForm.note || undefined,
             paidNow: true,
+            ...sanaYuborish,
           }),
     });
 
@@ -256,6 +267,7 @@ export function AcceptPaymentModal({
           amount: Number(payForm.amount),
           method: payForm.method,
           note: payForm.note || undefined,
+          ...sanaYuborish,
           ...(groupId ? { groupId } : {}),
           ...(payForm.branchId ? { branchId: payForm.branchId } : {}),
           // QAYSI OY UCHUN — faqat guruh tanlangan va ma'lumot kelgan bo'lsa.
@@ -546,6 +558,17 @@ export function AcceptPaymentModal({
                   </div>
                 )}
               </div>
+            )}
+          </div>
+
+          <div>
+            <Label className="text-xs font-medium text-neutral-500 mb-1.5 block">To&apos;lov sanasi</Label>
+            <DatePicker value={tanlanganSana} min={tolovSanaMin()} max={businessTodayStr()}
+              onChange={setTolovSana} />
+            {tanlanganSana !== businessTodayStr() && (
+              <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
+                O&apos;tgan sana: tushum shu sana oyiga yoziladi.
+              </p>
             )}
           </div>
 

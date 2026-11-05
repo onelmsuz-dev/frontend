@@ -54,3 +54,12 @@ export function businessMinutesOfDay(at: Date = new Date()): number {
 export function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
+
+/**
+ * To'lov sanasining eng eski kuni — joriy oydan 12 oy oldingi oyning 1-sanasi.
+ * Backend bilan bir qoida (`payments.service.ts`: `TOLOV_SANA_OY`).
+ */
+export function tolovSanaMin(at: Date = new Date()): string {
+  const [y, m] = businessTodayStr(at).split("-");
+  return `${Number(y) - 1}-${m}-01`;
+}

@@ -23,6 +23,7 @@ import {
   SELECTABLE_METHODS, methodGridCls,
 } from "@/lib/payment-methods";
 import { todayStr } from "@/lib/form-constants";
+import { businessTodayStr, tolovSanaMin } from "@/lib/time";
 import { DatePicker } from "@/components/ui/date-picker";
 import { MembershipDateModal } from "@/components/students/membership-date-modal";
 import { FreezeModal } from "@/components/students/freeze-modal";
@@ -148,6 +149,10 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
 
   // Payment modal
   const [showPayModal, setShowPayModal] = useState(false);
+  // TO'LOV SANASI. Bo'sh = bugun; faqat o'tgan kun tanlansa serverga ketadi.
+  const [tolovSana, setTolovSana] = useState("");
+  const tanlanganSana = tolovSana || businessTodayStr();
+  const sanaYuborish = tanlanganSana !== businessTodayStr() ? { date: tanlanganSana } : {};
   /**
    * QO'SHIMCHA TO'LOV REJIMI — kitob, forma, sertifikat.
    *
@@ -464,7 +469,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
   /** "Qaysi oy uchun" — oldindan oyi va ro'yxatda yo'q oy (payment-months.tsx). */
   const [oylar, setOylar] = useState<MonthsValue>(EMPTY_MONTHS);
   /** Oyna qaysi yo'l bilan yopilmasin (X, Bekor, muvaffaqiyat) — tasdiq o'chadi. */
-  const yopPayModal = () => { setShowPayModal(false); setMuzTasdiq(false); setOylar(EMPTY_MONTHS); };
+  const yopPayModal = () => { setShowPayModal(false); setMuzTasdiq(false); setTolovSana(""); setOylar(EMPTY_MONTHS); };
 
   async function setArchived(archived: boolean) {
     setArchiving(true); setArchiveErr("");
@@ -580,11 +585,13 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
           ? {
               studentId: id, amount,
               method: payForm.method, note: payForm.note || undefined,
+              ...sanaYuborish,
             }
           : {
               studentId: id, category: materialKat, amount,
               method: payForm.method, note: payForm.note || undefined,
               paidNow: !materialQarzga,
+              ...sanaYuborish,
             }),
       });
       const data = await res.json().catch(() => ({}));
@@ -621,6 +628,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
         body: JSON.stringify({
           studentId: id, groupId: sg?.groupId ?? undefined,
           amount, method: payForm.method, note: payForm.note || undefined,
+          ...sanaYuborish,
           // QAYSI OY UCHUN — faqat guruh tanlangan va ma'lumot kelgan bo'lsa.
           ...(sg?.groupId && payOylari ? oylarPayload(payOylari, payForm.amount, oylar, payBoshqaQarz, payKalendar) : {}),
         }),
@@ -1187,6 +1195,13 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
             </div>
           )}
         </div>
+        {!(material && materialQarzga && !qarzYopish) && (
+          <FormField label="To'lov sanasi"
+            hint={tanlanganSana !== businessTodayStr() ? "O'tgan sana: tushum shu sana oyiga yoziladi" : undefined}>
+            <DatePicker value={tanlanganSana} min={tolovSanaMin()} max={businessTodayStr()}
+              onChange={setTolovSana} />
+          </FormField>
+        )}
         {/* To'lov usuli — qarzga berilganda ma'nosiz (pul olinmadi). */}
         {!(material && materialQarzga && !qarzYopish) && (
         <FormField label="To'lov usuli">
