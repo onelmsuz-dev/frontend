@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import { SomInput } from "./som-input";
 import {
   OyNomi, oyNomi, sanaQisqa, soro, yangiKalit, avansniYangila, type AvansQatori,
@@ -54,7 +55,11 @@ export function BerildiOyna({
   if (ochilish !== oldingi) {
     setOldingi(ochilish);
     if (ochilish) {
-      setSumma(qoshimcha ? null : ((qator?.advanceRemaining ?? 0) || null));
+      // Summa BO'SH ochiladi: avans bo'lib beriladi (reja 1 000 000 —
+      // avval 200 000, keyin 500 000...). Ilgari qoldiq to'liq yozilib
+      // turardi va kassir uni o'zgartirmay, kerakdan ko'pini berib yuborardi.
+      // To'liq qoldiq kerak bo'lsa — "Qolganini" tugmasi.
+      setSumma(null);
       setSana(maxSana);
       setIzoh(""); setTushundim(false); setXato("");
     }
@@ -65,10 +70,15 @@ export function BerildiOyna({
 
   const jamiBolsa = qator.advanceGiven + qator.advanceCarried + (summa ?? 0);
   const oshadi = qator.taxminiy != null && qator.taxminiy > 0 && jamiBolsa > qator.taxminiy;
+  /** Rejadagi avansdan qolgani (oddiy avans uchun yuqori chegara). */
+  const qoldi = qator.advanceRemaining;
+  // Server ham shu chegarani tekshiradi — bu yerda oldindan aytamiz.
+  const qoldiqdanKop = !qoshimcha && summa != null && summa > qoldi;
 
   async function ber() {
     if (!summa) { setXato("Summani kiriting"); return; }
     if (!Number.isInteger(summa) || summa <= 0) { setXato("Summa butun son va 0 dan katta bo'lsin"); return; }
+    if (qoldiqdanKop) { setXato(`Qoldiqdan ko'p: ko'pi bilan ${formatCurrency(qoldi)}`); return; }
     if (kech && !tushundim) { setXato("Kech kiritishni tasdiqlang"); return; }
     setIshlamoqda(true); setXato("");
     kalit.current ??= yangiKalit();
@@ -101,7 +111,7 @@ export function BerildiOyna({
             className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-semibold">
             {ishlamoqda ? "Saqlanmoqda..."
               : xato.startsWith("Serverga") ? "Qayta urinish"
-              : `Berildi: ${formatCurrency(summa ?? 0)}`}
+              : summa ? `Berildi: ${formatCurrency(summa)}` : "Berildi"}
           </Button>
           <Button variant="outline" className="h-10 px-4 text-[13px]" onClick={yop} disabled={ishlamoqda}>
             Yopish
@@ -112,10 +122,30 @@ export function BerildiOyna({
       <div>
         <label htmlFor="avans-summa" className="text-[12px] font-medium text-neutral-500 mb-1.5 block">Summa</label>
         <SomInput id="avans-summa" value={summa} onChange={(v) => { setSumma(v); setXato(""); }} autoFocus />
+        {!qoshimcha && qator.advancePlanned > 0 && (
+          <div className="mt-2 flex items-center gap-2 flex-wrap" data-avans-qoldi>
+            <p className={cn("text-[12.5px] font-semibold",
+              qoldiqdanKop ? "text-red-600 dark:text-red-400" : "text-neutral-700 dark:text-neutral-200")}>
+              {`Reja ${formatCurrency(qator.advancePlanned)} · olindi ${formatCurrency(qator.advanceGiven)} · `}
+              <span className={qoldiqdanKop ? "" : "text-amber-600 dark:text-amber-400"}>{`qoldi ${formatCurrency(qoldi)}`}</span>
+            </p>
+            {qoldi > 0 && summa !== qoldi && (
+              <button type="button" onClick={() => { setSumma(qoldi); setXato(""); }} data-qolganini
+                className="h-7 px-2.5 rounded-lg text-[11.5px] font-semibold border border-indigo-200 dark:border-indigo-400/30 text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40">
+                {`Qolganini (${formatCurrency(qoldi)})`}
+              </button>
+            )}
+          </div>
+        )}
+        {qoldiqdanKop && (
+          <p className="mt-1 text-[12px] text-red-600 dark:text-red-400" data-qoldiqdan-kop>
+            {`Qoldiqdan ko'p: ko'pi bilan ${formatCurrency(qoldi)}. Ortig'ini «Qo'shimcha avans» bilan bering.`}
+          </p>
+        )}
         <p className="text-[11.5px] text-neutral-500 dark:text-neutral-400 mt-1.5">
           {[
-            qator.advancePlanned > 0 ? `Reja: ${formatCurrency(qator.advancePlanned)}` : null,
-            qator.advanceGiven > 0 ? `berilgan: ${formatCurrency(qator.advanceGiven)}` : null,
+            qoshimcha && qator.advancePlanned > 0 ? `Reja: ${formatCurrency(qator.advancePlanned)}` : null,
+            qoshimcha && qator.advanceGiven > 0 ? `berilgan: ${formatCurrency(qator.advanceGiven)}` : null,
             qator.maoshMatn || null,
             qator.oldingiOy != null ? `o'tgan oy hisoblangan: ${formatCurrency(qator.oldingiOy)}` : null,
           ].filter(Boolean).join(" · ")}

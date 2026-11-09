@@ -95,7 +95,7 @@ export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void
     if (r.salaryStatus === "PAID") return { matn: "Oylik to'langan", cls: "bg-neutral-100 text-neutral-500 dark:bg-white/5", lock: true };
     if (r.advancePlanned > 0 && r.advanceGiven >= r.advancePlanned) return { matn: "Berildi", cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400" };
     if (r.advanceGiven > 0 && r.advanceGiven < r.advancePlanned) {
-      return { matn: `Qisman ${formatCurrency(r.advanceGiven)} / ${formatCurrency(r.advancePlanned)}`, cls: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" };
+      return { matn: `Olindi ${formatCurrency(r.advanceGiven)} · Qoldi ${formatCurrency(r.advancePlanned - r.advanceGiven)}`, cls: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400" };
     }
     if (r.advancePlanned > 0) {
       return kunKeldi
@@ -231,7 +231,7 @@ export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void
                     {berishOchiq && r.advanceRemaining > 0 && (
                       <button type="button" onClick={() => setBerish({ qator: r, qoshimcha: false })} data-berildi
                         className="w-full sm:w-auto h-10 sm:h-9 px-3.5 rounded-xl bg-indigo-600 text-white text-[12.5px] font-semibold shrink-0">
-                        {r.advanceGiven > 0 ? "Qolganini berish" : "Berildi"}
+                        {r.advanceGiven > 0 ? "Yana berish" : "Avans berish"}
                       </button>
                     )}
                   </div>
