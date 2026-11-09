@@ -48,6 +48,21 @@ interface ImportSummary {
   created: number;
   duplicates: number;
   skipped: number;
+  /** Yozilmagan qatorlar va sababi — ekranda ro'yxat, Excel'ga yuklab olinadi. */
+  failed: { lead: MappedLead; sabab: string }[];
+}
+
+/**
+ * Yozilmagan qatorlarni Excel qilib beradi: ustunlar namuna bilan bir xil,
+ * ya'ni tuzatib, shu faylni o'zini qayta import qilish mumkin. "Sabab"
+ * ustuni matn — import uni ball deb olmaydi.
+ */
+function failedXlsx(failed: ImportSummary["failed"]) {
+  return buildXlsx("Yozilmagan",
+    [...TEMPLATE_HEADERS, "Sabab"].map((header) => ({ header, type: "text" as const })),
+    failed.map(({ lead, sabab }) => [
+      lead.name, lead.phone ?? "", lead.school ?? "", lead.grade ?? "", lead.note ?? "", sabab,
+    ]));
 }
 
 export function LeadImportModal({ open, onClose, onDone }: Props) {
@@ -125,7 +140,7 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
       // Interfeys `skipped` deb kutadi, server esa `errors` deb yuboradi:
       // shu nomuvofiqlik tufayli "N ta o'tkazib yuborildi" qatori ekranda
       // HECH QACHON chiqmagan.
-      const jami = { created: 0, duplicates: 0, skipped: 0 };
+      const jami: ImportSummary = { created: 0, duplicates: 0, skipped: 0, failed: [] };
       for (let i = 0; i < sendable.length; i += BOLAK) {
         const bolak = sendable.slice(i, i + BOLAK);
         setProgress({ done: i, total: sendable.length });
@@ -146,6 +161,12 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
         jami.created    += s2.created ?? 0;
         jami.duplicates += s2.duplicates ?? 0;
         jami.skipped    += s2.errors ?? s2.skipped ?? 0;
+        // Server `row` ni bo'lak ichida 1 dan sanaydi.
+        for (const r of (data.results ?? []) as { row: number; outcome: string; message?: string }[]) {
+          if (r.outcome === "created") continue;
+          const lead = bolak[r.row - 1];
+          if (lead) jami.failed.push({ lead, sabab: r.message ?? (r.outcome === "duplicate" ? "Takror" : "Xato") });
+        }
       }
       setProgress(null);
       setSummary(jami);
@@ -155,6 +176,9 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
     finally { setBusy(false); setProgress(null); }
   }
 
+  // Server 2 harfdan qisqa ismni yozmaydi ("?" — Excel'ga tushirishda
+  // yo'qolgan kirill ism). Yuborishdan OLDIN aytamiz.
+  const ismsiz = sendable.filter((r) => r.name.trim().length < 2).length;
   const withPhone = sendable.filter((r) => (r.phone ?? "").replace(/\D/g, "").length >= 9).length;
   const bolaklar = Math.ceil(sendable.length / 1000);
 
@@ -197,13 +221,51 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
               </p>
               {(summary.duplicates > 0 || summary.skipped > 0) && (
                 <p className="text-neutral-600 dark:text-neutral-400 mt-0.5">
-                  {summary.duplicates > 0 && `${summary.duplicates} ta takror (shu telefon allaqachon bor)`}
+                  {summary.duplicates > 0 && `${summary.duplicates} ta takror (shu ism va telefon allaqachon bor)`}
                   {summary.duplicates > 0 && summary.skipped > 0 && " · "}
                   {summary.skipped > 0 && `${summary.skipped} ta o'tkazib yuborildi`}
                 </p>
               )}
             </div>
           </div>
+          {summary.failed.length > 0 && (
+            <div className="space-y-2" data-import-failed>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-[12.5px] font-semibold text-neutral-900 dark:text-neutral-100">
+                  Yozilmagan qatorlar: {summary.failed.length}{" "}ta
+                </p>
+                <button type="button" data-failed-download
+                  onClick={() => downloadFile("yozilmagan-lidlar.xlsx", failedXlsx(summary.failed))}
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold
+                             bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400
+                             hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
+                  <FileDown className="w-3.5 h-3.5" /> Excel&apos;ga yuklab olish
+                </button>
+              </div>
+              <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 overflow-hidden">
+                <div className="max-h-64 overflow-auto">
+                  <table className="w-full text-[11px]">
+                    <thead className="bg-neutral-50 dark:bg-neutral-800/60 sticky top-0">
+                      <tr className="text-left text-neutral-500 dark:text-neutral-400">
+                        <th className="px-2.5 py-1.5 font-semibold">Ism</th>
+                        <th className="px-2.5 py-1.5 font-semibold">Telefon</th>
+                        <th className="px-2.5 py-1.5 font-semibold">Sabab</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {summary.failed.map(({ lead, sabab }, i) => (
+                        <tr key={i} className="border-t border-neutral-100 dark:border-neutral-800">
+                          <td className="px-2.5 py-1.5 text-neutral-900 dark:text-neutral-100">{lead.name}</td>
+                          <td className="px-2.5 py-1.5 tabular-nums text-neutral-600 dark:text-neutral-300 whitespace-nowrap">{lead.phone || "—"}</td>
+                          <td className="px-2.5 py-1.5 text-neutral-600 dark:text-neutral-300">{sabab}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-4">
@@ -253,6 +315,16 @@ export function LeadImportModal({ open, onClose, onDone }: Props) {
               </div>
 
               {brokenPhones > 0 && <BrokenPhonesNote rows={rows} count={brokenPhones} kind="leads" />}
+
+              {ismsiz > 0 && (
+                <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20" data-ismsiz>
+                  <CircleAlert className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-px" />
+                  <p className="text-[11px] leading-relaxed text-neutral-700 dark:text-neutral-300">
+                    <b>{ismsiz}{" "}ta qatorda ism yo&apos;q</b> (masalan &quot;?&quot;) — ular yozilmaydi.
+                    Import tugagach ro&apos;yxatini Excel&apos;ga yuklab olib, ismini to&apos;ldirib qayta yuklashingiz mumkin.
+                  </p>
+                </div>
+              )}
 
               {headerless && (
                 <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20">
