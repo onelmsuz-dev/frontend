@@ -5,12 +5,11 @@ import Link from "next/link";
 import { CalendarClock, CheckCircle2, Lock, Plus, Settings2, Users, Wallet, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import { useSalaryAdvances } from "@/lib/hooks/useSalaryAdvances";
 import { formatCurrency } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import {
-  OyNomi, oyNomi, sanaKun, sanaQisqa, HOLAT_NOMI, type AvansQatori,
+  OyNomi, oyNomi, sanaKun, sanaQisqa, HOLAT_NOMI, avansHuquqi, ozimmi, type AvansQatori,
 } from "@/lib/salary-advance";
 import { BerildiOyna } from "./berildi-oyna";
 import { HammasigaOyna } from "./hammasiga-oyna";
@@ -28,7 +27,6 @@ type Chip = "BERILMAGAN" | "BERILGAN" | "HAMMASI";
  * o'zi "berildi" deb yozmaydi.
  */
 export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void }) {
-  const { me } = useMe();
   const [oy, setOy] = useState<string | undefined>(undefined);
   const { data, isLoading, error } = useSalaryAdvances(oy);
   const [chip, setChip] = useState<Chip | null>(null);
@@ -47,13 +45,17 @@ export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void
     const kunKeldi = !keyin && (data.month < data.joriyOy || data.bugun >= data.avansKuni);
     const royxatda = data.rows.filter((r) => r.advancePlanned > 0
       || r.items.some((i) => i.status !== "BEKOR"));
-    const berilmagan = royxatda.filter((r) => r.advanceRemaining > 0 && r.salaryStatus !== "PAID" && r.faol);
+    // O'zining qatori "berilmagan" ro'yxatiga kirmaydi: unga o'zi bera olmaydi
+    // ("Hammasiga berildi" ham uni o'tkazib yuborardi).
+    const berilmagan = royxatda.filter((r) => r.advanceRemaining > 0 && r.salaryStatus !== "PAID" && r.faol
+      && !ozimmi(data, r.userId));
     const berilgan = royxatda.filter((r) => r.advanceGiven > 0 || r.advanceCarried > 0);
     // Bu oyga berish mumkinmi: joriy oy yoki (o'tgan oy, 1–5 kunlar).
-    const berishMumkin = data.canManage && !!data.kechRuxsat;
+    const huquq = avansHuquqi(data);
+    const berishMumkin = huquq.berish && !!data.kechRuxsat;
     const boshqalar = data.rows.filter((r) => r.faol && r.maoshBor && r.salaryStatus !== "PAID"
       && !royxatda.some((x) => x.userId === r.userId && x.kind === r.kind));
-    return { joriy, keyin, kunKeldi, royxatda, berilmagan, berilgan, berishMumkin, boshqalar };
+    return { joriy, keyin, kunKeldi, royxatda, berilmagan, berilgan, berishMumkin, boshqalar, huquq };
   }, [data]);
 
   if (error) {
@@ -69,7 +71,7 @@ export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void
     );
   }
 
-  const { joriy, kunKeldi, royxatda, berilmagan, berilgan, berishMumkin, boshqalar } = hisob;
+  const { joriy, kunKeldi, royxatda, berilmagan, berilgan, berishMumkin, boshqalar, huquq } = hisob;
   const faolChip: Chip = chip ?? (kunKeldi && berilmagan.length > 0 ? "BERILMAGAN" : "HAMMASI");
   const korinadi = faolChip === "BERILMAGAN" ? berilmagan : faolChip === "BERILGAN" ? berilgan : royxatda;
   const qoldiSumma = berilmagan.reduce((s, r) => s + r.advanceRemaining, 0);
@@ -122,9 +124,9 @@ export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void
         <span className="text-[12px] text-neutral-500 dark:text-neutral-400">
           {`Avans kuni: har oyning ${data.sozlama.day}-sanasi · Standart: ${formatCurrency(data.sozlama.standart)}`}
         </span>
-        {data.canManage && (
+        {(huquq.berish || huquq.sozlama) && (
           <div className="flex items-center gap-2 sm:ml-auto">
-            {hasPerm(me?.permissions, "settings.view") && (
+            {huquq.sozlama && (
               <Link href="/settings?tab=avans"
                 className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-[12.5px] font-semibold border border-white/60 dark:border-white/10 text-neutral-700 dark:text-neutral-200 hover:bg-white/60 dark:hover:bg-white/10">
                 <Settings2 className="w-3.5 h-3.5" />Sozlash
@@ -146,7 +148,7 @@ export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void
         banner.ton === "kulrang" && "border-neutral-200 bg-neutral-50 dark:border-white/10 dark:bg-white/[0.03]")}>
         <CalendarClock className="w-4.5 h-4.5 shrink-0 text-neutral-500" />
         <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-100 flex-1 min-w-0">{banner.matn}</p>
-        {banner.hammasi && data.canManage && berilmagan.length >= 2 && (
+        {banner.hammasi && huquq.berish && berilmagan.length >= 2 && (
           <button type="button" onClick={() => setHammasiga(true)} data-hammasiga
             className="h-9 px-3.5 rounded-xl bg-indigo-600 text-white text-[12.5px] font-semibold w-full sm:w-auto">
             Hammasiga berildi
@@ -204,7 +206,8 @@ export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void
           <ul className="divide-y divide-white/50 dark:divide-white/5">
             {korinadi.map((r) => {
               const h = holat(r);
-              const berishOchiq = berishMumkin && r.salaryStatus !== "PAID" && r.faol && r.maoshBor;
+              const ozim = ozimmi(data, r.userId);
+              const berishOchiq = berishMumkin && !ozim && r.salaryStatus !== "PAID" && r.faol && r.maoshBor;
               return (
                 <li key={`${r.kind}:${r.userId}`} className="px-3 sm:px-4 py-3" data-avans-qator={r.name}>
                   {/* Telefonda ikki qavat: ism to'liq ko'rinsin, summa ostida. */}
@@ -251,7 +254,7 @@ export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void
                               {`(${HOLAT_NOMI[a.status]}${a.closeReason && a.status !== "USHLANDI" ? `: ${a.closeReason}` : ""})`}
                             </span>
                           )}
-                          {data.canManage && a.status === "BERILDI" && (
+                          {huquq.berish && !ozim && a.status === "BERILDI" && (
                             <>
                               {!a.carriedFromMonth && (
                                 <button type="button" data-bekor
@@ -266,6 +269,11 @@ export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {berishMumkin && ozim && (
+                    <p className="mt-1.5 text-[11.5px] text-neutral-400" data-ozim>
+                      O&apos;zingizga avans bera olmaysiz: buni markaz egasi qiladi
+                    </p>
                   )}
                   {berishOchiq && r.advanceRemaining === 0 && (
                     <button type="button" onClick={() => setBerish({ qator: r, qoshimcha: true })} data-qoshimcha
@@ -288,7 +296,8 @@ export function AvansTab({ onOylikgaOt }: { onOylikgaOt: (month: string) => void
         )}
       </div>
 
-      <Yopilmagan items={data.yopilmagan} canManage={data.canManage} onMsg={setXabar} onOylikgaOt={onOylikgaOt} />
+      <Yopilmagan items={data.yopilmagan} canManage={huquq.berish} canFinal={huquq.yakuniy}
+        selfUserId={data.selfAllowed ? null : data.selfUserId ?? null} onMsg={setXabar} onOylikgaOt={onOylikgaOt} />
 
       {/* Oynalar */}
       <BerildiOyna open={!!berish} qator={berish?.qator ?? null} qoshimcha={!!berish?.qoshimcha}

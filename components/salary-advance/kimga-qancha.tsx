@@ -6,7 +6,7 @@ import { Search, AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { SomInput } from "./som-input";
-import { sanaKun, soro, avansniYangila, type AvansQatori, type AvansRoyxati } from "@/lib/salary-advance";
+import { sanaKun, soro, avansniYangila, ozimmi, type AvansQatori, type AvansRoyxati } from "@/lib/salary-advance";
 
 type Rejim = "STANDART" | "ALOHIDA" | "YOQ";
 
@@ -31,7 +31,7 @@ export function KimgaQancha({ data }: { data: AvansRoyxati }) {
     .filter((r) => !qidiruv.trim() || r.name.toLowerCase().includes(qidiruv.trim().toLowerCase()));
 
   function och(q: AvansQatori) {
-    if (!data.canManage) return;
+    if (!(data.canSettings ?? data.canManage) || ozimmi(data, q.userId)) return;
     const id = `${q.kind}:${q.userId}`;
     if (ochiq === id) { setOchiq(null); return; }
     setOchiq(id);
@@ -96,7 +96,7 @@ export function KimgaQancha({ data }: { data: AvansRoyxati }) {
           const ogoh = ogohlantirish(q);
           return (
             <li key={id} data-odam={q.name}>
-              <button type="button" onClick={() => och(q)} disabled={!data.canManage}
+              <button type="button" onClick={() => och(q)} disabled={!(data.canSettings ?? data.canManage) || ozimmi(data, q.userId)}
                 className="w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-neutral-50 dark:hover:bg-white/[0.03] disabled:cursor-default">
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold text-neutral-900 dark:text-neutral-100 truncate">

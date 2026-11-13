@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import { formatCurrency } from "@/lib/money";
-import { oyNomi, type YopilmaganAvans } from "@/lib/salary-advance";
+import { oyNomi, avansHuquqi, type YopilmaganAvans } from "@/lib/salary-advance";
 import { AmalOyna, type AmalNishoni, type AvansAmali } from "./amal-oyna";
 import { YakuniyOyna } from "./yakuniy-oyna";
 import { useSalaryAdvances } from "@/lib/hooks/useSalaryAdvances";
@@ -15,10 +15,15 @@ import { useSalaryAdvances } from "@/lib/hooks/useSalaryAdvances";
  * oylikdan ushlangan deb yopiladi.
  */
 export function Yopilmagan({
-  items, canManage, onMsg, onOylikgaOt,
+  items, canManage, canFinal = canManage, selfUserId = null, onMsg, onOylikgaOt,
 }: {
   items: YopilmaganAvans[];
+  /** Avans amallari — qaytarildi, kechirish (`salaries.advance`). */
   canManage: boolean;
+  /** Yakuniy hisob va oylikka o'tish — oylikni yopadi (`salaries.manage`). */
+  canFinal?: boolean;
+  /** O'ziga avans mumkin bo'lmagan xodim — o'z qatorida tugma yo'q. */
+  selfUserId?: string | null;
   onMsg: (m: string) => void;
   onOylikgaOt?: (month: string) => void;
 }) {
@@ -57,21 +62,21 @@ export function Yopilmagan({
             ].filter(Boolean).join(" · ")}
           </p>
         </div>
-        {canManage && (
+        {(canManage || canFinal) && y.userId !== selfUserId && (
           <div className="flex items-center gap-1.5 flex-wrap">
-            {!ketgan && !qatorYoq && onOylikgaOt && (
+            {canFinal && !ketgan && !qatorYoq && onOylikgaOt && (
               <button type="button" onClick={() => onOylikgaOt(y.month)}
                 className="h-8 px-2.5 rounded-lg text-[11.5px] font-semibold border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-200">
                 Oylik hisoblashga o&apos;tish
               </button>
             )}
-            {(ketgan || qatorYoq) && !y.ochirilgan && (
+            {canFinal && (ketgan || qatorYoq) && !y.ochirilgan && (
               <button type="button" onClick={() => setYakuniy(y)} data-yakuniy-och
                 className="h-8 px-2.5 rounded-lg text-[11.5px] font-semibold bg-indigo-600 text-white">
                 Yakuniy hisob
               </button>
             )}
-            {ketgan && (
+            {canManage && ketgan && (
               <>
                 <button type="button" onClick={() => setAmal({ amal: "QAYTARILDI", nishon: nishon(y) })}
                   className="h-8 px-2.5 rounded-lg text-[11.5px] font-semibold border border-neutral-200 dark:border-white/10 text-neutral-700 dark:text-neutral-200">
@@ -138,5 +143,7 @@ export function YopilmaganYuklab({ onMsg, onOylikgaOt }: {
   if (data.yopilmagan.length === 0) {
     return <p className="text-[12.5px] text-neutral-500">Yopilmagan avans yo&apos;q</p>;
   }
-  return <Yopilmagan items={data.yopilmagan} canManage={data.canManage} onMsg={onMsg} onOylikgaOt={onOylikgaOt} />;
+  const h = avansHuquqi(data);
+  return <Yopilmagan items={data.yopilmagan} canManage={h.berish} canFinal={h.yakuniy}
+    selfUserId={data.selfAllowed ? null : data.selfUserId ?? null} onMsg={onMsg} onOylikgaOt={onOylikgaOt} />;
 }

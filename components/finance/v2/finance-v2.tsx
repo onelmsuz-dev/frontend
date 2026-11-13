@@ -80,7 +80,10 @@ export function FinanceV2() {
 
   const { me } = useMe();
   const oylikKoradi = hasPerm(me?.permissions, "salaries.view");
-  const avansYoqiq  = useFeature("salary-advance") === true && oylikKoradi;
+  // Avans bo'limi oylikni ko'rmaydigan, faqat avans beradigan rolga ham ochiq.
+  const avansKoradi = oylikKoradi || hasPerm(me?.permissions, "salaries.advance")
+    || hasPerm(me?.permissions, "salaries.advanceSettings");
+  const avansYoqiq  = useFeature("salary-advance") === true && avansKoradi;
   const { data: avansRoyxat } = useSalaryAdvances(undefined, avansYoqiq);
 
   // ── Umumiy ko'rinish uchun yig'indilar (bo'limlar bilan bir xil SWR kalitlari) ──

@@ -47,7 +47,8 @@ export interface SettingsSection {
   /** Bayroq ortidagi bo'lim — bayroq yoqilmagan markazda ko'rinmaydi. */
   feature?: string;
   /** Ruxsat kaliti — yo'q bo'lsa bo'lim ko'rinmaydi. */
-  perm?: string;
+  /** Bittasi bo'lsa yetadi. */
+  perm?: string | string[];
   /**
    * QIDIRUV SO'ZLARI — odam bo'lim nomini emas, ichidagi narsani yozadi:
    * "ish vaqti", "skidka", "sms". Kichik harf, apostrofsiz ham bo'laveradi
@@ -88,7 +89,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
   // Xodim va o'qituvchiga oy o'rtasida beriladigan pul — "pul" guruhida,
   // lekin O'QUVCHI to'lovi emas: nomi ataylab "Oylik avansi".
   { id: "avans",         label: "Oylik avansi", icon: HandCoins, group: "pul",
-    feature: "salary-advance", perm: "salaries.view",
+    feature: "salary-advance", perm: ["salaries.view", "salaries.advance", "salaries.advanceSettings"],
     keywords: ["avans", "oylik avansi", "maosh", "zarplata", "oy o'rtasi", "15-sana", "oylik"] },
 
   // ─ Obuna: MARKAZ BIZGA qancha to'laydi ─
@@ -145,7 +146,7 @@ export function visibleSettingsSections(opts: {
       // Ko'rsatib keyin yo'qotish sakrashga olib kelardi.
       if (!on) return false;
     }
-    if (s.perm && !hasPerm(permissions, s.perm)) return false;
+    if (s.perm && ![s.perm].flat().some((k) => hasPerm(permissions, k))) return false;
     return true;
   });
 }

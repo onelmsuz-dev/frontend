@@ -96,7 +96,31 @@ export interface AvansRoyxati {
     remaining: number; remainingCount: number;
   };
   yopilmagan: YopilmaganAvans[];
+  /** Eski server bilan moslik uchun — `canGive` bilan bir xil. */
   canManage: boolean;
+  /** Avans berish/bekor qilish/qaytarish/kechirish (`salaries.advance`). */
+  canGive?: boolean;
+  /** Avans kuni, standart va shaxsiy summalar (`salaries.advanceSettings`). */
+  canSettings?: boolean;
+  /** Yakuniy hisob — oylikni yopadi (`salaries.manage`). */
+  canFinal?: boolean;
+  /** O'ziga avans faqat egasiga: shu odamning qatorida tugmalar yo'q. */
+  selfUserId?: string | null;
+  selfAllowed?: boolean;
+}
+
+/** Ruxsatlar — yangi maydonlar bo'lmasa (eski server) `canManage` ga qaytadi. */
+export function avansHuquqi(d: AvansRoyxati) {
+  return {
+    berish:  d.canGive ?? d.canManage,
+    sozlama: d.canSettings ?? d.canManage,
+    yakuniy: d.canFinal ?? d.canManage,
+  };
+}
+
+/** Bu qator — kirgan xodimning O'ZI va unga o'ziga avans berish mumkin emas. */
+export function ozimmi(d: AvansRoyxati, userId: string): boolean {
+  return !d.selfAllowed && !!d.selfUserId && d.selfUserId === userId;
 }
 
 export interface AvansSozlamasi {
@@ -106,6 +130,8 @@ export interface AvansSozlamasi {
   keyingi: { month: string; sana: string; asl: string; matn: string; siljigan: boolean }[];
   qoldaMaosh: { soni: number; summa: number };
   canManage: boolean;
+  /** Saqlash huquqi (`salaries.advanceSettings`); eski serverda yo'q. */
+  canSettings?: boolean;
 }
 
 const OYLAR_KICHIK = UZ_MONTHS.map((m) => m.toLowerCase());

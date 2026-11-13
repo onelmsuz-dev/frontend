@@ -38,7 +38,7 @@ export function AvansSozlama() {
   if (isLoading || !data) {
     return <div className="h-40 rounded-2xl bg-neutral-200/60 dark:bg-neutral-800 animate-pulse" />;
   }
-  const mumkin = data.canManage;
+  const mumkin = data.canSettings ?? data.canManage;
   const ozgardi = yoqiq !== data.enabled || kun !== data.day || (standart ?? 0) !== data.standart;
 
   async function saqla() {
