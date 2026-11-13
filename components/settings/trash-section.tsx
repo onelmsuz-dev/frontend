@@ -8,7 +8,7 @@ import { fmtRelative } from "@/lib/date-uz";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
 import {
   Trash2, RotateCcw, Loader2, AlertCircle, ShieldCheck,
-  GraduationCap, Users, BookOpen, DoorOpen, MapPin, Phone, UserCog,
+  GraduationCap, Users, BookOpen, DoorOpen, MapPin, Phone, UserCog, Receipt,
 } from "lucide-react";
 
 /**
@@ -33,7 +33,7 @@ interface TrashRow {
 
 const ICON: Record<string, typeof Users> = {
   Student: GraduationCap, Group: Users, Course: BookOpen,
-  Teacher: UserCog, Room: DoorOpen, Branch: MapPin, Lead: Phone,
+  Teacher: UserCog, Room: DoorOpen, Branch: MapPin, Lead: Phone, Expense: Receipt,
 };
 
 const FILTERS = [
@@ -45,6 +45,7 @@ const FILTERS = [
   { v: "Room",     l: "Xonalar" },
   { v: "Branch",   l: "Filiallar" },
   { v: "Lead",     l: "Lidlar" },
+  { v: "Expense",  l: "Xarajatlar" },
 ];
 
 export function TrashSection() {

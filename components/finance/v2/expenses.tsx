@@ -2,12 +2,15 @@
 
 import { useMemo, useState } from "react";
 import useSWR, { mutate } from "swr";
-import { Plus, Tags, TrendingDown, X } from "lucide-react";
+import { Plus, Tags, Trash2, TrendingDown, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Modal } from "@/components/ui/modal";
+import { useMe, hasPerm } from "@/lib/hooks/useMe";
+import { useFeature } from "@/lib/hooks/useFeatures";
 import { ExpenseCategoriesModal } from "@/components/finance/expense-categories-modal";
 import { MaoshEslatma } from "@/components/salary-advance/maosh-eslatma";
 import { BranchPicker } from "@/components/layout/branch-filter";
@@ -20,6 +23,80 @@ import {
 } from "./ui";
 
 const BOSH_FORMA = { category: "", description: "", amount: "", date: "", branchId: "" };
+
+/** Moliya sahifasidagi xarajatga bog'liq hamma raqamni yangilaydi. */
+function xarajatlarniYangila() {
+  mutate((k: unknown) => typeof k === "string" && (k.startsWith("/api/expenses") || k.startsWith("/api/reports")));
+}
+
+/**
+ * XARAJATNI O'CHIRISH — tasdiqlash oynasi.
+ *
+ * Xarajat har doim KORZINKAGA yoziladi. Tiklash esa "Korzinka" bayrog'i
+ * yoqiq markazda ko'rinadi — o'chiq bo'lsa "tiklash mumkin" deb
+ * va'da berilmaydi.
+ * Oylik/avans to'langanda tizim yozgan xarajatni server rad etadi —
+ * xabari shu oynada ko'rinadi.
+ */
+function XarajatOchirish({ exp, onClose }: { exp: Xarajat | null; onClose: () => void }) {
+  const [sabab, setSabab] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const yop = () => { setSabab(""); setErr(""); onClose(); };
+  const korzinka = useFeature("trash") === true;
+
+  async function ochir() {
+    if (!exp) return;
+    setBusy(true); setErr("");
+    try {
+      const r = await fetch(`/api/expenses/${exp.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: sabab.trim() || undefined }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setErr(d?.error ?? "O'chirib bo'lmadi");
+        return;
+      }
+      xarajatlarniYangila();
+      yop();
+    } catch {
+      setErr("Serverga ulanib bo'lmadi");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <Modal open={!!exp} onClose={yop} title="Xarajatni o'chirish" size="sm"
+      subtitle={korzinka ? "Korzinkaga tushadi — Sozlamalar → Korzinka'dan tiklash mumkin" : "Xarajat ro'yxatdan va hisobotlardan olib tashlanadi"}
+      footer={
+        <>
+          <Button onClick={ochir} disabled={busy} data-xarajat-ochir-tasdiq
+            className="flex-1 h-10 bg-red-600 hover:bg-red-700 text-white text-[13px] font-semibold">
+            {busy ? "O'chirilmoqda..." : "O'chirish"}
+          </Button>
+          <Button variant="outline" className="h-10 px-4 text-[13px]" onClick={yop} disabled={busy}>Bekor</Button>
+        </>
+      }>
+      {exp && (
+        <div className="rounded-xl border border-neutral-200 dark:border-white/10 p-3 space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[12px] font-medium text-orange-700 dark:text-orange-400">{exp.category}</span>
+            <span className="text-[13px] font-bold text-red-600 dark:text-red-400 tabular-nums">-{formatCurrency(exp.amount)}</span>
+          </div>
+          <p className="text-[12.5px] text-neutral-700 dark:text-neutral-300">{exp.description}</p>
+          <p className="text-[11.5px] text-neutral-400">{formatUzDate(exp.date)}</p>
+        </div>
+      )}
+      <div>
+        <Label className="text-[12px] text-neutral-500 mb-1.5 block">Sabab (ixtiyoriy)</Label>
+        <Input value={sabab} maxLength={300} onChange={(e) => setSabab(e.target.value)}
+          placeholder="Masalan: ikki marta kiritilgan" />
+      </div>
+      {err && <p className="text-[12.5px] text-red-600 dark:text-red-400 font-medium" data-xarajat-ochir-xato>{err}</p>}
+    </Modal>
+  );
+}
 
 /** Xarajat qo'shish oynasi — bo'limdan ham, sahifa tepasidagi tezkor tugmadan ham ochiladi. */
 export function ExpenseModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -141,6 +218,9 @@ export function ExpensesSection({ month, onAdd }: { month: string; onAdd: () => 
   const [from, setFrom] = useState("");
   const [to,   setTo]   = useState("");
   const [showCats, setShowCats] = useState(false);
+  const [ochiriladi, setOchiriladi] = useState<Xarajat | null>(null);
+  const { me } = useMe();
+  const canDelete = hasPerm(me?.permissions, "expenses.delete");
 
   // Aniq sanalar tanlansa oy yuborilmaydi — serverda ham oraliq oydan ustun.
   const qs = useBranchQueryString({
@@ -235,13 +315,14 @@ export function ExpensesSection({ month, onAdd }: { month: string; onAdd: () => 
                 <Th>Tavsif</Th>
                 <Th>Sana</Th>
                 <Th className="text-right">Summa</Th>
+                {canDelete && <Th className="w-10"><span className="sr-only">Amal</span></Th>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading
                 ? Array.from({ length: 4 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 4 }).map((_, j) => (
+                      {Array.from({ length: canDelete ? 5 : 4 }).map((_, j) => (
                         <TableCell key={j}><Skeleton className="h-3 w-full" /></TableCell>
                       ))}
                     </TableRow>
@@ -258,6 +339,15 @@ export function ExpensesSection({ month, onAdd }: { month: string; onAdd: () => 
                       <TableCell className="text-right">
                         <span className="text-[13px] font-bold text-red-600 dark:text-red-400">-{formatCurrency(e.amount)}</span>
                       </TableCell>
+                      {canDelete && (
+                        <TableCell className="text-right">
+                          <button type="button" onClick={() => setOchiriladi(e)} data-xarajat-ochir
+                            aria-label="Xarajatni o'chirish" title="O'chirish"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
             </TableBody>
@@ -272,6 +362,7 @@ export function ExpensesSection({ month, onAdd }: { month: string; onAdd: () => 
         )}
       </Panel>
 
+      <XarajatOchirish exp={ochiriladi} onClose={() => setOchiriladi(null)} />
       <ExpenseCategoriesModal open={showCats} onClose={() => setShowCats(false)} categories={cats}
         onChanged={() => mutate((k: string) => typeof k === "string" && k.startsWith("/api/expenses"))} />
     </div>
