@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { TopHeader } from "@/components/layout/top-header";
-import { BranchPicker } from "@/components/layout/branch-filter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -42,13 +41,14 @@ const EMPTY = {
   subjects: [] as string[], salary: "",
   salaryType: "FIXED" as SalaryType,
   acceptsPayments: false,
-  // Qaysi filialda ishlaydi. O'qituvchining LOGIN qamrovi ham shundan.
-  branchId: "",
+  // Qaysi filiallarda dars beradi, birinchisi ASOSIY (oylik shu filialda
+  // hisoblanadi). O'qituvchining LOGIN qamrovi ham shundan.
+  branchIds: [] as string[],
 };
 
 export default function TeachersPage() {
   const router = useRouter();
-  const { activeBranchId, kopFilial } = useBranch();
+  const { activeBranchId, kopFilial, branches } = useBranch();
   // Boshqa sahifalarda tugma huquqqa bog'langan (courses/page.tsx naqshi),
   // bu yerda esa tushib qolgan edi: `teachers.view` bor, `teachers.create`
   // yo'q xodim tugmani ko'rib, bosgach 403 olardi.
@@ -96,7 +96,7 @@ export default function TeachersPage() {
       subjects: t.subjects ?? [], salary: String(t.salary ?? ""),
       salaryType: t.salaryType ?? "FIXED",
       acceptsPayments: t.acceptsPayments ?? false,
-      branchId: t.branchId ?? "",
+      branchIds: t.branchIds ?? (t.branchId ? [t.branchId] : []),
     });
     setSubInput(""); setError(""); setPhoneErr(""); setShowModal(true);
   }
@@ -130,12 +130,13 @@ export default function TeachersPage() {
       if (form.joinedAt)     body.joinedAt = form.joinedAt;
       if (!editTarget) {
         body.password = form.password;
-        if (form.branchId || activeBranchId) body.branchId = form.branchId || activeBranchId;
+        if (form.branchIds.length) body.branchIds = form.branchIds;
+        else if (activeBranchId) body.branchIds = [activeBranchId];
       } else {
         if (form.password.trim()) body.password = form.password;
         // Tahrirda ham yuboriladi — o'qituvchini boshqa filialga
-        // ko'chirish kerak bo'lishi mumkin.
-        if (kopFilial) body.branchId = form.branchId;
+        // ko'chirish yoki yana bir filialga biriktirish mumkin.
+        if (kopFilial) body.branchIds = form.branchIds;
       }
 
       const url    = editTarget ? `/api/teachers/${editTarget.id}` : "/api/teachers";
@@ -261,11 +262,39 @@ export default function TeachersPage() {
           </FormField>
         </div>
 
+        {/* Xodimlar formasidagi (staff-section.tsx) bilan bir xil tanlov. */}
         {kopFilial && (
-          <FormField label="Filial" hint="Bo'sh qoldirilsa o'qituvchi barcha filiallarni ko'radi">
-            <BranchPicker value={form.branchId}
-              onChange={(v) => setForm(p => ({ ...p, branchId: v }))}
-              hammasiLabel="Filialga biriktirilmagan" />
+          <FormField
+            label="Filiallar"
+            hint={form.branchIds.length === 0
+              ? "Hech biri belgilanmasa — o'qituvchi barcha filiallarni ko'radi"
+              : form.branchIds.length > 1
+                ? "Birinchi belgilangani asosiy filial — oylik shu filialda hisoblanadi"
+                : "Bir nechta filialda dars bersa, ularni ham belgilang"}
+          >
+            <div className="flex flex-wrap gap-1.5">
+              {branches.map(b => {
+                const tanlangan = form.branchIds.includes(b.id);
+                const asosiy = form.branchIds.length > 1 && form.branchIds[0] === b.id;
+                return (
+                  <button key={b.id} type="button" aria-pressed={tanlangan}
+                    onClick={() => setForm(p => ({
+                      ...p,
+                      branchIds: tanlangan
+                        ? p.branchIds.filter(x => x !== b.id)
+                        : [...p.branchIds, b.id],
+                    }))}
+                    className={cn(
+                      "px-3 h-9 rounded-lg text-[12px] font-semibold border transition-colors",
+                      tanlangan
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "border-white/60 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:border-neutral-400",
+                    )}>
+                    {b.name}{asosiy && <span className="ml-1 font-normal opacity-80">· asosiy</span>}
+                  </button>
+                );
+              })}
+            </div>
           </FormField>
         )}
 
