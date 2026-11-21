@@ -116,6 +116,8 @@ export function GroupAttendanceGrid({
   ): string | null {
     if (!canMark) return "Davomat belgilashga ruxsatingiz yo'q";
     if (ds > todayStr) return "Bu kun hali kelmagan";
+    const bayram = bayramlar.get(ds);
+    if (bayram) return `Bayram: ${bayram} — bu kuni dars yo'q`;
     if (groupStartStr && ds < groupStartStr) return `Guruh ${kunUz(groupStartStr)} dan boshlangan`;
     if (groupEndStr && ds > groupEndStr) return `Guruh ${kunUz(groupEndStr)} da tugagan`;
     if (sg.enrollmentStatus === "CHIQIB_KETGAN") return "O'quvchi guruhdan chiqib ketgan — davomatini o'zgartirib bo'lmaydi";
@@ -169,6 +171,17 @@ export function GroupAttendanceGrid({
 
   const monthKey = `${view.year}-${pad(view.month + 1)}`;
   const { data } = useSWR<Rec[]>(`/api/attendance?groupId=${groupId}&month=${monthKey}`, fetcher);
+
+  // BAYRAM KUNLARI — butun markaz yoki faqat shu guruh uchun. Ustun qizil,
+  // belgilanmagan katakda "Bayram" (Doniyorjon, 2026-11-19).
+  const oyOxiri = new Date(view.year, view.month + 1, 0).getDate();
+  const { data: bayramXom } = useSWR<{ date: string; name: string; groupId: string | null }[]>(
+    `/api/holidays?from=${monthKey}-01&to=${monthKey}-${pad(oyOxiri)}`, fetcher);
+  // Oyiga bir-ikki qator — memo shart emas.
+  const bayramlar = new Map<string, string>(
+    (Array.isArray(bayramXom) ? bayramXom : [])
+      .filter((h) => !h.groupId || h.groupId === groupId)
+      .map((h) => [String(h.date).slice(0, 10), h.name]));
 
   const recordMap = useMemo(() => {
     const m = new Map<string, { status: Status; note: string | null }>();
@@ -422,10 +435,12 @@ export function GroupAttendanceGrid({
                 </th>
                 {dates.map(d => {
                   const ds = toDateStr(d);
+                  const bayram = bayramlar.get(ds);
                   return (
-                    <th key={ds}
+                    <th key={ds} title={bayram ? `Bayram: ${bayram}` : undefined}
                       className={cn("px-2 py-2 font-semibold text-center whitespace-nowrap",
-                        ds === todayStr ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-400")}>
+                        bayram ? "text-red-600 dark:text-red-400"
+                          : ds === todayStr ? "text-indigo-600 dark:text-indigo-400" : "text-neutral-400")}>
                       {d.getDate()} {UZ_MONTHS_SHORT[d.getMonth()].toLowerCase()}
                     </th>
                   );
@@ -461,9 +476,15 @@ export function GroupAttendanceGrid({
                       const clickable = sabab === null;
                       const key = `${sg.studentId}|${ds}`;
                       const sababAyt = () => setInfo(`${kunUz(ds)}, ${s?.name}: ${sabab}`);
+                      const bayram = bayramlar.get(ds);
                       return (
                         <td key={ds} className="px-2 py-1.5 text-center">
-                          {!applicable ? (
+                          {bayram && !status ? (
+                            <span title={`Bayram: ${bayram}`} onClick={sababAyt}
+                              className="inline-flex align-middle items-center justify-center w-14 h-5 rounded-md text-[10px] font-semibold cursor-help bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300">
+                              Bayram
+                            </span>
+                          ) : !applicable ? (
                             // `align-middle` — bo'sh inline-blok asos chiziqqa o'tirib,
                             // qatorni belgilangan qatorlardan ~5px baland qilardi.
                             <span title={sabab ?? undefined} onClick={sababAyt}
@@ -497,6 +518,7 @@ export function GroupAttendanceGrid({
                                   ? STATUS_CFG[status].cls
                                   : "border border-dashed border-neutral-300 dark:border-neutral-700",
                                 clickable ? "cursor-pointer hover:opacity-80" : "cursor-help",
+                                bayram && "ring-1 ring-red-400",
                                 savingCell === key && "opacity-50")}>
                               {status ? STATUS_CFG[status].short : (clickable &&
                                 <span className="text-neutral-300 dark:text-neutral-600">+</span>)}

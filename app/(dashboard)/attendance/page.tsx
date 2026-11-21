@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import { TopHeader } from "@/components/layout/top-header";
 import {
   ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, FileCheck,
@@ -135,6 +136,13 @@ export default function AttendancePage() {
   }, [groups, groupsLoading, selectedGroup]);
 
   const dateStr = toDateStr(currentDate);
+
+  // BAYRAM — tanlangan kun butun markaz yoki shu guruh uchun bayrammi.
+  const { data: bayramXom } = useSWR<{ name: string; groupId: string | null }[]>(
+    `/api/holidays?from=${dateStr}&to=${dateStr}`,
+    (u: string) => fetch(u).then((r) => (r.ok ? r.json() : [])));
+  const bayramNomi = (Array.isArray(bayramXom) ? bayramXom : [])
+    .find((h) => !h.groupId || h.groupId === selectedGroup)?.name ?? null;
   const isToday = currentDate.getTime() === today.getTime();
   const group = groups.find(g => g.id === selectedGroup);
 
@@ -460,6 +468,12 @@ export default function AttendancePage() {
                 attendanceRate >= 90 ? "bg-green-500" : attendanceRate >= 70 ? "bg-amber-500" : "bg-red-500")}
                 style={{ width: `${attendanceRate}%` }} />
             </div>
+          </div>
+        )}
+
+        {bayramNomi && (
+          <div data-bayram className="rounded-2xl border border-red-200 bg-red-50/80 dark:border-red-900/40 dark:bg-red-950/30 px-4 py-3 text-[13px] font-semibold text-red-700 dark:text-red-300">
+            {`Bayram: ${bayramNomi} — bu kuni dars yo'q`}
           </div>
         )}
 
