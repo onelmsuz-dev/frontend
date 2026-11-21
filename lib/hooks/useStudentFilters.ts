@@ -13,9 +13,16 @@ import { useSyncExternalStore } from "react";
 
 const KALIT = "oneroom:students:filters";
 
+/**
+ * Sahifa ochilganda — FAOL o'quvchilar (2026-11-21). Ilgari "Barchasi"
+ * edi va ketganlar faollar bilan aralash turardi; ketgan, yangi va
+ * boshqalar yorliq orqali ochiladi.
+ */
+export const STANDART_HOLAT = "FAOL";
+
 const STANDART = {
   search: "",
-  filterEnroll: "barchasi",
+  filterEnroll: STANDART_HOLAT,
   filterGroup: "barchasi",
   filterTeacher: "barchasi",
   filterDebt: "barchasi",

@@ -24,7 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TOUR_TARGETS } from "@/lib/onboarding/steps";
 import { useStudents } from "@/lib/hooks/useStudents";
-import { useStudentFilters } from "@/lib/hooks/useStudentFilters";
+import { STANDART_HOLAT, useStudentFilters } from "@/lib/hooks/useStudentFilters";
 import { useGroups } from "@/lib/hooks/useGroups";
 import { useTeachers } from "@/lib/hooks/useTeachers";
 import { useMe, hasPerm } from "@/lib/hooks/useMe";
@@ -345,7 +345,7 @@ export default function StudentsPage() {
   }
 
   const filtersOn =
-    filterEnroll !== "barchasi" || filterGroup !== "barchasi" ||
+    filterEnroll !== STANDART_HOLAT || filterGroup !== "barchasi" ||
     filterTeacher !== "barchasi" || filterDebt !== "barchasi" || !!search ||
     !!joinedFrom || !!joinedTo;
 
@@ -356,7 +356,7 @@ export default function StudentsPage() {
 
   function clearFilters() {
     setFilters({
-      search: "", filterEnroll: "barchasi", filterGroup: "barchasi",
+      search: "", filterEnroll: STANDART_HOLAT, filterGroup: "barchasi",
       filterTeacher: "barchasi", filterDebt: "barchasi",
       joinedFrom: "", joinedTo: "",
     });
@@ -409,12 +409,13 @@ export default function StudentsPage() {
               // "Jami" ro'yxatdagi qatorlardan sanaladi, ro'yxat esa serverda
               // 1000 ta bilan cheklangan — chegaraga yetilsa raqam yolg'on
               // bo'lib qolmasligi uchun "1000+" deb yoziladi.
-              { v: "barchasi", l: "Barchasi", n: stats.jami >= 1000 ? "1000+" : stats.jami },
-              { v: "YANGI",    l: "Yangi",    n: stats.yangi },
+              // "Faol" birinchi — sahifa shu bilan ochiladi (`STANDART_HOLAT`).
               { v: "FAOL",     l: "Faol",     n: stats.faol },
               { v: "SINOV",    l: "Sinov",    n: stats.sinov },
+              { v: "YANGI",    l: "Yangi",    n: stats.yangi },
               { v: "GURUHSIZ", l: "Guruhsiz", n: stats.guruhsiz },
               { v: "KETGAN",   l: "Ketgan",   n: stats.ketgan },
+              { v: "barchasi", l: "Barchasi", n: stats.jami >= 1000 ? "1000+" : stats.jami },
             ].map(f => {
               const faol = filterEnroll === f.v;
               return (
