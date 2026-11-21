@@ -47,8 +47,10 @@ export function BottomNav() {
 
   const barcha = useMemo(() => navSections.flatMap((s) => s.items), []);
   const visible = useMemo(
-    () => (item: NavItem) => navItemVisible(item, { role, permissions, teacherId: me?.teacherId }),
-    [role, permissions, me?.teacherId]);
+    () => (item: NavItem) => navItemVisible(item, {
+      role, permissions, teacherId: me?.teacherId, teacherSalaryVisible: me?.teacherSalaryVisible,
+    }),
+    [role, permissions, me?.teacherId, me?.teacherSalaryVisible]);
 
   const bottomItems = useMemo(() => {
     const has = (k: string) => permissions?.includes("*") || permissions?.includes(k);

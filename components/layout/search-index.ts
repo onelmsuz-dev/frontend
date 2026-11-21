@@ -82,6 +82,7 @@ export function bolimlarniTop(
     role: Role;
     permissions: string[] | undefined;
     teacherId?: string | null;
+    teacherSalaryVisible?: boolean;
     blocked: boolean;
     features: Record<string, boolean> | undefined;
     onboardingEnabled: boolean;

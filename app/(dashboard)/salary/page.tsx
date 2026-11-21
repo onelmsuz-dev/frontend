@@ -4,6 +4,7 @@ import { TopHeader } from "@/components/layout/top-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useTeacherSummary } from "@/lib/hooks/usePanel";
+import { useMe } from "@/lib/hooks/useMe";
 import { salaryDisplay, salaryTypeLabel } from "@/lib/salary";
 import { Wallet, Users, BookOpen, TrendingUp, CheckCircle2, Clock, HandCoins } from "lucide-react";
 import { formatCurrency } from "@/lib/money";
@@ -42,6 +43,25 @@ export default function SalaryPage() {
   const hisoblanmagan = [...new Set(avanslar
     .filter((a) => a.status === "BERILDI" && !salaries.some((s) => s.month === a.month))
     .map((a) => a.month))];
+
+  // Markaz bu bo'limni o'qituvchilarga yopgan — menyuda yo'q, lekin havola
+  // orqali kirilsa bo'sh nollar emas, aniq sabab ko'rinsin.
+  const { me } = useMe();
+  if (me?.role === "TEACHER" && me.teacherSalaryVisible === false) {
+    return (
+      <div>
+        <TopHeader title="Mening oyligim" subtitle="Oylik hisob-kitob va statistika" />
+        <div className="p-5">
+          <Card className="glass-panel">
+            <CardContent className="py-10 text-center text-[13px] text-neutral-500 dark:text-neutral-400">
+              Markaz bu bo&apos;limni o&apos;qituvchilar uchun yopgan.
+              Oylik bo&apos;yicha savollar bo&apos;lsa, markaz ma&apos;muriyatiga murojaat qiling.
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

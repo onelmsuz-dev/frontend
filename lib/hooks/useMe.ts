@@ -16,6 +16,8 @@ export interface MeData {
   staffRoleId: string | null;
   orgSubdomain: string | null;
   acceptsPayments?: boolean;
+  /** Markaz o'qituvchilarga "Oyligim" bo'limini ochiq qoldirganmi. */
+  teacherSalaryVisible?: boolean;
   /** Markaz tanlagan shrift o'lchami — `<html data-font>` shundan qo'yiladi. */
   uiFontScale?: "STANDART" | "ORTA" | "KATTA" | "JUDA_KATTA";
   /** Tarif muddati + grace-period tugagan — org resurslari backendda bloklangan. */

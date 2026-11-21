@@ -158,8 +158,10 @@ export function TorNav() {
   // ── ruxsat bo'yicha filtr (yuklanmaguncha role fallback) ─────────────
   // Qoida `navItemVisible` da — tepadagi qidiruv ham aynan shundan o'qiydi.
   const visible = useCallback(
-    (item: NavItem) => navItemVisible(item, { role, permissions, teacherId: me?.teacherId }),
-    [role, permissions, me?.teacherId]);
+    (item: NavItem) => navItemVisible(item, {
+      role, permissions, teacherId: me?.teacherId, teacherSalaryVisible: me?.teacherSalaryVisible,
+    }),
+    [role, permissions, me?.teacherId, me?.teacherSalaryVisible]);
 
   const sections = useMemo(() => navSections
     .map(sec => ({ ...sec, items: sec.items.filter(visible) }))

@@ -300,6 +300,24 @@ function SettingsContent() {
     finally { setOrgSaving(false); }
   }
 
+  // O'qituvchilar "Oyligim"ni ko'radimi — bosilishi bilan saqlanadi.
+  const teacherSalaryVisible = orgData?.teacherSalaryVisible ?? true;
+  const [salaryToggleSaving, setSalaryToggleSaving] = useState(false);
+  async function toggleTeacherSalary() {
+    setSalaryToggleSaving(true); setOrgErr("");
+    try {
+      const res = await fetch("/api/organization", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teacherSalaryVisible: !teacherSalaryVisible }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setOrgErr(data.error ?? "Xatolik"); return; }
+      mutate("/api/organization");
+      mutate("/api/me");
+    } catch { setOrgErr("Serverga ulanib bo'lmadi"); }
+    finally { setSalaryToggleSaving(false); }
+  }
+
   return (
     <div>
       <TopHeader title="Sozlamalar" subtitle="Tizim va markaz sozlamalari" />
@@ -534,6 +552,28 @@ function SettingsContent() {
                         bo'lsa, jadval o'zi kengayadi — dars yashirinib qolmaydi.
                       </p>
                     </div>
+
+                    <button type="button" onClick={toggleTeacherSalary} disabled={salaryToggleSaving}
+                      aria-pressed={teacherSalaryVisible}
+                      className="w-full flex items-center justify-between gap-3 rounded-xl border border-white/60 dark:border-white/10 px-3.5 py-3 text-left hover:border-neutral-300 dark:hover:border-neutral-600 transition-colors disabled:opacity-60">
+                      <div>
+                        <p className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">O&apos;qituvchilar o&apos;z oyligini ko&apos;radi</p>
+                        <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">
+                          {teacherSalaryVisible
+                            ? "Yoqilgan — o'qituvchi menyusida \"Oyligim\" bo'limi bor"
+                            : "O'chiq — \"Oyligim\" bo'limi o'qituvchilarga ko'rinmaydi. Oylik hisobi o'zgarmaydi, Moliya'da avvalgidek"}
+                        </p>
+                      </div>
+                      <span className={cn(
+                        "relative w-10 h-6 rounded-full transition-colors shrink-0",
+                        teacherSalaryVisible ? "bg-green-500" : "bg-neutral-300 dark:bg-neutral-600",
+                      )}>
+                        <span className={cn(
+                          "absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform",
+                          teacherSalaryVisible && "translate-x-4",
+                        )} />
+                      </span>
+                    </button>
 
                     <div>
                       <Label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1.5 block">Tarif rejasi</Label>

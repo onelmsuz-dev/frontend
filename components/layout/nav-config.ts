@@ -15,6 +15,11 @@ export interface NavItem {
   perm?: string | string[];
   /** Faqat o'qituvchi paneli uchun (permissiondan mustaqil). */
   teacherOnly?: boolean;
+  /**
+   * O'qituvchi menyusida ko'rinmaydi, lekin ruxsat QOLADI: Guruhlar va
+   * Jadval sahifalari kurs ma'lumotini o'qiydi (Proton, 2026-11-21).
+   */
+  hideForTeacher?: boolean;
 }
 
 export interface NavSection {
@@ -46,7 +51,7 @@ export const navSections: NavSection[] = [
   {
     id: "talim", label: "Ta'lim", icon: BookOpen,
     items: [
-      { href: "/courses", label: "Kurslar", icon: Layers, perm: "courses.view" },
+      { href: "/courses", label: "Kurslar", icon: Layers, perm: "courses.view", hideForTeacher: true },
       { href: "/groups", label: "Guruhlar", icon: Users, perm: "groups.view" },
       { href: "/schedule", label: "Jadval", icon: CalendarDays, perm: "schedule.view" },
       { href: "/attendance", label: "Davomat", icon: UserCheck, perm: "attendance.view" },
@@ -101,8 +106,14 @@ export function itemVisible(perm: NavItem["perm"], permissions: string[] | undef
  */
 export function navItemVisible(
   item: NavItem,
-  who: { role: Role; permissions: string[] | undefined; teacherId?: string | null },
+  who: {
+    role: Role; permissions: string[] | undefined; teacherId?: string | null;
+    /** Markaz o'qituvchilarga "Oyligim"ni yopgan bo'lsa `false`. */
+    teacherSalaryVisible?: boolean;
+  },
 ): boolean {
+  if (item.hideForTeacher && who.role === "TEACHER") return false;
+  if (item.teacherOnly && who.role === "TEACHER" && who.teacherSalaryVisible === false) return false;
   // SUPER_ADMIN o'zini o'qituvchi qilib qo'shgan bo'lsa (Jadval → "O'zimni
   // qo'shish"), teacherId mavjud bo'ladi va u ham "Oyligim"ni ko'rishi kerak.
   if (item.teacherOnly) return who.role === "TEACHER" || (who.role === "SUPER_ADMIN" && !!who.teacherId);

@@ -171,6 +171,7 @@ function GlobalSearch() {
     role: (me?.role ?? "TEACHER") as Role,
     permissions: me?.permissions,
     teacherId: me?.teacherId,
+    teacherSalaryVisible: me?.teacherSalaryVisible,
     blocked: me?.subscriptionBlocked === true,
     features,
     onboardingEnabled,
