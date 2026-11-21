@@ -2032,17 +2032,26 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                  `xl` dan boshlab — har kartochka o'qish uchun yetarli joy
                  oladi. */
               <div className="grid xl:grid-cols-2 gap-3 items-start">
-                {activeSgs.map((sg: any) => {
+                {/* TUGAGAN GURUH — oxirida, kulrang, amallarsiz (Doniyorjon,
+                    2026-11-20). Guruhning o'zi ochiladi: davomat, to'lov va
+                    tarix o'sha yerda saqlanib turadi. */}
+                {[...activeSgs]
+                  .sort((a: { group?: { status?: string } }, b: { group?: { status?: string } }) =>
+                    Number(a.group?.status === "COMPLETED") - Number(b.group?.status === "COMPLETED"))
+                  .map((sg: any) => {
                   const g = sg.group;
                   const t = g?.teacher?.user;
-                  const isTrial = sg.enrollmentStatus === "SINOV";
+                  const tugagan = g?.status === "COMPLETED";
+                  const isTrial = !tugagan && sg.enrollmentStatus === "SINOV";
                   // MUZLATILGAN — kartochka ko'k, belgi to'q (Doniyorjon, 2026-09-22:
                   // "sal bilinarli bo'lsin"). Holat FAOL bo'lib qolaveradi.
                   const muz = activeFreeze(sg.freezes as FreezeLike[] | undefined);
                   return (
                     <div key={sg.id}
                       className={cn("rounded-xl border p-4 space-y-2.5",
-                        muz
+                        tugagan
+                          ? "border-neutral-200 dark:border-neutral-700 bg-neutral-100/70 dark:bg-neutral-800/40 opacity-80"
+                          : muz
                           ? "border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-900/20"
                           : isTrial
                             ? "border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-900/10"
@@ -2052,7 +2061,11 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                           className="text-[13px] font-bold text-blue-600 hover:underline leading-tight">
                           {g.name}
                         </Link>
-                        {muz ? (
+                        {tugagan ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0 bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
+                            Tugagan{g.endDate ? ` · ${formatUzDate(g.endDate)}` : ""}
+                          </span>
+                        ) : muz ? (
                           <span title={freezeUntilLabel(muz)}
                             className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-semibold shrink-0 bg-sky-600 text-white dark:bg-sky-500">
                             <Snowflake className="w-2.5 h-2.5" /> Muzlatilgan
@@ -2075,7 +2088,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                         <div className="flex items-center gap-1.5 text-[11px] text-neutral-400">
                           <CalendarDays className="w-3 h-3 shrink-0" />
                           <span>{formatUzDate(sg.joinedAt)} dan</span>
-                          {canManageGroups && (
+                          {canManageGroups && !tugagan && (
                             // Sanani KEYIN ham tuzatish mumkin: ma'lumot
                             // ko'pincha kechikib kiritiladi va hamma
                             // a'zolikda kiritilgan kun turib qoladi.
@@ -2222,7 +2235,7 @@ export default function StudentDetailPage({ params }: { params: Promise<{ id: st
                         </button>
                       )}
 
-                      {canManageGroups && (
+                      {canManageGroups && !tugagan && (
                         <div className="flex gap-1.5 pt-0.5">
                           <button onClick={() => { setTransferGroupId(""); setTransferErr(""); setGroupModal({ sg }); }}
                             className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
